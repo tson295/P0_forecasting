@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "deny": [
+      "Edit(data/**)",
+      "Write(data/**)",
+      "Edit(Baseline_LGBM.py)",
+      "Write(Baseline_LGBM.py)"
+    ]
+  },
+  "preferredNotifChannel": "terminal_bell",
+  "env": {
+    "DISABLE_AUTO_COMPACT": "1"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python .claude/hooks/statusline.py 2>/dev/null || python3 .claude/hooks/statusline.py"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "AskUserQuestion|ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ting.sh askq",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|idle_prompt|agent_needs_input",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ting.sh notify",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

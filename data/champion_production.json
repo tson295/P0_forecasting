@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-08-17T06:59:35.172808+00:00",
+  "nguon": "app/ai/router/routing_table.py (ROUTING_TABLE / DEFAULT / TRAINED_ASSETS)",
+  "champion": {
+    "hf": {
+      "BTC": "ens_all",
+      "ETH": "ens_gn_bns",
+      "SOL": "garch_skewt",
+      "XRP": "ens_mc_gjr",
+      "HYPE": "garch_skewt"
+    },
+    "lf": {
+      "BTC": "gjr_t",
+      "ETH": "ens_g_gn",
+      "SOL": "garch_nig",
+      "XRP": "mc_const",
+      "HYPE": "ens_mc_gjr",
+      "XAU": "bns",
+      "SP500": "gjr_t",
+      "AAPLX": "ens_best4",
+      "NVDAX": "bns",
+      "TSLAX": "ens_gn_bns",
+      "GOOGLX": "bns",
+      "WTIOIL": "bns",
+      "SPCX": "bns"
+    }
+  },
+  "default_model": {
+    "hf": "ens_mc_gjr",
+    "lf": "ens_gn_bns"
+  },
+  "trained_assets": {
+    "hf": [
+      "BTC",
+      "ETH",
+      "HYPE",
+      "SOL",
+      "XRP"
+    ],
+    "lf": [
+      "AAPLX",
+      "BTC",
+      "ETH",
+      "GOOGLX",
+      "HYPE",
+      "NVDAX",
+      "SOL",
+      "SP500",
+      "SPCX",
+      "TSLAX",
+      "WTIOIL",
+      "XAU",
+      "XRP"
+    ]
+  },
+  "safe_untrained_model": "gbm"
+}

@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Raw data: CSV lớn không vào git (integrity anchor: data/data_checksums.json)
+data/*.csv
+
+# Artifacts sinh ra khi chạy experiment (log.csv canonical thì được track)
+experiments/runs/
+experiments/cache/
+reports/figures/
+
+# Claude Code local-only
+.claude/settings.local.json

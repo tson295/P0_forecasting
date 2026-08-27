@@ -1,0 +1,357 @@
+# RESEARCH PLAN — BTC 1-phút point forecasting (bản đơn giản hóa)
+
+Cập nhật: 2026-08-28 (rev 6: thêm theo dõi inference latency §7.4; rev 5: lọc 306 feature B0 trước Bước 2). Thay thế hoàn toàn roadmap 2026-08-24 (lưu tại `docs/archive/RESEARCH_PLAN_2026-08-24_detailed.md`, không còn hiệu lực).
+
+Luồng nghiên cứu:
+
+```
+Fix dataset 15 ngày (5 fold VAL 1 ngày, TEST 2 ngày cuối)
+→ Lọc 306 feature B0 bằng PI + standalone + MI → B0*  (§1.4)
+→ Feature selection: chạy từng model một (nhanh → chậm), mỗi model tự chọn feature set riêng F*_m từ B0*
+     LightGBM → XGBoost → CatBoost → TimesFM → ExtraTrees → AutoTS (2 model cố định) → LSTM
+→ Sau mỗi model: so với champion hiện tại, log đổi/không đổi
+→ Ensemble → Final evaluation (TEST 2 ngày) → bảng tổng hợp + visualize
+→ (để sau) data đầy đủ → scale data → TEST 30 ngày
+```
+
+Trạng thái: **chưa code, chưa training.** Code bắt đầu sau khi user duyệt plan này; training chỉ chạy khi user nói unlock.
+
+---
+
+## 0. Giữ nguyên từ thiết kế đã có (và các điểm sửa theo user)
+
+- **Target**: `y_h(t) = log(C[t+h] / C[t])`, h = 1, 2, 3 phút. Model dự báo one-step return `r` phải cộng dồn `ŷ_h = Σ_{i≤h} r̂_{t+i}` trước khi chấm.
+- **Data**: BTC 1-phút OHLCV + amount (Binance) `data/BTC_hf_1min.csv`; `data/BTC_lf_5min.csv` chỉ dùng cho feature ở resolution 5 phút. Không dùng `*_close.csv`, không cross-asset (thêm sau nếu user muốn).
+- **Baseline** (các nghĩa, dùng xuyên suốt):
+  - **B0-306** = 306 feature của `Baseline_LGBM.py` (file không sửa) chạy bằng LightGBM code gốc. Luôn log làm reference.
+  - **Feature baseline = B0\*** = B0-306 sau khi lọc nhiễu một lần ở §1.4 (chọn cột trong harness). Mọi model bắt đầu vòng lặp feature từ B0\*.
+  - **Model baseline / champion ban đầu** = LightGBM đúng code gốc (`fit_lgbm_baseline`, `LGBMConfig` không đổi: Huber alpha 0.9, TargetTransform `y / (rv60·√h)` fit train-only, seed 8586) trên F\*_LGBM. Gain của các model khác đo so với champion hiện tại (§3).
+  - **E0** (ŷ = 0 ⇔ P̂ = C_t) luôn log.
+- **Prediction và metric**: model dự báo **log return** `ŷ_h`; metric tính trên **giá**: `P̂_{t+h} = C_t · exp(ŷ_h)`, lỗi `e_h = P̂_{t+h} − C_{t+h}` (USD).
+  - `RMSE_h`, `MAE_h` trên `e_h`; `Gain = 1 − RMSE_cand / RMSE_base` per horizon × fold; tóm tắt **MedianGain, WinRate, P10Gain, WorstGain** trên 15 ô (5 fold × 3 h).
+  - Pearson r và directional accuracy tính trên **thay đổi giá** `P̂_{t+h} − C_t` so với `C_{t+h} − C_t` (r trên giá tuyệt đối vô nghĩa vì bị mức giá chi phối); directional accuracy bỏ bar có `C_{t+h} = C_t`.
+  - Importance/permutation importance/MI chỉ là diagnostic hoặc bộ lọc §1.4, không phải metric quyết định. Loss/transform bên trong model không đổi (z-space Huber); chỉ evaluation trên giá.
+- **Inference latency** (§7.4): thời gian predict **một origin** (batch 1) per model × horizon, tóm tắt p50/p95/p99. **Chỉ để theo dõi** — không ảnh hưởng training, loss, KEEP/DROP, champion hay bất kỳ quyết định nào.
+- **Split**: walk-forward FIT → ES → purge 60' → VAL; TEST cuối không chạm cho tới Final. 15 ngày: §1.2; data đầy đủ (để sau): §5.
+- **Quy tắc biên**: origin t thuộc `[T_start, T_end)` chỉ khi `t ≥ T_start` và `t + 3' < T_end`. Feature chỉ dùng dữ liệu τ ≤ t. TargetTransform/scaler fit train-only mỗi fold.
+- **Runtime**: giai đoạn 15 ngày chạy trên **Vast** (GPU detect tại runtime — có thể là RTX 3090, không hard-code; `LGBMConfig(require_p100=False)`; không CPU fallback âm thầm cho GPU model). ExtraTrees và các model 1-feature tí hon chạy CPU của instance; AutoTS theo `regression_model` bên trong. Unit test/smoke chạy CPU local.
+
+---
+
+## 1. Bước 1 — Fix dataset (15 ngày hiện có) và lọc B0
+
+### 1.1 Snapshot và kiểm tra (một lần)
+
+`data/BTC_hf_1min.csv` hiện có 21.916 dòng, `2026-01-18 16:15 → 2026-02-02 21:30 UTC` (file bị cắt đúng 2 MiB, dòng cuối cụt → bỏ). Đã kiểm tra read-only: lưới 60 s, không duplicate, không gap, `H ≥ max(O,C)`, `L ≤ min(O,C)`, `amount/volume` nằm trong `[L, H]`. Trước khi chạy:
+
+1. Adapter header lowercase → `Open/High/Low/Close/Volume` (không sửa B0); giữ `amount`.
+2. Ghi checksum + số dòng + range vào `data/data_checksums.json`, nhãn `btc_1min_15d_2026-01-18_02-02`. Mọi kết quả giai đoạn này gắn nhãn dataset đó.
+3. `BTC_lf_5min.csv` (đến 2026-03-26, đủ phủ 15 ngày): nhãn `T` = gộp 5 bar 1-phút `(T−4 … T]` → chỉ join bar có `T ≤ t`.
+4. Lưu ý regime: 15 ngày này BTC 95.156 → 78.299 (−18%), vol cao; kết quả chọn feature/model là trên một regime, sẽ kiểm tra lại khi có data đầy đủ (§5).
+
+B0-eligible origins: 21.258, `01-19 02:46 → 02-02 21:27` (warmup 631 bar).
+
+### 1.2 Fold cho 15 ngày [đã chốt]
+
+Expanding train, VAL = 1 ngày UTC, ES = ngày liền trước VAL (trừ 60' purge), TEST = 2 ngày cuối:
+
+| Fold | FIT (expanding, từ 01-19 02:46) | ES | purge | VAL |
+|---|---|---|---|---|
+| 1 | → 01-25 23:56 (~9.9k origin) | 01-26 00:00 → 22:56 | 60' | 01-27 00:00 → 23:56 |
+| 2 | → 01-26 23:56 (~11.3k) | 01-27 00:00 → 22:56 | 60' | 01-28 |
+| 3 | → 01-27 23:56 (~12.8k) | 01-28 00:00 → 22:56 | 60' | 01-29 |
+| 4 | → 01-28 23:56 (~14.2k) | 01-29 00:00 → 22:56 | 60' | 01-30 |
+| 5 | → 01-29 23:56 (~15.7k) | 01-30 00:00 → 22:56 | 60' | 01-31 |
+| TEST (refit) | → 01-30 23:56 (~17.1k) | 01-31 00:00 → 22:56 | 60' | 02-01 00:00 → 02-02 21:27 |
+
+- Mỗi VAL = 1.437 origin; 5 fold = 7.185 origin, 15 ô. ES = 1.377 origin. TEST = 2.725 origin (02-01 Chủ nhật, 02-02 Thứ hai).
+- Expanding thay vì rolling vì data ít; so sánh candidate vs baseline luôn trong cùng fold nên train size không làm lệch Gain.
+- Mọi partition half-open, `t + 3' < T_end`.
+- Cố định trong toàn bộ §1.4 và Bước 2, cho mọi model: cùng fold, cùng tập origin (= eligible của B0), cùng seed 8586, cùng config từng model.
+- Lookback candidate ≤ 1440 phút → ext có thể NaN ở ngày đầu FIT; tree nhận NaN native; model không nhận NaN (LSTM, AutoTS tùy API) điền 0 sau chuẩn hóa train-only.
+
+### 1.3 Nhiễu seed và số vòng cố định [đã chốt] (một lần cho mỗi model, trên feature baseline hiện hành)
+
+- **ε_m**: chạy model `m` trên feature baseline với 3 seed (8586, 8587, 8588) trên 5 fold; Gain (trên giá) của seed 8587, 8588 so với 8586 trên 15 ô → 30 giá trị; `ε_m = max(0.005 pp, std của 30 giá trị)`.
+- **Số vòng cố định** (LightGBM/XGBoost/CatBoost): ES trên 1.377 dòng làm `best_iteration` nhiễu, nên ES chỉ dùng ở run baseline này để lấy `best_iteration` per fold × horizon; mọi candidate của model đó train đúng số vòng ấy (`fixed_rounds`, B0 hỗ trợ sẵn). Run confirmation F\*_m cuối bật lại ES. LSTM giữ ES theo epoch (rẻ). ExtraTrees/AutoTS không có ES.
+- Với LightGBM: chạy §1.3 lần đầu trên **B0-306** (15 model này dùng cho §1.4a), và chạy lại trên **B0\*** sau khi lọc xong.
+
+### 1.4 Lọc 306 feature của B0 → B0\* (một lần, trước Bước 2) [mới theo quyết định user]
+
+Lý do: 306 cột của B0 (22 fine × 8 lag + 16 coarse × 8 lag + rv60/log_rv60) có thể chứa nhiều cột nhiễu; lọc một lần bằng LightGBM gốc trên 5 fold §1.2 rồi mới chạy Bước 2. `Baseline_LGBM.py` không đổi — lọc bằng chọn cột trong harness. B0-306 nguyên bản vẫn log làm reference ở mọi bảng.
+
+Ba điểm số cho từng cột `j` (per horizon; gộp 5 fold bằng median), tất cả trên giá:
+
+**(a) Permutation importance (PI)** — dùng đúng 15 model B0-306 của run baseline §1.3 (seed 8586). Trên VAL mỗi fold: xáo trộn cột `j` giữa các origin VAL, predict lại, `PI_{j,h,f} = RMSE_perm − RMSE_gốc` (USD); lặp 3 lần xáo (seed khác nhau) lấy trung bình; median qua 5 fold. `PI ≤ 0` = xáo không làm model xấu đi → cột không được dùng hữu ích. Chi phí: chỉ predict, vài phút. Ghi thêm PI theo nhóm (xáo cùng lúc 8 lag của một base feature, 38 nhóm) để đọc, không dùng để quyết định.
+
+**(b) Standalone 1-feature** — với từng cột `j`: LightGBM code gốc (cùng config, cùng TargetTransform, ES trên ES set) chỉ trên `[j]`, 5 fold × 3 h; Gain trên giá so với **E0** và so với **B0-306**. `Gain_E0 ≤ 0` = không có tín hiệu độc lập. Nếu có cột thắng B0-306 (`MedianGain_B0 > +ε_LGBM`) → cờ đỏ: B0 bị nhiễu chi phối, ưu tiên bộ lọc mạnh (R3). Chi phí: 306 × 15 fit tí hon ≈ 1–2.5 h (CPU đủ; GPU overhead lớn hơn lợi ích với 1 cột).
+
+**(c) Mutual information (MI)** — `mutual_info_regression(X_j, z_h)` trên FIT của từng fold (train-only), `z_h` = target sau TargetTransform (đúng đại lượng model học), `n_neighbors = 3`, seed cố định. Null: `MI_null_j = MI(X_j, z_h xáo trộn)`. `MI − MI_null ≤ 0` (median 5 fold) = không đo được phụ thuộc. Chi phí ≈ 30 phút.
+
+Phân tầng (một cột "fail" một tiêu chí khi fail ở **cả 3 horizon**):
+
+- **Tier 1** (nhiễu chắc): fail cả ba: PI ≤ 0, `Gain_E0` standalone ≤ 0, MI − null ≤ 0.
+- **Tier 2**: PI ≤ 0 và fail thêm một trong hai tiêu chí còn lại.
+- **R3** (mạnh tay): chỉ giữ cột có PI > 0 ở ít nhất một horizon.
+
+Kiểm chứng (3 run, LightGBM gốc, số vòng cố định của B0-306, seed 8586, 5 fold): `R1 = B0 − Tier1`, `R2 = B0 − Tier1 − Tier2`, `R3` như trên; Gain trên giá so với B0-306. Chọn **B0\***: trong các bộ có `MedianGain ≥ −ε_LGBM` (không tệ hơn B0-306), lấy bộ có MedianGain cao nhất; nếu chênh nhau < ε thì lấy bộ nhỏ nhất. Nếu cả ba đều tệ hơn → B0\* = B0-306, ghi rõ "lọc không giúp". Sau đó chạy lại §1.3 trên B0\* (3 seed, số vòng cố định, ε_LGBM) rồi mới vào Bước 2.
+
+Output: `experiments/b0_filter.csv` (306 dòng: PI per h, Gain standalone vs E0 / vs B0-306 per h, MI − null per h, tier, giữ/bỏ), bảng nhóm 38 base feature để đọc, danh sách cột B0\* đóng băng trong config.
+
+Áp dụng cho model khác: mọi model bắt đầu Bước 2 từ B0\* (cột); LSTM dùng per phút các fine feature còn ≥ 1 cột trong B0\* (+ rv60); AutoTS base regressor = B0\*. Bộ lọc là theo LightGBM, model khác có thể đánh giá cột khác đi — chấp nhận để giữ một base chung. Tổng chi phí §1.4 ≈ 2–4 h.
+
+---
+
+## 2. Bước 2 — Feature selection theo từng model
+
+Nguyên tắc: **chạy từng model một, theo thứ tự thời gian chạy tăng dần** (§2.2); mỗi model tự chọn feature set của nó bằng cùng một vòng lặp; xong model này mới sang model kế. Mọi model bắt đầu từ **B0\*** và đi qua cùng danh sách §2.3 theo cùng thứ tự. Không model nào dùng chung feature set với model khác.
+
+### 2.1 Vòng lặp (áp dụng y hệt cho mỗi model `m`)
+
+`S_m := B0*`. Với từng feature `f` trong §2.3, theo đúng thứ tự:
+
+1. Input = B0\* + các cột ext đang KEEP của `m` + `f` (giá trị tại origin t, lag 0; với LSTM/TimesFM-covariate là chuỗi theo phút của cùng cột).
+2. Train `m` × 5 fold (config §2.2, số vòng cố định §1.3).
+3. Metric trên giá tại VAL; Gain per ô với **base = `m` trên S_m hiện tại** (ghi thêm Gain vs `m` trên B0\*, vs E0, và Gain standalone §2.4).
+4. `MedianGain ≥ −ε_m` → **KEEP** (tốt hơn hoặc gần như không đổi), `S_m := S_m + f`; `MedianGain < −ε_m` → **DROP**.
+5. Feature tiếp theo.
+
+Hết danh sách: (a) safety-net §2.4 (1 run + có thể vài run); (b) tùy chọn, 1 run: bỏ đồng thời các cột ext có permutation importance ≤ 0 trên VAL, giữ bộ rút gọn nếu MedianGain so với `S_m` ≥ −ε_m; (c) run confirmation F\*_m: 3 seed (tree bật ES) — kết quả này dùng cho §3; kèm một pass đo latency §7.4 (pass riêng, không đụng prediction).
+
+Kết quả của model `m`: **F\*_m** + bảng `keepdrop_<m>.csv`. Sang model kế tiếp.
+
+### 2.2 Thứ tự model (thời gian chạy tăng dần), config và cách chọn feature
+
+| # | Model | Config (một config, không sweep) | Chọn feature | Ước lượng tổng cho 39 candidate (15 ngày, Vast) |
+|---|---|---|---|---|
+| 1 | LightGBM | `LGBMConfig` gốc (B0) | vòng lặp §2.1 | 15 fit × ~5 s ≈ 1–2 phút/candidate → **≈ 1–1.5 h** |
+| 2 | XGBoost | `hist`, `device=cuda`, `reg:pseudohubererror` (huber_slope 0.9), lr 0.03, max_depth 6, seed 8586; cùng TargetTransform | §2.1 | **≈ 1–2 h** |
+| 3 | CatBoost | GPU, `Huber:delta=0.9`, lr 0.03, depth 6, seed 8586; cùng TargetTransform | §2.1 | **≈ 1–2 h** |
+| 4 | TimesFM | zero-shot, không train; input chuỗi r1 kết thúc tại t, context 512 (hoặc tối đa API); dự báo `r̂_{t+1..t+3}` → cộng dồn → giá; pin package/checkpoint/backend; tắt tùy chọn ép dương nếu API có | (a) **TFM-POINT** không feature = baseline của model; (b) nếu API có covariate (xreg / `forecast_with_covariates` hoặc tương đương): vòng lặp §2.1 với candidate làm covariate theo phút, giá trị cho 3 bước dự báo = giữ giá trị tại t → F\*_TFM; không có covariate thì chỉ (a); (c) nếu (a)/(b) thắng E0 (MedianGain > 0 vs E0) → **TFM-LoRA**: rank 8 trên attention/FF, train FIT, ES trên ES set, Huber trên `r̂_{t+1..t+3}`, 1 config, 3 seed | inference batch 7.2k origin ≈ 1–2 phút/run → TFM-POINT vài phút; loop covariate (nếu có) **≈ 1–1.5 h**; LoRA (nếu chạy) ≈ 1–2 h |
+| 5 | ExtraTrees | sklearn, 500 cây, `min_samples_leaf=500`, `max_features=0.3`, squared error trên z-target, seed 8586, CPU | §2.1 | 15 fit × ~10–20 s ≈ 3–5 phút/candidate → **≈ 1.5–3 h** |
+| 6 | AutoTS — 2 model cố định | `WindowRegression` (regression_model LightGBM) và `MultivariateRegression` (regression_model ExtraTrees) — tên chính xác theo version; target r1, `forecast_length = 3` → cộng dồn → giá; base regressor = B0\*; transformer cố định tối thiểu, không search, không ensemble nội bộ | **hướng 1**: mỗi model một vòng lặp §2.1 với candidate làm regressor → F\*_A1, F\*_A2. **Tổng hợp chỉ làm sau khi cả hai vòng lặp đã kết thúc** (F\*_A1, F\*_A2 đầy đủ): mỗi model chạy thêm đúng 1 run với `F*_A1 ∪ F*_A2`; chọn cho mỗi model bộ tốt hơn giữa {riêng, tổng hợp} theo metric | rolling-origin trên lưới thưa (mỗi 5 phút, ~1.4k origin) ≈ 3–5 phút/candidate → **≈ 2–4 h/model, 4–8 h cả hai**; run cuối chấm trên toàn bộ origin |
+| 7 | LSTM-DMH | context 512; input mỗi phút = các fine feature B0 còn trong B0\* (+ rv60) + ext đang KEEP; 1 lớp LSTM hidden 64; head linear 3 output; Huber trên z-target (TargetTransform B0); Adam lr 1e-3, batch 256, ≤ 50 epoch, ES patience 5 trên ES set; seed 8586; NaN → 0 sau chuẩn hóa | §2.1 với 1 seed trong vòng lặp; confirmation F\*_LSTM 3 seed. Dự phòng nếu hết thời gian: chạy LSTM trên từng F\*_m của các model khác (4–6 run) và chọn bộ tốt nhất theo metric — không có cách biết trước bộ nào hợp | 1 fit ≈ 1–3 phút GPU cho cả 3 h; 5 fold ≈ 5–15 phút/candidate → **≈ 3–10 h** (chậm nhất → chạy cuối) |
+
+Ràng buộc chung cho regressor/covariate (AutoTS, TimesFM): giá trị dùng để dự báo bar `s` chỉ được tính từ dữ liệu `≤ s−1`; dự báo 3 bước từ t giữ nguyên giá trị tại t (cách truyền cụ thể chốt khi audit API; kiểm tra bằng §6.4). AutoTS/TimesFM không thấy VAL/TEST. Audit version trước khi code; cài package chỉ khi user cho phép.
+
+Tổng Bước 2 trên 15 ngày ≈ 12–25 giờ máy nếu chạy tuần tự đủ 7 model (cộng §1.4 ≈ 2–4 h).
+
+Không thêm: KNeighbors (306 chiều, low SNR → ≈ E0 hoặc noise), Bagging (trùng ExtraTrees), LinearRegression/Lars (OLS trên cột collinear không ổn định), AutoTS tự search (bỏ theo quyết định user), yfinance.
+
+### 2.3 Danh sách candidate (chung cho mọi model)
+
+Thứ tự trong bảng = thứ tự thử. Mọi cột chỉ dùng dữ liệu ≤ t, cửa sổ kết thúc tại t, lookback ≤ 1440 phút.
+
+Ký hiệu: `C, O, H, L, V` = close/open/high/low/volume của bar; `A` = amount (quote volume); `TP = (H + L + C)/3`; `r1 = log(C_t / C_{t−1})`; `rv_k = sqrt(mean_k(r1²))`; `EMA_k` = ewm(span k, min_periods k) trên log C; `ret_k = log(C_t / C_{t−k})`.
+
+**A. VWAP thật từ amount** — `A/V = Σ p·q / Σ q` của các trade trong bar (Binance quote volume / base volume) → là VWAP thật, không phải proxy.
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 1 | `vwap_amt_gap_1` | `log(C / (A/V))` | vị trí close so với giá trung bình bar; gần `close_position` |
+| 2 | `vwap_amt_gap_15` | `log(C / (Σ_15 A / Σ_15 V))` | |
+| 3 | `vwap_amt_gap_60` | `log(C / (Σ_60 A / Σ_60 V))` | |
+| 4 | `vwap_amt_gap_240` | `log(C / (Σ_240 A / Σ_240 V))` | |
+
+**B. Return / rolling statistics ngoài B0** (B0 có ret 1, 5, 8, 32 và các lag; rv5/rv60, rv8/rv64)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 5 | `ret_60` | `log(C_t / C_{t−60})` | |
+| 6 | `ret_240` | `log(C_t / C_{t−240})` | |
+| 7 | `ret_1440` | `log(C_t / C_{t−1440})` | |
+| 8 | `log_rv15_rv240` | `log(rv_15 / rv_240)` | |
+| 9 | `log_rv60_rv1440` | `log(rv_60 / rv_1440)` | |
+| 10 | `ret_skew_60` | skew của r1 trên 60 bar | |
+| 11 | `dd_240` | `log(C / max_240(C))` | drawdown |
+| 12 | `ru_240` | `log(C / min_240(C))` | run-up |
+
+**C. MA / EMA / HMA** (B0 có EMA 5/20, 8/32, 16/64, 32/128, HMA 16)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 13 | `log_c_ema60` | `log C − EMA_60` | |
+| 14 | `log_c_ema240` | `log C − EMA_240` | |
+| 15 | `log_c_ema1440` | `log C − EMA_1440` | |
+| 16 | `log_ema60_ema240` | `EMA_60 − EMA_240` | |
+| 17 | `hma_slope64_volnorm` | `diff(HMA_64(log C)) / rv60` | |
+
+**D. RSI / MACD multi-scale** (B0 có RSI 15/64; MACD 5/20/7 và 16/64/16)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 18 | `rsi240_centered` | `RSI_240(r1)/100 − 0.5` | |
+| 19 | `macd_hist_60_240_60_volnorm` | `((EMA_60 − EMA_240) − EMA_60(EMA_60 − EMA_240)) / rv60` | |
+
+**E. Bollinger** (trên log C; `SMA_n`, `σ_n` với `min_periods = n`, `ddof = 0`)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 20 | `bb_pctb_20` | `(log C − SMA_20) / (2·σ_20)` | mean-reversion z-score |
+| 21 | `bb_pctb_60` | `(log C − SMA_60) / (2·σ_60)` | |
+| 22 | `bb_logbw_20` | `log(σ_20)` | bandwidth |
+
+**F. ATR / Keltner** (`TR = max(H−L, |H−C_{t−1}|, |L−C_{t−1}|)`, `ATR_n` = Wilder EMA alpha 1/n, reset sau gap)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 23 | `log_atr14_c` | `log(ATR_14 / C)` | |
+| 24 | `log_atr14_rv14` | `log((ATR_14 / C) / rv_14)` | range-vol ÷ close-vol; giả thuyết liên quan bounce/reversal ở h = 1 |
+| 25 | `kcw_20` | `log(2·ATR_20 / EMA_20(C))` | Keltner channel width |
+
+**G. MFI** (money flow = A; `A⁺` khi `TP_t > TP_{t−1}`, `A⁻` khi `TP_t < TP_{t−1}`)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 26 | `mfi14_centered` | `ΣA⁺ / (ΣA⁺ + ΣA⁻)` trên 14 bar `− 0.5` | NaN nếu mẫu = 0 |
+| 27 | `mfi60_centered` | như trên, 60 bar | |
+
+**H. A/D dạng rolling** (không dùng tích lũy vì level phi dừng; `CLV = ((C−L) − (H−C)) / (H−L)`, = 0 khi `H = L`; `CLV = 2·close_position` của B0)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 28 | `ad_vwclv_5` | `Σ_5 CLV·V / Σ_5 V` | |
+| 29 | `ad_vwclv_15` | `Σ_15 CLV·V / Σ_15 V` | |
+| 30 | `ad_vwclv_60` | `Σ_60 CLV·V / Σ_60 V` | |
+
+**I. Parabolic SAR** (AF 0.02, bước 0.02, max 0.2; `SAR_t` tính từ bar ≤ t; reset sau gap NaN)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 31 | `psar_dir` | +1 uptrend / −1 downtrend | |
+| 32 | `psar_logdist` | `log(C / SAR_t)` | |
+| 33 | `psar_age_log` | `log1p(số bar từ lần flip gần nhất)` | |
+
+**J. Regime / calendar**
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 34 | `dow_sin`, `dow_cos` | `sin/cos(2π·weekday/7)` | thử như một cặp; trên 15 ngày chỉ có 2 tuần → ý nghĩa hạn chế |
+| 35 | `log_rv60_med2d` | `log(rv60 / median_2880(rv60))` | vol regime |
+| 36 | `log_range_240` | `log((max_240 H − min_240 L) / C)` | compression/breakout |
+
+**K. Resolution 5 phút** (`BTC_lf_5min.csv`, chỉ bar đã đóng, as-of join `T ≤ t`; về thông tin trùng 1-phút, chỉ khác representation → để cuối)
+
+| # | Cột | Định nghĩa | Ghi chú |
+|---|---|---|---|
+| 37 | `r5_1` | log return của bar 5' đã đóng gần nhất | |
+| 38 | `r5_12` | `log(C5_T / C5_{T−12})` | |
+| 39 | `log_c5_ema5_12` | `log C5 − EMA_12(log C5)` | |
+
+Ghi chú: RMSE/MAE/R²/MAPE là metric, không phải feature. Feature ngoài danh sách chỉ thêm khi có giả thuyết rõ, và thêm vào cuối danh sách.
+
+### 2.4 Khi candidate thua hoặc không đổi vì base đã nhiều feature
+
+Gain so với `S_m` đo **thông tin tăng thêm** so với B0\* (đã có return/vol/candle/volume/RSI/MACD/EMA/HMA ở nhiều lag). Vì vậy phần lớn candidate sẽ ra gần 0: đó là kết luận hợp lệ ("không thêm thông tin mới"), không phải lỗi. Thua rõ (< −ε_m) nghĩa là feature thêm noise/overfit → DROP vẫn đúng. Xử lý để không bỏ sót và để hiểu vì sao thua:
+
+1. **Gain standalone (diagnostic, không dùng để KEEP/DROP)**: với mỗi candidate `f`, cùng cách tính với §1.4(b): LightGBM code gốc chỉ trên `[f]`, Gain trên giá so với E0 (và so với B0\*). Ghi vào `keepdrop_<m>.csv` cột `gain_standalone`. Đọc kết hợp: standalone > 0 nhưng vs S_m ≈ 0 → có tín hiệu nhưng trùng base; standalone ≈ 0 → không có tín hiệu. Chi phí: 15 fit tí hon ≈ vài giây/candidate.
+2. **KEEP khi không đổi** (luật user) giữ lại feature bị che khuất; bước prune permutation ≤ 0 cuối vòng lặp dọn feature thuần noise.
+3. **Safety-net cuối vòng lặp** (1 run + có thể vài run): các cột đã DROP thử lại **một lần theo block** trên F\*_m; nếu block cho MedianGain ≥ +ε_m → thử lại từng cột trong block trên F\*_m theo luật §2.1; nếu không → xong. Bắt feature chỉ có ích khi đi cùng nhau.
+4. Không đổi hyperparameter của model để "giúp" feature (config cố định suốt vòng lặp).
+
+---
+
+## 3. Bước 3 — So sánh với champion (ngay sau mỗi model) + ensemble
+
+- **Champion ban đầu** = LightGBM code gốc trên F\*_LGBM (sau vòng lặp #1, bắt đầu từ B0\*). B0-306 và B0\* nguyên bản đều được log làm reference.
+- Sau khi mỗi model `m` xong vòng lặp và run confirmation (3 seed, tại F\*_m): tính Gain trên giá per ô so với champion hiện tại. `MedianGain > +ε_champion` (ε của champion đo ở §1.3) → **đổi champion** = `m`; ngược lại → **giữ champion**. Cả hai trường hợp ghi đầy đủ vào `champion_log.csv` (§7.2).
+- TimesFM: biến thể tốt nhất trên VAL trong {TFM-POINT, F\*_TFM, TFM-LoRA} đại diện model. AutoTS: mỗi model cố định lấy bộ tốt hơn giữa {riêng, tổng hợp}.
+- Latency (§7.4) ghi kèm trong `champion_log.csv` như thông tin; không phải tiêu chí đổi/giữ.
+- **Ensemble** (sau model cuối): lấy các model có MedianGain > 0 so với champion cuối (luôn gồm champion); (a) trung bình đều; (b) trọng số `1/MSE_VAL` (trên giá) per horizon. So sánh với champion bằng cùng metric; nếu < 2 model đủ điều kiện thì không ensemble. Chọn cấu hình cuối (champion hoặc ensemble) **trước** khi chạm TEST; ghi vào `champion_log.csv`.
+
+---
+
+## 4. Final evaluation (một lần, TEST 2 ngày)
+
+- Refit **mọi** model (không chỉ champion) trên FIT `→ 01-30 23:56`, ES `01-31 00:00 → 22:56`, purge 60', dự báo toàn bộ TEST `02-01 00:00 → 02-02 21:27` (2.725 origin).
+- Report per horizon trên giá: RMSE, MAE, Pearson r (thay đổi giá), directional accuracy; Gain vs B0-306, vs B0\* và vs E0; cho E0, B0-306, B0\*, từng model §2.2 tại F\*_m, ensemble. Xuất `all_models.csv` và figure §7.3 cho cả VAL và TEST.
+- Đo latency §7.4 trên toàn bộ origin TEST cho mọi model (pass riêng, batch 1) → `latency_summary.csv`.
+- Không sửa gì sau khi xem TEST. TEST chỉ được đọc bởi script final. TEST 2 ngày là kiểm tra one-shot của giai đoạn 15 ngày; TEST chính thức 30 ngày thuộc §5.
+
+---
+
+## 5. Để sau — data đầy đủ và scale data
+
+Chỉ làm khi user quyết định phục hồi data (re-export không giới hạn 2 MiB):
+
+1. Kiểm tra: 289.320 dòng, `2026-01-18 16:15 → 2026-08-07 14:14 UTC`, lưới 60 s, không dup/gap, OHLC sanity; checksum mới.
+2. Dataset feature-selection 60 ngày `[05-09 13:15, 07-08 14:15)`: 5 fold × VAL 3 ngày, train region rolling 45 (FIT 40 + ES 5), purge 60'; TEST = 30 ngày cuối `07-08 14:15 → 08-07 14:11`. Kiểm tra lại B0\* và F\*_m đã chọn trên 15 ngày (regime khác).
+3. Scale data từng model với F\*_m: train region 45 → 90 → 135 → full (từ 01-19 02:46), neo vào cùng VAL; chọn D\*_m = mức mà MedianGain so với mức trước `< +ε_m` hoặc full nếu vẫn cải thiện. TimesFM zero-shot không áp dụng.
+4. So sánh champion + ensemble tại (F\*_m, D\*_m) → Final trên TEST 30 ngày.
+
+---
+
+## 6. Checklist mỗi experiment (bắt buộc, ghi vào log)
+
+1. **Input**: checksum khớp §1.1; số dòng, khoảng thời gian, UTC, lưới 60 s, không dup, gap = 0; danh sách cột B0\* khớp config đóng băng.
+2. **Target**: `y_h = log(C[t+h]/C[t])` kiểm tra tay vài origin; E0 trên VAL: RMSE giá của `P̂ = C_t` khớp `sqrt(mean((C_{t+h} − C_t)²))`.
+3. **Time alignment**: partition half-open, origin cuối = `T_end − 4'`; bar 5' chỉ join khi `T ≤ t`.
+4. **Leakage**: feature tính trên chuỗi cắt tại t và trên chuỗi đầy đủ phải cho cùng giá trị tại t; không `rolling(center=True)`, không shift âm; TargetTransform/scaler fit trên FIT của fold; MI §1.4 chỉ tính trên FIT; PI xáo trộn chỉ trong VAL; ES ≠ VAL; TEST chưa đọc; regressor/covariate (AutoTS, TimesFM) chỉ từ dữ liệu `≤ s−1`.
+5. **Biên**: FIT/ES/VAL rời nhau; purge 60' giữa ES và VAL, và giữa train cuối và TEST.
+6. **Metric**: tính trên **giá** sau decode + `exp` (`P̂ = C_t·exp(ŷ)`), không tính trên log return hay z-space; base của Gain ghi rõ (S_m / B0-306 / B0\* / E0 / champion); MedianGain trên 15 ô; AutoTS chấm trên đúng tập origin đã khai báo (thưa hay đầy đủ).
+7. **Decode**: prediction qua `TargetTransform.decode` với rv60 của đúng origin (tree/LSTM) rồi `exp`; encode → decode round-trip khớp; AutoTS/TimesFM cộng dồn one-step đúng thứ tự trước khi `exp`.
+8. **Hợp lý**: số vòng cố định đúng theo §1.3; `std(ŷ) ≪ std(y)` là bình thường (tín hiệu 1-phút chỉ cỡ 0.1–0.2 pp RMSE); Gain > ~1 pp vs B0/E0 → nghi leakage/bug, kiểm tra lại trước khi tin; xem figure §7.3 của vài origin để chắc prediction không lệch pha.
+
+---
+
+## 7. Log và visualize
+
+Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `reports/smoke_visualize.md` (sinh bởi `reports/smoke_visualize.py`, seed 8586, không đọc data thật) — chỉ để thống nhất hình dạng output trước khi code; không phải kết quả, không trích dẫn.
+
+### 7.1 Log mỗi run
+
+`experiments/log.csv`: `exp_id, step, model, feature_set (danh sách cột ext), dataset_label, config_hash, seed, RMSE/MAE giá 15 ô, Gain 15 ô, MedianGain, WinRate, P10Gain, WorstGain, base, decision, ghi chú`. Thư mục `experiments/runs/<exp_id>/` chứa config, số vòng, importance, prediction VAL (ŷ và P̂ theo origin). Run phải tái tạo được từ config + seed (GPU có thể lệch bit nhỏ; ghi nhận).
+
+### 7.2 Log quyết định
+
+- `experiments/b0_filter.csv` (§1.4): 306 dòng — cột, base feature, lag, PI per h (median fold), Gain standalone vs E0 / vs B0-306 per h, MI − null per h, tier, giữ/bỏ; kèm bảng nhóm 38 base feature và kết quả 3 run kiểm chứng R1/R2/R3 + bộ được chọn.
+- `experiments/keepdrop_<model>.csv`: mỗi candidate một dòng — thứ tự, cột, MedianGain/WinRate/P10/Worst vs S_m, Gain vs B0\*, Gain vs E0, `gain_standalone`, decision KEEP/DROP, |S_m| sau quyết định, exp_id.
+- `experiments/champion_log.csv`: mỗi model một dòng khi so với champion — model, F\*_m, champion trước, metric per horizon (giá) của cả hai, Gain 15 ô, MedianGain/WinRate/P10/Worst, ε_champion, decision **đổi / giữ**, champion sau, exp_id. Ensemble và lựa chọn cuối cũng ghi vào đây.
+- `experiments/summary/all_models.csv`: mọi model (E0, B0-306, B0\*, từng model tại F\*_m, TimesFM các biến thể, AutoTS ×2, LSTM, ensemble) × fold × horizon × {RMSE, MAE, r, dir-acc, Gain vs B0-306, Gain vs B0\*, Gain vs E0, Gain vs champion} + latency p50/p95/p99 (ms) per model × horizon (§7.4); kèm TEST riêng.
+
+### 7.3 Visualize (theo origin, không vẽ chuỗi dự báo liên tục)
+
+- **Fig A — origin plot (bắt buộc)**: với mỗi origin t được chọn, một panel: giá thật 60 phút trước t (đường), giá thật tại t+1, t+2, t+3 (điểm đen), điểm dự báo `P̂_{t+1}, P̂_{t+2}, P̂_{t+3}` của từng model (marker màu, nối từ `C_t`), E0 = đường ngang tại `C_t`. Chọn origin mặc định: mỗi ngày VAL/TEST 3 origin cố định (00:00, 08:00, 16:00 UTC) + 2 origin có `|C_{t+3} − C_t|` lớn nhất trong ngày. Lưu `experiments/summary/fig_origin_<YYYYMMDD_HHMM>.png`.
+- **Fig B — tổng hợp mọi model**: bar chart **Gain vs E0 (pp)** per horizon per model (VAL; TEST riêng) — không vẽ RMSE tuyệt đối vì chênh lệch ~0.1% giữa các model không nhìn thấy trên bar (RMSE/MAE để trong bảng) — và heatmap Gain 15 ô vs champion cho từng model.
+- **Fig C — theo thời gian**: hàng trên RMSE của E0 theo ngày (mức biến động); hàng dưới Gain vs E0 theo ngày per model per horizon (VAL + TEST) để thấy ổn định.
+- Figure chỉ để nhìn; quyết định vẫn theo metric §0.
+
+### 7.4 Inference latency (chỉ theo dõi — không ảnh hưởng training/loss/quyết định)
+
+- **Đo gì**: thời gian gọi `predict` cho **một origin** (batch size 1) → ra `ŷ_h` (và `P̂`). Tree (3 model độc lập theo h): đo riêng từng horizon. Model một lần gọi ra cả 3 bước (LSTM head 3 output, TimesFM, AutoTS `fit_data + predict`): đo một lần gọi, gán chung cho h = 1, 2, 3 và đánh dấu `shared = true`. Chưa gồm thời gian tính feature (pipeline hiện tính feature theo cả frame; latency end-to-end để sau khi có pipeline incremental).
+- **Đo khi nào**: pass riêng **sau khi train xong**, chỉ ở run confirmation F\*_m (§2.1c) và Final (§4), trên toàn bộ origin VAL/TEST; không đo trong vòng lặp candidate (ở đó predict theo batch cho nhanh). Pass đo không được thay đổi kết quả: assert prediction theo batch == prediction batch-1 (sai số ≤ 1e-6).
+- **Cách đo**: `time.perf_counter_ns` quanh đúng lời gọi predict; model chạy GPU (LSTM/TimesFM, XGBoost nếu predict trên GPU) gọi `torch.cuda.synchronize()`/tương đương trước và sau; bỏ 50 lần gọi đầu (warm-up); cố định số thread (`num_threads`); ghi device, phiên bản thư viện, GPU/CPU của instance.
+- **Output**: `experiments/runs/<exp_id>/latency.csv` (origin, horizon, ms, shared); tóm tắt `experiments/summary/latency_summary.csv` (model × horizon × {p50, p95, p99, mean, max} ms, VAL và TEST riêng) và cột p50/p95/p99 trong `all_models.csv`.
+- **Không dùng** latency cho KEEP/DROP, champion, ensemble hay bất kỳ quyết định nào trong plan này; chỉ ghi nhận và báo cáo.
+
+---
+
+## 8. Thứ tự triển khai sau khi plan được duyệt
+
+1. Code tối thiểu: `src/data.py` (load + adapter + kiểm tra §1.1 + checksum), `src/split.py` (bảng fold/TEST §1.2, quy tắc biên), `src/features_ext.py` (mỗi cột một hàm), `src/metrics.py` (metric trên giá, Gain, tóm tắt), `src/filter_b0.py` (§1.4: PI, standalone, MI, tier, 3 run kiểm chứng), `src/run_lgbm.py` (B0\* + ext, vòng lặp §2.1, standalone §2.4, log §7), `src/plots.py` (§7.3), `src/latency.py` (§7.4: pass đo riêng, assert không đổi prediction); `tests/` cho adapter, biên, target, causality feature, metric E0, decode → giá, PI/MI chỉ dùng đúng partition.
+2. Smoke end-to-end trên vài trăm dòng (CPU local).
+3. User unlock training → Vast: LightGBM §1.3 trên B0-306 → §1.4 lọc → B0\* → §1.3 lại trên B0\* → §2.1 → F\*_LGBM → champion.
+4. XGBoost → CatBoost (cùng vòng lặp, cùng champion log).
+5. TimesFM: audit version/covariate API → TFM-POINT → loop nếu có covariate → LoRA nếu thắng E0.
+6. ExtraTrees.
+7. AutoTS: audit version → wrapper rolling-origin → 2 model → tổng hợp sau khi cả hai xong.
+8. LSTM (cuối).
+9. Ensemble → §4 Final (TEST 2 ngày) → `all_models.csv` + figure.
+10. §5 khi user quyết phục hồi data.
+
+---
+
+## 9. Đã bỏ / đổi so với plan 2026-08-24
+
+- HOLDOUT-NEAR/FAR → TEST 2 ngày (15 ngày) và TEST 30 ngày (data đầy đủ, để sau).
+- P0 gate / canonical-pilot framework → kiểm tra §1.1; giai đoạn hiện tại chạy trên snapshot 15 ngày theo quyết định user.
+- "Không ablate lại 306 feature B0" → đổi: lọc nhiễu B0 một lần bằng PI + standalone + MI + kiểm chứng (§1.4) thành B0\*; file `Baseline_LGBM.py` vẫn không sửa; B0-306 vẫn log làm reference.
+- Feature dossier, Wave-1, D-family discovery, second wave → danh sách §2.3 thử lần lượt, từng model một.
+- Một feature set chung → mỗi model một feature set riêng F\*_m.
+- KEEP/DROP 3 vùng, daily-block paired test, confirmation framework → luật §2.1 với ε_m seed + safety-net §2.4.
+- Metric trên log return → metric trên giá (USD); prediction vẫn log return.
+- Scale data → để sau (§5).
+- TimesFM ladder QMEAN/RECENTER/BTC-CAL → TFM-POINT (+ covariate loop nếu API có) → LoRA khi thắng E0.
+- AutoTS: chỉ hướng 1 (2 model cố định, riêng/tổng hợp sau khi cả hai vòng lặp xong); hướng tự search bỏ.
+- Q1–Q15, yfinance, paper 2407.18334 → bỏ.
+- "True VWAP không có" → sửa: `amount/volume` là VWAP thật theo trade trong bar; chỉ biến thể từ TP·V mới cần tên `proxy`.
