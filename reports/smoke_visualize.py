@@ -43,7 +43,7 @@ SKILL = {
     "XGBoost(F*)": (0.16, 0.11, 0.05),
     "CatBoost(F*)": (0.17, 0.11, 0.04),
     "TFM-POINT": (-0.05, -0.04, -0.03),
-    "ExtraTrees(F*)": (0.12, 0.09, 0.04),
+    "XGB-RF(F*)": (0.12, 0.09, 0.04),
     "AutoTS-WR(F*)": (0.10, 0.07, 0.03),
     "AutoTS-MR(F*)": (0.06, 0.05, 0.02),
     "LSTM(F*)": (0.09, 0.06, 0.03),
@@ -52,20 +52,39 @@ SKILL = {
 MODELS = list(SKILL)
 CHAMPION = "LightGBM(F*)"  # champion trước khi xét ensemble (§3)
 
-# Latency giả (ms) p50/p95/p99 tại h=1; shared = một lần gọi ra cả 3 bước (§7.4)
-LAT = {
-    "B0-306": ((0.30, 0.60, 1.20), False, "CPU"),
-    "B0*": ((0.24, 0.50, 1.00), False, "CPU"),
-    "LightGBM(F*)": ((0.35, 0.70, 1.40), False, "CPU"),
-    "XGBoost(F*)": ((0.60, 1.10, 2.20), False, "GPU"),
-    "CatBoost(F*)": ((0.25, 0.50, 1.00), False, "CPU"),
-    "TFM-POINT": ((28.0, 45.0, 90.0), True, "GPU"),
-    "ExtraTrees(F*)": ((9.0, 14.0, 24.0), False, "CPU"),
-    "AutoTS-WR(F*)": ((180.0, 320.0, 650.0), True, "CPU"),
-    "AutoTS-MR(F*)": ((260.0, 420.0, 800.0), True, "CPU"),
-    "LSTM(F*)": ((2.4, 4.1, 8.5), True, "GPU"),
+# Màu/marker cố định cho từng model ở MỌI figure. Palette categorical đã validate (dataviz reference palette,
+# thứ tự slot cố định, không xoay vòng); reference (B0-306/B0*) xám nét đứt; giá thật = đen.
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
+STYLE = {  # model -> (color, marker, linestyle)
+    "B0-306": ("#898781", "s", "--"),
+    "B0*": ("#52514e", "D", "--"),
+    "LightGBM(F*)": (PALETTE[0], "o", "-"),
+    "XGBoost(F*)": (PALETTE[1], "^", "-"),
+    "CatBoost(F*)": (PALETTE[2], "v", "-"),
+    "XGB-RF(F*)": (PALETTE[3], "X", "-"),
+    "AutoTS-WR(F*)": (PALETTE[4], "<", "-"),
+    "LSTM(F*)": (PALETTE[5], "*", "-"),
+    "TFM-POINT": (PALETTE[6], "P", "-"),
+    "Ensemble": (PALETTE[7], "h", "-"),
+    "AutoTS-MR(F*)": ("#0b0b0b", ">", ":"),  # slot 9 không có trong palette 8 màu → ink + nét chấm; không vẽ chung line với các model khác
 }
-ENSEMBLE_MEMBERS = ["LightGBM(F*)", "XGBoost(F*)", "CatBoost(F*)", "LSTM(F*)"]
+H_RAMP = ["#86b6ef", "#2a78d6", "#104281"]  # ramp một màu (blue 250/450/650) cho h=1,2,3 hoặc p95/p99/max
+INK, MUTED = "#0b0b0b", "#898781"
+
+# Latency giả (ms) (p95, p99, max) tại h=1; shared = một lần gọi ra cả 3 bước (§7.4).
+# Training luôn GPU; "device" ở đây là device của lời gọi predict (LightGBM/CatBoost predict trên CPU là đặc tính thư viện).
+LAT = {
+    "B0-306": ((0.60, 1.20, 3.1), False, "CPU (LightGBM predict)"),
+    "B0*": ((0.50, 1.00, 2.6), False, "CPU (LightGBM predict)"),
+    "LightGBM(F*)": ((0.70, 1.40, 3.5), False, "CPU (LightGBM predict)"),
+    "XGBoost(F*)": ((1.10, 2.20, 5.0), False, "GPU"),
+    "CatBoost(F*)": ((0.50, 1.00, 2.4), False, "CPU (CatBoost predict mặc định)"),
+    "TFM-POINT": ((45.0, 90.0, 210.0), True, "GPU"),
+    "XGB-RF(F*)": ((2.8, 6.0, 14.0), False, "GPU"),
+    "AutoTS-WR(F*)": ((320.0, 650.0, 1500.0), True, "CPU pipeline + GPU regression_model"),
+    "AutoTS-MR(F*)": ((420.0, 800.0, 1900.0), True, "CPU pipeline + GPU regression_model"),
+    "LSTM(F*)": ((4.1, 8.5, 20.0), True, "GPU"),
+}
 
 
 # ----------------------------------------------------------------------------- helpers
@@ -109,6 +128,21 @@ for m, sk in SKILL.items():
         g = sk[j] + (0.0 if m == "E0" else 0.02 * rng.standard_normal(len(FOLD_DAYS)))
         rmse_val[m][h] = e0_val[h] * (1.0 - g / 100.0)
 
+# Thành viên ensemble theo luật §3: champion + mọi model có MedianGain vs E0 > 0 (B0-306/B0* là reference, không phải thành viên)
+ENSEMBLE_MEMBERS = [
+    m for m in MODELS
+    if m not in ("E0", "B0-306", "B0*", "Ensemble")
+    and float(np.median(np.concatenate([gain_pp(rmse_val[m][h], e0_val[h]) for h in H]))) > 0
+]
+
+
+def lat_of(m: str) -> tuple[tuple[float, float, float], bool, str]:
+    if m == "Ensemble":
+        p = tuple(float(x) for x in np.sum([LAT[k][0] for k in ENSEMBLE_MEMBERS], axis=0))
+        return p, False, "tổng các thành viên (CPU+GPU)"
+    return LAT[m]
+
+
 # TEST (2 ngày, một block) per h
 e0_test = {h: float(rmse_e0(h, 1, scale=1.08)[0]) for h in H}
 rmse_test = {m: {h: e0_test[h] * (1.0 - (sk[j] + 0.05 * rng.standard_normal()) / 100.0) for j, h in enumerate(H)}
@@ -126,7 +160,7 @@ def secondary(rmse: float, gain_vs_e0_pp: float) -> tuple[float, float, float]:
 
 # ----------------------------------------------------------------------------- §1.3 ε và số vòng
 eps_rows = []
-for m, e in [("LightGBM", 0.021), ("XGBoost", 0.024), ("CatBoost", 0.019), ("ExtraTrees", 0.015),
+for m, e in [("LightGBM", 0.021), ("XGBoost", 0.024), ("CatBoost", 0.019), ("XGB-RF", 0.015),
              ("AutoTS-WR", 0.031), ("AutoTS-MR", 0.034), ("LSTM", 0.058)]:
     eps_rows.append({"model": m, "std_seed (pp)": f"{e:.3f}", "ε_m = max(0.005, std) (pp)": f"{max(0.005, e):.3f}"})
 eps_df = pd.DataFrame(eps_rows)
@@ -150,24 +184,25 @@ for name, base, lag in b0_cols:
     pi = [(0.9 if strong else 0.0) + 0.3 * rng.standard_normal() for _ in H]
     st = [(0.05 if strong else -0.01) + 0.02 * rng.standard_normal() for _ in H]
     mi = [(0.004 if strong else 0.0) + 0.001 * rng.standard_normal() for _ in H]
-    fail_pi = all(p <= 0 for p in pi)
-    fail_st = all(s <= 0 for s in st)
-    fail_mi = all(x <= 0 for x in mi)
-    tier = "Tier 1" if (fail_pi and fail_st and fail_mi) else ("Tier 2" if (fail_pi and (fail_st or fail_mi)) else "—")
+    # Cờ "+" của một tiêu chí = > 0 ở ÍT NHẤT MỘT horizon (B0 là 3 model độc lập; cột có ích cho một h là đáng giữ)
+    pi_p, st_p, mi_p = any(p > 0 for p in pi), any(s > 0 for s in st), any(x > 0 for x in mi)
+    keep = {"R1": pi_p or st_p or mi_p, "R2": pi_p or (st_p and mi_p), "R3": pi_p, "R4": st_p}
     filt_rows.append({
         "cột": name, "base": base, "lag": lag,
         "PI h1/h2/h3 (USD)": "/".join(f"{p:+.2f}" for p in pi),
-        "standalone Gain vs E0 h1/h2/h3 (pp)": "/".join(f"{s:+.3f}" for s in st),
-        "standalone Gain vs B0-306 (pp, median)": f"{-0.12 + 0.03 * rng.standard_normal():+.3f}",
-        "MI − null h1/h2/h3 (nat)": "/".join(f"{x:+.4f}" for x in mi),
-        "tier": tier, "B0* (R2)": "bỏ" if tier != "—" else "giữ",
+        "SA Gain vs E0 h1/h2/h3 (pp)": "/".join(f"{s:+.3f}" for s in st),
+        "SA Gain vs B0-306 (pp, median)": f"{-0.12 + 0.03 * rng.standard_normal():+.3f}",
+        "MI − null h1/h2/h3": "/".join(f"{x:+.4f}" for x in mi),
+        "PI+ / SA+ / MI+ (≥1 h)": f"{int(pi_p)} / {int(st_p)} / {int(mi_p)}",
+        **{k: ("giữ" if v else "bỏ") for k, v in keep.items()},
     })
 filt_df = pd.DataFrame(filt_rows)
-tier_df = pd.DataFrame([
-    {"bộ": "B0-306", "số cột": 306, "MedianGain vs B0-306 (pp)": "0.000", "WinRate": "—", "quyết định": "reference"},
-    {"bộ": "R1 = B0 − Tier1", "số cột": 245, "MedianGain vs B0-306 (pp)": "+0.020", "WinRate": "0.60", "quyết định": "không tệ hơn"},
-    {"bộ": "R2 = B0 − Tier1 − Tier2", "số cột": 197, "MedianGain vs B0-306 (pp)": "+0.031", "WinRate": "0.67", "quyết định": "**B0\\*** (cao nhất, ≥ −ε)"},
-    {"bộ": "R3 = chỉ PI > 0", "số cột": 143, "MedianGain vs B0-306 (pp)": "−0.044", "WinRate": "0.33", "quyết định": "tệ hơn ε_LGBM = 0.021 → loại"},
+rsets_df = pd.DataFrame([
+    {"bộ": "B0-306", "luật giữ cột": "—", "số cột": 306, "MedianGain vs B0-306 (pp)": "0.000", "WinRate": "—", "quyết định": "reference"},
+    {"bộ": "R1", "luật giữ cột": "PI+ hoặc SA+ hoặc MI+", "số cột": 245, "MedianGain vs B0-306 (pp)": "+0.020", "WinRate": "0.60", "quyết định": "không tệ hơn"},
+    {"bộ": "R2", "luật giữ cột": "PI+ hoặc (SA+ và MI+)", "số cột": 197, "MedianGain vs B0-306 (pp)": "+0.031", "WinRate": "0.67", "quyết định": "**B0\\*** (không tệ hơn, cao nhất)"},
+    {"bộ": "R3", "luật giữ cột": "PI+", "số cột": 143, "MedianGain vs B0-306 (pp)": "−0.044", "WinRate": "0.33", "quyết định": "tệ hơn −ε_LGBM (−0.021) → loại"},
+    {"bộ": "R4", "luật giữ cột": "SA+", "số cột": 88, "MedianGain vs B0-306 (pp)": "−0.090", "WinRate": "0.20", "quyết định": "loại"},
 ])
 
 # ----------------------------------------------------------------------------- §2.1 keepdrop_LightGBM
@@ -195,19 +230,20 @@ champ_rows, champ = [], "LightGBM(F*)"
 champ_rows.append({
     "model": "LightGBM(F*)", "F*_m (số cột ext KEEP)": "14", "champion trước": "—",
     "MedianGain vs champion (pp)": "—", "WinRate": "—", "P10Gain": "—", "WorstGain": "—", "ε_champion": f"{EPS_LGBM:.3f}",
-    "decision": "champion ban đầu (§3)", "latency p50 h1 (ms)": f"{LAT['LightGBM(F*)'][0][0]:.2f}", "champion sau": "LightGBM(F*)",
+    "decision": "champion ban đầu (§3)", "latency p95 h1 (ms)": f"{LAT['LightGBM(F*)'][0][0]:.2f}", "champion sau": "LightGBM(F*)",
 })
-order = ["XGBoost(F*)", "CatBoost(F*)", "TFM-POINT", "ExtraTrees(F*)", "AutoTS-WR(F*)", "AutoTS-MR(F*)", "LSTM(F*)", "Ensemble"]
+order = ["XGBoost(F*)", "CatBoost(F*)", "TFM-POINT", "XGB-RF(F*)", "AutoTS-WR(F*)", "AutoTS-MR(F*)", "LSTM(F*)", "Ensemble"]
 for m in order:
     g = np.concatenate([gain_pp(rmse_val[m][h], rmse_val[champ][h]) for h in H])
     s = summarize(g)
     change = s["MedianGain"] > EPS_LGBM
+    fstar = "—" if m == "TFM-POINT" else (f"{len(ENSEMBLE_MEMBERS)} thành viên, equal" if m == "Ensemble" else str(int(rng.integers(8, 26))))
     champ_rows.append({
-        "model": m, "F*_m (số cột ext KEEP)": "—" if m in ("TFM-POINT",) else str(int(rng.integers(8, 26))),
+        "model": m, "F*_m (số cột ext KEEP)": fstar,
         "champion trước": champ, "MedianGain vs champion (pp)": f"{s['MedianGain']:+.3f}", "WinRate": f"{s['WinRate']:.2f}",
         "P10Gain": f"{s['P10Gain']:+.3f}", "WorstGain": f"{s['WorstGain']:+.3f}", "ε_champion": f"{EPS_LGBM:.3f}",
         "decision": "**đổi**" if change else "giữ",
-        "latency p50 h1 (ms)": "—" if m == "Ensemble" else f"{LAT[m][0][0]:.2f}",
+        "latency p95 h1 (ms)": f"{lat_of(m)[0][0]:.2f}",
     })
     if change:
         champ = m
@@ -260,21 +296,16 @@ lat_rows = []
 for m in MODELS:
     if m == "E0":
         continue
-    if m == "Ensemble":
-        p = np.sum([LAT[k][0] for k in ENSEMBLE_MEMBERS], axis=0)
-        shared, dev = False, "CPU+GPU (tổng các member)"
-    else:
-        p, shared, dev = LAT[m]
+    p, shared, dev = lat_of(m)
     for j, h in enumerate(H):
         k = 1.0 if shared else (1.0 + 0.08 * j)
-        p50, p95, p99 = (x * k for x in p)
-        lat_rows.append({"model": m, "h": h, "p50 (ms)": f"{p50:.2f}", "p95 (ms)": f"{p95:.2f}", "p99 (ms)": f"{p99:.2f}",
-                         "mean (ms)": f"{p50 * 1.12:.2f}", "max (ms)": f"{p99 * 2.1:.2f}", "shared": str(shared).lower(), "device": dev})
+        p95, p99, pmax = (x * k for x in p)
+        lat_rows.append({"model": m, "h": h, "p95 (ms)": f"{p95:.2f}", "p99 (ms)": f"{p99:.2f}", "max (ms)": f"{pmax:.2f}",
+                         "shared": str(shared).lower(), "train device": "GPU", "predict device": dev})
 lat_df = pd.DataFrame(lat_rows)
 
 # ----------------------------------------------------------------------------- Fig A: origin plot
 FIG_A_MODELS = ["LightGBM(F*)", "XGBoost(F*)", "TFM-POINT", "LSTM(F*)", "Ensemble"]
-COLORS = dict(zip(FIG_A_MODELS, ["tab:blue", "tab:orange", "tab:purple", "tab:green", "tab:red"]))
 origins = ["2026-01-28 08:00 UTC (VAL fold 2)", "2026-01-30 16:00 UTC (VAL fold 4)"]
 fig, axes = plt.subplots(len(origins), 2, figsize=(13, 4.2 * len(origins)), gridspec_kw={"width_ratios": [2.2, 1]})
 for i, label in enumerate(origins):
@@ -286,20 +317,21 @@ for i, label in enumerate(origins):
     actual = price[60] * np.exp(np.cumsum(rng.normal(0, SIG1, 3)))
     preds = {m: c_t * np.exp(np.cumsum(rng.normal(0, 0.9 * SIG1 * 0.15, 3)) + 0.3 * (actual / c_t - 1) * (0.5 + rng.random())) for m in FIG_A_MODELS}
     ax = axes[i, 0]
-    ax.plot(x[:61], price_ctx, color="black", lw=1.2, label="giá thật (60' trước t)")
-    ax.axvline(0, color="gray", ls=":", lw=1)
-    ax.scatter([1, 2, 3], actual, color="black", zorder=5, s=36, label="giá thật t+1..t+3")
+    ax.plot(x[:61], price_ctx, color=INK, lw=1.2, label="giá thật (60' trước t)")
+    ax.axvline(0, color=MUTED, ls=":", lw=1)
+    ax.scatter([1, 2, 3], actual, color=INK, zorder=5, s=36, label="giá thật t+1..t+3")
     ax.set_title(f"Fig A — origin t = {label}  [{FAKE}]", fontsize=9)
     ax.set_xlabel("phút so với origin t")
     ax.set_ylabel("USD")
     ax.legend(loc="upper left", fontsize=8)
     ax2 = axes[i, 1]
-    ax2.axhline(c_t, color="gray", ls="--", lw=1, label="E0 (P̂ = C_t)")
-    ax2.scatter([0], [c_t], color="black", s=40, zorder=5)
-    ax2.plot([0, 1, 2, 3], np.r_[c_t, actual], color="black", lw=1, marker="o", label="giá thật")
+    ax2.axhline(c_t, color=MUTED, ls="--", lw=1, label="E0 (P̂ = C_t)")
+    ax2.scatter([0], [c_t], color=INK, s=40, zorder=5)
+    ax2.plot([0, 1, 2, 3], np.r_[c_t, actual], color=INK, lw=1.4, marker="o", ms=7, label="giá thật")
     for k, (m, p) in enumerate(preds.items()):
         off = (k - 2) * 0.06
-        ax2.plot(np.array([0, 1, 2, 3]) + off, np.r_[c_t, p], color=COLORS[m], lw=0.8, marker="^", ms=6, label=m)
+        col, mk, ls = STYLE[m]
+        ax2.plot(np.array([0, 1, 2, 3]) + off, np.r_[c_t, p], color=col, lw=1.0, ls=ls, marker=mk, ms=8, label=m)
     ax2.set_xticks([0, 1, 2, 3])
     ax2.set_xticklabels(["t", "t+1", "t+2", "t+3"])
     ax2.set_title("zoom: 3 điểm dự báo từ origin t", fontsize=9)
@@ -315,8 +347,8 @@ xpos = np.arange(len(MODELS))
 w = 0.27
 for j, h in enumerate(H):
     vals = [float(np.median(gain_pp(rmse_val[m][h], e0_val[h]))) for m in MODELS]
-    ax.bar(xpos + (j - 1) * w, vals, width=w, label=f"h={h}")
-ax.axhline(0, color="black", lw=0.8)
+    ax.bar(xpos + (j - 1) * w, vals, width=w, color=H_RAMP[j], label=f"h={h}")
+ax.axhline(0, color=INK, lw=0.8)
 ax.set_xticks(xpos)
 ax.set_xticklabels(MODELS, rotation=30, ha="right", fontsize=8)
 ax.set_ylabel("Gain vs E0 (pp), median 5 fold")
@@ -352,17 +384,18 @@ FIG_C_MODELS = ["B0-306", "LightGBM(F*)", "XGBoost(F*)", "TFM-POINT", "LSTM(F*)"
 for j, h in enumerate(H):
     e0_days = np.r_[e0_val[h], e0_test[h] * (1 + 0.05 * rng.standard_normal(2))]
     ax = axes[0, j]
-    ax.plot(days, e0_days, marker="o", color="black", lw=1.2)
-    ax.axvline(4.5, color="gray", ls=":")
+    ax.plot(days, e0_days, marker="o", color=INK, lw=1.2)
+    ax.axvline(4.5, color=MUTED, ls=":")
     ax.set_title(f"RMSE của E0 theo ngày, h={h} (USD) — mức biến động", fontsize=9)
     ax.tick_params(axis="x", rotation=30, labelsize=8)
     ax = axes[1, j]
     for m in FIG_C_MODELS:
         y_val = gain_pp(rmse_val[m][h], e0_val[h])
         y_test = 100.0 * (1.0 - rmse_test[m][h] / e0_test[h]) + 0.03 * rng.standard_normal(2)
-        ax.plot(days, np.r_[y_val, y_test], marker="o", ms=4, lw=1, label=m)
-    ax.axhline(0, color="black", lw=0.8)
-    ax.axvline(4.5, color="gray", ls=":")
+        col, mk, ls = STYLE[m]
+        ax.plot(days, np.r_[y_val, y_test], color=col, marker=mk, ls=ls, ms=6, lw=1.2, label=m)
+    ax.axhline(0, color=INK, lw=0.8)
+    ax.axvline(4.5, color=MUTED, ls=":")
     ax.set_title(f"Gain vs E0 theo ngày, h={h} (pp)", fontsize=9)
     ax.tick_params(axis="x", rotation=30, labelsize=8)
 axes[1, 0].legend(fontsize=7)
@@ -375,7 +408,7 @@ plt.close(fig)
 fig, ax = plt.subplots(figsize=(12, 4.2))
 lat_models = [m for m in MODELS if m not in ("E0",)]
 xpos = np.arange(len(lat_models))
-for k, (q, col) in enumerate(zip(["p50 (ms)", "p95 (ms)", "p99 (ms)"], ["tab:blue", "tab:orange", "tab:red"])):
+for k, (q, col) in enumerate(zip(["p95 (ms)", "p99 (ms)", "max (ms)"], H_RAMP)):
     vals = [float(lat_df[(lat_df.model == m) & (lat_df.h == 1)][q].iloc[0]) for m in lat_models]
     ax.bar(xpos + (k - 1) * 0.27, vals, width=0.27, color=col, label=q)
 ax.set_yscale("log")
@@ -397,7 +430,10 @@ A(f"> **{FAKE}.** Sinh bởi `reports/smoke_visualize.py` (seed 8586), không đ
   "Mọi con số dưới đây sẽ bị thay bằng kết quả thật khi chạy; không được trích dẫn như finding.\n")
 A("Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá** `P̂ = C_t·exp(ŷ_h)` (USD); "
   "`Gain = 1 − RMSE_cand/RMSE_base` tính bằng **pp** (0.100 pp = RMSE thấp hơn base 0.1%); "
-  "15 ô = 5 fold × 3 horizon; E0 = dự báo giá không đổi (`P̂ = C_t`).\n")
+  "15 ô = 5 fold × 3 horizon; E0 = dự báo giá không đổi (`P̂ = C_t`). "
+  "**Chỉ MedianGain (so với ε) là tiêu chí quyết định** ở mọi chỗ — KEEP/DROP, chọn B0\\*, đổi champion, thành viên ensemble; "
+  "WinRate/P10Gain/WorstGain chỉ báo cáo để nhìn ổn định. PI/MI/standalone chỉ dùng để lập các bộ R1–R4 khi lọc B0. "
+  "Training chỉ trên GPU; cột device trong bảng latency là device của lời gọi predict.\n")
 
 A("\n## 1. §1.3 — Nhiễu seed ε_m và số vòng cố định\n")
 A(md_table(eps_df))
@@ -410,15 +446,18 @@ A("\n**Giải thích.** ES trên 1.377 dòng làm best_iteration nhiễu, nên c
   "candidate và baseline cùng số vòng ⇒ chênh lệch Gain chỉ do feature. Run confirmation cuối bật lại ES.\n")
 
 A("\n## 2. §1.4 — Lọc 306 feature B0 → B0\\* (`experiments/b0_filter.csv`)\n")
-A("Mẫu 8 dòng (thật sẽ có 306 dòng):\n")
+A("Mẫu 8 dòng (thật sẽ có 306 dòng); mỗi cột có giữ/bỏ riêng cho từng bộ R1–R4:\n")
 A(md_table(filt_df))
-A("\nKiểm chứng 3 bộ lọc so với B0-306 (mỗi bộ 1 run, số vòng cố định, seed 8586):\n")
-A(md_table(tier_df))
-A("\n**Giải thích.** PI = RMSE tăng thêm (USD) khi xáo cột đó trong VAL (≤ 0 → model không dùng cột hữu ích); "
-  "standalone = LightGBM chỉ trên một cột, Gain so với E0 và so với B0-306 (nếu một cột thắng B0-306 → cờ đỏ B0 bị nhiễu); "
-  "MI − null = mutual information với z-target trên FIT trừ MI với target xáo trộn. Một cột *fail* một tiêu chí khi fail ở cả 3 horizon. "
-  "Tier 1 = fail cả ba; Tier 2 = PI ≤ 0 + một tiêu chí nữa; R3 = chỉ giữ PI > 0. Chọn B0\\* = bộ không tệ hơn B0-306 có MedianGain cao nhất "
-  "(ở mẫu này là R2, 197 cột). Bảng nhóm 38 base feature (gộp 8 lag) đi kèm để đọc, không dùng để quyết định.\n")
+A("\nKiểm chứng 4 bộ so với B0-306 (mỗi bộ 1 run LightGBM gốc, số vòng cố định, seed 8586):\n")
+A(md_table(rsets_df))
+A("\n**Giải thích.** Ba điểm số per horizon (median 5 fold): PI = RMSE tăng thêm (USD) khi xáo cột đó trong VAL; "
+  "SA = standalone, LightGBM chỉ trên một cột, Gain so với E0 và so với B0-306; MI − null = mutual information với z-target trên FIT trừ MI với target xáo trộn. "
+  "Cờ **PI+ / SA+ / MI+** = điểm số > 0 ở **ít nhất một horizon** (B0 là 3 model độc lập theo h, cột có ích cho một h là đáng giữ; "
+  "ví dụ PI > 0 ở h1, h2 nhưng < 0 ở h3 → PI+). Không có tier: bốn bộ định nghĩa thẳng bằng cờ — "
+  "R1 giữ nếu PI+ hoặc SA+ hoặc MI+ (bỏ cột âm cả ba); R2 giữ nếu PI+ hoặc (SA+ và MI+); R3 giữ nếu PI+; R4 giữ nếu SA+. "
+  "Chọn B0\\* = trong các bộ có MedianGain ≥ −ε_LGBM so với B0-306, lấy bộ MedianGain cao nhất (chênh < ε → bộ nhỏ hơn); không bộ nào đạt → B0\\* = B0-306. "
+  "Nếu một cột đơn lẻ thắng B0-306 (SA Gain vs B0-306 > +ε) thì đó là cờ đỏ B0 bị nhiễu chi phối — không cần luật riêng: R3/R4 sẽ tự thắng ở bước kiểm chứng. "
+  "Bảng nhóm 38 base feature (gộp 8 lag) đi kèm để đọc, không dùng để quyết định.\n")
 
 A("\n## 3. §2.1 — Vòng lặp feature của một model (`experiments/keepdrop_LightGBM.csv`)\n")
 A("Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):\n")
@@ -433,6 +472,8 @@ A(md_table(champ_df))
 A("\n**Giải thích.** Champion ban đầu = LightGBM code gốc trên F\\*_LGBM (dòng đầu, không so sánh). Sau khi mỗi model xong vòng lặp + "
   "confirmation 3 seed, so với champion hiện tại bằng Gain trên giá 15 ô; `MedianGain > +ε_champion` → đổi champion, ngược lại giữ — "
   "cả hai trường hợp đều ghi một dòng. Ensemble xét cuối cùng, cùng luật (ở mẫu này Ensemble thắng ⇒ champion cuối = Ensemble). "
+  f"Thành viên ensemble theo luật §3 = champion + mọi model có MedianGain vs E0 > 0: {', '.join(ENSEMBLE_MEMBERS)} "
+  "(TFM-POINT bị loại vì < 0; B0-306/B0\\* là reference). Trọng số: (a) đều, (b) 1/MSE_VAL per horizon — với chênh lệch RMSE ~0.1% thì (b) ≈ (a). "
   "Cột latency chỉ là thông tin (§7.4), không phải tiêu chí.\n")
 
 A("\n## 5. §7.2 — Bảng tổng hợp mọi model (`experiments/summary/all_models.csv`)\n")
@@ -446,6 +487,10 @@ A("\n**Giải thích.** RMSE/MAE tính trên giá (USD) — với BTC ~80k và s
   "TFM-POINT zero-shot ở mẫu này thua E0 (Gain âm) ⇒ theo plan sẽ không chạy LoRA. TEST chỉ xem một lần, không sửa gì sau đó.\n")
 
 A("\n## 6. §7.3 — Figure\n")
+A("Màu/marker **cố định cho từng model ở mọi figure** (palette categorical đã validate bằng validator của skill dataviz, "
+  "thứ tự slot cố định, không xoay vòng, không dùng hai màu dễ nhầm cạnh nhau): "
+  + "; ".join(f"{m} = {STYLE[m][0]} marker `{STYLE[m][1]}`" for m in FIG_A_MODELS + ["CatBoost(F*)", "XGB-RF(F*)", "AutoTS-WR(F*)"])
+  + ". Reference B0-306/B0\\* xám nét đứt; giá thật đen; horizon và percentile dùng ramp một màu; heatmap diverging xanh↔đỏ.\n")
 A("### Fig A — origin plot: một điểm t làm gốc, 3 điểm dự báo t+1, t+2, t+3\n")
 A("![Fig A](smoke/fig_A_origin.png)\n")
 A("**Giải thích.** Trái: 60 phút giá thật trước origin t và 3 điểm thật sau t. Phải: zoom quanh t — điểm đen là giá thật, "
@@ -469,8 +514,10 @@ A("\n## 7. §7.4 — Inference latency (chỉ theo dõi) (`experiments/summary/l
 A(md_table(lat_df))
 A("\n![Fig D](smoke/fig_D_latency.png)\n")
 A("**Giải thích.** Thời gian gọi `predict` cho **một origin** (batch 1), đo ở pass riêng sau khi train (confirmation và Final), "
-  "bỏ 50 lần đầu warm-up, GPU có `cuda.synchronize`. Tree đo riêng từng h (3 model); `shared = true` nghĩa là một lần gọi ra cả 3 bước "
-  "(LSTM/TimesFM/AutoTS) nên h=1,2,3 cùng giá trị. Chưa gồm thời gian tính feature. Không ảnh hưởng training/loss/quyết định.\n")
+  "bỏ 50 lần đầu warm-up, GPU có `cuda.synchronize`; báo cáo p95/p99/max (p50 không cần). Tree đo riêng từng h (3 model); `shared = true` nghĩa là một lần gọi ra cả 3 bước "
+  "(LSTM/TimesFM/AutoTS) nên h=1,2,3 cùng giá trị. `train device` luôn GPU (cấm training CPU); `predict device` là device thực tế của lời gọi predict: "
+  "LightGBM và CatBoost predict trên CPU là đặc tính thư viện (GPU chỉ dùng khi train), XGBoost/LSTM/TimesFM predict trên GPU, "
+  "AutoTS chạy pipeline CPU quanh regression_model GPU. Chưa gồm thời gian tính feature. Không ảnh hưởng training/loss/quyết định.\n")
 
 A("\n## 8. Cách sinh số giả (để không nhầm với kết quả)\n")
 A("- RMSE E0 per (fold, h) = 80.000 × 0.000765 × √h × (1 ± 15% nhiễu); RMSE model = E0 × (1 − skill/100) với skill giả gán sẵn "

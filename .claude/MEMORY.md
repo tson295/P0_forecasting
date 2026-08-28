@@ -1,6 +1,6 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: PLAN rev 6 (15 ngày, lọc B0 → B0*, feature selection theo từng model, metric trên giá, latency theo dõi) / CHỜ USER REVIEW / CHƯA CODE
+PHASE: PLAN rev 7 (15 ngày, lọc B0 → B0* theo R1–R4, feature selection theo từng model, metric trên giá, training chỉ GPU) / CHỜ USER REVIEW / CHƯA CODE
 TRAINING: LOCKED
 
 ## Current Task
@@ -18,6 +18,7 @@ TRAINING: LOCKED
 
 ## Decisions (mới nhất trước)
 
+- 2026-08-28 (rev 7): training chỉ GPU, cấm CPU training → ExtraTrees (sklearn) thay bằng XGB-RF (XGBoost random-forest mode GPU); AutoTS regression_model LightGBM/XGBoost GPU; standalone 1-feature chạy GPU. Lọc B0 §1.4 bỏ tier: cờ PI+/SA+/MI+ = > 0 ở ≥ 1 horizon; R1 = PI+∨SA+∨MI+, R2 = PI+∨(SA+∧MI+), R3 = PI+, R4 = SA+; 4 run kiểm chứng vs B0-306, chọn bộ không tệ hơn có MedianGain cao nhất; mỗi cột có giữ/bỏ theo từng R trong b0_filter.csv. Chỉ MedianGain (với ε) quyết định mọi lựa chọn; WinRate/P10/Worst báo cáo. Ensemble = champion + mọi model có MedianGain vs E0 > 0 (equal và 1/MSE), so với champion bằng luật §3. Latency báo cáo p95/p99/max (bỏ p50), ghi train device (GPU) và predict device thực tế. Figure: palette categorical cố định đã validate (dataviz), mỗi model một màu + marker ở mọi figure.
 - 2026-08-28 (rev 6): theo dõi inference latency (§7.4): predict một origin batch 1, per model × horizon, p50/p95/p99 (+mean/max); tree đo riêng từng h, model một lần gọi ra 3 bước gán chung (`shared`); pass riêng sau train ở confirmation F*_m và Final, warm-up 50, cuda synchronize, assert batch == batch-1; chưa gồm tính feature; chỉ theo dõi, không ảnh hưởng training/loss/KEEP-DROP/champion.
 - 2026-08-27 (rev 5): lọc 306 feature B0 một lần trước Bước 2 (§1.4): PI (3 lần xáo trên VAL, dùng 15 model baseline), standalone 1-feature LightGBM gốc vs E0 và vs B0-306 (cờ đỏ nếu một cột thắng B0-306), MI regression trên z-target FIT với null xáo trộn; fail = fail ở cả 3 horizon; Tier 1 (fail cả ba) / Tier 2 (PI ≤ 0 + một tiêu chí) / R3 (chỉ giữ PI > 0); 3 run kiểm chứng vs B0-306 → B0* = bộ không tệ hơn có MedianGain cao nhất (hòa → nhỏ nhất); lọc không giúp → B0* = B0-306. File B0 không sửa; B0-306 vẫn log reference. Mọi model bắt đầu từ B0*; LSTM dùng fine feature còn trong B0*; AutoTS base regressor = B0*.
 - 2026-08-27 (rev 4): fold §1.2 + số vòng cố định §1.3 = chốt. Giai đoạn 15 ngày chạy Vast (GPU detect, có thể 3090). Thứ tự model theo thời gian chạy tăng dần: LightGBM → XGBoost → CatBoost → TimesFM → ExtraTrees → AutoTS → LSTM (cuối). AutoTS tổng hợp F*_A1 ∪ F*_A2 chỉ sau khi cả hai vòng lặp xong (1 run/model). Metric tính trên giá (P̂ = C_t·exp(ŷ)); r/dir-acc trên thay đổi giá; predict vẫn log return. Champion: ban đầu LightGBM code gốc; sau mỗi model so sánh, log đổi/giữ (`champion_log.csv`); `keepdrop_<model>.csv` mỗi candidate; `all_models.csv` tổng hợp; visualize theo origin t → 3 điểm t+1..t+3 (Fig A), bar/heatmap (Fig B), theo ngày (Fig C). Candidate thua vì base 306 feature: Gain standalone diagnostic + KEEP khi không đổi + safety-net block cuối vòng lặp (§2.4).
@@ -47,6 +48,7 @@ TRAINING: LOCKED
 - Target h = 2, 3 chồng lấp → per-bar không iid (chỉ ghi nhớ khi đọc kết quả).
 - Lag-1 autocorr 1-min ≈ −0.06 trên snapshot → tín hiệu điểm cỡ 0.1–0.2 pp RMSE ở h=1, ~0.03 pp ở h=3; Gain vài pp = nghi leakage. Forecast trông "phẳng" là bình thường.
 - Directional accuracy: bỏ bar C_{t+h} = C_t (~3.7%).
+- LightGBM/CatBoost predict luôn chạy CPU dù train GPU (đặc tính thư viện) → cột predict device trong latency là CPU; không phải CPU training.
 - Metric trên giá: RMSE USD phụ thuộc mức giá (78k–95k trong 15 ngày); Gain là tỷ lệ nên ít bị ảnh hưởng; r/dir-acc phải tính trên thay đổi giá, không trên giá tuyệt đối.
 - Chi phí trên 15 ngày: tree ≈ 1–2 h/model cho 39 candidate; AutoTS ≈ 2–4 h/model (lưới origin thưa mỗi 5'); LSTM ≈ 3–10 h (1 seed); tổng ≈ 12–25 h máy.
 

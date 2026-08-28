@@ -2,7 +2,7 @@
 
 > **FAKE / SMOKE — số giả để xem layout, không phải kết quả.** Sinh bởi `reports/smoke_visualize.py` (seed 8586), không đọc data thật, không train gì. Mục đích: thống nhất *hình dạng* output của từng bước trong `docs/RESEARCH_PLAN.md` trước khi code. Mọi con số dưới đây sẽ bị thay bằng kết quả thật khi chạy; không được trích dẫn như finding.
 
-Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá** `P̂ = C_t·exp(ŷ_h)` (USD); `Gain = 1 − RMSE_cand/RMSE_base` tính bằng **pp** (0.100 pp = RMSE thấp hơn base 0.1%); 15 ô = 5 fold × 3 horizon; E0 = dự báo giá không đổi (`P̂ = C_t`).
+Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá** `P̂ = C_t·exp(ŷ_h)` (USD); `Gain = 1 − RMSE_cand/RMSE_base` tính bằng **pp** (0.100 pp = RMSE thấp hơn base 0.1%); 15 ô = 5 fold × 3 horizon; E0 = dự báo giá không đổi (`P̂ = C_t`). **Chỉ MedianGain (so với ε) là tiêu chí quyết định** ở mọi chỗ — KEEP/DROP, chọn B0\*, đổi champion, thành viên ensemble; WinRate/P10Gain/WorstGain chỉ báo cáo để nhìn ổn định. PI/MI/standalone chỉ dùng để lập các bộ R1–R4 khi lọc B0. Training chỉ trên GPU; cột device trong bảng latency là device của lời gọi predict.
 
 
 ## 1. §1.3 — Nhiễu seed ε_m và số vòng cố định
@@ -12,7 +12,7 @@ Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá** 
 | LightGBM | 0.021 | 0.021 |
 | XGBoost | 0.024 | 0.024 |
 | CatBoost | 0.019 | 0.019 |
-| ExtraTrees | 0.015 | 0.015 |
+| XGB-RF | 0.015 | 0.015 |
 | AutoTS-WR | 0.031 | 0.031 |
 | AutoTS-MR | 0.034 | 0.034 |
 | LSTM | 0.058 | 0.058 |
@@ -35,29 +35,30 @@ Số vòng cố định của LightGBM (best_iteration lấy từ run baseline c
 
 ## 2. §1.4 — Lọc 306 feature B0 → B0\* (`experiments/b0_filter.csv`)
 
-Mẫu 8 dòng (thật sẽ có 306 dòng):
+Mẫu 8 dòng (thật sẽ có 306 dòng); mỗi cột có giữ/bỏ riêng cho từng bộ R1–R4:
 
-| cột | base | lag | PI h1/h2/h3 (USD) | standalone Gain vs E0 h1/h2/h3 (pp) | standalone Gain vs B0-306 (pp, median) | MI − null h1/h2/h3 (nat) | tier | B0* (R2) |
-|---|---|---|---|---|---|---|---|---|
-| fine:t:return1 | return1 | 0 | +1.13/+0.47/+1.08 | +0.054/+0.073/+0.066 | -0.149 | +0.0040/+0.0035/+0.0046 | — | giữ |
-| fine:t-1m:return1 | return1 | -1 | +1.41/+0.86/+1.32 | +0.017/+0.085/+0.033 | -0.135 | +0.0030/+0.0038/+0.0040 | — | giữ |
-| fine:t:close_position | close_position | 0 | +0.77/+0.92/+1.04 | +0.065/+0.033/+0.026 | -0.076 | +0.0039/+0.0053/+0.0034 | — | giữ |
-| coarse:t:rv64 | rv64 | 0 | +0.85/+0.77/+1.30 | +0.081/+0.043/+0.042 | -0.046 | +0.0049/+0.0057/+0.0045 | — | giữ |
-| coarse:t-504m:time_of_day_sin | time_of_day_sin | -504 | -0.06/+0.07/-0.22 | -0.010/-0.012/-0.017 | -0.137 | -0.0025/-0.0004/+0.0005 | — | giữ |
-| fine:t-63m:minute_mod5_cos | minute_mod5_cos | -63 | -0.65/-0.25/-0.06 | -0.034/+0.007/-0.016 | -0.117 | -0.0020/+0.0013/+0.0006 | — | giữ |
-| coarse:t-256m:sign_flip_rate32 | sign_flip_rate32 | -256 | +0.21/+0.18/-0.01 | -0.032/+0.003/-0.016 | -0.160 | +0.0002/-0.0026/-0.0016 | — | giữ |
-| origin:rv60 | rv60 | 0 | +0.62/+0.68/+1.07 | +0.047/+0.042/+0.071 | -0.114 | +0.0042/+0.0040/+0.0043 | — | giữ |
+| cột | base | lag | PI h1/h2/h3 (USD) | SA Gain vs E0 h1/h2/h3 (pp) | SA Gain vs B0-306 (pp, median) | MI − null h1/h2/h3 | PI+ / SA+ / MI+ (≥1 h) | R1 | R2 | R3 | R4 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| fine:t:return1 | return1 | 0 | +1.13/+0.47/+1.08 | +0.054/+0.073/+0.066 | -0.149 | +0.0040/+0.0035/+0.0046 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
+| fine:t-1m:return1 | return1 | -1 | +1.41/+0.86/+1.32 | +0.017/+0.085/+0.033 | -0.135 | +0.0030/+0.0038/+0.0040 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
+| fine:t:close_position | close_position | 0 | +0.77/+0.92/+1.04 | +0.065/+0.033/+0.026 | -0.076 | +0.0039/+0.0053/+0.0034 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
+| coarse:t:rv64 | rv64 | 0 | +0.85/+0.77/+1.30 | +0.081/+0.043/+0.042 | -0.046 | +0.0049/+0.0057/+0.0045 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
+| coarse:t-504m:time_of_day_sin | time_of_day_sin | -504 | -0.06/+0.07/-0.22 | -0.010/-0.012/-0.017 | -0.137 | -0.0025/-0.0004/+0.0005 | 1 / 0 / 1 | giữ | giữ | giữ | bỏ |
+| fine:t-63m:minute_mod5_cos | minute_mod5_cos | -63 | -0.65/-0.25/-0.06 | -0.034/+0.007/-0.016 | -0.117 | -0.0020/+0.0013/+0.0006 | 0 / 1 / 1 | giữ | giữ | bỏ | giữ |
+| coarse:t-256m:sign_flip_rate32 | sign_flip_rate32 | -256 | +0.21/+0.18/-0.01 | -0.032/+0.003/-0.016 | -0.160 | +0.0002/-0.0026/-0.0016 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
+| origin:rv60 | rv60 | 0 | +0.62/+0.68/+1.07 | +0.047/+0.042/+0.071 | -0.114 | +0.0042/+0.0040/+0.0043 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
 
-Kiểm chứng 3 bộ lọc so với B0-306 (mỗi bộ 1 run, số vòng cố định, seed 8586):
+Kiểm chứng 4 bộ so với B0-306 (mỗi bộ 1 run LightGBM gốc, số vòng cố định, seed 8586):
 
-| bộ | số cột | MedianGain vs B0-306 (pp) | WinRate | quyết định |
-|---|---|---|---|---|
-| B0-306 | 306 | 0.000 | — | reference |
-| R1 = B0 − Tier1 | 245 | +0.020 | 0.60 | không tệ hơn |
-| R2 = B0 − Tier1 − Tier2 | 197 | +0.031 | 0.67 | **B0\*** (cao nhất, ≥ −ε) |
-| R3 = chỉ PI > 0 | 143 | −0.044 | 0.33 | tệ hơn ε_LGBM = 0.021 → loại |
+| bộ | luật giữ cột | số cột | MedianGain vs B0-306 (pp) | WinRate | quyết định |
+|---|---|---|---|---|---|
+| B0-306 | — | 306 | 0.000 | — | reference |
+| R1 | PI+ hoặc SA+ hoặc MI+ | 245 | +0.020 | 0.60 | không tệ hơn |
+| R2 | PI+ hoặc (SA+ và MI+) | 197 | +0.031 | 0.67 | **B0\*** (không tệ hơn, cao nhất) |
+| R3 | PI+ | 143 | −0.044 | 0.33 | tệ hơn −ε_LGBM (−0.021) → loại |
+| R4 | SA+ | 88 | −0.090 | 0.20 | loại |
 
-**Giải thích.** PI = RMSE tăng thêm (USD) khi xáo cột đó trong VAL (≤ 0 → model không dùng cột hữu ích); standalone = LightGBM chỉ trên một cột, Gain so với E0 và so với B0-306 (nếu một cột thắng B0-306 → cờ đỏ B0 bị nhiễu); MI − null = mutual information với z-target trên FIT trừ MI với target xáo trộn. Một cột *fail* một tiêu chí khi fail ở cả 3 horizon. Tier 1 = fail cả ba; Tier 2 = PI ≤ 0 + một tiêu chí nữa; R3 = chỉ giữ PI > 0. Chọn B0\* = bộ không tệ hơn B0-306 có MedianGain cao nhất (ở mẫu này là R2, 197 cột). Bảng nhóm 38 base feature (gộp 8 lag) đi kèm để đọc, không dùng để quyết định.
+**Giải thích.** Ba điểm số per horizon (median 5 fold): PI = RMSE tăng thêm (USD) khi xáo cột đó trong VAL; SA = standalone, LightGBM chỉ trên một cột, Gain so với E0 và so với B0-306; MI − null = mutual information với z-target trên FIT trừ MI với target xáo trộn. Cờ **PI+ / SA+ / MI+** = điểm số > 0 ở **ít nhất một horizon** (B0 là 3 model độc lập theo h, cột có ích cho một h là đáng giữ; ví dụ PI > 0 ở h1, h2 nhưng < 0 ở h3 → PI+). Không có tier: bốn bộ định nghĩa thẳng bằng cờ — R1 giữ nếu PI+ hoặc SA+ hoặc MI+ (bỏ cột âm cả ba); R2 giữ nếu PI+ hoặc (SA+ và MI+); R3 giữ nếu PI+; R4 giữ nếu SA+. Chọn B0\* = trong các bộ có MedianGain ≥ −ε_LGBM so với B0-306, lấy bộ MedianGain cao nhất (chênh < ε → bộ nhỏ hơn); không bộ nào đạt → B0\* = B0-306. Nếu một cột đơn lẻ thắng B0-306 (SA Gain vs B0-306 > +ε) thì đó là cờ đỏ B0 bị nhiễu chi phối — không cần luật riêng: R3/R4 sẽ tự thắng ở bước kiểm chứng. Bảng nhóm 38 base feature (gộp 8 lag) đi kèm để đọc, không dùng để quyết định.
 
 
 ## 3. §2.1 — Vòng lặp feature của một model (`experiments/keepdrop_LightGBM.csv`)
@@ -80,19 +81,19 @@ Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 
 ## 4. §3 — Champion log (`experiments/champion_log.csv`)
 
-| model | F*_m (số cột ext KEEP) | champion trước | MedianGain vs champion (pp) | WinRate | P10Gain | WorstGain | ε_champion | decision | latency p50 h1 (ms) | champion sau |
+| model | F*_m (số cột ext KEEP) | champion trước | MedianGain vs champion (pp) | WinRate | P10Gain | WorstGain | ε_champion | decision | latency p95 h1 (ms) | champion sau |
 |---|---|---|---|---|---|---|---|---|---|---|
-| LightGBM(F*) | 14 | — | — | — | — | — | 0.021 | champion ban đầu (§3) | 0.35 | LightGBM(F*) |
-| XGBoost(F*) | 14 | LightGBM(F*) | -0.011 | 0.40 | -0.033 | -0.037 | 0.021 | giữ | 0.60 | LightGBM(F*) |
-| CatBoost(F*) | 17 | LightGBM(F*) | +0.000 | 0.53 | -0.021 | -0.038 | 0.021 | giữ | 0.25 | LightGBM(F*) |
-| TFM-POINT | — | LightGBM(F*) | -0.139 | 0.00 | -0.225 | -0.235 | 0.021 | giữ | 28.00 | LightGBM(F*) |
-| ExtraTrees(F*) | 20 | LightGBM(F*) | -0.024 | 0.20 | -0.045 | -0.056 | 0.021 | giữ | 9.00 | LightGBM(F*) |
-| AutoTS-WR(F*) | 16 | LightGBM(F*) | -0.048 | 0.00 | -0.081 | -0.107 | 0.021 | giữ | 180.00 | LightGBM(F*) |
-| AutoTS-MR(F*) | 22 | LightGBM(F*) | -0.069 | 0.00 | -0.097 | -0.125 | 0.021 | giữ | 260.00 | LightGBM(F*) |
-| LSTM(F*) | 23 | LightGBM(F*) | -0.036 | 0.20 | -0.080 | -0.103 | 0.021 | giữ | 2.40 | LightGBM(F*) |
-| Ensemble | 14 | LightGBM(F*) | +0.034 | 1.00 | +0.014 | +0.005 | 0.021 | **đổi** | — | Ensemble |
+| LightGBM(F*) | 14 | — | — | — | — | — | 0.021 | champion ban đầu (§3) | 0.70 | LightGBM(F*) |
+| XGBoost(F*) | 14 | LightGBM(F*) | -0.011 | 0.40 | -0.033 | -0.037 | 0.021 | giữ | 1.10 | LightGBM(F*) |
+| CatBoost(F*) | 17 | LightGBM(F*) | +0.000 | 0.53 | -0.021 | -0.038 | 0.021 | giữ | 0.50 | LightGBM(F*) |
+| TFM-POINT | — | LightGBM(F*) | -0.139 | 0.00 | -0.225 | -0.235 | 0.021 | giữ | 45.00 | LightGBM(F*) |
+| XGB-RF(F*) | 20 | LightGBM(F*) | -0.024 | 0.20 | -0.045 | -0.056 | 0.021 | giữ | 2.80 | LightGBM(F*) |
+| AutoTS-WR(F*) | 16 | LightGBM(F*) | -0.048 | 0.00 | -0.081 | -0.107 | 0.021 | giữ | 320.00 | LightGBM(F*) |
+| AutoTS-MR(F*) | 22 | LightGBM(F*) | -0.069 | 0.00 | -0.097 | -0.125 | 0.021 | giữ | 420.00 | LightGBM(F*) |
+| LSTM(F*) | 23 | LightGBM(F*) | -0.036 | 0.20 | -0.080 | -0.103 | 0.021 | giữ | 4.10 | LightGBM(F*) |
+| Ensemble | 7 thành viên, equal | LightGBM(F*) | +0.034 | 1.00 | +0.014 | +0.005 | 0.021 | **đổi** | 749.20 | Ensemble |
 
-**Giải thích.** Champion ban đầu = LightGBM code gốc trên F\*_LGBM (dòng đầu, không so sánh). Sau khi mỗi model xong vòng lặp + confirmation 3 seed, so với champion hiện tại bằng Gain trên giá 15 ô; `MedianGain > +ε_champion` → đổi champion, ngược lại giữ — cả hai trường hợp đều ghi một dòng. Ensemble xét cuối cùng, cùng luật (ở mẫu này Ensemble thắng ⇒ champion cuối = Ensemble). Cột latency chỉ là thông tin (§7.4), không phải tiêu chí.
+**Giải thích.** Champion ban đầu = LightGBM code gốc trên F\*_LGBM (dòng đầu, không so sánh). Sau khi mỗi model xong vòng lặp + confirmation 3 seed, so với champion hiện tại bằng Gain trên giá 15 ô; `MedianGain > +ε_champion` → đổi champion, ngược lại giữ — cả hai trường hợp đều ghi một dòng. Ensemble xét cuối cùng, cùng luật (ở mẫu này Ensemble thắng ⇒ champion cuối = Ensemble). Thành viên ensemble theo luật §3 = champion + mọi model có MedianGain vs E0 > 0: LightGBM(F*), XGBoost(F*), CatBoost(F*), XGB-RF(F*), AutoTS-WR(F*), AutoTS-MR(F*), LSTM(F*) (TFM-POINT bị loại vì < 0; B0-306/B0\* là reference). Trọng số: (a) đều, (b) 1/MSE_VAL per horizon — với chênh lệch RMSE ~0.1% thì (b) ≈ (a). Cột latency chỉ là thông tin (§7.4), không phải tiêu chí.
 
 
 ## 5. §7.2 — Bảng tổng hợp mọi model (`experiments/summary/all_models.csv`)
@@ -108,7 +109,7 @@ Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 | XGBoost(F*) | 54.6 | 39.7 | 0.048 | 0.518 | +0.151 | 83.5 | 60.1 | 0.047 | 0.520 | +0.130 | 106.9 | 76.9 | 0.026 | 0.510 | +0.030 | +0.041 | 0.87 | -0.011 | -0.033 | -0.037 |
 | CatBoost(F*) | 54.6 | 39.1 | 0.058 | 0.526 | +0.172 | 83.5 | 64.2 | 0.049 | 0.517 | +0.107 | 106.9 | 78.1 | 0.031 | 0.514 | +0.043 | +0.044 | 0.80 | +0.000 | -0.021 | -0.038 |
 | TFM-POINT | 54.7 | 39.0 | -0.006 | 0.495 | -0.046 | 83.6 | 61.2 | -0.000 | 0.495 | -0.022 | 107.0 | 75.2 | 0.001 | 0.501 | -0.034 | -0.088 | 0.00 | -0.139 | -0.225 | -0.235 |
-| ExtraTrees(F*) | 54.6 | 41.0 | 0.055 | 0.525 | +0.141 | 83.5 | 56.2 | 0.052 | 0.523 | +0.092 | 106.9 | 76.2 | 0.025 | 0.508 | +0.031 | +0.031 | 0.73 | -0.024 | -0.045 | -0.056 |
+| XGB-RF(F*) | 54.6 | 41.0 | 0.055 | 0.525 | +0.141 | 83.5 | 56.2 | 0.052 | 0.523 | +0.092 | 106.9 | 76.2 | 0.025 | 0.508 | +0.031 | +0.031 | 0.73 | -0.024 | -0.045 | -0.056 |
 | AutoTS-WR(F*) | 54.6 | 41.7 | 0.045 | 0.514 | +0.086 | 83.5 | 59.7 | 0.039 | 0.515 | +0.079 | 106.9 | 76.2 | 0.024 | 0.512 | +0.017 | -0.003 | 0.40 | -0.048 | -0.081 | -0.107 |
 | AutoTS-MR(F*) | 54.6 | 40.1 | 0.036 | 0.512 | +0.074 | 83.6 | 59.7 | 0.023 | 0.513 | +0.036 | 106.9 | 76.3 | 0.022 | 0.504 | +0.012 | -0.023 | 0.13 | -0.069 | -0.097 | -0.125 |
 | LSTM(F*) | 54.6 | 38.5 | 0.052 | 0.523 | +0.090 | 83.5 | 63.1 | 0.042 | 0.518 | +0.071 | 106.9 | 77.5 | 0.033 | 0.517 | +0.038 | +0.006 | 0.60 | -0.036 | -0.080 | -0.103 |
@@ -125,7 +126,7 @@ Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 | XGBoost(F*) | 64.6 | 46.5 | 0.051 | 0.517 | +0.070 | +0.133 | 124.2 | 89.0 | 0.043 | 0.521 | +0.124 | +0.083 | 113.0 | 81.9 | 0.053 | 0.523 | +0.046 | +0.120 |
 | CatBoost(F*) | 64.5 | 43.0 | 0.078 | 0.532 | +0.219 | +0.282 | 124.1 | 90.9 | 0.061 | 0.528 | +0.202 | +0.161 | 113.1 | 79.3 | 0.027 | 0.512 | -0.043 | +0.031 |
 | TFM-POINT | 64.7 | 47.4 | 0.001 | 0.498 | -0.140 | -0.077 | 124.4 | 92.1 | 0.005 | 0.502 | +0.005 | -0.035 | 113.2 | 82.4 | 0.001 | 0.495 | -0.115 | -0.041 |
-| ExtraTrees(F*) | 64.5 | 45.4 | 0.060 | 0.528 | +0.120 | +0.183 | 124.3 | 93.4 | 0.023 | 0.508 | +0.072 | +0.032 | 113.1 | 82.6 | 0.010 | 0.506 | -0.069 | +0.005 |
+| XGB-RF(F*) | 64.5 | 45.4 | 0.060 | 0.528 | +0.120 | +0.183 | 124.3 | 93.4 | 0.023 | 0.508 | +0.072 | +0.032 | 113.1 | 82.6 | 0.010 | 0.506 | -0.069 | +0.005 |
 | AutoTS-WR(F*) | 64.6 | 44.9 | 0.047 | 0.519 | +0.041 | +0.104 | 124.1 | 90.6 | 0.062 | 0.528 | +0.198 | +0.157 | 113.1 | 79.6 | 0.034 | 0.515 | -0.032 | +0.042 |
 | AutoTS-MR(F*) | 64.6 | 45.8 | 0.033 | 0.516 | -0.020 | +0.044 | 124.3 | 89.9 | 0.029 | 0.508 | +0.093 | +0.052 | 113.1 | 80.4 | 0.044 | 0.514 | +0.002 | +0.076 |
 | LSTM(F*) | 64.6 | 41.9 | 0.050 | 0.520 | +0.074 | +0.138 | 124.3 | 91.8 | 0.020 | 0.509 | +0.063 | +0.022 | 113.0 | 80.5 | 0.052 | 0.522 | +0.029 | +0.103 |
@@ -135,6 +136,8 @@ Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 
 
 ## 6. §7.3 — Figure
+
+Màu/marker **cố định cho từng model ở mọi figure** (palette categorical đã validate bằng validator của skill dataviz, thứ tự slot cố định, không xoay vòng, không dùng hai màu dễ nhầm cạnh nhau): LightGBM(F*) = #2a78d6 marker `o`; XGBoost(F*) = #eb6834 marker `^`; TFM-POINT = #4a3aa7 marker `P`; LSTM(F*) = #008300 marker `*`; Ensemble = #e34948 marker `h`; CatBoost(F*) = #1baf7a marker `v`; XGB-RF(F*) = #eda100 marker `X`; AutoTS-WR(F*) = #e87ba4 marker `<`. Reference B0-306/B0\* xám nét đứt; giá thật đen; horizon và percentile dùng ramp một màu; heatmap diverging xanh↔đỏ.
 
 ### Fig A — origin plot: một điểm t làm gốc, 3 điểm dự báo t+1, t+2, t+3
 
@@ -163,45 +166,45 @@ Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 
 ## 7. §7.4 — Inference latency (chỉ theo dõi) (`experiments/summary/latency_summary.csv`)
 
-| model | h | p50 (ms) | p95 (ms) | p99 (ms) | mean (ms) | max (ms) | shared | device |
-|---|---|---|---|---|---|---|---|---|
-| B0-306 | 1 | 0.30 | 0.60 | 1.20 | 0.34 | 2.52 | false | CPU |
-| B0-306 | 2 | 0.32 | 0.65 | 1.30 | 0.36 | 2.72 | false | CPU |
-| B0-306 | 3 | 0.35 | 0.70 | 1.39 | 0.39 | 2.92 | false | CPU |
-| B0* | 1 | 0.24 | 0.50 | 1.00 | 0.27 | 2.10 | false | CPU |
-| B0* | 2 | 0.26 | 0.54 | 1.08 | 0.29 | 2.27 | false | CPU |
-| B0* | 3 | 0.28 | 0.58 | 1.16 | 0.31 | 2.44 | false | CPU |
-| LightGBM(F*) | 1 | 0.35 | 0.70 | 1.40 | 0.39 | 2.94 | false | CPU |
-| LightGBM(F*) | 2 | 0.38 | 0.76 | 1.51 | 0.42 | 3.18 | false | CPU |
-| LightGBM(F*) | 3 | 0.41 | 0.81 | 1.62 | 0.45 | 3.41 | false | CPU |
-| XGBoost(F*) | 1 | 0.60 | 1.10 | 2.20 | 0.67 | 4.62 | false | GPU |
-| XGBoost(F*) | 2 | 0.65 | 1.19 | 2.38 | 0.73 | 4.99 | false | GPU |
-| XGBoost(F*) | 3 | 0.70 | 1.28 | 2.55 | 0.78 | 5.36 | false | GPU |
-| CatBoost(F*) | 1 | 0.25 | 0.50 | 1.00 | 0.28 | 2.10 | false | CPU |
-| CatBoost(F*) | 2 | 0.27 | 0.54 | 1.08 | 0.30 | 2.27 | false | CPU |
-| CatBoost(F*) | 3 | 0.29 | 0.58 | 1.16 | 0.32 | 2.44 | false | CPU |
-| TFM-POINT | 1 | 28.00 | 45.00 | 90.00 | 31.36 | 189.00 | true | GPU |
-| TFM-POINT | 2 | 28.00 | 45.00 | 90.00 | 31.36 | 189.00 | true | GPU |
-| TFM-POINT | 3 | 28.00 | 45.00 | 90.00 | 31.36 | 189.00 | true | GPU |
-| ExtraTrees(F*) | 1 | 9.00 | 14.00 | 24.00 | 10.08 | 50.40 | false | CPU |
-| ExtraTrees(F*) | 2 | 9.72 | 15.12 | 25.92 | 10.89 | 54.43 | false | CPU |
-| ExtraTrees(F*) | 3 | 10.44 | 16.24 | 27.84 | 11.69 | 58.46 | false | CPU |
-| AutoTS-WR(F*) | 1 | 180.00 | 320.00 | 650.00 | 201.60 | 1365.00 | true | CPU |
-| AutoTS-WR(F*) | 2 | 180.00 | 320.00 | 650.00 | 201.60 | 1365.00 | true | CPU |
-| AutoTS-WR(F*) | 3 | 180.00 | 320.00 | 650.00 | 201.60 | 1365.00 | true | CPU |
-| AutoTS-MR(F*) | 1 | 260.00 | 420.00 | 800.00 | 291.20 | 1680.00 | true | CPU |
-| AutoTS-MR(F*) | 2 | 260.00 | 420.00 | 800.00 | 291.20 | 1680.00 | true | CPU |
-| AutoTS-MR(F*) | 3 | 260.00 | 420.00 | 800.00 | 291.20 | 1680.00 | true | CPU |
-| LSTM(F*) | 1 | 2.40 | 4.10 | 8.50 | 2.69 | 17.85 | true | GPU |
-| LSTM(F*) | 2 | 2.40 | 4.10 | 8.50 | 2.69 | 17.85 | true | GPU |
-| LSTM(F*) | 3 | 2.40 | 4.10 | 8.50 | 2.69 | 17.85 | true | GPU |
-| Ensemble | 1 | 3.60 | 6.40 | 13.10 | 4.03 | 27.51 | false | CPU+GPU (tổng các member) |
-| Ensemble | 2 | 3.89 | 6.91 | 14.15 | 4.35 | 29.71 | false | CPU+GPU (tổng các member) |
-| Ensemble | 3 | 4.18 | 7.42 | 15.20 | 4.68 | 31.91 | false | CPU+GPU (tổng các member) |
+| model | h | p95 (ms) | p99 (ms) | max (ms) | shared | train device | predict device |
+|---|---|---|---|---|---|---|---|
+| B0-306 | 1 | 0.60 | 1.20 | 3.10 | false | GPU | CPU (LightGBM predict) |
+| B0-306 | 2 | 0.65 | 1.30 | 3.35 | false | GPU | CPU (LightGBM predict) |
+| B0-306 | 3 | 0.70 | 1.39 | 3.60 | false | GPU | CPU (LightGBM predict) |
+| B0* | 1 | 0.50 | 1.00 | 2.60 | false | GPU | CPU (LightGBM predict) |
+| B0* | 2 | 0.54 | 1.08 | 2.81 | false | GPU | CPU (LightGBM predict) |
+| B0* | 3 | 0.58 | 1.16 | 3.02 | false | GPU | CPU (LightGBM predict) |
+| LightGBM(F*) | 1 | 0.70 | 1.40 | 3.50 | false | GPU | CPU (LightGBM predict) |
+| LightGBM(F*) | 2 | 0.76 | 1.51 | 3.78 | false | GPU | CPU (LightGBM predict) |
+| LightGBM(F*) | 3 | 0.81 | 1.62 | 4.06 | false | GPU | CPU (LightGBM predict) |
+| XGBoost(F*) | 1 | 1.10 | 2.20 | 5.00 | false | GPU | GPU |
+| XGBoost(F*) | 2 | 1.19 | 2.38 | 5.40 | false | GPU | GPU |
+| XGBoost(F*) | 3 | 1.28 | 2.55 | 5.80 | false | GPU | GPU |
+| CatBoost(F*) | 1 | 0.50 | 1.00 | 2.40 | false | GPU | CPU (CatBoost predict mặc định) |
+| CatBoost(F*) | 2 | 0.54 | 1.08 | 2.59 | false | GPU | CPU (CatBoost predict mặc định) |
+| CatBoost(F*) | 3 | 0.58 | 1.16 | 2.78 | false | GPU | CPU (CatBoost predict mặc định) |
+| TFM-POINT | 1 | 45.00 | 90.00 | 210.00 | true | GPU | GPU |
+| TFM-POINT | 2 | 45.00 | 90.00 | 210.00 | true | GPU | GPU |
+| TFM-POINT | 3 | 45.00 | 90.00 | 210.00 | true | GPU | GPU |
+| XGB-RF(F*) | 1 | 2.80 | 6.00 | 14.00 | false | GPU | GPU |
+| XGB-RF(F*) | 2 | 3.02 | 6.48 | 15.12 | false | GPU | GPU |
+| XGB-RF(F*) | 3 | 3.25 | 6.96 | 16.24 | false | GPU | GPU |
+| AutoTS-WR(F*) | 1 | 320.00 | 650.00 | 1500.00 | true | GPU | CPU pipeline + GPU regression_model |
+| AutoTS-WR(F*) | 2 | 320.00 | 650.00 | 1500.00 | true | GPU | CPU pipeline + GPU regression_model |
+| AutoTS-WR(F*) | 3 | 320.00 | 650.00 | 1500.00 | true | GPU | CPU pipeline + GPU regression_model |
+| AutoTS-MR(F*) | 1 | 420.00 | 800.00 | 1900.00 | true | GPU | CPU pipeline + GPU regression_model |
+| AutoTS-MR(F*) | 2 | 420.00 | 800.00 | 1900.00 | true | GPU | CPU pipeline + GPU regression_model |
+| AutoTS-MR(F*) | 3 | 420.00 | 800.00 | 1900.00 | true | GPU | CPU pipeline + GPU regression_model |
+| LSTM(F*) | 1 | 4.10 | 8.50 | 20.00 | true | GPU | GPU |
+| LSTM(F*) | 2 | 4.10 | 8.50 | 20.00 | true | GPU | GPU |
+| LSTM(F*) | 3 | 4.10 | 8.50 | 20.00 | true | GPU | GPU |
+| Ensemble | 1 | 749.20 | 1469.10 | 3444.90 | false | GPU | tổng các thành viên (CPU+GPU) |
+| Ensemble | 2 | 809.14 | 1586.63 | 3720.49 | false | GPU | tổng các thành viên (CPU+GPU) |
+| Ensemble | 3 | 869.07 | 1704.16 | 3996.08 | false | GPU | tổng các thành viên (CPU+GPU) |
 
 ![Fig D](smoke/fig_D_latency.png)
 
-**Giải thích.** Thời gian gọi `predict` cho **một origin** (batch 1), đo ở pass riêng sau khi train (confirmation và Final), bỏ 50 lần đầu warm-up, GPU có `cuda.synchronize`. Tree đo riêng từng h (3 model); `shared = true` nghĩa là một lần gọi ra cả 3 bước (LSTM/TimesFM/AutoTS) nên h=1,2,3 cùng giá trị. Chưa gồm thời gian tính feature. Không ảnh hưởng training/loss/quyết định.
+**Giải thích.** Thời gian gọi `predict` cho **một origin** (batch 1), đo ở pass riêng sau khi train (confirmation và Final), bỏ 50 lần đầu warm-up, GPU có `cuda.synchronize`; báo cáo p95/p99/max (p50 không cần). Tree đo riêng từng h (3 model); `shared = true` nghĩa là một lần gọi ra cả 3 bước (LSTM/TimesFM/AutoTS) nên h=1,2,3 cùng giá trị. `train device` luôn GPU (cấm training CPU); `predict device` là device thực tế của lời gọi predict: LightGBM và CatBoost predict trên CPU là đặc tính thư viện (GPU chỉ dùng khi train), XGBoost/LSTM/TimesFM predict trên GPU, AutoTS chạy pipeline CPU quanh regression_model GPU. Chưa gồm thời gian tính feature. Không ảnh hưởng training/loss/quyết định.
 
 
 ## 8. Cách sinh số giả (để không nhầm với kết quả)
