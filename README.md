@@ -11,7 +11,7 @@ Fix dataset 15 ngày (5 fold VAL 1 ngày, TEST 2 ngày cuối)
 → Lọc 306 feature B0 → B0*                                         (§1.4)
 → Mỗi model (nhanh → chậm) từ CÙNG B0*: calibrate riêng → add-one 39 candidate → F*_m   (§2)
      LightGBM → XGBoost → CatBoost → TimesFM → XGB-RF → AutoTS (2 model cố định) → LSTM
-→ Sau mỗi model: prune PI → 3 seed (median từng ô) → win_m → so với champion, log đổi/giữ, vẽ win vs champion (§3)
+→ Sau mỗi model: prune PI → 3 seed (mean RMSE từng ô) → win_m → so với champion, log đổi/giữ, vẽ win vs champion (§3)
 → Ensemble → Final evaluation (TEST 2 ngày) → all_models.csv + figure            (§4, §7)
 → (để sau) data đầy đủ → scale data → TEST 30 ngày                                (§5)
 ```
@@ -39,7 +39,7 @@ B0-306 + ES (LGBM) → 15fixed_306 → R1–R4 → B0*
    → Cat(B0*)  + ES → 15fixed_Cat  → CatBoost add-one 39 candidate → F*_Cat
    → LSTM(B0*) + ES theo epoch → fixed_epoch_LSTM → LSTM add-one 39 candidate → F*_LSTM
    (XGB-RF: 1 vòng boosting cố định; TimesFM: zero-shot; AutoTS: cơ chế riêng — cũng từ B0*, chỉ đo ε_m)
-→ prune PI → confirmation 3 seed (chồng 3 bảng Gain, median từng ô) → win_m → so với champion, vẽ win vs champion
+→ prune PI → confirmation 3 seed (mean RMSE từng ô → Gain 15 ô → MedianGain ≥ −ε_m chọn prune) → win_m → so với champion, vẽ win vs champion
 ```
 
 Luật KEEP/DROP (§2.1): `MedianGain ≥ −ε_m` → KEEP (tốt hơn hoặc gần như không đổi), `< −ε_m` → DROP; ε_m = nhiễu seed của chính model đó. Chỉ MedianGain quyết định; WinRate/P10/Worst báo cáo. Training chỉ trên GPU.

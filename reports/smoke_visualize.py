@@ -140,23 +140,28 @@ for m, sk in SKILL.items():
         rmse_seed[m][h] = np.array(tabs)
 
 
-def gain_table_median(m: str, base: str | None) -> np.ndarray:
-    """Bảng Gain 15 ô (5 fold × 3 h) của model m so với base: tính bảng Gain cho TỪNG seed
-    (base = bảng RMSE median 3 seed của base; E0 không có seed), chồng 3 bảng lên nhau, lấy median từng ô."""
+def rmse_mean_table(m: str) -> dict[int, np.ndarray]:
+    """Bảng RMSE̅ 15 ô của một configuration: mỗi ô (fold, h) = MEAN RMSE của 3 seed (luật §2.1b)."""
+    return {h: np.mean(rmse_seed[m][h], axis=0) for h in H}
+
+
+def gain_table(m: str, base: str | None) -> np.ndarray:
+    """Bảng Gain 15 ô (5 fold × 3 h) của m so với base: Gain_{f,h} = 1 − RMSE̅_m / RMSE̅_base,
+    RMSE̅ = mean 3 seed từng ô (E0 không có seed). MedianGain = median của 15 ô này."""
+    rm = rmse_mean_table(m)
     out = np.zeros((len(FOLD_DAYS), len(H)))
     for j, h in enumerate(H):
-        b = e0_val[h] if base is None else np.median(rmse_seed[base][h], axis=0)
-        per_seed = np.stack([gain_pp(rmse_seed[m][h][s], b) for s in range(len(SEEDS))])  # (3 seed, 5 fold)
-        out[:, j] = np.median(per_seed, axis=0)
+        b = e0_val[h] if base is None else rmse_mean_table(base)[h]
+        out[:, j] = gain_pp(rm[h], b)
     return out
 
 
-rmse_med = {m: {h: np.median(rmse_seed[m][h], axis=0) for h in H} for m in MODELS}
+rmse_med = {m: rmse_mean_table(m) for m in MODELS}  # bảng RMSE̅ (mean 3 seed) dùng cho all_models
 
 # Thành viên ensemble theo luật §3: champion + mọi model có MedianGain vs E0 > 0 (B0-306/B0* là reference)
 ENSEMBLE_MEMBERS = [
     m for m in MODELS
-    if m not in ("E0", "B0-306", "B0*", "Ensemble") and float(np.median(gain_table_median(m, None))) > 0
+    if m not in ("E0", "B0-306", "B0*", "Ensemble") and float(np.median(gain_table(m, None))) > 0
 ]
 
 
@@ -204,7 +209,7 @@ calib_df = pd.DataFrame([
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "CatBoost", "run ES": "1", "kết quả": "15fixed_Cat + ε_Cat", "dùng cho": "39 candidate + prune PI của CatBoost"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "LSTM", "run ES": "1 (ES theo epoch)", "kết quả": "fixed_epoch_LSTM + ε_LSTM", "dùng cho": "39 candidate + prune PI của LSTM"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "XGB-RF / AutoTS / TimesFM", "run ES": "— (cơ chế riêng)", "kết quả": "chỉ ε_m (XGB-RF 1 vòng cố định; TimesFM zero-shot; AutoTS config cố định)", "dùng cho": "vòng lặp riêng của model đó"},
-    {"phase": "C. Prune PI + win", "feature set": "F*_m và F*_m^prune", "model": "từng model", "run ES": "3 seed, ES bật", "kết quả": "bảng median 3 seed → win_m (+ số vòng/epoch cho Final)", "dùng cho": "so với champion (§3), figure §7.3"},
+    {"phase": "C. Prune PI + win", "feature set": "F*_m và F*_m^prune", "model": "từng model", "run ES": "3 seed mỗi configuration, ES bật", "kết quả": "RMSE̅ (mean 3 seed từng ô) → Gain prune vs unprune → MedianGain → win_m (+ số vòng/epoch cho Final)", "dùng cho": "so với champion (§3), figure §7.3"},
 ])
 
 # ----------------------------------------------------------------------------- §1.4 b0_filter
@@ -263,40 +268,50 @@ for i, (c, mg) in enumerate(cands, start=1):
     })
 kd_df = pd.DataFrame(kd_rows)
 
+# F*_m (unprune) = rmse_seed[WIN]; F*_m^prune giả = unprune × (1 − g/100), g ~ N(0.006, 0.02) mỗi ô mỗi seed
+EPS_WIN = 0.024  # ε của model đang xét (XGBoost giả)
+prune_seed = {h: rmse_seed[WIN][h] * (1.0 - (0.006 + 0.02 * rng.standard_normal(rmse_seed[WIN][h].shape)) / 100.0) for h in H}
+unp_mean = {h: np.mean(rmse_seed[WIN][h], axis=0) for h in H}  # RMSE̅ unprune: mean 3 seed từng ô
+prn_mean = {h: np.mean(prune_seed[h], axis=0) for h in H}  # RMSE̅ prune
+gain_prune = np.column_stack([gain_pp(prn_mean[h], unp_mean[h]) for h in H])  # Gain_{f,h} = 1 − RMSE̅^prune / RMSE̅^unprune
+s_prune = summarize(gain_prune.ravel())
 prune_df = pd.DataFrame([
-    {"bộ": "F*_LGBM (sau vòng lặp)", "số cột ext": 14, "3 seed": "8586/8587/8588, ES bật", "MedianGain vs F*_LGBM (median từng ô)": "0.000", "WinRate": "—", "quyết định": "—"},
-    {"bộ": "F*_LGBM^prune (bỏ 5 cột ext có PI ≤ 0)", "số cột ext": 9, "3 seed": "8586/8587/8588, ES bật", "MedianGain vs F*_LGBM (median từng ô)": "+0.006", "WinRate": "0.60", "quyết định": "≥ −ε_LGBM → **win_LGBM = F*_LGBM^prune**"},
+    {"configuration": "F*_m (unprune, 14 cột ext)", "3 seed": "8586/8587/8588, ES bật", "RMSE̅ h=1 fold1..5 (USD)": " / ".join(f"{v:.2f}" for v in unp_mean[1]),
+     "MedianGain prune vs unprune (pp)": "—", "quyết định": "—"},
+    {"configuration": "F*_m^prune (bỏ 5 cột ext có PI ≤ 0, còn 9)", "3 seed": "8586/8587/8588, ES bật", "RMSE̅ h=1 fold1..5 (USD)": " / ".join(f"{v:.2f}" for v in prn_mean[1]),
+     "MedianGain prune vs unprune (pp)": f"{s_prune['MedianGain']:+.3f} (Win {s_prune['WinRate']:.2f} · P10 {s_prune['P10Gain']:+.3f} · Worst {s_prune['WorstGain']:+.3f})",
+     "quyết định": (f"≥ −ε_m (−{EPS_WIN:.3f}) → **win = prune**" if s_prune["MedianGain"] >= -EPS_WIN else f"< −ε_m (−{EPS_WIN:.3f}) → win = unprune")},
 ])
-# minh họa chồng 3 seed → median từng ô (Gain vs E0 của win, h=1)
-win_seed_h1 = np.stack([gain_pp(rmse_seed[WIN][1][s], e0_val[1]) for s in range(3)])
+# minh họa: 3 seed → mean RMSE từng ô → Gain từng ô (chỉ h=1; thật sẽ là 15 ô)
 stack_df = pd.DataFrame({
     "fold": [f"f{i + 1} {d}" for i, d in enumerate(FOLD_DAYS)],
-    "seed 8586 (h=1)": [f"{v:+.3f}" for v in win_seed_h1[0]],
-    "seed 8587 (h=1)": [f"{v:+.3f}" for v in win_seed_h1[1]],
-    "seed 8588 (h=1)": [f"{v:+.3f}" for v in win_seed_h1[2]],
-    "median từng ô (h=1)": [f"{v:+.3f}" for v in np.median(win_seed_h1, axis=0)],
+    "unprune RMSE seed 8586 / 8587 / 8588 (h=1)": [" / ".join(f"{rmse_seed[WIN][1][s][i]:.2f}" for s in range(3)) for i in range(5)],
+    "RMSE̅ unprune (mean)": [f"{v:.2f}" for v in unp_mean[1]],
+    "prune RMSE seed 8586 / 8587 / 8588 (h=1)": [" / ".join(f"{prune_seed[1][s][i]:.2f}" for s in range(3)) for i in range(5)],
+    "RMSE̅ prune (mean)": [f"{v:.2f}" for v in prn_mean[1]],
+    "Gain_{f,1} = 1 − RMSE̅^prune/RMSE̅^unprune (pp)": [f"{v:+.3f}" for v in gain_prune[:, 0]],
 })
 
 # ----------------------------------------------------------------------------- §3 champion_log
 champ_rows, champ = [], CHAMPION
-first_tab = gain_table_median(CHAMPION, None)
+first_tab = gain_table(CHAMPION, None)
 champ_rows.append({
     "model (win_m)": CHAMPION, "F*_m (cột ext sau prune)": "9", "champion trước": "—",
-    "MedianGain vs champion (pp, median 3 seed từng ô)": "—", "WinRate": "—", "P10Gain": "—", "WorstGain": "—", "ε_champion": f"{EPS_LGBM:.3f}",
+    "MedianGain vs champion (pp, từ RMSE̅ mean 3 seed)": "—", "WinRate": "—", "P10Gain": "—", "WorstGain": "—", "ε_champion": f"{EPS_LGBM:.3f}",
     "decision": "champion ban đầu (§3)", "MedianGain vs E0": f"{np.median(first_tab):+.3f}",
     "latency p95 h1 (ms)": f"{LAT[CHAMPION][0][0]:.2f}", "champion sau": CHAMPION,
 })
 order = ["XGBoost(F*)", "CatBoost(F*)", "TFM-POINT", "XGB-RF(F*)", "AutoTS-WR(F*)", "AutoTS-MR(F*)", "LSTM(F*)", "Ensemble"]
 for m in order:
-    tab = gain_table_median(m, champ)
+    tab = gain_table(m, champ)
     s = summarize(tab.ravel())
     change = s["MedianGain"] > EPS_LGBM
     fstar = "—" if m == "TFM-POINT" else (f"{len(ENSEMBLE_MEMBERS)} thành viên, equal" if m == "Ensemble" else str(int(rng.integers(6, 20))))
     champ_rows.append({
         "model (win_m)": m, "F*_m (cột ext sau prune)": fstar, "champion trước": champ,
-        "MedianGain vs champion (pp, median 3 seed từng ô)": f"{s['MedianGain']:+.3f}", "WinRate": f"{s['WinRate']:.2f}",
+        "MedianGain vs champion (pp, từ RMSE̅ mean 3 seed)": f"{s['MedianGain']:+.3f}", "WinRate": f"{s['WinRate']:.2f}",
         "P10Gain": f"{s['P10Gain']:+.3f}", "WorstGain": f"{s['WorstGain']:+.3f}", "ε_champion": f"{EPS_LGBM:.3f}",
-        "decision": "**đổi**" if change else "giữ", "MedianGain vs E0": f"{np.median(gain_table_median(m, None)):+.3f}",
+        "decision": "**đổi**" if change else "giữ", "MedianGain vs E0": f"{np.median(gain_table(m, None)):+.3f}",
         "latency p95 h1 (ms)": f"{lat_of(m)[0][0]:.2f}",
     })
     if change:
@@ -308,11 +323,11 @@ champ_df = pd.DataFrame(champ_rows)
 val_rows = []
 for m in MODELS:
     row = {"model": m}
-    g_b0 = gain_table_median(m, "B0-306").ravel()
-    g_ch = gain_table_median(m, CHAMPION).ravel()
+    g_b0 = gain_table(m, "B0-306").ravel()
+    g_ch = gain_table(m, CHAMPION).ravel()
     for j, h in enumerate(H):
         r_mean = float(np.mean(rmse_med[m][h]))
-        ge0 = float(np.median(gain_table_median(m, None)[:, j]))
+        ge0 = float(np.median(gain_table(m, None)[:, j]))
         mae, r, dacc = secondary(r_mean, ge0)
         row[f"RMSE h{h} (USD)"] = f"{r_mean:.1f}"
         row[f"MAE h{h}"] = f"{mae:.1f}"
@@ -360,9 +375,9 @@ lat_df = pd.DataFrame(lat_rows)
 
 
 # ----------------------------------------------------------------------------- figure helpers
-def fake_window(n_origin: int = 60, hmax: int = 3, level: float = PRICE) -> np.ndarray:
-    """Chuỗi giá thật giả: n_origin origin + hmax bar sau đó."""
-    r = rng.normal(0.0, SIG1, n_origin + hmax)
+def fake_window(n_origin: int = 60, hmax: int = 3, level: float = PRICE, sig: float = SIG1) -> np.ndarray:
+    """Chuỗi giá thật giả: n_origin origin + hmax bar sau đó; sig = std r1 của cửa sổ (thấp/trung bình/cao)."""
+    r = rng.normal(0.0, sig, n_origin + hmax)
     return level * np.exp(np.cumsum(r))
 
 
@@ -412,8 +427,11 @@ def heatmap(ax, mat: np.ndarray, row_labels: list[str], title: str, vmax: float 
 
 
 # ----------------------------------------------------------------------------- Fig H_h + HM: win vs champion (sau mỗi model)
-VAL_WINDOWS = ["01-29 00:00–01:00", "01-29 08:00–09:00", "01-29 16:00–17:00"]  # ngày VAL có RMSE E0 ở giữa (giả định)
-win_prices = [fake_window(level=PRICE * (1 + 0.004 * k)) for k in range(3)]
+# 3 cửa sổ ở 3 ngày VAL/fold KHÁC NHAU: ngày biến động thấp / trung bình / cao (xếp 5 ngày theo std r1 trong ngày ≈ RMSE E0 h=1)
+_order = np.argsort(e0_val[1])
+VOL_DAYS = [FOLD_DAYS[_order[0]], FOLD_DAYS[_order[2]], FOLD_DAYS[_order[4]]]
+VAL_WINDOWS = [f"{VOL_DAYS[0]} 12:00–13:00 (vol thấp)", f"{VOL_DAYS[1]} 12:00–13:00 (vol trung bình)", f"{VOL_DAYS[2]} 12:00–13:00 (vol cao)"]
+win_prices = [fake_window(level=PRICE * (1 + 0.004 * k), sig=SIG1 * sc) for k, sc in enumerate((0.6, 1.0, 1.6))]
 for h in H:
     win_preds = [fake_pred(p, h, 0.32) for p in win_prices]
     ch_preds = [fake_pred(p, h, 0.28) for p in win_prices]
@@ -425,15 +443,15 @@ for h in H:
 
 fig, axes = plt.subplots(1, 2, figsize=(11.5, 5.2))
 row_labels = [f"f{i + 1} {d}" for i, d in enumerate(FOLD_DAYS)]
-tab_w, tab_c = gain_table_median(WIN, None), gain_table_median(CHAMPION, None)
+tab_w, tab_c = gain_table(WIN, None), gain_table(CHAMPION, None)
 heatmap(axes[0], tab_w, row_labels, f"win = {WIN}: Gain vs E0 (pp)\n{fmt_sum(summarize(tab_w.ravel()))}")
 im = heatmap(axes[1], tab_c, row_labels, f"champion = {CHAMPION}: Gain vs E0 (pp)\n{fmt_sum(summarize(tab_c.ravel()))}")
 fig.subplots_adjust(left=0.09, right=0.86, top=0.80, bottom=0.16, wspace=0.45)
 cax = fig.add_axes([0.89, 0.16, 0.02, 0.64])
-fig.colorbar(im, cax=cax, label="Gain vs E0 (pp), median 3 seed từng ô")
-s_wc = summarize(gain_table_median(WIN, CHAMPION).ravel())
+fig.colorbar(im, cax=cax, label="Gain vs E0 (pp), từ RMSE̅ mean 3 seed")
+s_wc = summarize(gain_table(WIN, CHAMPION).ravel())
 fig.suptitle(f"Fig HM — 2 heatmap 15 ô (fold × horizon), cùng thang màu  [{FAKE}]", fontsize=9)
-fig.text(0.5, 0.04, f"win vs champion (base = bảng RMSE median 3 seed của champion): {fmt_sum(s_wc)}  →  "
+fig.text(0.5, 0.04, f"win vs champion (Gain từng ô = 1 − RMSE̅_win/RMSE̅_champion, RMSE̅ = mean 3 seed): {fmt_sum(s_wc)}  →  "
          f"{'ĐỔI champion' if s_wc['MedianGain'] > EPS_LGBM else 'GIỮ champion'} (ε = {EPS_LGBM:.3f})", ha="center", fontsize=8)
 fig.savefig(OUT / "fig_HM_win_vs_champion.png", dpi=130)
 plt.close(fig)
@@ -453,8 +471,9 @@ fig.suptitle(f"Final — heatmap TEST của mọi model: ô = khối 6 giờ × 
 fig.savefig(OUT / "fig_final_heatmaps.png", dpi=120)
 plt.close(fig)
 
-TEST_WINDOWS = ["02-01 08:00–09:00", "02-01 16:00–17:00", "02-02 08:00–09:00"]
-test_prices = [fake_window(level=PRICE * (0.98 + 0.004 * k)) for k in range(3)]
+# 3 cửa sổ 60' trong TEST chọn theo std r1 của cửa sổ: thấp nhất / trung vị / cao nhất (không chồng nhau) — giả định vị trí
+TEST_WINDOWS = ["02-01 03:00–04:00 (vol thấp)", "02-02 09:00–10:00 (vol trung bình)", "02-01 15:00–16:00 (vol cao)"]
+test_prices = [fake_window(level=PRICE * (0.98 + 0.004 * k), sig=SIG1 * sc) for k, sc in enumerate((0.6, 1.0, 1.6))]
 STRENGTH = {"B0-306": 0.20, "B0*": 0.22, "LightGBM(F*)": 0.28, "XGBoost(F*)": 0.27, "CatBoost(F*)": 0.27, "TFM-POINT": 0.05,
             "XGB-RF(F*)": 0.22, "AutoTS-WR(F*)": 0.20, "AutoTS-MR(F*)": 0.15, "LSTM(F*)": 0.18, "Ensemble": 0.32}
 for h in H:
@@ -509,7 +528,8 @@ A("Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá
   "15 ô = 5 fold × 3 horizon; E0 = dự báo giá không đổi (`P̂ = C_t`). "
   "**Chỉ MedianGain (so với ε) là tiêu chí quyết định** ở mọi chỗ — KEEP/DROP, chọn B0\\*, win_m, đổi champion, thành viên ensemble; "
   "WinRate/P10Gain/WorstGain chỉ báo cáo. PI/MI/standalone chỉ dùng để lập các bộ R1–R4 khi lọc B0 và prune PI cuối vòng lặp. "
-  "Bảng 3 seed: chồng 3 bảng Gain 15 ô lên nhau, **mỗi ô lấy median của 3 ô cùng vị trí**, rồi MedianGain = median 15 ô. "
+  "Gộp 3 seed: mỗi configuration có 3 bảng RMSE 15 ô (một mỗi seed); **mỗi ô lấy mean RMSE của 3 seed** → bảng RMSE̅ 15 ô; "
+  "Gain từng ô = 1 − RMSE̅_A/RMSE̅_B; MedianGain = median của 15 Gain. "
   "Training chỉ trên GPU; cột device trong bảng latency là device của lời gọi predict.\n")
 
 A("\n## 1. §1.3 — Nhiễu seed ε_m, lịch calibrate, số vòng cố định\n")
@@ -552,17 +572,18 @@ A(f"\n**Giải thích.** Mỗi dòng = một candidate thêm vào bộ hiện t�
 
 A("\n### 3b. §2.1 — Prune PI + confirmation 3 seed → win_m\n")
 A(md_table(prune_df))
-A("\nMinh họa \"chồng 3 seed lấy median từng ô\" (Gain vs E0 của win, chỉ h=1; thật sẽ là 5 fold × 3 horizon):\n")
+A("\nMinh họa gộp 3 seed (chỉ h=1; thật sẽ là 5 fold × 3 horizon = 15 ô):\n")
 A(md_table(stack_df))
 A("\n**Giải thích.** Sau vòng lặp: (a) tính permutation importance trên VAL cho các cột ext của F*_m, bỏ đồng thời mọi cột có PI ≤ 0 → F*_m^prune; "
-  "(b) chạy cả F*_m và F*_m^prune với 3 seed (ES bật); với mỗi bộ, 3 bảng Gain 15 ô (một bảng mỗi seed, cùng base) chồng lên nhau, "
-  "**mỗi ô lấy median của 3 ô cùng vị trí** → một bảng 15 ô; MedianGain = median của 15 ô này (WinRate/P10/Worst tính trên cùng bảng, chỉ báo cáo). "
-  "win_m = F*_m^prune nếu MedianGain(F*_m^prune vs F*_m) ≥ −ε_m, ngược lại = F*_m. Bảng median 3 seed của win_m là bảng dùng cho champion log và figure.\n")
+  "(b) mỗi configuration (F*_m và F*_m^prune) chạy 3 seed (ES bật) → 3 bảng RMSE 15 ô; với mỗi ô (f, h) lấy **mean RMSE của 3 seed** → một bảng RMSE̅ 15 ô duy nhất cho mỗi configuration; "
+  "từng ô `Gain_{f,h} = 1 − RMSE̅^prune_{f,h} / RMSE̅^unprune_{f,h}`; **MedianGain = median của 15 Gain**, so với ngưỡng nhiễu ε_m của model đang xét "
+  "(WinRate/P10/Worst tính trên cùng 15 ô, chỉ báo cáo). `MedianGain ≥ −ε_m` → win_m = F*_m^prune; thấp hơn → win_m = F*_m (unpruned). "
+  "Bảng RMSE̅ của win_m là bảng dùng cho champion log và figure; win vs champion dùng cùng cách gộp (RMSE̅ của hai bên → Gain từng ô → median).\n")
 
 A("\n## 4. §3 — Champion log (`experiments/champion_log.csv`)\n")
 A(md_table(champ_df))
 A("\n**Giải thích.** Champion ban đầu = LightGBM code gốc trên win_LGBM (dòng đầu, không so sánh). Sau khi mỗi model có win_m, "
-  "tính bảng Gain 15 ô của win_m so với champion hiện tại (base = bảng RMSE median 3 seed của champion), chồng 3 seed lấy median từng ô → MedianGain; "
+  "tính từng ô Gain = 1 − RMSE̅_win/RMSE̅_champion với RMSE̅ = bảng mean 3 seed của mỗi bên (cùng cách gộp như prune) → MedianGain = median 15 Gain; "
   "`MedianGain > +ε_champion` → đổi champion, ngược lại giữ — cả hai trường hợp đều ghi một dòng và vẽ figure §7.3 (win vs champion). "
   "Ensemble xét cuối cùng, cùng luật (ở mẫu này Ensemble thắng ⇒ champion cuối = Ensemble). "
   f"Thành viên ensemble theo luật §3 = champion + mọi model có MedianGain vs E0 > 0: {', '.join(ENSEMBLE_MEMBERS)} "
@@ -570,7 +591,7 @@ A("\n**Giải thích.** Champion ban đầu = LightGBM code gốc trên win_LGBM
   "Cột latency chỉ là thông tin (§7.4), không phải tiêu chí.\n")
 
 A("\n## 5. §7.2 — Bảng tổng hợp mọi model (`experiments/summary/all_models.csv`)\n")
-A("### 5.1 VAL (5 fold; RMSE/MAE = trung bình fold của bảng median 3 seed; Gain 15 ô median 3 seed)\n")
+A("### 5.1 VAL (5 fold; RMSE/MAE = trung bình fold của bảng RMSE̅ mean 3 seed; Gain 15 ô từ RMSE̅)\n")
 A(md_table(val_df))
 A("\n### 5.2 TEST 2 ngày (§4, một block; refit trên FIT → 01-30, ES 01-31)\n")
 A(md_table(test_df))
@@ -589,9 +610,10 @@ A("### 6.1 Sau mỗi model — win_m vs champion hiện tại: mỗi horizon 3 �
 for h in H:
     A(f"![Fig H{h}](smoke/fig_H{h}_win_vs_champion.png)\n")
 A("![Fig HM](smoke/fig_HM_win_vs_champion.png)\n")
-A("**Giải thích.** Fig H_h: mỗi ảnh một horizon; 3 panel = 3 cửa sổ 60 origin liên tiếp cố định (00:00–01:00, 08:00–09:00, 16:00–17:00 UTC của ngày VAL có RMSE E0 ở giữa 5 ngày). "
+A("**Giải thích.** Fig H_h: mỗi ảnh một horizon; 3 panel = 3 cửa sổ 60 origin ở **3 ngày VAL/fold khác nhau**, đại diện mức biến động thấp / trung bình / cao "
+  "(xếp 5 ngày VAL theo std của r1 trong ngày ≈ RMSE E0 h=1, lấy ngày min / trung vị / max; cửa sổ cố định 12:00–13:00 UTC của mỗi ngày) — tránh một cửa sổ tình cờ dự đoán đẹp làm hiểu sai model. "
   "Trục x = origin t; chấm đen nối mảnh = giá thật `C_(t+h)` (chuỗi thật); marker màu = `P̂_(t+h)` của win và champion, **không nối** — mỗi prediction gắn với origin của nó, không vẽ chuỗi dự báo liên tục; "
-  "đường xám đứt = `C_t` (E0). Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 median 3 seed từng ô, cùng thang màu; "
+  "đường xám đứt = `C_t` (E0). Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 tính từ bảng RMSE̅ mean 3 seed, cùng thang màu; "
   "tiêu đề ghi MedianGain/WinRate/P10/Worst và kết quả win vs champion. Ở mẫu này prediction được vẽ với biên độ lớn hơn thực tế để nhìn rõ layout — "
   "với tín hiệu thật (~0.1–0.2 pp) các marker sẽ nằm rất sát `C_t`; đó là bình thường.\n")
 A("### 6.2 Final (TEST) — heatmap của mọi model + Fig H_h của mọi model\n")
@@ -599,7 +621,7 @@ A("![Final heatmaps](smoke/fig_final_heatmaps.png)\n")
 for h in H:
     A(f"![Final H{h}](smoke/fig_final_H{h}_all_models.png)\n")
 A("**Giải thích.** Heatmap TEST: ô = khối 6 giờ × horizon (2 ngày ≈ 8 khối), giá trị Gain vs E0, một panel mỗi model (B0-306, B0*, mọi win_m, ensemble), cùng thang màu. "
-  "Fig H_h Final: cùng định nghĩa Fig H_h nhưng vẽ prediction của tất cả model trên 3 cửa sổ TEST (02-01 08:00, 02-01 16:00, 02-02 08:00); "
+  "Fig H_h Final: cùng định nghĩa Fig H_h nhưng vẽ prediction của tất cả model trên 3 cửa sổ 60' trong TEST chọn theo std r1 của cửa sổ: thấp nhất / trung vị / cao nhất (không chồng nhau); "
   "tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.\n")
 
 A("\n## 7. §7.4 — Inference latency (chỉ theo dõi) (`experiments/summary/latency_summary.csv`)\n")
@@ -613,7 +635,8 @@ A("**Giải thích.** Thời gian gọi `predict` cho **một origin** (batch 1)
 
 A("\n## 8. Cách sinh số giả (để không nhầm với kết quả)\n")
 A("- RMSE E0 per (fold, h) = 80.000 × 0.000765 × √h × (1 ± 15% nhiễu); RMSE model per seed = E0 × (1 − skill/100) với skill giả gán sẵn "
-  "(LightGBM 0.18/0.12/0.05 pp, TFM-POINT âm, Ensemble cao nhất) + nhiễu ô 0.02 pp + nhiễu seed 0.015 pp; 3 seed → median từng ô.\n"
+  "(LightGBM 0.18/0.12/0.05 pp, TFM-POINT âm, Ensemble cao nhất) + nhiễu ô 0.02 pp + nhiễu seed 0.015 pp; 3 seed → mean RMSE từng ô → Gain.\n"
+  "- Prune giả: RMSE prune = RMSE unprune × (1 − g/100), g ~ N(0.006, 0.02) mỗi ô mỗi seed. Cửa sổ vol thấp/trung bình/cao: std r1 × 0.6 / 1.0 / 1.6.\n"
   "- MAE = 0.72·RMSE; r ≈ √(2·Gain_vs_E0); dir-acc ≈ 0.5 + 0.4·r; latency, PI, MI, standalone, prune đều là hằng số + nhiễu.\n"
   "- Giá trong Fig H: random walk 63 phút; prediction = C_t·exp(strength·r_thật + noise) với strength 0.05–0.32 (cao hơn thực tế nhiều lần, chỉ để nhìn layout).\n"
   "- Seed 8586; chạy lại cho cùng số. Khi có pipeline thật, script này bị thay bằng `src/plots.py` + log thật.\n")

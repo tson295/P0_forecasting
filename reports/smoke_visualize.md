@@ -2,7 +2,7 @@
 
 > **FAKE / SMOKE — số giả để xem layout, không phải kết quả.** Sinh bởi `reports/smoke_visualize.py` (seed 8586), không đọc data thật, không train gì. Mục đích: thống nhất *hình dạng* output của từng bước trong `docs/RESEARCH_PLAN.md` trước khi code. Mọi con số dưới đây sẽ bị thay bằng kết quả thật khi chạy; không được trích dẫn như finding.
 
-Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá** `P̂ = C_t·exp(ŷ_h)` (USD); `Gain = 1 − RMSE_cand/RMSE_base` tính bằng **pp** (0.100 pp = RMSE thấp hơn base 0.1%); 15 ô = 5 fold × 3 horizon; E0 = dự báo giá không đổi (`P̂ = C_t`). **Chỉ MedianGain (so với ε) là tiêu chí quyết định** ở mọi chỗ — KEEP/DROP, chọn B0\*, win_m, đổi champion, thành viên ensemble; WinRate/P10Gain/WorstGain chỉ báo cáo. PI/MI/standalone chỉ dùng để lập các bộ R1–R4 khi lọc B0 và prune PI cuối vòng lặp. Bảng 3 seed: chồng 3 bảng Gain 15 ô lên nhau, **mỗi ô lấy median của 3 ô cùng vị trí**, rồi MedianGain = median 15 ô. Training chỉ trên GPU; cột device trong bảng latency là device của lời gọi predict.
+Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá** `P̂ = C_t·exp(ŷ_h)` (USD); `Gain = 1 − RMSE_cand/RMSE_base` tính bằng **pp** (0.100 pp = RMSE thấp hơn base 0.1%); 15 ô = 5 fold × 3 horizon; E0 = dự báo giá không đổi (`P̂ = C_t`). **Chỉ MedianGain (so với ε) là tiêu chí quyết định** ở mọi chỗ — KEEP/DROP, chọn B0\*, win_m, đổi champion, thành viên ensemble; WinRate/P10Gain/WorstGain chỉ báo cáo. PI/MI/standalone chỉ dùng để lập các bộ R1–R4 khi lọc B0 và prune PI cuối vòng lặp. Gộp 3 seed: mỗi configuration có 3 bảng RMSE 15 ô (một mỗi seed); **mỗi ô lấy mean RMSE của 3 seed** → bảng RMSE̅ 15 ô; Gain từng ô = 1 − RMSE̅_A/RMSE̅_B; MedianGain = median của 15 Gain. Training chỉ trên GPU; cột device trong bảng latency là device của lời gọi predict.
 
 
 ## 1. §1.3 — Nhiễu seed ε_m, lịch calibrate, số vòng cố định
@@ -30,7 +30,7 @@ Lịch calibrate số vòng/epoch cố định (mỗi (phase, model) một run E
 | B. Feature search | B0* (chung) | CatBoost | 1 | 15fixed_Cat + ε_Cat | 39 candidate + prune PI của CatBoost |
 | B. Feature search | B0* (chung) | LSTM | 1 (ES theo epoch) | fixed_epoch_LSTM + ε_LSTM | 39 candidate + prune PI của LSTM |
 | B. Feature search | B0* (chung) | XGB-RF / AutoTS / TimesFM | — (cơ chế riêng) | chỉ ε_m (XGB-RF 1 vòng cố định; TimesFM zero-shot; AutoTS config cố định) | vòng lặp riêng của model đó |
-| C. Prune PI + win | F*_m và F*_m^prune | từng model | 3 seed, ES bật | bảng median 3 seed → win_m (+ số vòng/epoch cho Final) | so với champion (§3), figure §7.3 |
+| C. Prune PI + win | F*_m và F*_m^prune | từng model | 3 seed mỗi configuration, ES bật | RMSE̅ (mean 3 seed từng ô) → Gain prune vs unprune → MedianGain → win_m (+ số vòng/epoch cho Final) | so với champion (§3), figure §7.3 |
 
 Ví dụ `15fixed_LGBM` (best_iteration mà ES dừng ở run calibrate của LightGBM trên B0*, per fold × horizon; dùng cho cả 39 candidate của LightGBM):
 
@@ -93,76 +93,76 @@ Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 
 ### 3b. §2.1 — Prune PI + confirmation 3 seed → win_m
 
-| bộ | số cột ext | 3 seed | MedianGain vs F*_LGBM (median từng ô) | WinRate | quyết định |
-|---|---|---|---|---|---|
-| F*_LGBM (sau vòng lặp) | 14 | 8586/8587/8588, ES bật | 0.000 | — | — |
-| F*_LGBM^prune (bỏ 5 cột ext có PI ≤ 0) | 9 | 8586/8587/8588, ES bật | +0.006 | 0.60 | ≥ −ε_LGBM → **win_LGBM = F*_LGBM^prune** |
-
-Minh họa "chồng 3 seed lấy median từng ô" (Gain vs E0 của win, chỉ h=1; thật sẽ là 5 fold × 3 horizon):
-
-| fold | seed 8586 (h=1) | seed 8587 (h=1) | seed 8588 (h=1) | median từng ô (h=1) |
+| configuration | 3 seed | RMSE̅ h=1 fold1..5 (USD) | MedianGain prune vs unprune (pp) | quyết định |
 |---|---|---|---|---|
-| f1 01-27 | +0.147 | +0.132 | +0.145 | +0.145 |
-| f2 01-28 | +0.141 | +0.139 | +0.150 | +0.141 |
-| f3 01-29 | +0.189 | +0.189 | +0.205 | +0.189 |
-| f4 01-30 | +0.201 | +0.231 | +0.219 | +0.219 |
-| f5 01-31 | +0.200 | +0.184 | +0.169 | +0.184 |
+| F*_m (unprune, 14 cột ext) | 8586/8587/8588, ES bật | 60.26 / 53.42 / 53.72 / 48.76 / 56.81 | — | — |
+| F*_m^prune (bỏ 5 cột ext có PI ≤ 0, còn 9) | 8586/8587/8588, ES bật | 60.26 / 53.41 / 53.73 / 48.76 / 56.82 | -0.000 (Win 0.47 · P10 -0.014 · Worst -0.023) | ≥ −ε_m (−0.024) → **win = prune** |
 
-**Giải thích.** Sau vòng lặp: (a) tính permutation importance trên VAL cho các cột ext của F*_m, bỏ đồng thời mọi cột có PI ≤ 0 → F*_m^prune; (b) chạy cả F*_m và F*_m^prune với 3 seed (ES bật); với mỗi bộ, 3 bảng Gain 15 ô (một bảng mỗi seed, cùng base) chồng lên nhau, **mỗi ô lấy median của 3 ô cùng vị trí** → một bảng 15 ô; MedianGain = median của 15 ô này (WinRate/P10/Worst tính trên cùng bảng, chỉ báo cáo). win_m = F*_m^prune nếu MedianGain(F*_m^prune vs F*_m) ≥ −ε_m, ngược lại = F*_m. Bảng median 3 seed của win_m là bảng dùng cho champion log và figure.
+Minh họa gộp 3 seed (chỉ h=1; thật sẽ là 5 fold × 3 horizon = 15 ô):
+
+| fold | unprune RMSE seed 8586 / 8587 / 8588 (h=1) | RMSE̅ unprune (mean) | prune RMSE seed 8586 / 8587 / 8588 (h=1) | RMSE̅ prune (mean) | Gain_{f,1} = 1 − RMSE̅^prune/RMSE̅^unprune (pp) |
+|---|---|---|---|---|---|
+| f1 01-27 | 60.26 / 60.26 / 60.26 | 60.26 | 60.25 / 60.26 / 60.27 | 60.26 | -0.003 |
+| f2 01-28 | 53.42 / 53.42 / 53.41 | 53.42 | 53.41 / 53.42 / 53.40 | 53.41 | +0.014 |
+| f3 01-29 | 53.72 / 53.72 / 53.71 | 53.72 | 53.73 / 53.74 / 53.72 | 53.73 | -0.023 |
+| f4 01-30 | 48.77 / 48.75 / 48.76 | 48.76 | 48.78 / 48.75 / 48.75 | 48.76 | -0.000 |
+| f5 01-31 | 56.80 / 56.81 / 56.82 | 56.81 | 56.80 / 56.82 / 56.82 | 56.82 | -0.013 |
+
+**Giải thích.** Sau vòng lặp: (a) tính permutation importance trên VAL cho các cột ext của F*_m, bỏ đồng thời mọi cột có PI ≤ 0 → F*_m^prune; (b) mỗi configuration (F*_m và F*_m^prune) chạy 3 seed (ES bật) → 3 bảng RMSE 15 ô; với mỗi ô (f, h) lấy **mean RMSE của 3 seed** → một bảng RMSE̅ 15 ô duy nhất cho mỗi configuration; từng ô `Gain_{f,h} = 1 − RMSE̅^prune_{f,h} / RMSE̅^unprune_{f,h}`; **MedianGain = median của 15 Gain**, so với ngưỡng nhiễu ε_m của model đang xét (WinRate/P10/Worst tính trên cùng 15 ô, chỉ báo cáo). `MedianGain ≥ −ε_m` → win_m = F*_m^prune; thấp hơn → win_m = F*_m (unpruned). Bảng RMSE̅ của win_m là bảng dùng cho champion log và figure; win vs champion dùng cùng cách gộp (RMSE̅ của hai bên → Gain từng ô → median).
 
 
 ## 4. §3 — Champion log (`experiments/champion_log.csv`)
 
-| model (win_m) | F*_m (cột ext sau prune) | champion trước | MedianGain vs champion (pp, median 3 seed từng ô) | WinRate | P10Gain | WorstGain | ε_champion | decision | MedianGain vs E0 | latency p95 h1 (ms) | champion sau |
+| model (win_m) | F*_m (cột ext sau prune) | champion trước | MedianGain vs champion (pp, từ RMSE̅ mean 3 seed) | WinRate | P10Gain | WorstGain | ε_champion | decision | MedianGain vs E0 | latency p95 h1 (ms) | champion sau |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| LightGBM(F*) | 9 | — | — | — | — | — | 0.021 | champion ban đầu (§3) | +0.132 | 0.70 | LightGBM(F*) |
-| XGBoost(F*) | 17 | LightGBM(F*) | +0.001 | 0.53 | -0.050 | -0.059 | 0.021 | giữ | +0.134 | 1.10 | LightGBM(F*) |
-| CatBoost(F*) | 18 | LightGBM(F*) | -0.028 | 0.20 | -0.065 | -0.069 | 0.021 | giữ | +0.105 | 0.50 | LightGBM(F*) |
-| TFM-POINT | — | LightGBM(F*) | -0.178 | 0.00 | -0.236 | -0.271 | 0.021 | giữ | -0.034 | 45.00 | LightGBM(F*) |
-| XGB-RF(F*) | 16 | LightGBM(F*) | -0.039 | 0.13 | -0.089 | -0.094 | 0.021 | giữ | +0.087 | 2.80 | LightGBM(F*) |
-| AutoTS-WR(F*) | 6 | LightGBM(F*) | -0.059 | 0.00 | -0.106 | -0.119 | 0.021 | giữ | +0.062 | 320.00 | LightGBM(F*) |
-| AutoTS-MR(F*) | 18 | LightGBM(F*) | -0.067 | 0.00 | -0.141 | -0.157 | 0.021 | giữ | +0.053 | 420.00 | LightGBM(F*) |
-| LSTM(F*) | 6 | LightGBM(F*) | -0.060 | 0.00 | -0.108 | -0.129 | 0.021 | giữ | +0.060 | 4.10 | LightGBM(F*) |
-| Ensemble | 7 thành viên, equal | LightGBM(F*) | -0.004 | 0.40 | -0.033 | -0.057 | 0.021 | giữ | +0.115 | 749.20 | LightGBM(F*) |
+| LightGBM(F*) | 9 | — | — | — | — | — | 0.021 | champion ban đầu (§3) | +0.137 | 0.70 | LightGBM(F*) |
+| XGBoost(F*) | 17 | LightGBM(F*) | -0.001 | 0.47 | -0.052 | -0.056 | 0.021 | giữ | +0.135 | 1.10 | LightGBM(F*) |
+| CatBoost(F*) | 16 | LightGBM(F*) | -0.029 | 0.20 | -0.071 | -0.074 | 0.021 | giữ | +0.099 | 0.50 | LightGBM(F*) |
+| TFM-POINT | — | LightGBM(F*) | -0.169 | 0.00 | -0.237 | -0.280 | 0.021 | giữ | -0.031 | 45.00 | LightGBM(F*) |
+| XGB-RF(F*) | 8 | LightGBM(F*) | -0.047 | 0.07 | -0.085 | -0.093 | 0.021 | giữ | +0.077 | 2.80 | LightGBM(F*) |
+| AutoTS-WR(F*) | 14 | LightGBM(F*) | -0.059 | 0.00 | -0.108 | -0.115 | 0.021 | giữ | +0.067 | 320.00 | LightGBM(F*) |
+| AutoTS-MR(F*) | 8 | LightGBM(F*) | -0.065 | 0.00 | -0.146 | -0.159 | 0.021 | giữ | +0.049 | 420.00 | LightGBM(F*) |
+| LSTM(F*) | 14 | LightGBM(F*) | -0.064 | 0.00 | -0.111 | -0.133 | 0.021 | giữ | +0.063 | 4.10 | LightGBM(F*) |
+| Ensemble | 7 thành viên, equal | LightGBM(F*) | -0.009 | 0.40 | -0.036 | -0.052 | 0.021 | giữ | +0.115 | 749.20 | LightGBM(F*) |
 
-**Giải thích.** Champion ban đầu = LightGBM code gốc trên win_LGBM (dòng đầu, không so sánh). Sau khi mỗi model có win_m, tính bảng Gain 15 ô của win_m so với champion hiện tại (base = bảng RMSE median 3 seed của champion), chồng 3 seed lấy median từng ô → MedianGain; `MedianGain > +ε_champion` → đổi champion, ngược lại giữ — cả hai trường hợp đều ghi một dòng và vẽ figure §7.3 (win vs champion). Ensemble xét cuối cùng, cùng luật (ở mẫu này Ensemble thắng ⇒ champion cuối = Ensemble). Thành viên ensemble theo luật §3 = champion + mọi model có MedianGain vs E0 > 0: LightGBM(F*), XGBoost(F*), CatBoost(F*), XGB-RF(F*), AutoTS-WR(F*), AutoTS-MR(F*), LSTM(F*) (TFM-POINT bị loại vì < 0; B0-306/B0\* là reference). Trọng số: (a) đều, (b) 1/MSE_VAL per horizon — với chênh lệch RMSE ~0.1% thì (b) ≈ (a). Cột latency chỉ là thông tin (§7.4), không phải tiêu chí.
+**Giải thích.** Champion ban đầu = LightGBM code gốc trên win_LGBM (dòng đầu, không so sánh). Sau khi mỗi model có win_m, tính từng ô Gain = 1 − RMSE̅_win/RMSE̅_champion với RMSE̅ = bảng mean 3 seed của mỗi bên (cùng cách gộp như prune) → MedianGain = median 15 Gain; `MedianGain > +ε_champion` → đổi champion, ngược lại giữ — cả hai trường hợp đều ghi một dòng và vẽ figure §7.3 (win vs champion). Ensemble xét cuối cùng, cùng luật (ở mẫu này Ensemble thắng ⇒ champion cuối = Ensemble). Thành viên ensemble theo luật §3 = champion + mọi model có MedianGain vs E0 > 0: LightGBM(F*), XGBoost(F*), CatBoost(F*), XGB-RF(F*), AutoTS-WR(F*), AutoTS-MR(F*), LSTM(F*) (TFM-POINT bị loại vì < 0; B0-306/B0\* là reference). Trọng số: (a) đều, (b) 1/MSE_VAL per horizon — với chênh lệch RMSE ~0.1% thì (b) ≈ (a). Cột latency chỉ là thông tin (§7.4), không phải tiêu chí.
 
 
 ## 5. §7.2 — Bảng tổng hợp mọi model (`experiments/summary/all_models.csv`)
 
-### 5.1 VAL (5 fold; RMSE/MAE = trung bình fold của bảng median 3 seed; Gain 15 ô median 3 seed)
+### 5.1 VAL (5 fold; RMSE/MAE = trung bình fold của bảng RMSE̅ mean 3 seed; Gain 15 ô từ RMSE̅)
 
 | model | RMSE h1 (USD) | MAE h1 | r h1 | dir-acc h1 | Gain vs E0 h1 (pp) | RMSE h2 (USD) | MAE h2 | r h2 | dir-acc h2 | Gain vs E0 h2 (pp) | RMSE h3 (USD) | MAE h3 | r h3 | dir-acc h3 | Gain vs E0 h3 (pp) | MedianGain vs B0-306 (pp) | WinRate vs B0-306 | MedianGain vs champion (pp) | P10 vs champion | Worst vs champion |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| E0 | 54.7 | 36.9 | -0.002 | 0.498 | +0.000 | 83.6 | 60.3 | -0.008 | 0.498 | +0.000 | 106.9 | 73.0 | -0.004 | 0.502 | +0.000 | -0.058 | 0.07 | -0.132 | -0.201 | -0.206 |
-| B0-306 | 54.6 | 37.9 | 0.046 | 0.516 | +0.089 | 83.5 | 62.6 | 0.038 | 0.515 | +0.080 | 106.9 | 81.3 | 0.023 | 0.510 | +0.024 | +0.000 | 0.00 | -0.065 | -0.111 | -0.127 |
-| B0* | 54.6 | 38.4 | 0.046 | 0.514 | +0.119 | 83.5 | 61.3 | 0.045 | 0.520 | +0.109 | 106.9 | 77.0 | 0.018 | 0.510 | +0.019 | +0.017 | 0.73 | -0.046 | -0.083 | -0.092 |
-| LightGBM(F*) | 54.6 | 38.9 | 0.067 | 0.532 | +0.196 | 83.5 | 56.2 | 0.046 | 0.524 | +0.132 | 106.9 | 73.5 | 0.029 | 0.508 | +0.061 | +0.065 | 0.93 | +0.000 | +0.000 | +0.000 |
-| XGBoost(F*) | 54.6 | 38.1 | 0.064 | 0.524 | +0.184 | 83.5 | 57.8 | 0.054 | 0.519 | +0.134 | 106.9 | 78.5 | 0.037 | 0.514 | +0.062 | +0.064 | 0.93 | +0.001 | -0.050 | -0.059 |
-| CatBoost(F*) | 54.6 | 40.9 | 0.056 | 0.527 | +0.165 | 83.5 | 59.1 | 0.050 | 0.517 | +0.105 | 106.9 | 75.9 | 0.018 | 0.506 | +0.028 | +0.045 | 0.67 | -0.028 | -0.065 | -0.069 |
-| TFM-POINT | 54.7 | 40.2 | -0.006 | 0.498 | -0.039 | 83.6 | 59.0 | 0.006 | 0.507 | -0.036 | 107.0 | 71.9 | 0.006 | 0.503 | -0.025 | -0.107 | 0.00 | -0.178 | -0.236 | -0.271 |
-| XGB-RF(F*) | 54.6 | 39.4 | 0.051 | 0.519 | +0.128 | 83.5 | 58.0 | 0.040 | 0.520 | +0.093 | 106.9 | 78.7 | 0.039 | 0.522 | +0.062 | +0.029 | 0.80 | -0.039 | -0.089 | -0.094 |
-| AutoTS-WR(F*) | 54.6 | 39.9 | 0.048 | 0.519 | +0.095 | 83.5 | 58.0 | 0.038 | 0.515 | +0.062 | 106.9 | 81.6 | 0.020 | 0.509 | +0.025 | +0.001 | 0.53 | -0.059 | -0.106 | -0.119 |
-| AutoTS-MR(F*) | 54.7 | 37.8 | 0.036 | 0.512 | +0.054 | 83.5 | 60.5 | 0.035 | 0.512 | +0.065 | 106.9 | 71.2 | 0.024 | 0.521 | +0.030 | -0.007 | 0.47 | -0.067 | -0.141 | -0.157 |
-| LSTM(F*) | 54.6 | 40.5 | 0.037 | 0.518 | +0.083 | 83.5 | 60.1 | 0.040 | 0.514 | +0.069 | 106.9 | 78.6 | 0.027 | 0.508 | +0.032 | +0.011 | 0.60 | -0.060 | -0.108 | -0.129 |
-| Ensemble | 54.6 | 41.7 | 0.069 | 0.522 | +0.217 | 83.5 | 61.7 | 0.053 | 0.521 | +0.115 | 106.9 | 78.3 | 0.024 | 0.509 | +0.035 | +0.064 | 0.87 | -0.004 | -0.033 | -0.057 |
+| E0 | 54.7 | 41.0 | -0.002 | 0.504 | +0.000 | 83.6 | 59.2 | 0.004 | 0.499 | +0.000 | 106.9 | 75.9 | -0.006 | 0.496 | +0.000 | -0.063 | 0.07 | -0.137 | -0.201 | -0.207 |
+| B0-306 | 54.6 | 40.1 | 0.039 | 0.516 | +0.102 | 83.5 | 58.9 | 0.045 | 0.522 | +0.075 | 106.9 | 71.9 | 0.031 | 0.513 | +0.031 | +0.000 | 0.00 | -0.065 | -0.104 | -0.118 |
+| B0* | 54.6 | 39.4 | 0.050 | 0.518 | +0.123 | 83.5 | 58.0 | 0.043 | 0.521 | +0.105 | 106.9 | 78.7 | 0.026 | 0.517 | +0.024 | +0.019 | 0.73 | -0.044 | -0.084 | -0.098 |
+| LightGBM(F*) | 54.6 | 39.9 | 0.067 | 0.526 | +0.197 | 83.5 | 57.9 | 0.055 | 0.521 | +0.137 | 106.9 | 81.5 | 0.031 | 0.514 | +0.058 | +0.065 | 1.00 | +0.000 | +0.000 | +0.000 |
+| XGBoost(F*) | 54.6 | 37.8 | 0.064 | 0.523 | +0.184 | 83.5 | 60.5 | 0.051 | 0.518 | +0.135 | 106.9 | 71.2 | 0.033 | 0.525 | +0.057 | +0.060 | 1.00 | -0.001 | -0.052 | -0.056 |
+| CatBoost(F*) | 54.6 | 40.5 | 0.054 | 0.525 | +0.168 | 83.5 | 60.1 | 0.047 | 0.517 | +0.099 | 106.9 | 78.6 | 0.022 | 0.506 | +0.021 | +0.039 | 0.60 | -0.029 | -0.071 | -0.074 |
+| TFM-POINT | 54.7 | 41.8 | 0.003 | 0.496 | -0.043 | 83.6 | 61.8 | 0.005 | 0.502 | -0.037 | 107.0 | 78.3 | -0.002 | 0.499 | -0.028 | -0.108 | 0.00 | -0.169 | -0.237 | -0.280 |
+| XGB-RF(F*) | 54.6 | 40.3 | 0.046 | 0.520 | +0.128 | 83.5 | 59.1 | 0.043 | 0.516 | +0.099 | 106.9 | 79.1 | 0.034 | 0.511 | +0.057 | +0.026 | 0.87 | -0.047 | -0.085 | -0.093 |
+| AutoTS-WR(F*) | 54.6 | 41.7 | 0.038 | 0.512 | +0.095 | 83.5 | 57.2 | 0.034 | 0.512 | +0.067 | 106.9 | 77.2 | 0.025 | 0.512 | +0.032 | +0.003 | 0.53 | -0.059 | -0.108 | -0.115 |
+| AutoTS-MR(F*) | 54.7 | 40.9 | 0.028 | 0.511 | +0.049 | 83.5 | 58.1 | 0.030 | 0.510 | +0.057 | 106.9 | 80.6 | 0.028 | 0.514 | +0.030 | -0.003 | 0.47 | -0.065 | -0.146 | -0.159 |
+| LSTM(F*) | 54.6 | 38.5 | 0.045 | 0.516 | +0.081 | 83.5 | 59.6 | 0.044 | 0.524 | +0.068 | 106.9 | 73.5 | 0.026 | 0.508 | +0.034 | +0.004 | 0.53 | -0.064 | -0.111 | -0.133 |
+| Ensemble | 54.6 | 38.8 | 0.068 | 0.525 | +0.222 | 83.5 | 60.9 | 0.053 | 0.520 | +0.115 | 106.9 | 76.3 | 0.028 | 0.511 | +0.035 | +0.066 | 0.80 | -0.009 | -0.036 | -0.052 |
 
 ### 5.2 TEST 2 ngày (§4, một block; refit trên FIT → 01-30, ES 01-31)
 
 | model | RMSE h1 (USD) | MAE h1 | r h1 | dir-acc h1 | Gain vs B0-306 h1 (pp) | Gain vs E0 h1 (pp) | RMSE h2 (USD) | MAE h2 | r h2 | dir-acc h2 | Gain vs B0-306 h2 (pp) | Gain vs E0 h2 (pp) | RMSE h3 (USD) | MAE h3 | r h3 | dir-acc h3 | Gain vs B0-306 h3 (pp) | Gain vs E0 h3 (pp) |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| E0 | 62.3 | 46.0 | -0.005 | 0.500 | -0.068 | +0.000 | 58.6 | 41.5 | -0.001 | 0.499 | -0.053 | +0.000 | 125.0 | 92.5 | 0.001 | 0.497 | -0.066 | +0.000 |
-| B0-306 | 62.3 | 47.5 | 0.031 | 0.509 | +0.000 | +0.068 | 58.6 | 40.1 | 0.030 | 0.510 | +0.000 | +0.053 | 125.0 | 90.2 | 0.036 | 0.517 | +0.000 | +0.066 |
-| B0* | 62.3 | 46.6 | 0.037 | 0.515 | +0.017 | +0.085 | 58.6 | 40.8 | 0.039 | 0.514 | +0.037 | +0.091 | 125.0 | 94.3 | 0.011 | 0.507 | -0.064 | +0.003 |
-| LightGBM(F*) | 62.2 | 43.8 | 0.066 | 0.525 | +0.124 | +0.191 | 58.6 | 41.8 | 0.044 | 0.524 | +0.015 | +0.068 | 124.9 | 85.9 | 0.041 | 0.514 | +0.020 | +0.086 |
-| XGBoost(F*) | 62.2 | 44.2 | 0.061 | 0.523 | +0.112 | +0.180 | 58.5 | 42.7 | 0.057 | 0.521 | +0.081 | +0.134 | 125.0 | 89.2 | 0.027 | 0.511 | -0.033 | +0.034 |
-| CatBoost(F*) | 62.2 | 46.3 | 0.056 | 0.526 | +0.110 | +0.178 | 58.5 | 43.7 | 0.060 | 0.523 | +0.099 | +0.152 | 125.0 | 89.7 | 0.029 | 0.511 | -0.014 | +0.052 |
-| TFM-POINT | 62.3 | 46.3 | 0.001 | 0.499 | -0.087 | -0.019 | 58.6 | 40.8 | -0.002 | 0.501 | -0.068 | -0.015 | 125.1 | 89.1 | 0.009 | 0.503 | -0.108 | -0.042 |
-| XGB-RF(F*) | 62.3 | 42.2 | 0.052 | 0.524 | +0.046 | +0.114 | 58.6 | 41.4 | 0.041 | 0.515 | +0.034 | +0.087 | 125.0 | 88.0 | 0.027 | 0.512 | -0.050 | +0.017 |
-| AutoTS-WR(F*) | 62.3 | 45.2 | 0.030 | 0.510 | -0.005 | +0.063 | 58.6 | 42.8 | 0.046 | 0.513 | +0.044 | +0.098 | 124.9 | 91.3 | 0.042 | 0.517 | +0.039 | +0.106 |
-| AutoTS-MR(F*) | 62.3 | 43.8 | 0.039 | 0.517 | +0.017 | +0.085 | 58.6 | 40.6 | 0.026 | 0.513 | -0.028 | +0.026 | 125.0 | 87.9 | 0.020 | 0.508 | -0.036 | +0.030 |
-| LSTM(F*) | 62.3 | 45.0 | 0.041 | 0.519 | +0.037 | +0.105 | 58.6 | 42.5 | 0.039 | 0.517 | +0.015 | +0.069 | 124.9 | 93.9 | 0.046 | 0.515 | +0.031 | +0.097 |
-| Ensemble | 62.2 | 46.0 | 0.061 | 0.524 | +0.126 | +0.193 | 58.6 | 42.0 | 0.054 | 0.523 | +0.054 | +0.107 | 125.0 | 93.0 | 0.024 | 0.504 | -0.034 | +0.032 |
+| E0 | 62.3 | 46.4 | -0.004 | 0.502 | -0.068 | +0.000 | 58.6 | 43.8 | 0.005 | 0.501 | -0.053 | +0.000 | 125.0 | 89.7 | -0.003 | 0.498 | -0.066 | +0.000 |
+| B0-306 | 62.3 | 46.3 | 0.038 | 0.514 | +0.000 | +0.068 | 58.6 | 40.8 | 0.031 | 0.514 | +0.000 | +0.053 | 125.0 | 89.0 | 0.046 | 0.517 | +0.000 | +0.066 |
+| B0* | 62.3 | 42.2 | 0.045 | 0.521 | +0.017 | +0.085 | 58.6 | 41.4 | 0.042 | 0.516 | +0.037 | +0.091 | 125.0 | 88.0 | 0.016 | 0.508 | -0.064 | +0.003 |
+| LightGBM(F*) | 62.2 | 45.2 | 0.056 | 0.521 | +0.124 | +0.191 | 58.6 | 42.8 | 0.039 | 0.510 | +0.015 | +0.068 | 124.9 | 91.4 | 0.038 | 0.515 | +0.020 | +0.086 |
+| XGBoost(F*) | 62.2 | 43.7 | 0.058 | 0.525 | +0.112 | +0.180 | 58.5 | 40.5 | 0.056 | 0.525 | +0.081 | +0.134 | 125.0 | 87.9 | 0.022 | 0.509 | -0.033 | +0.034 |
+| CatBoost(F*) | 62.2 | 45.0 | 0.055 | 0.525 | +0.110 | +0.178 | 58.5 | 42.4 | 0.058 | 0.525 | +0.099 | +0.152 | 125.0 | 94.0 | 0.034 | 0.510 | -0.014 | +0.052 |
+| TFM-POINT | 62.3 | 46.1 | -0.002 | 0.499 | -0.087 | -0.019 | 58.6 | 42.1 | 0.008 | 0.505 | -0.068 | -0.015 | 125.1 | 93.1 | -0.001 | 0.494 | -0.108 | -0.042 |
+| XGB-RF(F*) | 62.3 | 47.6 | 0.045 | 0.525 | +0.046 | +0.114 | 58.6 | 41.4 | 0.045 | 0.521 | +0.034 | +0.087 | 125.0 | 86.7 | 0.017 | 0.503 | -0.050 | +0.017 |
+| AutoTS-WR(F*) | 62.3 | 44.1 | 0.035 | 0.517 | -0.005 | +0.063 | 58.6 | 42.2 | 0.039 | 0.515 | +0.044 | +0.098 | 124.9 | 89.1 | 0.049 | 0.519 | +0.039 | +0.106 |
+| AutoTS-MR(F*) | 62.3 | 44.8 | 0.042 | 0.517 | +0.017 | +0.085 | 58.6 | 42.0 | 0.019 | 0.505 | -0.028 | +0.026 | 125.0 | 90.9 | 0.022 | 0.516 | -0.036 | +0.030 |
+| LSTM(F*) | 62.3 | 45.6 | 0.041 | 0.518 | +0.037 | +0.105 | 58.6 | 39.2 | 0.030 | 0.511 | +0.015 | +0.069 | 124.9 | 86.5 | 0.045 | 0.513 | +0.031 | +0.097 |
+| Ensemble | 62.2 | 45.8 | 0.065 | 0.524 | +0.126 | +0.193 | 58.6 | 43.8 | 0.048 | 0.522 | +0.054 | +0.107 | 125.0 | 86.5 | 0.025 | 0.510 | -0.034 | +0.032 |
 
 **Giải thích.** RMSE/MAE tính trên giá (USD) — với BTC ~80k và std return 1 phút ~0.077%, E0 ở h=1 cỡ 60 USD, h=3 cỡ 105 USD. Tín hiệu 1 phút rất nhỏ nên Gain thật chỉ cỡ 0.05–0.3 pp; Gain > ~1 pp là dấu hiệu leakage/bug. `r` và `dir-acc` tính trên thay đổi giá `P̂ − C_t` vs `C_{t+h} − C_t` (dir-acc bỏ bar giá không đổi). TFM-POINT zero-shot ở mẫu này thua E0 (Gain âm) ⇒ theo plan sẽ không chạy LoRA. TEST chỉ xem một lần, không sửa gì sau đó.
 
@@ -181,7 +181,7 @@ Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo vai 
 
 ![Fig HM](smoke/fig_HM_win_vs_champion.png)
 
-**Giải thích.** Fig H_h: mỗi ảnh một horizon; 3 panel = 3 cửa sổ 60 origin liên tiếp cố định (00:00–01:00, 08:00–09:00, 16:00–17:00 UTC của ngày VAL có RMSE E0 ở giữa 5 ngày). Trục x = origin t; chấm đen nối mảnh = giá thật `C_(t+h)` (chuỗi thật); marker màu = `P̂_(t+h)` của win và champion, **không nối** — mỗi prediction gắn với origin của nó, không vẽ chuỗi dự báo liên tục; đường xám đứt = `C_t` (E0). Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 median 3 seed từng ô, cùng thang màu; tiêu đề ghi MedianGain/WinRate/P10/Worst và kết quả win vs champion. Ở mẫu này prediction được vẽ với biên độ lớn hơn thực tế để nhìn rõ layout — với tín hiệu thật (~0.1–0.2 pp) các marker sẽ nằm rất sát `C_t`; đó là bình thường.
+**Giải thích.** Fig H_h: mỗi ảnh một horizon; 3 panel = 3 cửa sổ 60 origin ở **3 ngày VAL/fold khác nhau**, đại diện mức biến động thấp / trung bình / cao (xếp 5 ngày VAL theo std của r1 trong ngày ≈ RMSE E0 h=1, lấy ngày min / trung vị / max; cửa sổ cố định 12:00–13:00 UTC của mỗi ngày) — tránh một cửa sổ tình cờ dự đoán đẹp làm hiểu sai model. Trục x = origin t; chấm đen nối mảnh = giá thật `C_(t+h)` (chuỗi thật); marker màu = `P̂_(t+h)` của win và champion, **không nối** — mỗi prediction gắn với origin của nó, không vẽ chuỗi dự báo liên tục; đường xám đứt = `C_t` (E0). Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 tính từ bảng RMSE̅ mean 3 seed, cùng thang màu; tiêu đề ghi MedianGain/WinRate/P10/Worst và kết quả win vs champion. Ở mẫu này prediction được vẽ với biên độ lớn hơn thực tế để nhìn rõ layout — với tín hiệu thật (~0.1–0.2 pp) các marker sẽ nằm rất sát `C_t`; đó là bình thường.
 
 ### 6.2 Final (TEST) — heatmap của mọi model + Fig H_h của mọi model
 
@@ -193,7 +193,7 @@ Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo vai 
 
 ![Final H3](smoke/fig_final_H3_all_models.png)
 
-**Giải thích.** Heatmap TEST: ô = khối 6 giờ × horizon (2 ngày ≈ 8 khối), giá trị Gain vs E0, một panel mỗi model (B0-306, B0*, mọi win_m, ensemble), cùng thang màu. Fig H_h Final: cùng định nghĩa Fig H_h nhưng vẽ prediction của tất cả model trên 3 cửa sổ TEST (02-01 08:00, 02-01 16:00, 02-02 08:00); tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.
+**Giải thích.** Heatmap TEST: ô = khối 6 giờ × horizon (2 ngày ≈ 8 khối), giá trị Gain vs E0, một panel mỗi model (B0-306, B0*, mọi win_m, ensemble), cùng thang màu. Fig H_h Final: cùng định nghĩa Fig H_h nhưng vẽ prediction của tất cả model trên 3 cửa sổ 60' trong TEST chọn theo std r1 của cửa sổ: thấp nhất / trung vị / cao nhất (không chồng nhau); tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.
 
 
 ## 7. §7.4 — Inference latency (chỉ theo dõi) (`experiments/summary/latency_summary.csv`)
@@ -241,7 +241,8 @@ Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo vai 
 
 ## 8. Cách sinh số giả (để không nhầm với kết quả)
 
-- RMSE E0 per (fold, h) = 80.000 × 0.000765 × √h × (1 ± 15% nhiễu); RMSE model per seed = E0 × (1 − skill/100) với skill giả gán sẵn (LightGBM 0.18/0.12/0.05 pp, TFM-POINT âm, Ensemble cao nhất) + nhiễu ô 0.02 pp + nhiễu seed 0.015 pp; 3 seed → median từng ô.
+- RMSE E0 per (fold, h) = 80.000 × 0.000765 × √h × (1 ± 15% nhiễu); RMSE model per seed = E0 × (1 − skill/100) với skill giả gán sẵn (LightGBM 0.18/0.12/0.05 pp, TFM-POINT âm, Ensemble cao nhất) + nhiễu ô 0.02 pp + nhiễu seed 0.015 pp; 3 seed → mean RMSE từng ô → Gain.
+- Prune giả: RMSE prune = RMSE unprune × (1 − g/100), g ~ N(0.006, 0.02) mỗi ô mỗi seed. Cửa sổ vol thấp/trung bình/cao: std r1 × 0.6 / 1.0 / 1.6.
 - MAE = 0.72·RMSE; r ≈ √(2·Gain_vs_E0); dir-acc ≈ 0.5 + 0.4·r; latency, PI, MI, standalone, prune đều là hằng số + nhiễu.
 - Giá trong Fig H: random walk 63 phút; prediction = C_t·exp(strength·r_thật + noise) với strength 0.05–0.32 (cao hơn thực tế nhiều lần, chỉ để nhìn layout).
 - Seed 8586; chạy lại cho cùng số. Khi có pipeline thật, script này bị thay bằng `src/plots.py` + log thật.
