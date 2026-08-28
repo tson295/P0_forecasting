@@ -44,10 +44,24 @@ B0-306 + ES (LGBM) → 15fixed_306 → R1–R4 → B0*
 
 Luật KEEP/DROP (§2.1): `MedianGain ≥ −ε_m` → KEEP (tốt hơn hoặc gần như không đổi), `< −ε_m` → DROP; ε_m = nhiễu seed của chính model đó. Chỉ MedianGain quyết định; WinRate/P10/Worst báo cáo. Training chỉ trên GPU.
 
+## Tài liệu: chính thức / lưu trữ / tham khảo
+
+| Loại | Vị trí | Ghi chú |
+|---|---|---|
+| **Chính thức** | `docs/RESEARCH_PLAN.md` | plan duy nhất có hiệu lực (rev 8) |
+| Chính thức (vận hành) | `.claude/CLAUDE.md`, `.claude/MEMORY.md`, `.claude/AGENT.md`, `.claude/agents/` | hiến pháp rút gọn, trạng thái, registry agent |
+| Lưu trữ (hết hiệu lực) | `docs/archive/` | plan / hiến pháp / memory bản 2026-08-24 |
+| Tham khảo (không có hiệu lực) | `docs/reference/` | TimesFM R0–R6 (distribution, cũ), tổng hợp G-Research; audit API sẽ ghi vào đây |
+| Layout mẫu (số giả) | `reports/smoke_visualize.md` | sinh bởi `reports/smoke_visualize.py`, không phải kết quả |
+
+## Agents (`.claude/agents/`)
+
+`main-controller` (điều khiển, work order, TRAINING lock, MEMORY) · `coder` (code + test tí hon) · `researcher` (audit API, giả thuyết feature, verdict methodology) · `checker` (checklist §6, review, test — phủ quyết, không sửa code) · `runner` (chạy trên Vast, chỉ khi UNLOCKED) · `analyst` (đọc log thật) · `infra` (Vast/tmux/GPU env). Chi tiết và cách phối hợp: `.claude/AGENT.md`.
+
 ## Cấu trúc repo
 
 - `Baseline_LGBM.py` — B0 frozen (306 feature, LightGBM GPU), không sửa.
-- `docs/RESEARCH_PLAN.md` — plan canonical; `docs/archive/` — bản cũ.
-- `reports/smoke_visualize.py` → `reports/smoke_visualize.md` + `reports/smoke/*.png` — layout mẫu, số giả.
-- `.claude/` — hiến pháp rút gọn (`CLAUDE.md`), trạng thái (`MEMORY.md`), agents.
+- `docs/` — plan chính thức + `archive/` + `reference/`.
+- `reports/` — smoke visualize (số giả).
+- `.claude/` — hiến pháp, trạng thái, agents, hooks.
 - `data/` — manifest; CSV raw không push.

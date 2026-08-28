@@ -14,7 +14,7 @@ TRAINING: LOCKED
 3. User unlock training → Vast: LightGBM §1.3 trên B0-306 (15fixed_306) → §1.4 lọc → B0* → mỗi model calibrate 15fixed_m + ε_m trên B0* rồi vòng lặp riêng: LightGBM → XGBoost → CatBoost → TimesFM (audit API trước) → XGB-RF → AutoTS (audit trước) → LSTM; champion log sau mỗi model → ensemble → Final TEST 2 ngày → all_models.csv + figure.
 4. Phục hồi data đầy đủ + scale data: chỉ khi user quyết (plan §5).
 
-2026-08-28: đã tạo `reports/smoke_visualize.py` + `reports/smoke_visualize.md` + `reports/smoke/*.png` (layout mẫu, SỐ GIẢ, không phải kết quả); đã viết lại 8 agent files + `AGENT.md` theo plan rev 6 (remote-infra giữ nguyên).
+2026-08-28: đã tạo `reports/smoke_visualize.py` + `reports/smoke_visualize.md` + `reports/smoke/*.png` (layout mẫu, SỐ GIẢ, không phải kết quả); 2026-08-28 (sau): bộ agent mới 7 file (main-controller/coder/researcher/checker/runner/analyst/infra) thay 9 agent cũ; tài liệu tách: chính thức `docs/RESEARCH_PLAN.md`, lưu trữ `docs/archive/`, tham khảo `docs/reference/`.
 
 ## Decisions (mới nhất trước)
 
@@ -62,7 +62,8 @@ TRAINING: LOCKED
 - `.claude/CLAUDE.md` — invariants rút gọn.
 - `docs/archive/` — plan/hiến pháp/memory cũ 2026-08-24 (tham khảo).
 - `data/manifest.json` — range/row count dự kiến của data đầy đủ.
-- `timesfm_ohlcv_distribution_forecasting_R0_R6.md`, `g_research_crypto_solutions_summary.md` — reference only.
+- `docs/reference/` — TimesFM R0–R6 (cũ), G-Research summary; audit API ghi vào đây. Reference only.
+- `.claude/agents/` — 7 agent: main-controller, coder, researcher, checker, runner, analyst, infra (registry `.claude/AGENT.md`).
 
 ## Open Questions
 

@@ -1,6 +1,6 @@
 # P0_forecasting — Hiến pháp (bản rút gọn 2026-08-27)
 
-File này chỉ giữ invariants. Kế hoạch nghiên cứu: `docs/RESEARCH_PLAN.md`. Trạng thái hiện tại: `.claude/MEMORY.md` (auto-import cuối file). Bản chi tiết cũ (2026-08-24) lưu ở `docs/archive/` chỉ để tham khảo, không còn hiệu lực.
+File này chỉ giữ invariants. Kế hoạch nghiên cứu: `docs/RESEARCH_PLAN.md`. Trạng thái hiện tại: `.claude/MEMORY.md` (auto-import cuối file). Bản cũ (2026-08-24) ở `docs/archive/` và tài liệu tham khảo ở `docs/reference/` không có hiệu lực. Agents: `.claude/AGENT.md`.
 
 Khi mâu thuẫn: quyết định user mới nhất > `docs/RESEARCH_PLAN.md` > file này > code hiện có > đề xuất. **Không tự mở rộng protocol/governance/stage/rule/framework khi user không yêu cầu.** Chỉ đổi thiết kế đã có khi phát hiện logic sai, leakage, hoặc model/metric rõ ràng không phù hợp — và nói rõ cái nào, vì sao, không thay bằng thứ phức tạp hơn.
 
