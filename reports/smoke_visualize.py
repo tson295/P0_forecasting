@@ -232,7 +232,7 @@ for i, (c, mg) in enumerate(cands, start=1):
         "P10Gain": f"{s['P10Gain']:+.3f}", "WorstGain": f"{s['WorstGain']:+.3f}",
         "Gain vs B0* (pp)": f"{mg + 0.03 * i / len(cands):+.3f}", "Gain vs E0 (pp)": f"{0.12 + mg + 0.03 * i / len(cands):+.3f}",
         "gain_standalone vs E0 (pp)": f"{max(mg, 0) * 0.6 + 0.01 * rng.standard_normal():+.3f}",
-        "decision": "KEEP" if keep else "DROP", "|S_m| sau": size, "exp_id": f"lgbm_c{i:03d}",
+        "decision": "KEEP" if keep else "DROP", "size S_m sau": size, "exp_id": f"lgbm_c{i:03d}",
     })
 kd_df = pd.DataFrame(kd_rows)
 
@@ -482,7 +482,7 @@ A(f"\n**Giải thích.** Mỗi dòng = một candidate thêm vào bộ hiện t�
   f"Luật: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = {EPS_LGBM:.3f} pp). "
   "Mỗi model có file riêng (keepdrop_XGBoost.csv, keepdrop_CatBoost.csv, …) với cùng cấu trúc; các F*_m có thể khác nhau. "
   "`gain_standalone` là diagnostic (LightGBM chỉ trên cột đó vs E0): standalone > 0 nhưng vs S_m ≈ 0 ⇒ có tín hiệu nhưng trùng base. "
-  "`|S_m| sau` cho thấy bộ feature lớn dần; cuối vòng lặp có safety-net (thử lại block các cột DROP) và prune permutation ≤ 0.\n")
+  "`size S_m sau` (số cột của S_m sau quyết định) cho thấy bộ feature lớn dần; cuối vòng lặp có safety-net (thử lại block các cột DROP) và prune permutation ≤ 0.\n")
 
 A("\n## 4. §3 — Champion log (`experiments/champion_log.csv`)\n")
 A(md_table(champ_df))

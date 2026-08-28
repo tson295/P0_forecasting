@@ -77,7 +77,7 @@ Kiểm chứng 4 bộ so với B0-306 (mỗi bộ 1 run LightGBM gốc, số vò
 
 Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 
-| # | cột | MedianGain vs S_m (pp) | WinRate | P10Gain | WorstGain | Gain vs B0* (pp) | Gain vs E0 (pp) | gain_standalone vs E0 (pp) | decision | |S_m| sau | exp_id |
+| # | cột | MedianGain vs S_m (pp) | WinRate | P10Gain | WorstGain | Gain vs B0* (pp) | Gain vs E0 (pp) | gain_standalone vs E0 (pp) | decision | size S_m sau | exp_id |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | vwap_amt_gap_1 | +0.041 | 0.73 | -0.021 | -0.030 | +0.045 | +0.165 | +0.034 | KEEP | 198 | lgbm_c001 |
 | 2 | vwap_amt_gap_15 | +0.012 | 0.73 | -0.042 | -0.078 | +0.019 | +0.140 | +0.013 | KEEP | 199 | lgbm_c002 |
@@ -88,7 +88,7 @@ Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 | 7 | ret_1440 | -0.052 | 0.20 | -0.137 | -0.151 | -0.026 | +0.094 | +0.013 | DROP | 202 | lgbm_c007 |
 | 8 | log_rv15_rv240 | +0.024 | 0.80 | -0.054 | -0.115 | +0.054 | +0.174 | +0.021 | KEEP | 203 | lgbm_c008 |
 
-**Giải thích.** Mỗi dòng = một candidate thêm vào bộ hiện tại `S_m` của model (xuất phát chung là B0*); base của Gain là chính model trên `S_m`; số vòng = 15fixed_m của model đó (calibrate trên B0*). Luật: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = 0.021 pp). Mỗi model có file riêng (keepdrop_XGBoost.csv, keepdrop_CatBoost.csv, …) với cùng cấu trúc; các F*_m có thể khác nhau. `gain_standalone` là diagnostic (LightGBM chỉ trên cột đó vs E0): standalone > 0 nhưng vs S_m ≈ 0 ⇒ có tín hiệu nhưng trùng base. `|S_m| sau` cho thấy bộ feature lớn dần; cuối vòng lặp có safety-net (thử lại block các cột DROP) và prune permutation ≤ 0.
+**Giải thích.** Mỗi dòng = một candidate thêm vào bộ hiện tại `S_m` của model (xuất phát chung là B0*); base của Gain là chính model trên `S_m`; số vòng = 15fixed_m của model đó (calibrate trên B0*). Luật: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = 0.021 pp). Mỗi model có file riêng (keepdrop_XGBoost.csv, keepdrop_CatBoost.csv, …) với cùng cấu trúc; các F*_m có thể khác nhau. `gain_standalone` là diagnostic (LightGBM chỉ trên cột đó vs E0): standalone > 0 nhưng vs S_m ≈ 0 ⇒ có tín hiệu nhưng trùng base. `size S_m sau` (số cột của S_m sau quyết định) cho thấy bộ feature lớn dần; cuối vòng lặp có safety-net (thử lại block các cột DROP) và prune permutation ≤ 0.
 
 
 ## 4. §3 — Champion log (`experiments/champion_log.csv`)

@@ -100,6 +100,20 @@ B0-306 + ES (LGBM) → 15fixed_306 → R1–R4 → B0*
 
 Lý do: 306 cột của B0 (22 fine × 8 lag + 16 coarse × 8 lag + rv60/log_rv60) có thể chứa nhiều cột nhiễu; lọc một lần bằng LightGBM gốc trên 5 fold §1.2 rồi mới chạy Bước 2. `Baseline_LGBM.py` không đổi — lọc bằng chọn cột trong harness. B0-306 nguyên bản vẫn log làm reference ở mọi bảng.
 
+Flow lọc:
+
+```
+B0-306 + ES (LightGBM, seed 8586) → 15fixed_306 + 15 model baseline
+   ├─ (a) PI : xáo từng cột trong VAL × 3 lần → ΔRMSE giá per horizon (median 5 fold)
+   ├─ (b) SA : LightGBM chỉ 1 cột, 5 fold × 3 h → Gain vs E0 và vs B0-306
+   └─ (c) MI : mutual_info_regression(X_j, z_h) trên FIT − MI với target xáo trộn
+→ cờ per cột: PI+ / SA+ / MI+  khi điểm số > 0 ở ≥ 2/3 horizon
+→ R1 = PI+ ∨ SA+ ∨ MI+   R2 = PI+ ∨ (SA+ ∧ MI+)   R3 = PI+   R4 = SA+
+→ 4 run kiểm chứng (LightGBM, 15fixed_306) so với B0-306 → MedianGain 15 ô
+→ B0* = bộ không tệ hơn (≥ −ε_LGBM) có MedianGain cao nhất (hòa → nhỏ hơn); không bộ nào đạt → B0-306
+→ experiments/b0_filter.csv: 306 dòng (điểm số, cờ, giữ/bỏ theo R1–R4) + 4 kết quả kiểm chứng
+```
+
 Ba điểm số cho từng cột `j` (per horizon; gộp 5 fold bằng median), tất cả trên giá:
 
 **(a) Permutation importance (PI)** — dùng đúng 15 model B0-306 của run baseline §1.3 (seed 8586). Trên VAL mỗi fold: xáo trộn cột `j` giữa các origin VAL, predict lại, `PI_{j,h,f} = RMSE_perm − RMSE_gốc` (USD); lặp 3 lần xáo (seed khác nhau) lấy trung bình; median qua 5 fold. `PI ≤ 0` = xáo không làm model xấu đi → cột không được dùng hữu ích. Chi phí: chỉ predict, vài phút. Ghi thêm PI theo nhóm (xáo cùng lúc 8 lag của một base feature, 38 nhóm) để đọc, không dùng để quyết định.
@@ -332,7 +346,7 @@ Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `rep
 ### 7.2 Log quyết định
 
 - `experiments/b0_filter.csv` (§1.4): 306 dòng — cột, base feature, lag, PI per h (median fold), SA Gain vs E0 / vs B0-306 per h, MI − null per h, cờ PI+/SA+/MI+ (> 0 ở ≥ 1 horizon), giữ/bỏ theo từng bộ R1, R2, R3, R4; kèm bảng nhóm 38 base feature và kết quả 4 run kiểm chứng + bộ được chọn.
-- `experiments/keepdrop_<model>.csv`: mỗi candidate một dòng — thứ tự, cột, MedianGain/WinRate/P10/Worst vs S_m, Gain vs B0\*, Gain vs E0, `gain_standalone`, decision KEEP/DROP, |S_m| sau quyết định, exp_id.
+- `experiments/keepdrop_<model>.csv`: mỗi candidate một dòng — thứ tự, cột, MedianGain/WinRate/P10/Worst vs S_m, Gain vs B0\*, Gain vs E0, `gain_standalone`, decision KEEP/DROP, size S_m sau quyết định, exp_id.
 - `experiments/champion_log.csv`: mỗi model một dòng khi so với champion — model, F\*_m, champion trước, metric per horizon (giá) của cả hai, Gain 15 ô, MedianGain/WinRate/P10/Worst, ε_champion, decision **đổi / giữ**, champion sau, exp_id. Ensemble và lựa chọn cuối cũng ghi vào đây.
 - `experiments/summary/all_models.csv`: mọi model (E0, B0-306, B0\*, từng model tại F\*_m, TimesFM các biến thể, AutoTS ×2, LSTM, ensemble) × fold × horizon × {RMSE, MAE, r, dir-acc, Gain vs B0-306, Gain vs B0\*, Gain vs E0, Gain vs champion} + latency p95/p99/max (ms) per model × horizon (§7.4); kèm TEST riêng.
 
