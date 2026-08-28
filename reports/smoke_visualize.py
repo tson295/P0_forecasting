@@ -170,6 +170,14 @@ rounds = pd.DataFrame(
     index=[f"fold {i + 1} (VAL {d})" for i, d in enumerate(FOLD_DAYS)],
     columns=[f"h={h}" for h in H],
 ).reset_index().rename(columns={"index": "fold"})
+calib_df = pd.DataFrame([
+    {"phase": "A. Lọc B0", "feature set": "B0-306", "model": "LightGBM", "run ES": "1 (seed 8586)", "kết quả": "15fixed_306 + ε_LGBM(B0-306)", "dùng cho": "4 run kiểm chứng R1–R4"},
+    {"phase": "B. Feature search", "feature set": "B0*", "model": "LightGBM", "run ES": "1", "kết quả": "15fixed_B0* + ε_LGBM(B0*)", "dùng cho": "39 candidate → F* (tính một lần, dùng chung)"},
+    {"phase": "C. Trên F*", "feature set": "F*", "model": "LightGBM", "run ES": "1", "kết quả": "15fixed_LGBM + ε", "dùng cho": "safety-net / prune / confirmation của LightGBM"},
+    {"phase": "C. Trên F*", "feature set": "F*", "model": "XGBoost", "run ES": "1", "kết quả": "15fixed_XGB + ε", "dùng cho": "mọi candidate/ablation của XGBoost (từ F*)"},
+    {"phase": "C. Trên F*", "feature set": "F*", "model": "CatBoost", "run ES": "1", "kết quả": "15fixed_Cat + ε", "dùng cho": "mọi candidate/ablation của CatBoost (từ F*)"},
+    {"phase": "C. Trên F*", "feature set": "F*", "model": "XGB-RF / AutoTS / LSTM / TimesFM", "run ES": "—", "kết quả": "chỉ ε (không có số vòng; LSTM ES theo epoch)", "dùng cho": "—"},
+])
 
 # ----------------------------------------------------------------------------- §1.4 b0_filter
 b0_cols = [
@@ -184,8 +192,10 @@ for name, base, lag in b0_cols:
     pi = [(0.9 if strong else 0.0) + 0.3 * rng.standard_normal() for _ in H]
     st = [(0.05 if strong else -0.01) + 0.02 * rng.standard_normal() for _ in H]
     mi = [(0.004 if strong else 0.0) + 0.001 * rng.standard_normal() for _ in H]
-    # Cờ "+" của một tiêu chí = > 0 ở ÍT NHẤT MỘT horizon (B0 là 3 model độc lập; cột có ích cho một h là đáng giữ)
-    pi_p, st_p, mi_p = any(p > 0 for p in pi), any(s > 0 for s in st), any(x > 0 for x in mi)
+    # Cờ "+" của một tiêu chí = > 0 ở ÍT NHẤT 2 TRONG 3 horizon (luật user, rev 8)
+    pi_p = sum(p > 0 for p in pi) >= 2
+    st_p = sum(v > 0 for v in st) >= 2
+    mi_p = sum(x > 0 for x in mi) >= 2
     keep = {"R1": pi_p or st_p or mi_p, "R2": pi_p or (st_p and mi_p), "R3": pi_p, "R4": st_p}
     filt_rows.append({
         "cột": name, "base": base, "lag": lag,
@@ -193,7 +203,7 @@ for name, base, lag in b0_cols:
         "SA Gain vs E0 h1/h2/h3 (pp)": "/".join(f"{s:+.3f}" for s in st),
         "SA Gain vs B0-306 (pp, median)": f"{-0.12 + 0.03 * rng.standard_normal():+.3f}",
         "MI − null h1/h2/h3": "/".join(f"{x:+.4f}" for x in mi),
-        "PI+ / SA+ / MI+ (≥1 h)": f"{int(pi_p)} / {int(st_p)} / {int(mi_p)}",
+        "PI+ / SA+ / MI+ (≥2/3 h)": f"{int(pi_p)} / {int(st_p)} / {int(mi_p)}",
         **{k: ("giữ" if v else "bỏ") for k, v in keep.items()},
     })
 filt_df = pd.DataFrame(filt_rows)
@@ -216,7 +226,7 @@ for i, (c, mg) in enumerate(cands, start=1):
     keep = mg >= -EPS_LGBM
     size += int(keep)
     kd_rows.append({
-        "#": i, "cột": c,
+        "#": i, "cột": c, "thao tác": "thêm",
         "MedianGain vs S_m (pp)": f"{mg:+.3f}", "WinRate": f"{s['WinRate']:.2f}",
         "P10Gain": f"{s['P10Gain']:+.3f}", "WorstGain": f"{s['WorstGain']:+.3f}",
         "Gain vs B0* (pp)": f"{mg + 0.03 * i / len(cands):+.3f}", "Gain vs E0 (pp)": f"{0.12 + mg + 0.03 * i / len(cands):+.3f}",
@@ -437,13 +447,17 @@ A("Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá
 
 A("\n## 1. §1.3 — Nhiễu seed ε_m và số vòng cố định\n")
 A(md_table(eps_df))
-A("\n**Giải thích.** Mỗi model chạy 3 seed trên feature baseline; `std_seed` là độ lệch chuẩn của Gain giữa các seed "
+A("\n**Giải thích.** Mỗi model chạy 3 seed trên feature set của phase (xem lịch calibrate bên dưới); `std_seed` là độ lệch chuẩn của Gain giữa các seed "
   "trên 15 ô; `ε_m` là ngưỡng \"tệ hơn\" dùng cho KEEP/DROP và champion của model đó. LSTM nhiễu seed lớn hơn tree, "
   "nên ngưỡng của nó rộng hơn — tự động, không chỉnh tay.\n")
-A("\nSố vòng cố định của LightGBM (best_iteration lấy từ run baseline có ES, dùng cho mọi candidate):\n")
+A("\nLịch calibrate số vòng cố định (mỗi phase một run ES trên đúng feature set và đúng model; không dùng chéo):\n")
+A(md_table(calib_df))
+A("\nVí dụ `15fixed_B0*` của LightGBM (best_iteration mà ES dừng ở run calibrate phase B, per fold × horizon; dùng cho cả 39 candidate):\n")
 A(md_table(rounds))
-A("\n**Giải thích.** ES trên 1.377 dòng làm best_iteration nhiễu, nên chỉ lấy một lần ở baseline rồi cố định; "
-  "candidate và baseline cùng số vòng ⇒ chênh lệch Gain chỉ do feature. Run confirmation cuối bật lại ES.\n")
+A("\n**Giải thích.** \"Số vòng cố định\" = chính best_iteration mà early stopping dừng ở run calibrate (không phải ước lượng thống kê). "
+  "ES trên 1.377 dòng nhiễu, nên chỉ chạy ES một lần mỗi phase rồi cố định cho mọi run của phase đó ⇒ candidate và base cùng số vòng, "
+  "chênh lệch Gain chỉ do feature. Sau khi có B0* thì calibrate lại (15fixed_B0*), sau khi có F* thì calibrate lại lần nữa và riêng từng model "
+  "(15fixed_LGBM / 15fixed_XGB / 15fixed_Cat); không dùng số vòng của B0-306 hay của LightGBM cho model khác.\n")
 
 A("\n## 2. §1.4 — Lọc 306 feature B0 → B0\\* (`experiments/b0_filter.csv`)\n")
 A("Mẫu 8 dòng (thật sẽ có 306 dòng); mỗi cột có giữ/bỏ riêng cho từng bộ R1–R4:\n")
@@ -452,8 +466,8 @@ A("\nKiểm chứng 4 bộ so với B0-306 (mỗi bộ 1 run LightGBM gốc, s�
 A(md_table(rsets_df))
 A("\n**Giải thích.** Ba điểm số per horizon (median 5 fold): PI = RMSE tăng thêm (USD) khi xáo cột đó trong VAL; "
   "SA = standalone, LightGBM chỉ trên một cột, Gain so với E0 và so với B0-306; MI − null = mutual information với z-target trên FIT trừ MI với target xáo trộn. "
-  "Cờ **PI+ / SA+ / MI+** = điểm số > 0 ở **ít nhất một horizon** (B0 là 3 model độc lập theo h, cột có ích cho một h là đáng giữ; "
-  "ví dụ PI > 0 ở h1, h2 nhưng < 0 ở h3 → PI+). Không có tier: bốn bộ định nghĩa thẳng bằng cờ — "
+  "Cờ **PI+ / SA+ / MI+** = điểm số > 0 ở **ít nhất 2 trong 3 horizon** "
+  "(ví dụ PI > 0 ở h1, h2 nhưng < 0 ở h3 → PI+; chỉ h1 > 0 → không +). Không có tier: bốn bộ định nghĩa thẳng bằng cờ — "
   "R1 giữ nếu PI+ hoặc SA+ hoặc MI+ (bỏ cột âm cả ba); R2 giữ nếu PI+ hoặc (SA+ và MI+); R3 giữ nếu PI+; R4 giữ nếu SA+. "
   "Chọn B0\\* = trong các bộ có MedianGain ≥ −ε_LGBM so với B0-306, lấy bộ MedianGain cao nhất (chênh < ε → bộ nhỏ hơn); không bộ nào đạt → B0\\* = B0-306. "
   "Nếu một cột đơn lẻ thắng B0-306 (SA Gain vs B0-306 > +ε) thì đó là cờ đỏ B0 bị nhiễu chi phối — không cần luật riêng: R3/R4 sẽ tự thắng ở bước kiểm chứng. "
@@ -462,8 +476,9 @@ A("\n**Giải thích.** Ba điểm số per horizon (median 5 fold): PI = RMSE t
 A("\n## 3. §2.1 — Vòng lặp feature của một model (`experiments/keepdrop_LightGBM.csv`)\n")
 A("Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):\n")
 A(md_table(kd_df))
-A(f"\n**Giải thích.** Mỗi dòng = một candidate thêm vào bộ hiện tại `S_m` của model; base của Gain là chính model trên `S_m`. "
-  f"Luật: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = {EPS_LGBM:.3f} pp). "
+A(f"\n**Giải thích.** Mỗi dòng = một candidate thử vào bộ hiện tại `S_m` của model; base của Gain là chính model trên `S_m`; số vòng = 15fixed của phase (LightGBM phase B: 15fixed_B0*). "
+  f"Luật thêm: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = {EPS_LGBM:.3f} pp). "
+  "Model khác xuất phát từ F* của LightGBM với 15fixed riêng: cột đã có → `thao tác = bỏ` (chỉ bỏ khi MedianGain > +ε_m), cột chưa có → `thao tác = thêm` (luật trên). "
   "`gain_standalone` là diagnostic (LightGBM chỉ trên cột đó vs E0): standalone > 0 nhưng vs S_m ≈ 0 ⇒ có tín hiệu nhưng trùng base. "
   "`|S_m| sau` cho thấy bộ feature lớn dần; cuối vòng lặp có safety-net (thử lại block các cột DROP) và prune permutation ≤ 0.\n")
 

@@ -17,10 +17,21 @@ Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá** 
 | AutoTS-MR | 0.034 | 0.034 |
 | LSTM | 0.058 | 0.058 |
 
-**Giải thích.** Mỗi model chạy 3 seed trên feature baseline; `std_seed` là độ lệch chuẩn của Gain giữa các seed trên 15 ô; `ε_m` là ngưỡng "tệ hơn" dùng cho KEEP/DROP và champion của model đó. LSTM nhiễu seed lớn hơn tree, nên ngưỡng của nó rộng hơn — tự động, không chỉnh tay.
+**Giải thích.** Mỗi model chạy 3 seed trên feature set của phase (xem lịch calibrate bên dưới); `std_seed` là độ lệch chuẩn của Gain giữa các seed trên 15 ô; `ε_m` là ngưỡng "tệ hơn" dùng cho KEEP/DROP và champion của model đó. LSTM nhiễu seed lớn hơn tree, nên ngưỡng của nó rộng hơn — tự động, không chỉnh tay.
 
 
-Số vòng cố định của LightGBM (best_iteration lấy từ run baseline có ES, dùng cho mọi candidate):
+Lịch calibrate số vòng cố định (mỗi phase một run ES trên đúng feature set và đúng model; không dùng chéo):
+
+| phase | feature set | model | run ES | kết quả | dùng cho |
+|---|---|---|---|---|---|
+| A. Lọc B0 | B0-306 | LightGBM | 1 (seed 8586) | 15fixed_306 + ε_LGBM(B0-306) | 4 run kiểm chứng R1–R4 |
+| B. Feature search | B0* | LightGBM | 1 | 15fixed_B0* + ε_LGBM(B0*) | 39 candidate → F* (tính một lần, dùng chung) |
+| C. Trên F* | F* | LightGBM | 1 | 15fixed_LGBM + ε | safety-net / prune / confirmation của LightGBM |
+| C. Trên F* | F* | XGBoost | 1 | 15fixed_XGB + ε | mọi candidate/ablation của XGBoost (từ F*) |
+| C. Trên F* | F* | CatBoost | 1 | 15fixed_Cat + ε | mọi candidate/ablation của CatBoost (từ F*) |
+| C. Trên F* | F* | XGB-RF / AutoTS / LSTM / TimesFM | — | chỉ ε (không có số vòng; LSTM ES theo epoch) | — |
+
+Ví dụ `15fixed_B0*` của LightGBM (best_iteration mà ES dừng ở run calibrate phase B, per fold × horizon; dùng cho cả 39 candidate):
 
 | fold | h=1 | h=2 | h=3 |
 |---|---|---|---|
@@ -30,22 +41,22 @@ Số vòng cố định của LightGBM (best_iteration lấy từ run baseline c
 | fold 4 (VAL 01-30) | 275 | 203 | 443 |
 | fold 5 (VAL 01-31) | 298 | 379 | 207 |
 
-**Giải thích.** ES trên 1.377 dòng làm best_iteration nhiễu, nên chỉ lấy một lần ở baseline rồi cố định; candidate và baseline cùng số vòng ⇒ chênh lệch Gain chỉ do feature. Run confirmation cuối bật lại ES.
+**Giải thích.** "Số vòng cố định" = chính best_iteration mà early stopping dừng ở run calibrate (không phải ước lượng thống kê). ES trên 1.377 dòng nhiễu, nên chỉ chạy ES một lần mỗi phase rồi cố định cho mọi run của phase đó ⇒ candidate và base cùng số vòng, chênh lệch Gain chỉ do feature. Sau khi có B0* thì calibrate lại (15fixed_B0*), sau khi có F* thì calibrate lại lần nữa và riêng từng model (15fixed_LGBM / 15fixed_XGB / 15fixed_Cat); không dùng số vòng của B0-306 hay của LightGBM cho model khác.
 
 
 ## 2. §1.4 — Lọc 306 feature B0 → B0\* (`experiments/b0_filter.csv`)
 
 Mẫu 8 dòng (thật sẽ có 306 dòng); mỗi cột có giữ/bỏ riêng cho từng bộ R1–R4:
 
-| cột | base | lag | PI h1/h2/h3 (USD) | SA Gain vs E0 h1/h2/h3 (pp) | SA Gain vs B0-306 (pp, median) | MI − null h1/h2/h3 | PI+ / SA+ / MI+ (≥1 h) | R1 | R2 | R3 | R4 |
+| cột | base | lag | PI h1/h2/h3 (USD) | SA Gain vs E0 h1/h2/h3 (pp) | SA Gain vs B0-306 (pp, median) | MI − null h1/h2/h3 | PI+ / SA+ / MI+ (≥2/3 h) | R1 | R2 | R3 | R4 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | fine:t:return1 | return1 | 0 | +1.13/+0.47/+1.08 | +0.054/+0.073/+0.066 | -0.149 | +0.0040/+0.0035/+0.0046 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
 | fine:t-1m:return1 | return1 | -1 | +1.41/+0.86/+1.32 | +0.017/+0.085/+0.033 | -0.135 | +0.0030/+0.0038/+0.0040 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
 | fine:t:close_position | close_position | 0 | +0.77/+0.92/+1.04 | +0.065/+0.033/+0.026 | -0.076 | +0.0039/+0.0053/+0.0034 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
 | coarse:t:rv64 | rv64 | 0 | +0.85/+0.77/+1.30 | +0.081/+0.043/+0.042 | -0.046 | +0.0049/+0.0057/+0.0045 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
-| coarse:t-504m:time_of_day_sin | time_of_day_sin | -504 | -0.06/+0.07/-0.22 | -0.010/-0.012/-0.017 | -0.137 | -0.0025/-0.0004/+0.0005 | 1 / 0 / 1 | giữ | giữ | giữ | bỏ |
-| fine:t-63m:minute_mod5_cos | minute_mod5_cos | -63 | -0.65/-0.25/-0.06 | -0.034/+0.007/-0.016 | -0.117 | -0.0020/+0.0013/+0.0006 | 0 / 1 / 1 | giữ | giữ | bỏ | giữ |
-| coarse:t-256m:sign_flip_rate32 | sign_flip_rate32 | -256 | +0.21/+0.18/-0.01 | -0.032/+0.003/-0.016 | -0.160 | +0.0002/-0.0026/-0.0016 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
+| coarse:t-504m:time_of_day_sin | time_of_day_sin | -504 | -0.06/+0.07/-0.22 | -0.010/-0.012/-0.017 | -0.137 | -0.0025/-0.0004/+0.0005 | 0 / 0 / 0 | bỏ | bỏ | bỏ | bỏ |
+| fine:t-63m:minute_mod5_cos | minute_mod5_cos | -63 | -0.65/-0.25/-0.06 | -0.034/+0.007/-0.016 | -0.117 | -0.0020/+0.0013/+0.0006 | 0 / 0 / 1 | giữ | bỏ | bỏ | bỏ |
+| coarse:t-256m:sign_flip_rate32 | sign_flip_rate32 | -256 | +0.21/+0.18/-0.01 | -0.032/+0.003/-0.016 | -0.160 | +0.0002/-0.0026/-0.0016 | 1 / 0 / 0 | giữ | giữ | giữ | bỏ |
 | origin:rv60 | rv60 | 0 | +0.62/+0.68/+1.07 | +0.047/+0.042/+0.071 | -0.114 | +0.0042/+0.0040/+0.0043 | 1 / 1 / 1 | giữ | giữ | giữ | giữ |
 
 Kiểm chứng 4 bộ so với B0-306 (mỗi bộ 1 run LightGBM gốc, số vòng cố định, seed 8586):
@@ -58,25 +69,25 @@ Kiểm chứng 4 bộ so với B0-306 (mỗi bộ 1 run LightGBM gốc, số vò
 | R3 | PI+ | 143 | −0.044 | 0.33 | tệ hơn −ε_LGBM (−0.021) → loại |
 | R4 | SA+ | 88 | −0.090 | 0.20 | loại |
 
-**Giải thích.** Ba điểm số per horizon (median 5 fold): PI = RMSE tăng thêm (USD) khi xáo cột đó trong VAL; SA = standalone, LightGBM chỉ trên một cột, Gain so với E0 và so với B0-306; MI − null = mutual information với z-target trên FIT trừ MI với target xáo trộn. Cờ **PI+ / SA+ / MI+** = điểm số > 0 ở **ít nhất một horizon** (B0 là 3 model độc lập theo h, cột có ích cho một h là đáng giữ; ví dụ PI > 0 ở h1, h2 nhưng < 0 ở h3 → PI+). Không có tier: bốn bộ định nghĩa thẳng bằng cờ — R1 giữ nếu PI+ hoặc SA+ hoặc MI+ (bỏ cột âm cả ba); R2 giữ nếu PI+ hoặc (SA+ và MI+); R3 giữ nếu PI+; R4 giữ nếu SA+. Chọn B0\* = trong các bộ có MedianGain ≥ −ε_LGBM so với B0-306, lấy bộ MedianGain cao nhất (chênh < ε → bộ nhỏ hơn); không bộ nào đạt → B0\* = B0-306. Nếu một cột đơn lẻ thắng B0-306 (SA Gain vs B0-306 > +ε) thì đó là cờ đỏ B0 bị nhiễu chi phối — không cần luật riêng: R3/R4 sẽ tự thắng ở bước kiểm chứng. Bảng nhóm 38 base feature (gộp 8 lag) đi kèm để đọc, không dùng để quyết định.
+**Giải thích.** Ba điểm số per horizon (median 5 fold): PI = RMSE tăng thêm (USD) khi xáo cột đó trong VAL; SA = standalone, LightGBM chỉ trên một cột, Gain so với E0 và so với B0-306; MI − null = mutual information với z-target trên FIT trừ MI với target xáo trộn. Cờ **PI+ / SA+ / MI+** = điểm số > 0 ở **ít nhất 2 trong 3 horizon** (ví dụ PI > 0 ở h1, h2 nhưng < 0 ở h3 → PI+; chỉ h1 > 0 → không +). Không có tier: bốn bộ định nghĩa thẳng bằng cờ — R1 giữ nếu PI+ hoặc SA+ hoặc MI+ (bỏ cột âm cả ba); R2 giữ nếu PI+ hoặc (SA+ và MI+); R3 giữ nếu PI+; R4 giữ nếu SA+. Chọn B0\* = trong các bộ có MedianGain ≥ −ε_LGBM so với B0-306, lấy bộ MedianGain cao nhất (chênh < ε → bộ nhỏ hơn); không bộ nào đạt → B0\* = B0-306. Nếu một cột đơn lẻ thắng B0-306 (SA Gain vs B0-306 > +ε) thì đó là cờ đỏ B0 bị nhiễu chi phối — không cần luật riêng: R3/R4 sẽ tự thắng ở bước kiểm chứng. Bảng nhóm 38 base feature (gộp 8 lag) đi kèm để đọc, không dùng để quyết định.
 
 
 ## 3. §2.1 — Vòng lặp feature của một model (`experiments/keepdrop_LightGBM.csv`)
 
 Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):
 
-| # | cột | MedianGain vs S_m (pp) | WinRate | P10Gain | WorstGain | Gain vs B0* (pp) | Gain vs E0 (pp) | gain_standalone vs E0 (pp) | decision | |S_m| sau | exp_id |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | vwap_amt_gap_1 | +0.041 | 0.73 | -0.021 | -0.030 | +0.045 | +0.165 | +0.034 | KEEP | 198 | lgbm_c001 |
-| 2 | vwap_amt_gap_15 | +0.012 | 0.73 | -0.042 | -0.078 | +0.019 | +0.140 | +0.013 | KEEP | 199 | lgbm_c002 |
-| 3 | vwap_amt_gap_60 | -0.009 | 0.27 | -0.084 | -0.113 | +0.002 | +0.122 | -0.018 | KEEP | 200 | lgbm_c003 |
-| 4 | vwap_amt_gap_240 | -0.033 | 0.13 | -0.106 | -0.134 | -0.018 | +0.102 | +0.020 | DROP | 200 | lgbm_c004 |
-| 5 | ret_60 | +0.002 | 0.53 | -0.054 | -0.067 | +0.021 | +0.141 | -0.007 | KEEP | 201 | lgbm_c005 |
-| 6 | ret_240 | -0.018 | 0.40 | -0.114 | -0.124 | +0.005 | +0.124 | +0.009 | KEEP | 202 | lgbm_c006 |
-| 7 | ret_1440 | -0.052 | 0.20 | -0.137 | -0.151 | -0.026 | +0.094 | +0.013 | DROP | 202 | lgbm_c007 |
-| 8 | log_rv15_rv240 | +0.024 | 0.80 | -0.054 | -0.115 | +0.054 | +0.174 | +0.021 | KEEP | 203 | lgbm_c008 |
+| # | cột | thao tác | MedianGain vs S_m (pp) | WinRate | P10Gain | WorstGain | Gain vs B0* (pp) | Gain vs E0 (pp) | gain_standalone vs E0 (pp) | decision | |S_m| sau | exp_id |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | vwap_amt_gap_1 | thêm | +0.041 | 0.73 | -0.021 | -0.030 | +0.045 | +0.165 | +0.034 | KEEP | 198 | lgbm_c001 |
+| 2 | vwap_amt_gap_15 | thêm | +0.012 | 0.73 | -0.042 | -0.078 | +0.019 | +0.140 | +0.013 | KEEP | 199 | lgbm_c002 |
+| 3 | vwap_amt_gap_60 | thêm | -0.009 | 0.27 | -0.084 | -0.113 | +0.002 | +0.122 | -0.018 | KEEP | 200 | lgbm_c003 |
+| 4 | vwap_amt_gap_240 | thêm | -0.033 | 0.13 | -0.106 | -0.134 | -0.018 | +0.102 | +0.020 | DROP | 200 | lgbm_c004 |
+| 5 | ret_60 | thêm | +0.002 | 0.53 | -0.054 | -0.067 | +0.021 | +0.141 | -0.007 | KEEP | 201 | lgbm_c005 |
+| 6 | ret_240 | thêm | -0.018 | 0.40 | -0.114 | -0.124 | +0.005 | +0.124 | +0.009 | KEEP | 202 | lgbm_c006 |
+| 7 | ret_1440 | thêm | -0.052 | 0.20 | -0.137 | -0.151 | -0.026 | +0.094 | +0.013 | DROP | 202 | lgbm_c007 |
+| 8 | log_rv15_rv240 | thêm | +0.024 | 0.80 | -0.054 | -0.115 | +0.054 | +0.174 | +0.021 | KEEP | 203 | lgbm_c008 |
 
-**Giải thích.** Mỗi dòng = một candidate thêm vào bộ hiện tại `S_m` của model; base của Gain là chính model trên `S_m`. Luật: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = 0.021 pp). `gain_standalone` là diagnostic (LightGBM chỉ trên cột đó vs E0): standalone > 0 nhưng vs S_m ≈ 0 ⇒ có tín hiệu nhưng trùng base. `|S_m| sau` cho thấy bộ feature lớn dần; cuối vòng lặp có safety-net (thử lại block các cột DROP) và prune permutation ≤ 0.
+**Giải thích.** Mỗi dòng = một candidate thử vào bộ hiện tại `S_m` của model; base của Gain là chính model trên `S_m`; số vòng = 15fixed của phase (LightGBM phase B: 15fixed_B0*). Luật thêm: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = 0.021 pp). Model khác xuất phát từ F* của LightGBM với 15fixed riêng: cột đã có → `thao tác = bỏ` (chỉ bỏ khi MedianGain > +ε_m), cột chưa có → `thao tác = thêm` (luật trên). `gain_standalone` là diagnostic (LightGBM chỉ trên cột đó vs E0): standalone > 0 nhưng vs S_m ≈ 0 ⇒ có tín hiệu nhưng trùng base. `|S_m| sau` cho thấy bộ feature lớn dần; cuối vòng lặp có safety-net (thử lại block các cột DROP) và prune permutation ≤ 0.
 
 
 ## 4. §3 — Champion log (`experiments/champion_log.csv`)
