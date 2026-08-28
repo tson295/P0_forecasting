@@ -38,12 +38,12 @@ def measure_tabular(run: RunResult, warmup: int = 50, max_origins: int | None = 
     """Đo trên VAL của fold đầu tiên có state. X_val là ma trận (tree) hoặc SeqBatch (LSTM: feats + idx)."""
     st = run.states[0]
     X = st.X_val
-    is_seq = hasattr(X, "feats") and hasattr(X, "idx")
-    n_all = len(X.idx) if is_seq else len(X)
+    is_batch = hasattr(X, "slice") and hasattr(X, "idx")  # SeqBatch (LSTM) / SeriesBatch (TimesFM)
+    n_all = len(X.idx) if is_batch else len(X)
     n = n_all if max_origins is None else min(n_all, max_origins)
 
     def sub(a: int, b: int):
-        return type(X)(X.feats, X.idx[a:b]) if is_seq else X[a:b]
+        return X.slice(a, b) if is_batch else X[a:b]
 
     meta = {"train_device": getattr(model, "train_device", ""), "predict_device": getattr(model, "predict_device", ""),
             "lib_version": lib_version(model) if model is not None else "", "threads": "lib_default"}

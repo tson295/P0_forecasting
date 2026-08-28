@@ -61,9 +61,13 @@ def prune_pi(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold
     if not colset.ext:
         return colset, pd.DataFrame(columns=["col", "PI_h1", "PI_h2", "PI_h3", "keep"])
     run = run_config(store, model, colset, folds, rounds=rounds, seed=seed, keep_states=True)
-    if getattr(model, "name", "") == "lstm":  # LSTM: input là kênh của fine_matrix, không phải cột của ma trận B0 + ext
+    kind = getattr(model, "input_kind", "tabular")
+    if kind == "sequence":  # LSTM: input là kênh của fine_matrix, không phải cột của ma trận B0 + ext
         names = store.fine_names(colset)
         positions = [names.index(c) for c in colset.ext]
+    elif kind == "series":  # covariate = ext (TimesFM) hoặc B0* + ext (AutoTS) → ext nằm ở cuối
+        off = len(colset.b0) if getattr(model, "series_covariates", "ext") == "all" else 0
+        positions = [off + i for i in range(len(colset.ext))]
     else:
         positions = [len(colset.b0) + i for i in range(len(colset.ext))]
     delta = median_over_folds(permutation_importance(store, run, positions, repeats=repeats, seed=seed))

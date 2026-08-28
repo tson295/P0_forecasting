@@ -68,6 +68,7 @@ class Store:
         self.b0_names: tuple[str, ...] = lgbm_feature_names()
         self._b0_pos = {n: i for i, n in enumerate(self.b0_names)}
         self._ext: dict[str, np.ndarray] = {}
+        self._r1: np.ndarray | None = None
 
     @property
     def first_origin_ts(self) -> int:
@@ -76,6 +77,13 @@ class Store:
     @property
     def last_ts(self) -> int:
         return int(self.ts[-1])
+
+    @property
+    def r1(self) -> np.ndarray:
+        """Log-return 1 phút trên lưới: r1[s] = log(C_s / C_(s−1)); r1[0] = 0 (không có bar trước; origin đầu ở bar 631)."""
+        if self._r1 is None:
+            self._r1 = np.concatenate([[0.0], np.diff(np.log(self.close))])
+        return self._r1
 
     def ensure_ext(self, cols) -> None:
         missing = tuple(c for c in cols if c not in self._ext)
@@ -101,6 +109,13 @@ class Store:
             self.ensure_ext(colset.ext)
             parts.append(np.column_stack([self._ext[c][idx] for c in colset.ext]))
         return np.concatenate(parts, axis=1).astype(np.float32) if parts else np.zeros((len(idx), 0), np.float32)
+
+    def grid_matrix(self, colset: ColSet) -> np.ndarray:
+        """Cột của colset trên TOÀN lưới (bar không eligible = NaN) — regressor theo phút của AutoTS."""
+        out = np.full((len(self.ts), len(colset.names)), np.nan, np.float32)
+        el = np.flatnonzero(self.eligible)
+        out[el] = self.matrix(el, colset)
+        return out
 
     def targets(self, idx: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         c_t = self.close[idx]
@@ -193,10 +208,16 @@ def run_config(store: Store, model: TabularModel, colset: ColSet, folds: list[Fo
     rmse = np.zeros((F, 3)); mae = np.zeros((F, 3)); rr = np.zeros((F, 3)); dacc = np.zeros((F, 3)); e0 = np.zeros((F, 3))
     best = np.zeros((F, 3), dtype=int)
     used, states = [], []
-    is_seq = getattr(model, "name", "") == "lstm"
+    kind = getattr(model, "input_kind", "tabular")
     feats_all = names = None
-    if is_seq:
+    if kind == "sequence":
         feats_all, names = store.fine_matrix(colset)
+    elif kind == "series":  # covariate/regressor thô theo phút (chuẩn hoá train-only, NaN → 0 như plan §2.3)
+        cov_cols = tuple(colset.names) if getattr(model, "series_covariates", "ext") == "all" else tuple(colset.ext)
+        if cov_cols:
+            feats_all = store.grid_matrix(ColSet(tuple(c for c in cov_cols if c in store._b0_pos),
+                                                 tuple(c for c in cov_cols if c not in store._b0_pos)))
+            names = cov_cols
     for i, fold in enumerate(folds):
         idx_fit = fold.fit.origins(store.ts, store.eligible)
         idx_es = fold.es.origins(store.ts, store.eligible)
@@ -207,15 +228,21 @@ def run_config(store: Store, model: TabularModel, colset: ColSet, folds: list[Fo
         z_fit = transform.encode(store.fd.target, store.fd.rv60, idx_fit)
         z_es = transform.encode(store.fd.target, store.fd.rv60, idx_es)
         fold_rounds = _resolve_rounds(rounds, fold.name, getattr(model, "supports_rounds", True))
-        if is_seq:
+        if kind == "sequence":
             from .models_lstm import SeqBatch
 
             feats = _standardize_fit(feats_all, idx_fit)
             X_fit, X_es, X_val = SeqBatch(feats, idx_fit), SeqBatch(feats, idx_es), SeqBatch(feats, idx_val)
+        elif kind == "series":
+            from .models import SeriesBatch
+
+            cov = _standardize_fit(feats_all, idx_fit) if feats_all is not None else None
+            X_fit, X_es, X_val = (SeriesBatch(store.ts, store.r1, i, cov, tuple(names or ())) for i in (idx_fit, idx_es, idx_val))
         else:
             X_fit, X_es, X_val = store.matrix(idx_fit, colset), store.matrix(idx_es, colset), store.matrix(idx_val, colset)
         res = model.fit_predict(X_fit, z_fit, X_es, z_es, X_val, fold_rounds, seed)
-        yhat = transform.decode(res.pred_z, store.fd.rv60[idx_val])
+        # TimesFM/AutoTS trả thẳng log-return (§6.7); tree/LSTM trả z-space của B0 → decode với rv60 của đúng origin
+        yhat = np.asarray(res.pred_z, np.float32) if res.is_logret else transform.decode(res.pred_z, store.fd.rv60[idx_val])
         c_t, c_future, _ = store.targets(idx_val)
         m = cell_metrics(c_t, c_future, yhat)
         rmse[i], mae[i], rr[i], dacc[i] = m["rmse"], m["mae"], m["r"], m["dir_acc"]

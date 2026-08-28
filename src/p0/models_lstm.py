@@ -31,6 +31,7 @@ class SeqBatch:
 class LSTMModel:
     name = "lstm"
     lib = "torch"
+    input_kind = "sequence"
     supports_rounds = True  # "rounds" = số epoch cố định (fixed_epoch_LSTM)
 
     def __init__(self, device: str = "cuda", allow_cpu: bool = False, context: int = 512, hidden: int = 64, lr: float = 1e-3,

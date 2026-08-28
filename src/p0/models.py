@@ -23,10 +23,34 @@ Rounds = Sequence[int] | None
 
 
 @dataclass
+class SeriesBatch:
+    """Chuỗi gốc theo phút cho model KHÔNG dùng ma trận feature của B0 (TimesFM §2.2 #4, AutoTS §2.2 #6).
+
+    `cov` = covariate/regressor theo phút (đã chuẩn hoá train-only, NaN → 0): với TimesFM là các cột ext đang xét,
+    với AutoTS là B0* + ext. `perm` chỉ dùng ở pass permutation importance (§1.4/§2.1a).
+    """
+
+    ts: np.ndarray  # (n_grid,) timestamp giây
+    r1: np.ndarray  # (n_grid,) r1[s] = log(C_s / C_(s−1))
+    idx: np.ndarray  # chỉ số origin trên lưới
+    cov: np.ndarray | None = None  # (n_grid, k)
+    cov_names: tuple[str, ...] = ()
+    perm: dict[int, np.ndarray] | None = None  # cột j lấy giá trị của origin perm[j][k]
+
+    def slice(self, a: int, b: int) -> "SeriesBatch":
+        perm = None if not self.perm else {j: np.asarray(v)[a:b] for j, v in self.perm.items()}
+        return SeriesBatch(self.ts, self.r1, self.idx[a:b], self.cov, self.cov_names, perm)
+
+    def with_perm(self, perm: dict[int, np.ndarray]) -> "SeriesBatch":
+        return SeriesBatch(self.ts, self.r1, self.idx, self.cov, self.cov_names, perm)
+
+
+@dataclass
 class FitResult:
-    pred_z: np.ndarray  # (n_pred, 3)
+    pred_z: np.ndarray  # (n_pred, 3) — z-space của B0, HOẶC log-return trực tiếp nếu is_logret
     best_iters: tuple[int, int, int]
     predictors: list[Callable[[np.ndarray], np.ndarray]] = field(default_factory=list)  # per horizon: X → z
+    is_logret: bool = False  # True (TimesFM/AutoTS): prediction đã là ŷ log-return, KHÔNG qua TargetTransform.decode (§6.7)
 
     def predict_z(self, X) -> np.ndarray:
         """X: ma trận (tree, mỗi predictor một horizon) hoặc SeqBatch (LSTM, một predictor trả (n, 3))."""
@@ -35,6 +59,7 @@ class FitResult:
 
 class TabularModel:
     name: str = "base"
+    input_kind: str = "tabular"  # tabular (tree) | sequence (LSTM: SeqBatch) | series (TimesFM/AutoTS: SeriesBatch)
     supports_rounds: bool = True
     train_device: str = "GPU"
     predict_device: str = "CPU"  # device thực tế khi predict (§7.4): LightGBM/CatBoost luôn CPU (đặc tính thư viện)
@@ -210,8 +235,12 @@ def make_model(name: str, params: dict | None = None, allow_cpu: bool = False) -
         from .models_lstm import LSTMModel
 
         return LSTMModel(allow_cpu=allow_cpu, **params)
-    if name in ("tfm", "autots_wr", "autots_mr"):
-        from .models_pending import pending
+    if name == "tfm":
+        from .models_tfm import TimesFMModel
 
-        return pending(name)
+        return TimesFMModel(allow_cpu=allow_cpu, **params)
+    if name in ("autots_wr", "autots_mr"):
+        from .models_autots import AutoTSModel
+
+        return AutoTSModel(kind=name.split("_")[1], allow_cpu=allow_cpu, **params)
     raise KeyError(f"model không có trong plan §2.2: {name}")

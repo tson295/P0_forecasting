@@ -1,7 +1,7 @@
 """CLI: python run.py <step> --config configs/p0_15d.json [--model lgbm] [--smoke] [--allow-cpu]
 
 Bước (§8): check-data → calibrate (lgbm, b0306) → filter-b0 → loop --model m (calibrate riêng trên B0*, add-one, prune PI,
-3 seed → win_m, latency, champion + figure) → ensemble → final. `smoke-e2e` chạy toàn bộ trên data tổng hợp CPU (chỉ debug).
+3 seed → win_m, latency, champion + figure) → autots-union (§2.2 #6, sau khi cả hai loop AutoTS xong) → ensemble → final. `smoke-e2e` chạy toàn bộ trên data tổng hợp CPU (chỉ debug).
 Gate: training chỉ khi `.claude/MEMORY.md` ghi `TRAINING: UNLOCKED`; GPU preflight bắt buộc. `--smoke` / `--allow-cpu` CHỈ được chấp nhận
 khi dataset_label bắt đầu bằng "synthetic" (data tổng hợp) — với data thật CLI từ chối (plan §0: cấm training CPU).
 Data thật phải khớp `data/data_checksums.json` (§6.1) ở mọi bước sau check-data.
@@ -86,12 +86,19 @@ def gpu_preflight(model: str, cfg: RunConfig) -> None:
         x = np.random.default_rng(0).normal(size=(256, 4))
         CatBoostRegressor(iterations=3, task_type="GPU", verbose=False, allow_writing_files=False).fit(x, x[:, 0])
         say("GPU preflight CatBoost: OK")
-    elif model == "lstm":
+    elif model in ("lstm", "tfm"):
         import torch
 
         if not torch.cuda.is_available():
-            sys.exit("GPU preflight LSTM: CUDA không có — cấm training CPU.")
-        say(f"GPU preflight torch: {torch.cuda.get_device_name(0)}")
+            sys.exit(f"GPU preflight {model}: CUDA không có — cấm training/inference CPU.")
+        say(f"GPU preflight torch ({model}): {torch.cuda.get_device_name(0)}")
+        if model == "tfm":
+            import timesfm  # noqa: F401  — chỉ kiểm tra đã cài đúng version (pin trong requirements.txt)
+    elif model in ("autots_wr", "autots_mr"):
+        import autots  # noqa: F401
+
+        gpu_preflight("lgbm" if model == "autots_wr" else "xgb", cfg)  # regression_model bên trong chạy GPU
+        say(f"GPU preflight AutoTS ({autots.__version__}): OK")
 
 
 def checksum_path(cfg: RunConfig) -> Path:
@@ -425,6 +432,84 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         say(f"[{mname}] figure bỏ qua: {e}")
 
 
+def champion_step(cfg: RunConfig, mname: str, colset: ColSet, rmse_mean: np.ndarray, e0: np.ndarray, eps: float,
+                  extra: dict | None = None) -> str:
+    """§3: so bảng RMSE̅ của win_m với champion → đổi/giữ, ghi champion_log.csv. Trả tên champion sau."""
+    exp = cfg.exp_dir
+    champ_path = exp / "champion.json"
+    champ = load_champion(champ_path)
+    state = {"model": mname, "colset": colset.to_dict(), "rmse_mean": rmse_mean.tolist(), "eps": eps, "e0": e0.tolist()}
+    row = {"exp_id": new_exp_id("champion", mname), "model": mname, "n_ext": len(colset.ext), "ext_cols": "|".join(colset.ext),
+           "MedianGain_vs_E0": round(float(np.median(gain_pp(rmse_mean, e0))), 4), "rmse_mean_win": _cells(rmse_mean),
+           **{f"rmse_h{h}": round(float(rmse_mean[:, h - 1].mean()), 4) for h in HORIZONS}, **(extra or {})}
+    if champ is None:
+        save_champion(champ_path, state)
+        row.update({"champion_before": "", "decision": "champion ban đầu", "champion_after": mname})
+    else:
+        change, gc, sc = compare(rmse_mean, np.asarray(champ["rmse_mean"]), float(champ["eps"]))
+        row.update({"champion_before": champ["model"], "MedianGain_vs_champion": round(sc["MedianGain"], 4),
+                    "WinRate": round(sc["WinRate"], 4), "P10Gain": round(sc["P10Gain"], 4), "WorstGain": round(sc["WorstGain"], 4),
+                    "eps_champion": champ["eps"], "decision": "đổi" if change else "giữ", "gain_cells": _cells(gc),
+                    "rmse_mean_champion": _cells(np.asarray(champ["rmse_mean"])),
+                    "champion_after": mname if change else champ["model"]})
+        if change:
+            save_champion(champ_path, state)
+    log_champion(exp, row)
+    say(f"[{mname}] champion: {row['decision']} (champion sau = {row['champion_after']})")
+    return str(row["champion_after"])
+
+
+def cmd_autots_union(cfg: RunConfig, args) -> None:
+    """§2.2 #6: SAU KHI cả hai vòng lặp AutoTS xong — mỗi model chạy thêm đúng 1 run với `F*_A1 ∪ F*_A2`,
+    chọn bộ tốt hơn giữa {riêng, tổng hợp} theo MedianGain, rồi so lại với champion (§3)."""
+    gate(cfg, args, ["autots_wr", "autots_mr"])
+    store, folds, _, _ = load_store(cfg)
+    exp = cfg.exp_dir
+    wins = {}
+    for m in ("autots_wr", "autots_mr"):
+        p = exp / "wins" / f"{m}.json"
+        if not p.exists():
+            sys.exit(f"Thiếu {p} — phải chạy `loop --model {m}` cho CẢ HAI model AutoTS trước khi tổng hợp (§2.2 #6).")
+        wins[m] = json.loads(p.read_text(encoding="utf-8"))
+    b0 = ColSet.from_dict(wins["autots_wr"]["colset"]).b0
+    union_ext = tuple(dict.fromkeys(list(ColSet.from_dict(wins["autots_wr"]["colset"]).ext)
+                                    + list(ColSet.from_dict(wins["autots_mr"]["colset"]).ext)))
+    say(f"F*_A1 ∪ F*_A2 = {len(union_ext)} cột ext: {'|'.join(union_ext) or '(rỗng)'}")
+    rows = []
+    for mname, w in wins.items():
+        own = ColSet.from_dict(w["colset"])
+        own_rmse = np.asarray(w["rmse_mean"])
+        eps = float(w["eps"])
+        if tuple(own.ext) == union_ext:
+            say(f"[{mname}] tổng hợp trùng bộ riêng — không cần run thêm")
+            rows.append({"model": mname, "choice": "riêng", "n_ext_own": len(own.ext), "n_ext_union": len(union_ext),
+                         "MedianGain_union_vs_own": 0.0})
+            continue
+        model = model_for(cfg, mname, args.allow_cpu)
+        uni = ColSet(b0, union_ext)
+        say(f"[{mname}] run tổng hợp ({len(union_ext)} cột ext), 3 seed")
+        conf = confirm(store, model, uni, folds, cfg.seeds, keep_states=True)
+        s_ = summarize(gain_pp(conf.rmse_mean, own_rmse))
+        choice = "tổng hợp" if s_["MedianGain"] > 0 else "riêng"
+        say(f"[{mname}] MedianGain tổng hợp vs riêng = {s_['MedianGain']:+.4f} → chọn {choice}")
+        rows.append({"model": mname, "choice": choice, "n_ext_own": len(own.ext), "n_ext_union": len(union_ext),
+                     "MedianGain_union_vs_own": round(s_["MedianGain"], 4), "WinRate": round(s_["WinRate"], 4),
+                     "P10Gain": round(s_["P10Gain"], 4), "WorstGain": round(s_["WorstGain"], 4),
+                     "rmse_mean_own": _cells(own_rmse), "rmse_mean_union": _cells(conf.rmse_mean)})
+        if choice == "tổng hợp":
+            w.update({"colset": uni.to_dict(), "rmse_mean": conf.rmse_mean.tolist(), "which": "union",
+                      "best_iters_by_seed": [b.tolist() for b in conf.best_iters],
+                      "median_gain_vs_e0": float(np.median(gain_pp(conf.rmse_mean, conf.e0)))})
+            (exp / "wins" / f"{mname}.json").write_text(json.dumps(w, indent=1), encoding="utf-8")
+            for k, r in enumerate(conf.runs):
+                np.savez_compressed(exp / "wins" / f"{mname}_seed{k}.npz",
+                                    **{f"idx_{i}": p[0] for i, p in enumerate(r.preds())},
+                                    **{f"yhat_{i}": p[1] for i, p in enumerate(r.preds())})
+            champion_step(cfg, mname, uni, conf.rmse_mean, conf.e0, eps, {"win": "union"})
+    pd.DataFrame(rows).to_csv(exp / "autots_union.csv", index=False)
+    say(f"→ {exp / 'autots_union.csv'}")
+
+
 def cmd_ensemble(cfg: RunConfig, args) -> None:
     """§3 ensemble: thành viên = champion + mọi win_m có MedianGain vs E0 > 0; (a) đều, (b) 1/MSE; so với champion."""
     store, folds, _, _ = load_store(cfg)
@@ -597,6 +682,7 @@ def main(argv=None) -> None:
     s = sub.add_parser("filter-b0", parents=[common(False)]); s.add_argument("--max-cols", type=int, default=None)
     s = sub.add_parser("loop", parents=[common(False)]); s.add_argument("--model", required=True); s.add_argument("--max-candidates", type=int, default=None)
     s.add_argument("--no-standalone", action="store_true"); s.add_argument("--latency-origins", type=int, default=None)
+    sub.add_parser("autots-union", parents=[common(False)])
     sub.add_parser("ensemble", parents=[common(False)])
     s = sub.add_parser("final", parents=[common(False)]); s.add_argument("--latency-origins", type=int, default=None)
     s = sub.add_parser("smoke-e2e", parents=[common(False)]); s.add_argument("--out", default="tmp_smoke"); s.add_argument("--days", type=float, default=6)
@@ -605,8 +691,8 @@ def main(argv=None) -> None:
         cmd_smoke_e2e(None, args)
         return
     cfg = RunConfig.load(args.config)
-    {"check-data": cmd_check_data, "calibrate": cmd_calibrate, "filter-b0": cmd_filter_b0, "loop": cmd_loop, "ensemble": cmd_ensemble,
-     "final": cmd_final}[args.cmd](cfg, args)
+    {"check-data": cmd_check_data, "calibrate": cmd_calibrate, "filter-b0": cmd_filter_b0, "loop": cmd_loop,
+     "autots-union": cmd_autots_union, "ensemble": cmd_ensemble, "final": cmd_final}[args.cmd](cfg, args)
 
 
 if __name__ == "__main__":

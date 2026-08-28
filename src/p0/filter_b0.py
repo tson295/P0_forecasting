@@ -26,7 +26,7 @@ def permutation_importance(store: Store, run: RunResult, col_positions: list[int
     for fi, st in enumerate(run.states):
         c_t, c_future, rv = store.targets(st.idx_val)
         base = cell_metrics(c_t, c_future, st.yhat)["rmse"]
-        is_seq = hasattr(st.X_val, "with_perm")
+        is_seq = hasattr(st.X_val, "with_perm")  # SeqBatch (LSTM) hoặc SeriesBatch (TimesFM covariate)
         X = st.X_val if is_seq else np.asarray(st.X_val)
         for cj, j in enumerate(col_positions):
             acc = np.zeros(3)
@@ -37,7 +37,7 @@ def permutation_importance(store: Store, run: RunResult, col_positions: list[int
                     Xp = X.copy()
                     Xp[:, j] = rng.permutation(Xp[:, j])
                 z = st.result.predict_z(Xp)
-                yhat = st.transform.decode(z, rv)
+                yhat = np.asarray(z, np.float32) if st.result.is_logret else st.transform.decode(z, rv)
                 acc += cell_metrics(c_t, c_future, yhat)["rmse"] - base
             out[cj, fi] = acc / repeats
     return out

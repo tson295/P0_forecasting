@@ -1,21 +1,23 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: CODE XONG + CHECKER REVIEW ĐÃ SỬA (src/p0; 74 unit test + smoke e2e PASS trên data tổng hợp CPU; check-data + checksum data thật OK) / CHỜ ĐƯA LÊN VAST + USER UNLOCK
+PHASE: CODE XONG ĐỦ 8 MODEL §2.2 (86 unit test + smoke e2e PASS trên data tổng hợp CPU; TimesFM/AutoTS test bằng stub — package chưa cài) / CHỜ ĐƯA LÊN VAST + USER UNLOCK
 TRAINING: LOCKED
 
 ## Current Task
 
-2026-08-29: đã code harness theo plan rev 9b (§8): `src/p0/*`, `run.py`, `configs/p0_15d.json`, `tests/` (74 test PASS), `python run.py smoke-e2e` chạy trọn pipeline trên data tổng hợp (CPU, chỉ debug). Checker review 10 mục → đã sửa 5 lỗi (gate --smoke/--allow-cpu chỉ cho data tổng hợp; champion_log/log.csv schema cố định; checksum §6.1 bắt buộc + `ok` gồm gap/dup; config_hash không phụ thuộc root; console UTF-8) + ghi chú nhỏ (latency LSTM shared, predict device/lib version, runs/<exp_id>, keepdrop exp_id, all_models Gain vs B0-306/B0*/champion, loop đầu phải là lgbm). Đã chạy `check-data --write-checksums` trên snapshot thật (đọc-only) → `data/data_checksums.json` commit. Đã viết `docs/VAST_SESSION_PROMPT.md`, `scripts/vast_bootstrap.sh`, `requirements.txt`. Chưa training thật.
+2026-08-29: harness đủ 8 model của §2.2. (1) **Visualize đổi sang forecast path**: mỗi panel = MỘT origin, x = t → t+3, y = thay đổi giá so với C_t (actual đen, win/champion, E0 = đường ngang 0); VAL lấy 3 origin cố định ≥ 12:00 UTC ở 3 ngày vol thấp/trung bình/cao, TEST lấy origin đầu của 3 khối 60' vol thấp/trung vị/cao và vẽ mọi model (2 nhóm); heatmap giữ nguyên. (2) **TimesFM + AutoTS đã implement** theo `docs/reference/audit_timesfm.md` / `audit_autots.md` (`models_tfm.py`, `models_autots.py`) — package CHƯA cài, mới test bằng stub. (3) **PI prune chạy được cho LSTM** (SeqBatch.perm: xáo cửa sổ 512' của đúng kênh) và cho TimesFM/AutoTS (SeriesBatch.perm). (4) **Rà tree pipeline**: 40 kiểm tra target/alignment/fixed-rounds/prune/3-seed/champion đều đúng; sửa duy nhất XGBRFRegressor (deprecated) → XGBRegressor num_parallel_tree, prediction bit-exact.
 
 ## Exact Next Step
 
-1. Đưa lên Vast: clone repo, scp `data/BTC_hf_1min.csv` + `data/BTC_lf_5min.csv`, mở session Claude mới với `docs/VAST_SESSION_PROMPT.md`; `bash scripts/vast_bootstrap.sh`; `python run.py check-data --config configs/p0_15d.json` phải in `verify … OK` (sha256 khớp) + 21.916 dòng, 21.258 origin, 5 fold + TEST OK.
-2. User unlock training (sửa MEMORY `TRAINING: UNLOCKED`) → `calibrate --model lgbm --colset b0306` → `filter-b0` → `loop --model lgbm` (bắt buộc đầu tiên) → `xgb` → `cat` → `xgbrf` → `lstm` → `ensemble` → `final` (lệnh ở plan §8).
-3. Song song: `researcher` audit TimesFM (covariate API, LoRA) và AutoTS (WindowRegression/MultivariateRegression, regressor, rolling predict) → `docs/reference/audit_<lib>.md` → `coder` implement adapter `tfm`, `autots_wr`, `autots_mr` (hiện `models_pending.py`).
-4. Phục hồi data đầy đủ + scale data: chỉ khi user quyết (plan §5).
+1. Đưa lên Vast: clone repo, scp `data/BTC_hf_1min.csv` + `data/BTC_lf_5min.csv`, mở session Claude mới với `docs/VAST_SESSION_PROMPT.md`; `bash scripts/vast_bootstrap.sh`; `python run.py check-data --config configs/p0_15d.json` phải in `verify … OK`.
+2. User quyết cho cài `timesfm[torch]==2.0.2` và `autots==1.0.4 + statsmodels` (plan §2.2: cài chỉ khi user cho phép). AutoTS CHƯA xác minh với pandas 3.0.3 → smoke import trước; TimesFM covariate cần thêm `jax[cpu]` + sklearn.
+3. User unlock training → `calibrate lgbm b0306` → `filter-b0` → `loop lgbm` (bắt buộc đầu tiên) → `xgb` → `cat` → `tfm` → `xgbrf` → `autots_wr` → `autots_mr` → `lstm` → `ensemble` → `final`.
+4. TFM-LoRA chỉ khi TFM thắng E0 (§2.2 #4c) — cần `transformers>=5.4` + `peft` + checkpoint thứ hai, và phải đo lại zero-shot bằng chính path `transformers`.
+5. Phục hồi data đầy đủ + scale data: chỉ khi user quyết (plan §5).
 
 ## Decisions (mới nhất trước)
 
+- 2026-08-29 (visualize + model mới): Fig P thay Fig H_h — forecast path của MỘT origin (x = t..t+3, y = P̂ − C_t), 3 origin đại diện vol thấp/trung bình/cao chọn bằng quy tắc cố định (VAL: origin ≥ 12:00 UTC; TEST: origin đầu khối 60'), không chọn theo error; file `fig_path_<model>_vs_champion.png`, `fig_final_paths_all_models.png`. Prune PI chạy trên mọi loại input: tabular (cột), LSTM (kênh của cửa sổ 512'), TimesFM/AutoTS (cột covariate/regressor) — cùng một định nghĩa PI. TimesFM/AutoTS trả thẳng log-return (`FitResult.is_logret=True`), không qua TargetTransform. AutoTS chấm trên **toàn bộ origin** (bỏ lưới thưa 5' để §3 so cùng 15 ô). XGB-RF dùng `XGBRegressor(n_estimators=1, num_parallel_tree=N)` thay `XGBRFRegressor` (deprecated từ xgboost 3.4) — bit-exact.
 - 2026-08-29: B0 `TargetTransform` có bug nhân in-place `(n,1) *= (1,3)` (ValueError ở mọi numpy) → B0 gốc không chạy nguyên bản; file B0 không sửa; harness dùng `src/p0/transform.py` tái hiện đúng công thức (unit test so công thức + test ghi nhận bug). LightGBM trong harness = `_make_model`/`LGBMConfig`/ES huber y hệt `fit_lgbm_baseline`. Prune PI: bỏ cột ext không có cờ PI+ (PI > 0 ở ≥ 2/3 horizon). Latency §7.4: thread mặc định thư viện (ghi cột), assert |batch − batch-1| ≤ 1e-6. TEST = 2.728 origin (plan cũ ghi 2.725 — sai số cộng).
 - 2026-08-28 (rev 9b, user chốt): gộp 3 seed khi confirmation = mỗi configuration (F*_m, F*_m^prune) 3 seed → 3 bảng RMSE 15 ô → mỗi ô lấy MEAN RMSE 3 seed → bảng RMSE̅; Gain_{f,h} = 1 − RMSE̅^prune/RMSE̅^unprune; MedianGain = median 15 Gain; ≥ −ε_m → prune, thấp hơn → unpruned. Cùng cách gộp cho win vs champion (bảng RMSE̅ hai bên). Cửa sổ visualize: 3 ngày VAL/fold khác nhau theo std r1 trong ngày = thấp / trung bình / cao, cửa sổ 12:00–13:00 UTC; TEST: 3 cửa sổ 60' theo std r1 thấp nhất / trung vị / cao nhất.
 - 2026-08-28 (rev 9, user chốt): bỏ safety-net; sau vòng lặp chỉ prune PI (bỏ cột ext PI ≤ 0) → F*_m^prune; confirmation 3 seed (cách gộp median từng ô — đã thay bằng mean RMSE từng ô ở rev 9b); win_m = F*_m^prune nếu ≥ −ε_m so với F*_m, ngược lại F*_m; win_m so với champion cùng cách (median từng ô). Visualize sau mỗi model: win vs champion — mỗi horizon 3 ảnh (3 cửa sổ 60 origin) + 2 heatmap 15 ô; Final: heatmap TEST mọi model (khối 6h × h) + Fig H_h mọi model; actual đen; win = blue, champion = red; nhiều model → màu cố định, ≤ 8 màu/panel.
@@ -50,6 +52,8 @@ TRAINING: LOCKED
 - Target h = 2, 3 chồng lấp → per-bar không iid (chỉ ghi nhớ khi đọc kết quả).
 - Lag-1 autocorr 1-min ≈ −0.06 trên snapshot → tín hiệu điểm cỡ 0.1–0.2 pp RMSE ở h=1, ~0.03 pp ở h=3; Gain vài pp = nghi leakage. Forecast trông "phẳng" là bình thường.
 - Directional accuracy: bỏ bar C_{t+h} = C_t (~3.7%).
+- TimesFM 2.5: `point_forecast` là q50, RMSE cần **mean** → dùng `quantile[..., 0]`; covariate BẮT BUỘC 1 origin/lời gọi (xreg fit chung `beta_hat`) và dịch 1 bar; timesfm 1.x không cài được trên Python 3.12.
+- AutoTS 1.0.4 có bug `sklearn.py:3337` (`future_regressor.reindex(df)`) → không gọi được `fit_data(df, future_regressor=...)`; ta gọi `fit_data(df)` rồi tự gán `regressor_train` (chỉ cho MR; WR predict chỉ dùng `future_regressor.tail(1)`). `max_windows` mặc định 5000 cắt mất phần lớn FIT; nhánh xgboost không tự set seed.
 - lightgbm ≥ 4.7 cảnh báo `eval_set` deprecated (B0 dùng eval_set) — harness lọc warning, giữ API cho đồng nhất với B0; nếu Vast cài lightgbm mới hơn bỏ hẳn eval_set thì sửa `models.LGBMModel` (không sửa B0).
 - `--smoke`/`--allow-cpu` chỉ có tác dụng với `dataset_label` `synthetic*`; trên data thật CLI thoát — không tìm cách lách (cấm training CPU).
 - LightGBM/CatBoost predict luôn chạy CPU dù train GPU (đặc tính thư viện) → cột predict device trong latency là CPU; không phải CPU training.
@@ -59,6 +63,7 @@ TRAINING: LOCKED
 ## Important Files
 
 - Repo GitHub (private): https://github.com/tson295/P0_forecasting — branch `main`; raw CSV không push (.gitignore).
+- `docs/reference/audit_timesfm.md`, `docs/reference/audit_autots.md` — audit API/version (2026-08-29), căn cứ của `models_tfm.py` / `models_autots.py`.
 - `src/p0/` + `run.py` — harness (§8); `configs/p0_15d.json`; `tests/`; `docs/VAST_SESSION_PROMPT.md`; `scripts/vast_bootstrap.sh`; `requirements.txt`; `data/data_checksums.json` (anchor §6.1).
 - `Baseline_LGBM.py` — B0 frozen, deny-protected (có bug TargetTransform, xem Decisions 2026-08-29).
 - `docs/RESEARCH_PLAN.md` — plan rev 9b (canonical; §8 = trạng thái code + lệnh chạy).

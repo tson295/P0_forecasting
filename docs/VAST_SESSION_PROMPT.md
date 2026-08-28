@@ -13,7 +13,7 @@ Bạn là session Claude Code chạy trên máy Vast.ai GPU cho project **P0_for
 1. **Training chỉ trên GPU — cấm training CPU, không fallback.** LightGBM phải là build GPU (`device_type=gpu`, hoặc `cuda` nếu OpenCL không có); XGBoost `device=cuda`; CatBoost `task_type=GPU`; torch CUDA. CPU chỉ cho tính feature, metric, MI/PI, unit test, và predict của thư viện mặc định chạy CPU. `--smoke`/`--allow-cpu` chỉ có tác dụng với dataset tổng hợp — CLI từ chối trên data thật; không tìm cách lách.
 2. **TRAINING lock**: chỉ chạy `calibrate / filter-b0 / loop / ensemble / final` khi `.claude/MEMORY.md` ghi `TRAINING: UNLOCKED` do user ra lệnh rõ ("unlock training" / "bắt đầu training" / "run experiments"). CLI tự kiểm tra và từ chối nếu LOCKED. Chưa unlock → chỉ bootstrap, check-data, unit test.
 3. Mỗi run phải thuộc một bước của plan §8 và trả lời "thuộc bước nào, so với base nào, dùng số vòng/ε của model nào". Không chạy trùng, không idle GPU (Vast tính giờ), không rerun vì quên config (config/log đã persist trong `experiments/`).
-4. Không thêm model, metric, feature ngoài plan; không sweep hyperparameter; không sửa `Baseline_LGBM.py`; không đổi luật KEEP/DROP (`MedianGain ≥ −ε_m` KEEP, `< −ε_m` DROP), R1–R4, champion (`> +ε_champion`), gộp 3 seed (mean RMSE từng ô → Gain → median 15 ô).
+4. TimesFM/AutoTS: giữ đúng ràng buộc đã ghi trong adapter — TFM covariate **1 origin/lời gọi** + covariate dịch 1 bar; AutoTS regressor dịch theo model (MR `f(s−1)`, WR `f(s+window−1)`), không dùng `AutoTS(...)` (search), không sửa site-packages. Không thêm model, metric, feature ngoài plan; không sweep hyperparameter; không sửa `Baseline_LGBM.py`; không đổi luật KEEP/DROP (`MedianGain ≥ −ε_m` KEEP, `< −ε_m` DROP), R1–R4, champion (`> +ε_champion`), gộp 3 seed (mean RMSE từng ô → Gain → median 15 ô).
 5. `data/` read-only; không đưa secret (Vast API key, SSH key) vào repo/MEMORY; IP/instance id không thành memory. Commit + push sau mỗi bước hoàn tất (`git add -A && git commit && git push`), raw CSV bị `.gitignore` loại.
 6. Sau mỗi bước: cập nhật `.claude/MEMORY.md` (Current Task / Exact Next Step / Experiment Findings chỉ khi có run thật) — MEMORY là trạng thái, không phải log.
 
@@ -43,8 +43,14 @@ python run.py filter-b0 --config configs/p0_15d.json          # PI + SA (306 mod
 python run.py loop --config configs/p0_15d.json --model lgbm   # bắt buộc đầu tiên: champion ban đầu = LightGBM (CLI từ chối model khác khi chưa có champion)
 python run.py loop --config configs/p0_15d.json --model xgb
 python run.py loop --config configs/p0_15d.json --model cat
-# tfm (TimesFM) và autots_wr/autots_mr: CHƯA implement — researcher audit API trước (plan §2.2 #4/#6), ghi docs/reference/audit_<lib>.md, rồi coder implement adapter
+# TimesFM + AutoTS: adapter đã code theo docs/reference/audit_timesfm.md / audit_autots.md, nhưng PACKAGE CHƯA CÀI.
+# Cài chỉ khi user cho phép (plan §2.2), rồi smoke import trước khi chạy loop:
+#   pip install "timesfm[torch]==2.0.2"                 # + "jax[cpu]" scikit-learn nếu chạy covariate
+#   pip install autots==1.0.4 statsmodels               # CHƯA xác minh với pandas 3.0.3 → smoke import trước
+python run.py loop --config configs/p0_15d.json --model tfm
 python run.py loop --config configs/p0_15d.json --model xgbrf
+python run.py loop --config configs/p0_15d.json --model autots_wr
+python run.py loop --config configs/p0_15d.json --model autots_mr
 python run.py loop --config configs/p0_15d.json --model lstm
 
 python run.py ensemble --config configs/p0_15d.json           # §3 ensemble vs champion
