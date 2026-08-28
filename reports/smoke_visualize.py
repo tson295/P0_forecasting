@@ -175,7 +175,8 @@ calib_df = pd.DataFrame([
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "LightGBM", "run ES": "1", "kết quả": "15fixed_LGBM + ε_LGBM", "dùng cho": "39 candidate + safety-net + prune của LightGBM → F*_LGBM"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "XGBoost", "run ES": "1", "kết quả": "15fixed_XGB + ε_XGB", "dùng cho": "39 candidate + safety-net + prune của XGBoost → F*_XGB"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "CatBoost", "run ES": "1", "kết quả": "15fixed_Cat + ε_Cat", "dùng cho": "39 candidate + safety-net + prune của CatBoost → F*_Cat"},
-    {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "XGB-RF / AutoTS / LSTM / TimesFM", "run ES": "—", "kết quả": "chỉ ε_m (không có số vòng; LSTM ES theo epoch)", "dùng cho": "vòng lặp riêng của model đó → F*_m"},
+    {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "LSTM", "run ES": "1 (ES theo epoch)", "kết quả": "fixed_epoch_LSTM + ε_LSTM", "dùng cho": "39 candidate + safety-net + prune của LSTM → F*_LSTM"},
+    {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "XGB-RF / AutoTS / TimesFM", "run ES": "— (cơ chế riêng)", "kết quả": "chỉ ε_m (XGB-RF 1 vòng cố định; TimesFM zero-shot; AutoTS config cố định)", "dùng cho": "vòng lặp riêng của model đó → F*_m"},
     {"phase": "C. Confirmation", "feature set": "F*_m của chính model", "model": "từng model", "run ES": "3 seed, ES bật", "kết quả": "metric cho champion log + 15fixed_m(F*_m) cho Final", "dùng cho": "so với champion (§3)"},
 ])
 
@@ -456,7 +457,7 @@ A("\nVí dụ `15fixed_LGBM` (best_iteration mà ES dừng ở run calibrate c�
 A(md_table(rounds))
 A("\n**Giải thích.** \"Số vòng cố định\" = chính best_iteration mà early stopping dừng ở run calibrate (không phải ước lượng thống kê). "
   "ES trên 1.377 dòng nhiễu, nên chỉ chạy ES một lần cho mỗi (phase, model) rồi cố định cho mọi run của phase đó ⇒ candidate và base cùng số vòng, "
-  "chênh lệch Gain chỉ do feature. B0* là điểm xuất phát chung: mỗi model (LightGBM, XGBoost, CatBoost) tự calibrate một run ES trên B0* → 15fixed_m riêng, "
+  "chênh lệch Gain chỉ do feature. B0* là điểm xuất phát chung: mỗi model có early stopping (LightGBM, XGBoost, CatBoost theo số vòng; LSTM theo số epoch → fixed_epoch_LSTM) tự calibrate một run ES trên B0* → 15fixed_m riêng, "
   "rồi tự feature search bằng chính model đó → F*_LGBM, F*_XGB, F*_Cat có thể khác nhau; không model nào kế thừa F* của model khác. "
   "15fixed_306 chỉ dùng cho lọc B0; không dùng số vòng của LightGBM cho model khác.\n")
 

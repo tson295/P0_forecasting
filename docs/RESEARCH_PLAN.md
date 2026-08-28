@@ -80,19 +80,21 @@ Lịch calibrate:
 | Phase | Feature set calibrate | Model | Kết quả | Dùng cho |
 |---|---|---|---|---|
 | A. Lọc B0 (§1.4) | B0-306 | LightGBM | `15fixed_306` (+ 15 model baseline dùng cho PI) + ε_LGBM(B0-306) | 4 run kiểm chứng R1–R4 → B0\* |
-| B. Feature search (§2.1) | **B0\*** (chung cho mọi model) | từng model có ES: LightGBM, XGBoost, CatBoost — mỗi model một run | `15fixed_LGBM`, `15fixed_XGB`, `15fixed_Cat` + ε_m | toàn bộ 39 candidate, safety-net, prune của chính model đó (tính một lần, dùng chung cả phase) |
-| C. Confirmation (§2.1) | F\*_m của chính model | model m, ES bật, 3 seed | metric F\*_m cho champion log (§3) + `15fixed_m(F*_m)` ghi lại cho Final refit | so với champion |
+| B. Feature search (§2.1) | **B0\*** (chung cho mọi model) | từng model có early stopping: LightGBM, XGBoost, CatBoost (số vòng), LSTM (số epoch) — mỗi model một run | `15fixed_LGBM`, `15fixed_XGB`, `15fixed_Cat`, `fixed_epoch_LSTM` + ε_m | toàn bộ 39 candidate, safety-net, prune của chính model đó (tính một lần, dùng chung cả phase) |
+| C. Confirmation (§2.1) | F\*_m của chính model | model m, ES bật, 3 seed | metric F\*_m cho champion log (§3) + `15fixed_m(F*_m)` / `fixed_epoch_LSTM(F*_LSTM)` ghi lại cho Final refit | so với champion |
 
 ```
 B0-306 + ES (LGBM) → 15fixed_306 → R1–R4 → B0*
    → LGBM(B0*) + ES → 15fixed_LGBM → LightGBM add-one 39 candidate → F*_LGBM
    → XGB(B0*)  + ES → 15fixed_XGB  → XGBoost  add-one 39 candidate → F*_XGB
    → Cat(B0*)  + ES → 15fixed_Cat  → CatBoost add-one 39 candidate → F*_Cat
-   (XGB-RF / AutoTS / LSTM / TimesFM: cũng từ B0*, không có số vòng → chỉ đo ε_m)
+   → LSTM(B0*) + ES theo epoch → fixed_epoch_LSTM → LSTM add-one 39 candidate → F*_LSTM
+   (XGB-RF: 1 vòng boosting cố định; TimesFM: zero-shot; AutoTS: cơ chế riêng — cũng từ B0*, chỉ đo ε_m, không ép fixed_rounds)
 ```
 
-- LSTM giữ ES theo epoch trong từng fit (rẻ). XGB-RF (1 vòng boosting), AutoTS, TimesFM zero-shot không có ES → không calibrate số vòng.
-- **ε_m** đo ngay sau calibrate phase B của model đó: chạy `m` trên B0\* với 3 seed (8586, 8587, 8588), số vòng cố định vừa có (model không có số vòng dùng config cố định), 5 fold; Gain (trên giá) của seed 8587, 8588 so với 8586 trên 15 ô → 30 giá trị; `ε_m = max(0.005 pp, std của 30 giá trị)`. LightGBM đo thêm ε ở phase A trên B0-306 (dùng để chọn B0\*).
+- **LSTM** có epoch nên cũng calibrate: một run ES theo epoch trên B0\* (patience 5, ≤ 50 epoch) → `fixed_epoch_LSTM` per fold (head 3 output nên một số epoch cho cả 3 h); mọi candidate của LSTM train đúng số epoch ấy; confirmation bật lại ES.
+- **XGB-RF** (1 vòng boosting cố định, `num_parallel_tree` cố định) không có gì để calibrate; **TimesFM** zero-shot không train; **AutoTS** cố định số vòng của regression_model bên trong theo cơ chế của AutoTS trong config. Ba model này xử lý theo cơ chế riêng, không ép khái niệm fixed_rounds; chỉ đo ε_m.
+- **ε_m** đo ngay sau calibrate phase B của model đó: chạy `m` trên B0\* với 3 seed (8586, 8587, 8588), số vòng/epoch cố định vừa có (XGB-RF, AutoTS, TimesFM dùng config cố định của nó), 5 fold; Gain (trên giá) của seed 8587, 8588 so với 8586 trên 15 ô → 30 giá trị; `ε_m = max(0.005 pp, std của 30 giá trị)`. LightGBM đo thêm ε ở phase A trên B0-306 (dùng để chọn B0\*).
 
 ### 1.4 Lọc 306 feature của B0 → B0\* (một lần, trước Bước 2) [mới theo quyết định user]
 
@@ -131,17 +133,17 @@ Nguyên tắc: **chạy từng model một, theo thứ tự thời gian chạy t
 
 ### 2.1 Vòng lặp feature (áp dụng y hệt cho mỗi model `m`, xuất phát từ cùng B0\*)
 
-Trước vòng lặp: calibrate phase B của `m` trên B0\* (§1.3) → `15fixed_m` (nếu model có ES) và ε_m.
+Trước vòng lặp: calibrate phase B của `m` trên B0\* (§1.3) → `15fixed_m` (LightGBM/XGBoost/CatBoost) hoặc `fixed_epoch_LSTM` (LSTM), và ε_m; XGB-RF/AutoTS/TimesFM không có gì để calibrate ngoài ε_m.
 
 `S_m := B0*`. Với từng feature `f` trong §2.3, theo đúng thứ tự:
 
 1. Input = B0\* + các cột ext đang KEEP của `m` + `f` (giá trị tại origin t, lag 0; với LSTM/TimesFM-covariate là chuỗi theo phút của cùng cột).
-2. Train `m` × 5 fold với `15fixed_m` (config §2.2).
+2. Train `m` × 5 fold với số vòng/epoch cố định của `m` (config §2.2).
 3. Metric trên giá tại VAL; Gain per ô với **base = `m` trên S_m hiện tại** (ghi thêm Gain vs `m` trên B0\*, vs E0, và Gain standalone §2.4).
 4. `MedianGain ≥ −ε_m` → **KEEP** (tốt hơn hoặc gần như không đổi), `S_m := S_m + f`; `MedianGain < −ε_m` → **DROP**.
 5. Feature tiếp theo.
 
-Hết danh sách (vẫn `15fixed_m`): (a) safety-net §2.4 (thử lại block các cột DROP); (b) tùy chọn, 1 run: bỏ đồng thời các cột ext có permutation importance ≤ 0, giữ bộ rút gọn nếu MedianGain ≥ −ε_m. Rồi (c) **confirmation** (phase C): `m` trên F\*_m với ES bật, 3 seed — kết quả này dùng cho champion log §3, và `best_iteration` của nó ghi lại làm `15fixed_m(F*_m)` cho Final refit.
+Hết danh sách (vẫn số vòng/epoch cố định): (a) safety-net §2.4 (thử lại block các cột DROP); (b) tùy chọn, 1 run: bỏ đồng thời các cột ext có permutation importance ≤ 0, giữ bộ rút gọn nếu MedianGain ≥ −ε_m. Rồi (c) **confirmation** (phase C): `m` trên F\*_m với ES bật, 3 seed — kết quả này dùng cho champion log §3, và `best_iteration`/best epoch của nó ghi lại cho Final refit.
 
 Kết quả của model `m`: **F\*_m** + bảng `keepdrop_<m>.csv`. Sang model kế tiếp (cũng từ B0\*). TimesFM không có feature dạng cột: xuất phát không covariate, thử thêm lần lượt candidate §2.3 làm covariate nếu API có (§2.2).
 
@@ -153,9 +155,9 @@ Kết quả của model `m`: **F\*_m** + bảng `keepdrop_<m>.csv`. Sang model k
 | 2 | XGBoost | `hist`, `device=cuda`, `reg:pseudohubererror` (huber_slope 0.9), lr 0.03, max_depth 6, seed 8586; cùng TargetTransform | §2.1 từ B0\* với `15fixed_XGB` → F\*_XGB | **≈ 1–2 h** |
 | 3 | CatBoost | GPU, `Huber:delta=0.9`, lr 0.03, depth 6, seed 8586; cùng TargetTransform | §2.1 từ B0\* với `15fixed_Cat` → F\*_Cat | **≈ 1–2 h** |
 | 4 | TimesFM | zero-shot, không train; input chuỗi r1 kết thúc tại t, context 512 (hoặc tối đa API); dự báo `r̂_{t+1..t+3}` → cộng dồn → giá; pin package/checkpoint/backend; tắt tùy chọn ép dương nếu API có | (a) **TFM-POINT** không feature = baseline của model; (b) nếu API có covariate (xreg / `forecast_with_covariates` hoặc tương đương): §2.1 với candidate §2.3 làm covariate theo phút (xuất phát không covariate), giá trị cho 3 bước dự báo = giữ giá trị tại t → F\*_TFM; không có covariate thì chỉ (a); (c) nếu (a)/(b) thắng E0 (MedianGain > 0 vs E0) → **TFM-LoRA**: rank 8 trên attention/FF, train FIT, ES trên ES set, Huber trên `r̂_{t+1..t+3}`, 1 config, 3 seed | inference batch 7.2k origin ≈ 1–2 phút/run → TFM-POINT vài phút; loop covariate (nếu có) **≈ 1–1.5 h**; LoRA (nếu chạy) ≈ 1–2 h |
-| 5 | XGB-RF (thay ExtraTrees) | XGBoost random-forest mode trên GPU: `num_parallel_tree=500`, `subsample=0.63`, `colsample_bynode=0.3`, `learning_rate=1`, 1 vòng boosting, `max_depth=8`, `min_child_weight=500`, squared error trên z-target, `device=cuda`, seed 8586 | §2.1 từ B0\* (không ES, không cần calibrate số vòng) → F\*_XGBRF | 15 fit × ~10 s ≈ 2–3 phút/candidate → **≈ 1.5–2 h** |
-| 6 | AutoTS — 2 model cố định | `WindowRegression` (regression_model LightGBM, GPU) và `MultivariateRegression` (regression_model XGBoost, GPU) — tên chính xác và cách truyền tham số GPU cho regression_model chốt khi audit; target r1, `forecast_length = 3` → cộng dồn → giá; base regressor = B0\*; transformer cố định tối thiểu, không search, không ensemble nội bộ | **hướng 1**: mỗi model một vòng lặp §2.1 từ B0\* với candidate làm regressor → F\*_A1, F\*_A2. **Tổng hợp chỉ làm sau khi cả hai vòng lặp đã kết thúc** (F\*_A1, F\*_A2 đầy đủ): mỗi model chạy thêm đúng 1 run với `F*_A1 ∪ F*_A2`; chọn cho mỗi model bộ tốt hơn giữa {riêng, tổng hợp} theo metric | rolling-origin trên lưới thưa (mỗi 5 phút, ~1.4k origin) ≈ 3–5 phút/candidate → **≈ 2–4 h/model, 4–8 h cả hai**; run cuối chấm trên toàn bộ origin |
-| 7 | LSTM-DMH | context 512; input mỗi phút = các fine feature B0 còn trong B0\* (+ rv60) + ext đang KEEP; 1 lớp LSTM hidden 64; head linear 3 output; Huber trên z-target (TargetTransform B0); Adam lr 1e-3, batch 256, ≤ 50 epoch, ES patience 5 trên ES set; seed 8586; NaN → 0 sau chuẩn hóa | §2.1 từ B0\* với 1 seed trong vòng lặp; confirmation F\*_LSTM 3 seed. Dự phòng nếu hết thời gian: chạy LSTM trên từng F\*_m của các model khác (4–6 run) và chọn bộ tốt nhất theo metric — không có cách biết trước bộ nào hợp | 1 fit ≈ 1–3 phút GPU cho cả 3 h; 5 fold ≈ 5–15 phút/candidate → **≈ 3–10 h** (chậm nhất → chạy cuối) |
+| 5 | XGB-RF (thay ExtraTrees) | XGBoost random-forest mode trên GPU: `num_parallel_tree=500`, `subsample=0.63`, `colsample_bynode=0.3`, `learning_rate=1`, 1 vòng boosting, `max_depth=8`, `min_child_weight=500`, squared error trên z-target, `device=cuda`, seed 8586 | §2.1 từ B0\* (1 vòng boosting cố định — không có gì để calibrate ngoài ε) → F\*_XGBRF | 15 fit × ~10 s ≈ 2–3 phút/candidate → **≈ 1.5–2 h** |
+| 6 | AutoTS — 2 model cố định | `WindowRegression` (regression_model LightGBM, GPU) và `MultivariateRegression` (regression_model XGBoost, GPU) — tên chính xác và cách truyền tham số GPU cho regression_model chốt khi audit; target r1, `forecast_length = 3` → cộng dồn → giá; base regressor = B0\*; transformer cố định tối thiểu, không search, không ensemble nội bộ; số vòng của regression_model bên trong cố định trong config theo cơ chế AutoTS (không ép fixed_rounds) | **hướng 1**: mỗi model một vòng lặp §2.1 từ B0\* với candidate làm regressor → F\*_A1, F\*_A2. **Tổng hợp chỉ làm sau khi cả hai vòng lặp đã kết thúc** (F\*_A1, F\*_A2 đầy đủ): mỗi model chạy thêm đúng 1 run với `F*_A1 ∪ F*_A2`; chọn cho mỗi model bộ tốt hơn giữa {riêng, tổng hợp} theo metric | rolling-origin trên lưới thưa (mỗi 5 phút, ~1.4k origin) ≈ 3–5 phút/candidate → **≈ 2–4 h/model, 4–8 h cả hai**; run cuối chấm trên toàn bộ origin |
+| 7 | LSTM-DMH | context 512; input mỗi phút = các fine feature B0 còn trong B0\* (+ rv60) + ext đang KEEP; 1 lớp LSTM hidden 64; head linear 3 output; Huber trên z-target (TargetTransform B0); Adam lr 1e-3, batch 256, ≤ 50 epoch, ES patience 5 trên ES set chỉ ở run calibrate và confirmation; seed 8586; NaN → 0 sau chuẩn hóa | §2.1 từ B0\* với `fixed_epoch_LSTM` (per fold, một số epoch cho cả 3 h), 1 seed trong vòng lặp; confirmation F\*_LSTM 3 seed, ES bật. Dự phòng nếu hết thời gian: chạy LSTM trên từng F\*_m của các model khác (4–6 run) và chọn bộ tốt nhất theo metric — không có cách biết trước bộ nào hợp | 1 fit ≈ 1–3 phút GPU cho cả 3 h; 5 fold ≈ 5–15 phút/candidate → **≈ 3–10 h** (chậm nhất → chạy cuối) |
 
 Ràng buộc chung cho regressor/covariate (AutoTS, TimesFM): giá trị dùng để dự báo bar `s` chỉ được tính từ dữ liệu `≤ s−1`; dự báo 3 bước từ t giữ nguyên giá trị tại t (cách truyền cụ thể chốt khi audit API; kiểm tra bằng §6.4). AutoTS/TimesFM không thấy VAL/TEST. Audit version trước khi code; cài package chỉ khi user cho phép.
 
@@ -361,7 +363,7 @@ Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `rep
 5. TimesFM: audit version/covariate API → TFM-POINT → loop nếu có covariate → LoRA nếu thắng E0.
 6. XGB-RF.
 7. AutoTS: audit version → wrapper rolling-origin → 2 model → tổng hợp sau khi cả hai xong.
-8. LSTM (cuối).
+8. LSTM (cuối): calibrate `fixed_epoch_LSTM` trên B0\* → vòng lặp → F\*_LSTM.
 9. Ensemble → §4 Final (TEST 2 ngày) → `all_models.csv` + figure.
 10. §5 khi user quyết phục hồi data.
 
