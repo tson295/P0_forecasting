@@ -1,0 +1,35 @@
+{
+  "dataset_label": "btc_1min_15d_2026-01-18_02-02",
+  "hf_csv": "data/BTC_hf_1min.csv",
+  "lf_csv": "data/BTC_lf_5min.csv",
+  "val_days": ["2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31"],
+  "test_start": "2026-02-01 00:00:00",
+  "test_end": null,
+  "es_hours": 23,
+  "purge_minutes": 60,
+  "seeds": [8586, 8587, 8588],
+  "eps_floor_pp": 0.005,
+  "experiments_dir": "experiments",
+  "require_gpu": true,
+  "candidates": [
+    "vwap_amt_gap_1", "vwap_amt_gap_15", "vwap_amt_gap_60", "vwap_amt_gap_240",
+    "ret_60", "ret_240", "ret_1440", "log_rv15_rv240", "log_rv60_rv1440", "ret_skew_60", "dd_240", "ru_240",
+    "log_c_ema60", "log_c_ema240", "log_c_ema1440", "log_ema60_ema240", "hma_slope64_volnorm",
+    "rsi240_centered", "macd_hist_60_240_60_volnorm",
+    "bb_pctb_20", "bb_pctb_60", "bb_logbw_20",
+    "log_atr14_c", "log_atr14_rv14", "kcw_20",
+    "mfi14_centered", "mfi60_centered",
+    "ad_vwclv_5", "ad_vwclv_15", "ad_vwclv_60",
+    "psar_dir", "psar_logdist", "psar_age_log",
+    "dow", "log_rv60_med2d", "log_range_240",
+    "r5_1", "r5_12", "log_c5_ema5_12"
+  ],
+  "models": {
+    "lgbm": {"device_type": "gpu"},
+    "xgb": {"device": "cuda"},
+    "cat": {"task_type": "GPU"},
+    "xgbrf": {"device": "cuda"},
+    "lstm": {"device": "cuda"}
+  },
+  "model_order": ["lgbm", "xgb", "cat", "tfm", "xgbrf", "autots_wr", "autots_mr", "lstm"]
+}

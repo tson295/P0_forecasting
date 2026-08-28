@@ -1,23 +1,22 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: PLAN rev 9 (15 ngày, lọc B0 → B0* theo R1–R4, mọi model từ B0* với 15fixed_m riêng → F*_m, GPU-only) / CHỜ USER REVIEW / CHƯA CODE
+PHASE: CODE XONG + CHECKER REVIEW ĐÃ SỬA (src/p0; 74 unit test + smoke e2e PASS trên data tổng hợp CPU; check-data + checksum data thật OK) / CHỜ ĐƯA LÊN VAST + USER UNLOCK
 TRAINING: LOCKED
 
 ## Current Task
 
-2026-08-28: plan rev 8 (xem Decisions) — snapshot 15 ngày (Vast), lọc B0 → B0* theo R1–R4, mọi model từ B0* với 15fixed_m riêng → F*_m, metric trên giá, champion log, latency theo dõi, visualize theo origin; scale data để sau. `docs/RESEARCH_PLAN.md`, `.claude/CLAUDE.md`, agents, `reports/smoke_visualize.*` đã đồng bộ và push (repo private). Bản cũ 2026-08-24 ở `docs/archive/`. Chưa code, chưa training, chưa cài package.
+2026-08-29: đã code harness theo plan rev 9b (§8): `src/p0/*`, `run.py`, `configs/p0_15d.json`, `tests/` (74 test PASS), `python run.py smoke-e2e` chạy trọn pipeline trên data tổng hợp (CPU, chỉ debug). Checker review 10 mục → đã sửa 5 lỗi (gate --smoke/--allow-cpu chỉ cho data tổng hợp; champion_log/log.csv schema cố định; checksum §6.1 bắt buộc + `ok` gồm gap/dup; config_hash không phụ thuộc root; console UTF-8) + ghi chú nhỏ (latency LSTM shared, predict device/lib version, runs/<exp_id>, keepdrop exp_id, all_models Gain vs B0-306/B0*/champion, loop đầu phải là lgbm). Đã chạy `check-data --write-checksums` trên snapshot thật (đọc-only) → `data/data_checksums.json` commit. Đã viết `docs/VAST_SESSION_PROMPT.md`, `scripts/vast_bootstrap.sh`, `requirements.txt`. Chưa training thật.
 
 ## Exact Next Step
 
-1. User review plan rev 5 — đã chốt: fold §1.2, số vòng cố định §1.3, chạy Vast. Còn xem: lọc B0 §1.4 (tier/kiểm chứng), thứ tự model §2.2, §2.4, metric trên giá §0, log/visualize §7.
-2. Sau duyệt: code tối thiểu (`src/data.py`, `split.py`, `features_ext.py`, `metrics.py`, `run_lgbm.py` + `tests/`); smoke CPU vài trăm dòng.
-3. User unlock training → Vast: LightGBM §1.3 trên B0-306 (15fixed_306) → §1.4 lọc → B0* → mỗi model calibrate 15fixed_m + ε_m trên B0* rồi vòng lặp riêng: LightGBM → XGBoost → CatBoost → TimesFM (audit API trước) → XGB-RF → AutoTS (audit trước) → LSTM; champion log sau mỗi model → ensemble → Final TEST 2 ngày → all_models.csv + figure.
+1. Đưa lên Vast: clone repo, scp `data/BTC_hf_1min.csv` + `data/BTC_lf_5min.csv`, mở session Claude mới với `docs/VAST_SESSION_PROMPT.md`; `bash scripts/vast_bootstrap.sh`; `python run.py check-data --config configs/p0_15d.json` phải in `verify … OK` (sha256 khớp) + 21.916 dòng, 21.258 origin, 5 fold + TEST OK.
+2. User unlock training (sửa MEMORY `TRAINING: UNLOCKED`) → `calibrate --model lgbm --colset b0306` → `filter-b0` → `loop --model lgbm` (bắt buộc đầu tiên) → `xgb` → `cat` → `xgbrf` → `lstm` → `ensemble` → `final` (lệnh ở plan §8).
+3. Song song: `researcher` audit TimesFM (covariate API, LoRA) và AutoTS (WindowRegression/MultivariateRegression, regressor, rolling predict) → `docs/reference/audit_<lib>.md` → `coder` implement adapter `tfm`, `autots_wr`, `autots_mr` (hiện `models_pending.py`).
 4. Phục hồi data đầy đủ + scale data: chỉ khi user quyết (plan §5).
-
-2026-08-28: đã tạo `reports/smoke_visualize.py` + `reports/smoke_visualize.md` + `reports/smoke/*.png` (layout mẫu, SỐ GIẢ, không phải kết quả); 2026-08-28 (sau): bộ agent mới 7 file (main-controller/coder/researcher/checker/runner/analyst/infra) thay 9 agent cũ; tài liệu tách: chính thức `docs/RESEARCH_PLAN.md`, lưu trữ `docs/archive/`, tham khảo `docs/reference/`.
 
 ## Decisions (mới nhất trước)
 
+- 2026-08-29: B0 `TargetTransform` có bug nhân in-place `(n,1) *= (1,3)` (ValueError ở mọi numpy) → B0 gốc không chạy nguyên bản; file B0 không sửa; harness dùng `src/p0/transform.py` tái hiện đúng công thức (unit test so công thức + test ghi nhận bug). LightGBM trong harness = `_make_model`/`LGBMConfig`/ES huber y hệt `fit_lgbm_baseline`. Prune PI: bỏ cột ext không có cờ PI+ (PI > 0 ở ≥ 2/3 horizon). Latency §7.4: thread mặc định thư viện (ghi cột), assert |batch − batch-1| ≤ 1e-6. TEST = 2.728 origin (plan cũ ghi 2.725 — sai số cộng).
 - 2026-08-28 (rev 9b, user chốt): gộp 3 seed khi confirmation = mỗi configuration (F*_m, F*_m^prune) 3 seed → 3 bảng RMSE 15 ô → mỗi ô lấy MEAN RMSE 3 seed → bảng RMSE̅; Gain_{f,h} = 1 − RMSE̅^prune/RMSE̅^unprune; MedianGain = median 15 Gain; ≥ −ε_m → prune, thấp hơn → unpruned. Cùng cách gộp cho win vs champion (bảng RMSE̅ hai bên). Cửa sổ visualize: 3 ngày VAL/fold khác nhau theo std r1 trong ngày = thấp / trung bình / cao, cửa sổ 12:00–13:00 UTC; TEST: 3 cửa sổ 60' theo std r1 thấp nhất / trung vị / cao nhất.
 - 2026-08-28 (rev 9, user chốt): bỏ safety-net; sau vòng lặp chỉ prune PI (bỏ cột ext PI ≤ 0) → F*_m^prune; confirmation 3 seed (cách gộp median từng ô — đã thay bằng mean RMSE từng ô ở rev 9b); win_m = F*_m^prune nếu ≥ −ε_m so với F*_m, ngược lại F*_m; win_m so với champion cùng cách (median từng ô). Visualize sau mỗi model: win vs champion — mỗi horizon 3 ảnh (3 cửa sổ 60 origin) + 2 heatmap 15 ô; Final: heatmap TEST mọi model (khối 6h × h) + Fig H_h mọi model; actual đen; win = blue, champion = red; nhiều model → màu cố định, ≤ 8 màu/panel.
 - 2026-08-28 (rev 8, user chốt): (a) ExtraTrees → XGB-RF. (b) Cờ +/− khi lọc B0: > 0 ở ≥ 2/3 horizon. (c) B0* (bộ tốt nhất từ B0-306 và R1–R4) là điểm xuất phát CHUNG cho mọi model; từ B0* mỗi model chạy ES một lần → 15fixed_m riêng (15fixed_306 chỉ cho R1–R4), rồi tự feature search bằng chính model đó → F*_LGBM, F*_XGB, F*_Cat, … có thể khác nhau; KHÔNG để LightGBM tìm F* trước rồi model khác kế thừa. Confirmation F*_m: ES bật, 3 seed (ghi best_iteration cho Final). ε_m đo trên B0* ngay sau calibrate (LightGBM thêm ε trên B0-306 cho lọc). LSTM cũng calibrate ES theo epoch trên B0* → fixed_epoch_LSTM cho mọi candidate (confirmation ES bật); XGB-RF (1 vòng cố định), TimesFM zero-shot, AutoTS xử lý theo cơ chế riêng, không ép fixed_rounds.
@@ -38,11 +37,11 @@ TRAINING: LOCKED
 
 ## Data / Implementation Blockers
 
-- Snapshot 15 ngày đang dùng: `BTC_hf_1min.csv` 21.916 dòng (cắt đúng 2 MiB, dòng cuối cụt), 2026-01-18 16:15 → 02-02 21:30; B0-eligible 21.258 origin (01-19 02:46 → 02-02 21:27), warmup 631 bar; lưới/dup/gap/OHLC đã kiểm tra sạch. Regime: BTC −18% trong 15 ngày. `BTC_lf_5min.csv` đến 03-26 (đủ phủ). Data đầy đủ (manifest 289.320 bar đến 08-07) chưa phục hồi — để sau.
-- lightgbm/xgboost/catboost/timesfm/autots chưa cài local (có torch 2.11+cu128, sklearn 1.8, scipy 1.17, pandas 3.0.3, numpy 2.4). Máy local có RTX 3050 Ti.
+- Snapshot 15 ngày đang dùng: `BTC_hf_1min.csv` 21.916 dòng (cắt đúng 2 MiB, dòng cuối cụt), 2026-01-18 16:15 → 02-02 21:30; B0-eligible 21.258 origin (01-19 02:46 → 02-02 21:27), warmup 631 bar; lưới/dup/gap/OHLC đã kiểm tra sạch; sha256 ở `data/data_checksums.json` (CLI verify mọi bước). Số origin thực tế (`check-data`): FIT 9.887 / 11.327 / 12.767 / 14.207 / 15.647 (Final 17.087), ES 1.377, VAL 1.437, TEST 2.728 — B0 loại 24 origin ngày 01-24 08:30–09:33, 19:03–20:06 và 01-25 07:27–08:30 (3 bar bất thường lan theo lag 1/2/4/8/16/32/63; chỉ trong FIT, đặc tính B0, không sửa). Regime: BTC −18% trong 15 ngày. `BTC_lf_5min.csv` đến 03-26 (đủ phủ). Data đầy đủ (manifest 289.320 bar đến 08-07) chưa phục hồi — để sau.
+- Local đã cài lightgbm 4.7.0 (CPU wheel), xgboost 3.4.1, catboost 1.2.10, pytest 9.1 — chỉ cho unit test; timesfm/autots chưa cài (chờ audit). torch 2.11+cu128, sklearn 1.8, scipy 1.17, pandas 3.0.3, numpy 2.4. Máy local có RTX 3050 Ti (training vẫn trên Vast).
 - Raw header lowercase vs B0 uppercase → adapter ở ingestion.
 - LF 5-min nhãn T = gộp 1-min bars (T−4..T] (verify: LF 16:20 open = HF 16:16 open) → as-of join `T ≤ t` là causal.
-- Repo chưa có commit nào (mọi file staged, nhiều file modified sau staging).
+- Windows: `PYTHONPATH` tách bằng `;` (không `:`); console cp1252 không in được `→` → `run.py` tự reconfigure stdout UTF-8; script ad-hoc cần `PYTHONUTF8=1`.
 
 ## Pitfalls
 
@@ -51,6 +50,8 @@ TRAINING: LOCKED
 - Target h = 2, 3 chồng lấp → per-bar không iid (chỉ ghi nhớ khi đọc kết quả).
 - Lag-1 autocorr 1-min ≈ −0.06 trên snapshot → tín hiệu điểm cỡ 0.1–0.2 pp RMSE ở h=1, ~0.03 pp ở h=3; Gain vài pp = nghi leakage. Forecast trông "phẳng" là bình thường.
 - Directional accuracy: bỏ bar C_{t+h} = C_t (~3.7%).
+- lightgbm ≥ 4.7 cảnh báo `eval_set` deprecated (B0 dùng eval_set) — harness lọc warning, giữ API cho đồng nhất với B0; nếu Vast cài lightgbm mới hơn bỏ hẳn eval_set thì sửa `models.LGBMModel` (không sửa B0).
+- `--smoke`/`--allow-cpu` chỉ có tác dụng với `dataset_label` `synthetic*`; trên data thật CLI thoát — không tìm cách lách (cấm training CPU).
 - LightGBM/CatBoost predict luôn chạy CPU dù train GPU (đặc tính thư viện) → cột predict device trong latency là CPU; không phải CPU training.
 - Metric trên giá: RMSE USD phụ thuộc mức giá (78k–95k trong 15 ngày); Gain là tỷ lệ nên ít bị ảnh hưởng; r/dir-acc phải tính trên thay đổi giá, không trên giá tuyệt đối.
 - Chi phí trên 15 ngày: tree ≈ 1–2 h/model cho 39 candidate; AutoTS ≈ 2–4 h/model (lưới origin thưa mỗi 5'); LSTM ≈ 3–10 h (1 seed); tổng ≈ 12–25 h máy.
@@ -58,8 +59,9 @@ TRAINING: LOCKED
 ## Important Files
 
 - Repo GitHub (private): https://github.com/tson295/P0_forecasting — branch `main`; raw CSV không push (.gitignore).
-- `Baseline_LGBM.py` — B0 frozen, deny-protected.
-- `docs/RESEARCH_PLAN.md` — plan rev 6 (canonical).
+- `src/p0/` + `run.py` — harness (§8); `configs/p0_15d.json`; `tests/`; `docs/VAST_SESSION_PROMPT.md`; `scripts/vast_bootstrap.sh`; `requirements.txt`; `data/data_checksums.json` (anchor §6.1).
+- `Baseline_LGBM.py` — B0 frozen, deny-protected (có bug TargetTransform, xem Decisions 2026-08-29).
+- `docs/RESEARCH_PLAN.md` — plan rev 9b (canonical; §8 = trạng thái code + lệnh chạy).
 - `reports/smoke_visualize.md` + `reports/smoke_visualize.py` — layout mẫu bảng/figure với số giả (không phải kết quả).
 - `.claude/CLAUDE.md` — invariants rút gọn.
 - `docs/archive/` — plan/hiến pháp/memory cũ 2026-08-24 (tham khảo).

@@ -2,6 +2,10 @@
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
+
+# Smoke output tạm (data tổng hợp, không phải kết quả)
+tmp_smoke*/
 
 # Raw data: CSV lớn không vào git (integrity anchor: data/data_checksums.json)
 data/*.csv

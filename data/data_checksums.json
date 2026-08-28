@@ -1,0 +1,43 @@
+{
+  "dataset_label": "btc_1min_15d_2026-01-18_02-02",
+  "files": {
+    "hf": {
+      "path": "data/BTC_hf_1min.csv",
+      "sha256": "457941de9e4842a0690c723406f0bafdeb5d11a8fbb443befc820f898b3b666f",
+      "bytes": 2097152,
+      "report": {
+        "rows": 21916,
+        "start": "2026-01-18 16:15:00+00:00",
+        "end": "2026-02-02 21:30:00+00:00",
+        "aligned": true,
+        "duplicates": 0,
+        "gaps": 0,
+        "max_gap_sec": 60,
+        "ohlc_ok": true,
+        "volume_ok": true,
+        "amount_in_range": true,
+        "amount_available": true,
+        "ok": true
+      }
+    },
+    "lf": {
+      "path": "data/BTC_lf_5min.csv",
+      "sha256": "af93a6e4528221198444b008ee5123f768556c3649eede854f906816e45e7472",
+      "bytes": 2097152,
+      "report": {
+        "rows": 19308,
+        "start": "2026-01-18 16:20:00+00:00",
+        "end": "2026-03-26 17:15:00+00:00",
+        "aligned": true,
+        "duplicates": 0,
+        "gaps": 0,
+        "max_gap_sec": 300,
+        "ohlc_ok": true,
+        "volume_ok": true,
+        "amount_in_range": true,
+        "amount_available": true,
+        "ok": true
+      }
+    }
+  }
+}

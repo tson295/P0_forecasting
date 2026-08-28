@@ -1,0 +1,11 @@
+[project]
+name = "p0-forecasting"
+version = "0.1.0"
+description = "BTC 1-minute point forecasting research harness (docs/RESEARCH_PLAN.md)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::FutureWarning"]

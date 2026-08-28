@@ -1,0 +1,13 @@
+# P0_forecasting — môi trường Vast (Linux, CUDA). Pin phiên bản thực tế được ghi vào experiments/env.txt khi bootstrap.
+numpy>=2.0
+pandas>=3.0
+scipy>=1.14
+scikit-learn>=1.6
+matplotlib>=3.9
+pytest>=8
+xgboost>=3.0          # device=cuda
+catboost>=1.2         # task_type=GPU
+# lightgbm: cài BUILD GPU (OpenCL) trong scripts/vast_bootstrap.sh — wheel pip mặc định không có GPU:
+#   pip install lightgbm --no-binary lightgbm --config-settings=cmake.define.USE_GPU=ON
+# torch: cài theo CUDA của image (vd. pip install torch --index-url https://download.pytorch.org/whl/cu128)
+# timesfm / autots: chỉ cài sau khi researcher audit (plan §2.2 #4, #6)

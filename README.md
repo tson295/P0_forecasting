@@ -2,7 +2,18 @@
 
 Dự báo điểm `y_h(t) = log(C[t+h]/C[t])`, h = 1, 2, 3 phút, BTC 1-phút (Binance OHLCV + amount). Model dự báo log-return, **metric tính trên giá** (`P̂ = C_t·exp(ŷ)`, RMSE/MAE USD, Gain = 1 − RMSE_cand/RMSE_base trên 15 ô = 5 fold × 3 horizon). Chi tiết: [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) (plan rev 9). Layout mẫu mọi bảng/figure với **số giả**: [`reports/smoke_visualize.md`](reports/smoke_visualize.md).
 
-Trạng thái: plan đang review; **chưa code, chưa training**. Giai đoạn hiện tại chạy trên snapshot 15 ngày (2026-01-18 → 02-02); raw CSV không nằm trong repo.
+Trạng thái: **code xong (`src/p0/`, 74 unit test + smoke PASS, checker review đã sửa), chưa training** — chạy trên Vast sau khi user unlock. Giai đoạn hiện tại: snapshot 15 ngày (2026-01-18 → 02-02); raw CSV không nằm trong repo (sha256 ở `data/data_checksums.json`).
+
+## Chạy
+
+```bash
+python -m pytest -q                                   # unit test CPU (data tổng hợp)
+python run.py smoke-e2e --out tmp_smoke --days 6      # toàn bộ pipeline trên data tổng hợp, CPU, chỉ debug
+python run.py check-data --config configs/p0_15d.json # kiểm tra §1.1 + verify sha256 (không training)
+python run.py calibrate --model lgbm --colset b0306   # sau khi user unlock; GPU only
+python run.py filter-b0 ; python run.py loop --model lgbm ; ... ; python run.py ensemble ; python run.py final
+```
+Bootstrap Vast: `scripts/vast_bootstrap.sh`; prompt cho session Vast: `docs/VAST_SESSION_PROMPT.md`. CLI từ chối training khi `.claude/MEMORY.md` còn `TRAINING: LOCKED`, khi CSV không khớp checksum, và từ chối `--smoke`/`--allow-cpu` trên data thật. Lưu ý: `TargetTransform` trong `Baseline_LGBM.py` có bug nhân in-place nên harness dùng bản tái hiện `src/p0/transform.py` (công thức giữ nguyên, file B0 không sửa).
 
 ## Flow tổng thể
 
@@ -61,6 +72,7 @@ Luật KEEP/DROP (§2.1): `MedianGain ≥ −ε_m` → KEEP (tốt hơn hoặc g
 ## Cấu trúc repo
 
 - `Baseline_LGBM.py` — B0 frozen (306 feature, LightGBM GPU), không sửa.
+- `src/p0/` — harness theo plan §8; `run.py` CLI; `configs/`; `tests/`; `scripts/vast_bootstrap.sh`; `data/data_checksums.json`.
 - `docs/` — plan chính thức + `archive/` + `reference/`.
 - `reports/` — smoke visualize (số giả).
 - `.claude/` — hiến pháp, trạng thái, agents, hooks.

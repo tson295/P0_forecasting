@@ -1,6 +1,6 @@
 # RESEARCH PLAN — BTC 1-phút point forecasting (bản đơn giản hóa)
 
-Cập nhật: 2026-08-28 (rev 9b: gộp 3 seed bằng mean RMSE từng ô; cửa sổ visualize ở 3 ngày VAL vol thấp/trung bình/cao; rev 9: bỏ safety-net, chỉ prune PI; confirmation 3 seed → win_m; figure win vs champion + Final mọi model; rev 8: B0* là điểm xuất phát chung của mọi model; mỗi model calibrate 15fixed_m riêng trên B0* rồi tự feature search → F*_m; cờ + = > 0 ở ≥ 2/3 horizon; rev 7: training chỉ GPU, ExtraTrees → XGB-RF, lọc B0 theo R1–R4 không tier, ensemble theo skill vs E0, latency p95/p99/max, màu cố định; rev 6: latency §7.4; rev 5: lọc B0). Thay thế hoàn toàn roadmap 2026-08-24 (lưu tại `docs/archive/RESEARCH_PLAN_2026-08-24_detailed.md`, không còn hiệu lực).
+Cập nhật: 2026-08-29 (code §8 + checker review: TEST = 2.728 origin, prune PI theo cờ PI+ ≥ 2/3 horizon, latency §7.4 thread mặc định thư viện, checksum §6.1 bắt buộc trong CLI) · 2026-08-28 (rev 9b: gộp 3 seed bằng mean RMSE từng ô; cửa sổ visualize ở 3 ngày VAL vol thấp/trung bình/cao; rev 9: bỏ safety-net, chỉ prune PI; confirmation 3 seed → win_m; figure win vs champion + Final mọi model; rev 8: B0* là điểm xuất phát chung của mọi model; mỗi model calibrate 15fixed_m riêng trên B0* rồi tự feature search → F*_m; cờ + = > 0 ở ≥ 2/3 horizon; rev 7: training chỉ GPU, ExtraTrees → XGB-RF, lọc B0 theo R1–R4 không tier, ensemble theo skill vs E0, latency p95/p99/max, màu cố định; rev 6: latency §7.4; rev 5: lọc B0). Thay thế hoàn toàn roadmap 2026-08-24 (lưu tại `docs/archive/RESEARCH_PLAN_2026-08-24_detailed.md`, không còn hiệu lực).
 
 Luồng nghiên cứu:
 
@@ -14,7 +14,7 @@ Fix dataset 15 ngày (5 fold VAL 1 ngày, TEST 2 ngày cuối)
 → (để sau) data đầy đủ → scale data → TEST 30 ngày
 ```
 
-Trạng thái: **chưa code, chưa training.** Code bắt đầu sau khi user duyệt plan này; training chỉ chạy khi user nói unlock.
+Trạng thái: **code xong + unit test/smoke PASS + checker review đã sửa (2026-08-29); chưa training.** Training chỉ chạy trên Vast khi user nói unlock (§8).
 
 ---
 
@@ -23,7 +23,7 @@ Trạng thái: **chưa code, chưa training.** Code bắt đầu sau khi user du
 - **Target**: `y_h(t) = log(C[t+h] / C[t])`, h = 1, 2, 3 phút. Model dự báo one-step return `r` phải cộng dồn `ŷ_h = Σ_{i≤h} r̂_{t+i}` trước khi chấm.
 - **Data**: BTC 1-phút OHLCV + amount (Binance) `data/BTC_hf_1min.csv`; `data/BTC_lf_5min.csv` chỉ dùng cho feature ở resolution 5 phút. Không dùng `*_close.csv`, không cross-asset (thêm sau nếu user muốn).
 - **Baseline** (các nghĩa, dùng xuyên suốt):
-  - **B0-306** = 306 feature của `Baseline_LGBM.py` (file không sửa) chạy bằng LightGBM code gốc. Luôn log làm reference.
+  - **B0-306** = 306 feature của `Baseline_LGBM.py` (file không sửa) chạy bằng LightGBM code gốc. Luôn log làm reference. Lưu ý: `TargetTransform` trong file B0 có bug nhân in-place (`(n,1) *= (1,3)` → ValueError) — harness dùng `src/p0/transform.py` tái hiện đúng công thức; mọi thứ khác (feature 306, `_make_model`, `LGBMConfig`, `build_lgbm_matrix`) import thẳng từ B0.
   - **Feature baseline = B0\*** = bộ tốt nhất chọn từ B0-306 và R1–R4 (§1.4, chọn cột trong harness). **Mọi model bắt đầu vòng lặp feature từ cùng B0\***; không model nào kế thừa feature set của model khác (§2.1).
   - **Model baseline / champion ban đầu** = LightGBM đúng code gốc (`fit_lgbm_baseline`, `LGBMConfig` không đổi: Huber alpha 0.9, TargetTransform `y / (rv60·√h)` fit train-only, seed 8586) trên F\*_LGBM. Gain của các model khác đo so với champion hiện tại (§3).
   - **E0** (ŷ = 0 ⇔ P̂ = C_t) luôn log.
@@ -65,7 +65,7 @@ Expanding train, VAL = 1 ngày UTC, ES = ngày liền trước VAL (trừ 60' pu
 | 5 | → 01-29 23:56 (~15.7k) | 01-30 00:00 → 22:56 | 60' | 01-31 |
 | TEST (refit) | → 01-30 23:56 (~17.1k) | 01-31 00:00 → 22:56 | 60' | 02-01 00:00 → 02-02 21:27 |
 
-- Mỗi VAL = 1.437 origin; 5 fold = 7.185 origin, 15 ô. ES = 1.377 origin. TEST = 2.725 origin (02-01 Chủ nhật, 02-02 Thứ hai).
+- Mỗi VAL = 1.437 origin; 5 fold = 7.185 origin, 15 ô. ES = 1.377 origin. TEST = 2.728 origin (02-01 Chủ nhật, 02-02 Thứ hai; origin cuối 02-02 21:27). FIT thực tế theo eligible của B0 (đã chạy `check-data` trên snapshot): 9.887 / 11.327 / 12.767 / 14.207 / 15.647 origin (fold 1–5), Final 17.087 — B0 loại 24 origin ngày 01-24/01-25 (3 bar bất thường lan theo lag), chỉ nằm trong FIT.
 - Expanding thay vì rolling vì data ít; so sánh candidate vs baseline luôn trong cùng fold nên train size không làm lệch Gain.
 - Mọi partition half-open, `t + 3' < T_end`.
 - Cố định trong toàn bộ §1.4 và Bước 2, cho mọi model: cùng fold, cùng tập origin (= eligible của B0), cùng seed 8586, cùng config từng model.
@@ -159,7 +159,7 @@ Trước vòng lặp: calibrate phase B của `m` trên B0\* (§1.3) → `15fixe
 
 Hết danh sách → **F\*_m** (bộ sau vòng lặp). Không còn safety-net. Sau đó:
 
-(a) **Prune PI** (vẫn số vòng/epoch cố định): tính permutation importance trên VAL cho các cột ext của F\*_m; bỏ đồng thời mọi cột ext có PI ≤ 0 → **F\*_m^prune**.
+(a) **Prune PI** (vẫn số vòng/epoch cố định): tính permutation importance trên VAL cho các cột ext của F\*_m; bỏ đồng thời mọi cột ext không có cờ PI+ (PI > 0 ở ≥ 2/3 horizon — cùng quy ước cờ §1.4; PI = median 5 fold của 3 lần xáo) → **F\*_m^prune**.
 
 (b) **Confirmation 3 seed → win_m** (phase C): mỗi configuration (F\*_m và F\*_m^prune) chạy 3 seed (8586, 8587, 8588; ES bật; `best_iteration`/best epoch ghi lại cho Final refit) → 3 bảng RMSE 5 fold × 3 horizon = 15 ô. Với mỗi ô (f, h) lấy **mean RMSE của 3 seed** → một bảng `RMSE̅` 15 ô duy nhất cho mỗi configuration. Sau đó từng ô:
 
@@ -313,7 +313,7 @@ Gain so với `S_m` đo **thông tin tăng thêm** so với B0\* (đã có retur
 
 ## 4. Final evaluation (một lần, TEST 2 ngày)
 
-- Refit **mọi** model (không chỉ champion) trên FIT `→ 01-30 23:56`, ES `01-31 00:00 → 22:56`, purge 60', dự báo toàn bộ TEST `02-01 00:00 → 02-02 21:27` (2.725 origin).
+- Refit **mọi** model (không chỉ champion) trên FIT `→ 01-30 23:56`, ES `01-31 00:00 → 22:56`, purge 60', dự báo toàn bộ TEST `02-01 00:00 → 02-02 21:27` (2.728 origin).
 - Report per horizon trên giá: RMSE, MAE, Pearson r (thay đổi giá), directional accuracy; Gain vs B0-306, vs B0\* và vs E0; cho E0, B0-306, B0\*, từng model §2.2 tại F\*_m, ensemble. Xuất `all_models.csv`; vẽ **heatmap TEST của mọi model** và **Fig H_h của mọi model** với prediction của chúng (§7.3 Final).
 - Đo latency §7.4 trên toàn bộ origin TEST cho mọi model (pass riêng, batch 1) → `latency_summary.csv`.
 - Không sửa gì sau khi xem TEST. TEST chỉ được đọc bởi script final. TEST 2 ngày là kiểm tra one-shot của giai đoạn 15 ngày; TEST chính thức 30 ngày thuộc §5.
@@ -378,26 +378,25 @@ Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `rep
 
 - **Đo gì**: thời gian gọi `predict` cho **một origin** (batch size 1) → ra `ŷ_h` (và `P̂`). Tree (3 model độc lập theo h): đo riêng từng horizon. Model một lần gọi ra cả 3 bước (LSTM head 3 output, TimesFM, AutoTS `fit_data + predict`): đo một lần gọi, gán chung cho h = 1, 2, 3 và đánh dấu `shared = true`. Chưa gồm thời gian tính feature (pipeline hiện tính feature theo cả frame; latency end-to-end để sau khi có pipeline incremental).
 - **Đo khi nào**: pass riêng **sau khi train xong**, chỉ ở run confirmation F\*_m (§2.1c) và Final (§4), trên toàn bộ origin VAL/TEST; không đo trong vòng lặp candidate (ở đó predict theo batch cho nhanh). Pass đo không được thay đổi kết quả: assert prediction theo batch == prediction batch-1 (sai số ≤ 1e-6).
-- **Cách đo**: `time.perf_counter_ns` quanh đúng lời gọi predict; model chạy GPU (LSTM/TimesFM, XGBoost nếu predict trên GPU) gọi `torch.cuda.synchronize()`/tương đương trước và sau; bỏ 50 lần gọi đầu (warm-up); cố định số thread (`num_threads`); ghi device, phiên bản thư viện, GPU/CPU của instance.
+- **Cách đo**: `time.perf_counter_ns` quanh đúng lời gọi predict; model chạy GPU (LSTM/TimesFM, XGBoost nếu predict trên GPU) gọi `torch.cuda.synchronize()`/tương đương trước và sau; bỏ 50 lần gọi đầu (warm-up); số thread = mặc định thư viện (batch 1 không phụ thuộc thread; ghi cột `threads`); ghi train/predict device, phiên bản thư viện, GPU/CPU của instance.
 - **Output**: `experiments/runs/<exp_id>/latency.csv` (origin, horizon, ms, shared); tóm tắt `experiments/summary/latency_summary.csv` (model × horizon × {p95, p99, max} ms, VAL và TEST riêng; p50 không cần) và cột p95/p99/max trong `all_models.csv`; ghi `train device` (luôn GPU) và `predict device` thực tế (LightGBM/CatBoost predict trên CPU là đặc tính thư viện; XGBoost/XGB-RF/LSTM/TimesFM predict GPU; AutoTS pipeline CPU quanh regression_model GPU).
 - **Không dùng** latency cho KEEP/DROP, champion, ensemble hay bất kỳ quyết định nào trong plan này; chỉ ghi nhận và báo cáo.
 
 ---
 
-## 8. Thứ tự triển khai sau khi plan được duyệt
+## 8. Triển khai — trạng thái và lệnh chạy
 
-1. Code tối thiểu: `src/data.py` (load + adapter + kiểm tra §1.1 + checksum), `src/split.py` (bảng fold/TEST §1.2, quy tắc biên), `src/features_ext.py` (mỗi cột một hàm), `src/metrics.py` (metric trên giá, Gain, tóm tắt), `src/filter_b0.py` (§1.4: PI, standalone, MI, tier, 3 run kiểm chứng), `src/run_lgbm.py` (B0\* + ext, vòng lặp §2.1, standalone §2.4, log §7), `src/plots.py` (§7.3: Fig H_h, Fig HM, Final heatmap + H_h mọi model; palette/marker cố định, actual đen), `src/latency.py` (§7.4: p95/p99/max, pass đo riêng, assert không đổi prediction); `tests/` cho adapter, biên, target, causality feature, metric E0, decode → giá, PI/MI chỉ dùng đúng partition.
-2. Smoke end-to-end trên vài trăm dòng (CPU local).
-3. User unlock training → Vast: LightGBM calibrate A (B0-306, `15fixed_306`, ε) → §1.4 lọc → B0\* → LightGBM calibrate B trên B0\* (`15fixed_LGBM`, ε) → vòng lặp 39 candidate → prune PI → 3 seed (mean RMSE từng ô → Gain → MedianGain) → win_LGBM → champion; vẽ Fig H/HM.
-4. XGBoost → CatBoost: mỗi model calibrate riêng trên B0\* (`15fixed_XGB`, `15fixed_Cat`, ε_m) → vòng lặp riêng từ B0\* → F\*_m → champion log.
-5. TimesFM: audit version/covariate API → TFM-POINT → loop nếu có covariate → LoRA nếu thắng E0.
-6. XGB-RF.
-7. AutoTS: audit version → wrapper rolling-origin → 2 model → tổng hợp sau khi cả hai xong.
-8. LSTM (cuối): calibrate `fixed_epoch_LSTM` trên B0\* → vòng lặp → F\*_LSTM.
-9. Ensemble → §4 Final (TEST 2 ngày) → `all_models.csv` + figure.
-10. §5 khi user quyết phục hồi data.
+**Code đã viết (2026-08-29): 74 unit test PASS (CPU, data tổng hợp), smoke end-to-end PASS, checker review đã sửa (gate, checksum §6.1, schema log).** `src/p0/`: `data` (adapter, kiểm tra §1.1 gồm gap/dup, checksum §6.1, as-of LF), `split` (§1.2), `features_ext` (39 cột §2.3, causal), `metrics` (trên giá, Gain, tóm tắt, gộp 3 seed), `transform` (tái hiện `TargetTransform` của B0 — **B0 gốc có bug nhân in-place `(n,1) *= (1,3)` trong `TargetTransform` nên không chạy được nguyên bản; file B0 không sửa, công thức giữ nguyên**), `models` (LightGBM đúng code gốc B0 qua `_make_model`/`LGBMConfig`, XGBoost, XGB-RF, CatBoost; `models_lstm`; TimesFM/AutoTS chờ researcher audit — `models_pending`), `harness` (Store = ma trận B0 + ext, `run_config`, `calibrate` → 15fixed_m, `seed_noise` → ε_m), `filter_b0` (§1.4), `loop` (§2.1 add-one, prune PI, 3 seed → win_m; §3 champion, ensemble), `latency` (§7.4), `plots` (§7.3), `logs` (§7: `log.csv`, `champion_log.csv`, `summary/latency_summary.csv` schema cố định; `runs/<exp_id>/`), `cli`. Config: `configs/p0_15d.json`. Test: `python -m pytest -q`; smoke: `python run.py smoke-e2e --out tmp_smoke --days 6` (data tổng hợp, CPU, chỉ debug). Prompt session Vast: `docs/VAST_SESSION_PROMPT.md`; bootstrap: `scripts/vast_bootstrap.sh`; môi trường: `requirements.txt`.
 
----
+Ràng buộc trong CLI: (i) `calibrate / filter-b0 / loop / final` từ chối khi `.claude/MEMORY.md` còn `TRAINING: LOCKED`, và preflight GPU trước khi train; (ii) `--smoke` / `--allow-cpu` chỉ được chấp nhận khi `dataset_label` bắt đầu bằng `synthetic` — với data thật bị từ chối (cấm training CPU); (iii) mọi bước sau `check-data` verify sha256 của CSV với `data/data_checksums.json` (đã ghi cho snapshot 15 ngày, path tương đối, commit trong repo); (iv) `loop` đầu tiên phải là `lgbm` (champion ban đầu §3).
+
+Lệnh theo bước trên Vast:
+
+1. `bash scripts/vast_bootstrap.sh` → `python run.py check-data --config configs/p0_15d.json` (§1.1 + verify checksum; phải in `verify … OK`, 21.916 dòng, 21.258 origin, 5 fold + TEST `OK`).
+2. `python run.py calibrate --model lgbm --colset b0306` (phase A: `15fixed_306`, ε_LGBM) → `python run.py filter-b0` (§1.4: PI + SA + MI → R1–R4 → 4 run kiểm chứng → `experiments/b0_star.json`).
+3. `python run.py loop --model lgbm` → `xgb` → `cat` → (`tfm`, `autots_wr`, `autots_mr` sau audit) → `xgbrf` → `lstm`: mỗi lệnh = calibrate riêng trên B0\* (15fixed_m / fixed_epoch, ε_m) → 39 candidate → prune PI → 3 seed (mean RMSE từng ô) → win_m → latency → champion log + Fig H_h/HM.
+4. `python run.py ensemble` (§3) → `python run.py final` (§4: TEST một lần → `summary/all_models_test.csv` gồm Gain vs E0/B0-306/B0\*/champion + latency, heatmap + Fig H_h mọi model, `latency_summary.csv`).
+5. §5 khi user quyết phục hồi data đầy đủ.
 
 ## 9. Đã bỏ / đổi so với plan 2026-08-24
 
