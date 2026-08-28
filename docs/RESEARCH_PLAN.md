@@ -1,6 +1,6 @@
 # RESEARCH PLAN — BTC 1-phút point forecasting (bản đơn giản hóa)
 
-Cập nhật: 2026-08-28 (rev 8: B0* là điểm xuất phát chung của mọi model; mỗi model calibrate 15fixed_m riêng trên B0* rồi tự feature search → F*_m; cờ + = > 0 ở ≥ 2/3 horizon; rev 7: training chỉ GPU, ExtraTrees → XGB-RF, lọc B0 theo R1–R4 không tier, ensemble theo skill vs E0, latency p95/p99/max, màu cố định; rev 6: latency §7.4; rev 5: lọc B0). Thay thế hoàn toàn roadmap 2026-08-24 (lưu tại `docs/archive/RESEARCH_PLAN_2026-08-24_detailed.md`, không còn hiệu lực).
+Cập nhật: 2026-08-28 (rev 9: bỏ safety-net, chỉ prune PI; confirmation 3 seed median từng ô → win_m; figure win vs champion + Final mọi model; rev 8: B0* là điểm xuất phát chung của mọi model; mỗi model calibrate 15fixed_m riêng trên B0* rồi tự feature search → F*_m; cờ + = > 0 ở ≥ 2/3 horizon; rev 7: training chỉ GPU, ExtraTrees → XGB-RF, lọc B0 theo R1–R4 không tier, ensemble theo skill vs E0, latency p95/p99/max, màu cố định; rev 6: latency §7.4; rev 5: lọc B0). Thay thế hoàn toàn roadmap 2026-08-24 (lưu tại `docs/archive/RESEARCH_PLAN_2026-08-24_detailed.md`, không còn hiệu lực).
 
 Luồng nghiên cứu:
 
@@ -9,7 +9,7 @@ Fix dataset 15 ngày (5 fold VAL 1 ngày, TEST 2 ngày cuối)
 → Lọc 306 feature B0 bằng PI + standalone + MI → B0*  (§1.4)
 → Feature search: mỗi model (nhanh → chậm) từ CÙNG B0*: m(B0*) + ES → 15fixed_m → add-one 39 candidate → F*_m riêng
      LightGBM → XGBoost → CatBoost → TimesFM → XGB-RF → AutoTS (2 model cố định) → LSTM
-→ Sau mỗi model: so với champion hiện tại, log đổi/không đổi
+→ Sau mỗi model: prune PI → 3 seed (median từng ô) → win_m → so với champion, log đổi/giữ, vẽ win vs champion
 → Ensemble → Final evaluation (TEST 2 ngày) → bảng tổng hợp + visualize
 → (để sau) data đầy đủ → scale data → TEST 30 ngày
 ```
@@ -80,8 +80,8 @@ Lịch calibrate:
 | Phase | Feature set calibrate | Model | Kết quả | Dùng cho |
 |---|---|---|---|---|
 | A. Lọc B0 (§1.4) | B0-306 | LightGBM | `15fixed_306` (+ 15 model baseline dùng cho PI) + ε_LGBM(B0-306) | 4 run kiểm chứng R1–R4 → B0\* |
-| B. Feature search (§2.1) | **B0\*** (chung cho mọi model) | từng model có early stopping: LightGBM, XGBoost, CatBoost (số vòng), LSTM (số epoch) — mỗi model một run | `15fixed_LGBM`, `15fixed_XGB`, `15fixed_Cat`, `fixed_epoch_LSTM` + ε_m | toàn bộ 39 candidate, safety-net, prune của chính model đó (tính một lần, dùng chung cả phase) |
-| C. Confirmation (§2.1) | F\*_m của chính model | model m, ES bật, 3 seed | metric F\*_m cho champion log (§3) + `15fixed_m(F*_m)` / `fixed_epoch_LSTM(F*_LSTM)` ghi lại cho Final refit | so với champion |
+| B. Feature search (§2.1) | **B0\*** (chung cho mọi model) | từng model có early stopping: LightGBM, XGBoost, CatBoost (số vòng), LSTM (số epoch) — mỗi model một run | `15fixed_LGBM`, `15fixed_XGB`, `15fixed_Cat`, `fixed_epoch_LSTM` + ε_m | toàn bộ 39 candidate và prune PI của chính model đó (tính một lần, dùng chung cả phase) |
+| C. Prune PI + confirmation (§2.1) | F\*_m và F\*_m^prune của chính model | model m, ES bật, 3 seed | bảng Gain median 3 seed → **win_m** (+ `best_iteration`/best epoch ghi lại cho Final refit) | so với champion (§3), figure §7.3 |
 
 ```
 B0-306 + ES (LGBM) → 15fixed_306 → R1–R4 → B0*
@@ -157,9 +157,13 @@ Trước vòng lặp: calibrate phase B của `m` trên B0\* (§1.3) → `15fixe
 4. `MedianGain ≥ −ε_m` → **KEEP** (tốt hơn hoặc gần như không đổi), `S_m := S_m + f`; `MedianGain < −ε_m` → **DROP**.
 5. Feature tiếp theo.
 
-Hết danh sách (vẫn số vòng/epoch cố định): (a) safety-net §2.4 (thử lại block các cột DROP); (b) tùy chọn, 1 run: bỏ đồng thời các cột ext có permutation importance ≤ 0, giữ bộ rút gọn nếu MedianGain ≥ −ε_m. Rồi (c) **confirmation** (phase C): `m` trên F\*_m với ES bật, 3 seed — kết quả này dùng cho champion log §3, và `best_iteration`/best epoch của nó ghi lại cho Final refit.
+Hết danh sách → **F\*_m** (bộ sau vòng lặp). Không còn safety-net. Sau đó:
 
-Kết quả của model `m`: **F\*_m** + bảng `keepdrop_<m>.csv`. Sang model kế tiếp (cũng từ B0\*). TimesFM không có feature dạng cột: xuất phát không covariate, thử thêm lần lượt candidate §2.3 làm covariate nếu API có (§2.2).
+(a) **Prune PI** (vẫn số vòng/epoch cố định): tính permutation importance trên VAL cho các cột ext của F\*_m; bỏ đồng thời mọi cột ext có PI ≤ 0 → **F\*_m^prune**.
+
+(b) **Confirmation 3 seed → win_m** (phase C): chạy cả F\*_m và F\*_m^prune với 3 seed (8586, 8587, 8588; ES bật; `best_iteration`/best epoch ghi lại cho Final refit). Với mỗi bộ: 3 bảng Gain 15 ô (fold × horizon) — một bảng mỗi seed, cùng base — **chồng lên nhau, mỗi ô lấy median của 3 ô cùng vị trí** → một bảng 15 ô; MedianGain = median của 15 ô này (WinRate/P10/Worst tính trên cùng bảng, chỉ báo cáo). **win_m** = F\*_m^prune nếu MedianGain(F\*_m^prune vs F\*_m) ≥ −ε_m, ngược lại = F\*_m. Bảng median 3 seed của win_m là bảng dùng cho §3 và figure §7.3.
+
+Kết quả của model `m`: **win_m** (feature set + bảng median 3 seed) + bảng `keepdrop_<m>.csv` + bảng prune. Sang model kế tiếp (cũng từ B0\*). TimesFM không có feature dạng cột: xuất phát không covariate, thử thêm lần lượt candidate §2.3 làm covariate nếu API có (§2.2).
 
 ### 2.2 Thứ tự model (thời gian chạy tăng dần), config và cách chọn feature
 
@@ -283,19 +287,18 @@ Ghi chú: RMSE/MAE/R²/MAPE là metric, không phải feature. Feature ngoài da
 
 ### 2.4 Khi candidate thua hoặc không đổi vì base đã nhiều feature
 
-Gain so với `S_m` đo **thông tin tăng thêm** so với B0\* (đã có return/vol/candle/volume/RSI/MACD/EMA/HMA ở nhiều lag). Vì vậy phần lớn candidate sẽ ra gần 0: đó là kết luận hợp lệ ("không thêm thông tin mới"), không phải lỗi. Thua rõ (< −ε_m) nghĩa là feature thêm noise/overfit → DROP vẫn đúng. Xử lý để không bỏ sót và để hiểu vì sao thua:
+Gain so với `S_m` đo **thông tin tăng thêm** so với B0\* (đã có return/vol/candle/volume/RSI/MACD/EMA/HMA ở nhiều lag). Vì vậy phần lớn candidate sẽ ra gần 0: đó là kết luận hợp lệ ("không thêm thông tin mới"), không phải lỗi. Thua rõ (< −ε_m) nghĩa là feature thêm noise/overfit → DROP vẫn đúng. Xử lý để hiểu vì sao thua:
 
 1. **Gain standalone (diagnostic, không dùng để KEEP/DROP)**: với mỗi candidate `f`, cùng cách tính với §1.4(b): LightGBM code gốc chỉ trên `[f]`, Gain trên giá so với E0 (và so với B0\*). Ghi vào `keepdrop_<m>.csv` cột `gain_standalone`. Đọc kết hợp: standalone > 0 nhưng vs S_m ≈ 0 → có tín hiệu nhưng trùng base; standalone ≈ 0 → không có tín hiệu. Chi phí: 15 fit tí hon ≈ vài giây/candidate.
-2. **KEEP khi không đổi** (luật user) giữ lại feature bị che khuất; bước prune permutation ≤ 0 cuối vòng lặp dọn feature thuần noise.
-3. **Safety-net cuối vòng lặp** (1 run + có thể vài run): các cột đã DROP thử lại **một lần theo block** trên F\*_m; nếu block cho MedianGain ≥ +ε_m → thử lại từng cột trong block trên F\*_m theo luật §2.1; nếu không → xong. Bắt feature chỉ có ích khi đi cùng nhau.
-4. Không đổi hyperparameter của model để "giúp" feature (config cố định suốt vòng lặp).
+2. **KEEP khi không đổi** (luật user) giữ lại feature bị che khuất; bước **prune PI** cuối vòng lặp (§2.1a) dọn feature thuần noise. Không có safety-net.
+3. Không đổi hyperparameter của model để "giúp" feature (config cố định suốt vòng lặp).
 
 ---
 
 ## 3. Bước 3 — So sánh với champion (ngay sau mỗi model) + ensemble
 
-- **Champion ban đầu** = LightGBM code gốc trên F\*_LGBM (sau vòng lặp #1, bắt đầu từ B0\*). B0-306 và B0\* nguyên bản đều được log làm reference.
-- Sau khi mỗi model `m` xong vòng lặp và run confirmation (3 seed, tại F\*_m): tính Gain trên giá per ô so với champion hiện tại. `MedianGain > +ε_champion` (ε của champion đo ở §1.3) → **đổi champion** = `m`; ngược lại → **giữ champion**. Cả hai trường hợp ghi đầy đủ vào `champion_log.csv` (§7.2).
+- **Champion ban đầu** = LightGBM code gốc trên win_LGBM (sau vòng lặp #1 từ B0\*, prune PI, 3 seed). B0-306 và B0\* nguyên bản đều được log làm reference.
+- Sau khi mỗi model `m` có **win_m** (§2.1: prune PI + 3 seed): tính bảng Gain 15 ô của win_m so với champion hiện tại (base = bảng RMSE median 3 seed của champion), **chồng 3 seed lấy median từng ô** → MedianGain. `MedianGain > +ε_champion` (ε của champion đo ở §1.3) → **đổi champion** = win_m; ngược lại → **giữ champion**. Cả hai trường hợp ghi đầy đủ vào `champion_log.csv` (§7.2) và vẽ figure win vs champion (§7.3).
 - TimesFM: biến thể tốt nhất trên VAL trong {TFM-POINT, F\*_TFM, TFM-LoRA} đại diện model. AutoTS: mỗi model cố định lấy bộ tốt hơn giữa {riêng, tổng hợp}.
 - Latency (§7.4) ghi kèm trong `champion_log.csv` như thông tin; không phải tiêu chí đổi/giữ.
 - **Ensemble** (sau model cuối): thành viên = champion + mọi model có `MedianGain vs E0 > 0` trên 15 ô (có skill thật; B0-306/B0\* là reference, không phải thành viên; TimesFM/AutoTS/LSTM là thành viên nếu đạt). (a) trung bình đều; (b) trọng số `1/MSE_VAL` (trên giá) per horizon; lấy cấu hình tốt hơn trên VAL rồi so với champion bằng đúng luật trên (`> +ε_champion` → champion = ensemble). Nếu < 2 thành viên thì không ensemble. Chọn cấu hình cuối **trước** khi chạm TEST; ghi thành viên + trọng số vào `champion_log.csv`.
@@ -305,7 +308,7 @@ Gain so với `S_m` đo **thông tin tăng thêm** so với B0\* (đã có retur
 ## 4. Final evaluation (một lần, TEST 2 ngày)
 
 - Refit **mọi** model (không chỉ champion) trên FIT `→ 01-30 23:56`, ES `01-31 00:00 → 22:56`, purge 60', dự báo toàn bộ TEST `02-01 00:00 → 02-02 21:27` (2.725 origin).
-- Report per horizon trên giá: RMSE, MAE, Pearson r (thay đổi giá), directional accuracy; Gain vs B0-306, vs B0\* và vs E0; cho E0, B0-306, B0\*, từng model §2.2 tại F\*_m, ensemble. Xuất `all_models.csv` và figure §7.3 cho cả VAL và TEST.
+- Report per horizon trên giá: RMSE, MAE, Pearson r (thay đổi giá), directional accuracy; Gain vs B0-306, vs B0\* và vs E0; cho E0, B0-306, B0\*, từng model §2.2 tại F\*_m, ensemble. Xuất `all_models.csv`; vẽ **heatmap TEST của mọi model** và **Fig H_h của mọi model** với prediction của chúng (§7.3 Final).
 - Đo latency §7.4 trên toàn bộ origin TEST cho mọi model (pass riêng, batch 1) → `latency_summary.csv`.
 - Không sửa gì sau khi xem TEST. TEST chỉ được đọc bởi script final. TEST 2 ngày là kiểm tra one-shot của giai đoạn 15 ngày; TEST chính thức 30 ngày thuộc §5.
 
@@ -347,15 +350,22 @@ Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `rep
 
 - `experiments/b0_filter.csv` (§1.4): 306 dòng — cột, base feature, lag, PI per h (median fold), SA Gain vs E0 / vs B0-306 per h, MI − null per h, cờ PI+/SA+/MI+ (> 0 ở ≥ 1 horizon), giữ/bỏ theo từng bộ R1, R2, R3, R4; kèm bảng nhóm 38 base feature và kết quả 4 run kiểm chứng + bộ được chọn.
 - `experiments/keepdrop_<model>.csv`: mỗi candidate một dòng — thứ tự, cột, MedianGain/WinRate/P10/Worst vs S_m, Gain vs B0\*, Gain vs E0, `gain_standalone`, decision KEEP/DROP, size S_m sau quyết định, exp_id.
-- `experiments/champion_log.csv`: mỗi model một dòng khi so với champion — model, F\*_m, champion trước, metric per horizon (giá) của cả hai, Gain 15 ô, MedianGain/WinRate/P10/Worst, ε_champion, decision **đổi / giữ**, champion sau, exp_id. Ensemble và lựa chọn cuối cũng ghi vào đây.
+- `experiments/champion_log.csv`: mỗi model một dòng khi so với champion — model, win_m (cột ext sau prune), champion trước, metric per horizon (giá) của cả hai, bảng Gain 15 ô median 3 seed, MedianGain/WinRate/P10/Worst, ε_champion, decision **đổi / giữ**, champion sau, exp_id. Kèm `prune_<model>.csv`: F\*_m vs F\*_m^prune (3 seed, median từng ô) → win_m. Ensemble và lựa chọn cuối cũng ghi vào đây.
 - `experiments/summary/all_models.csv`: mọi model (E0, B0-306, B0\*, từng model tại F\*_m, TimesFM các biến thể, AutoTS ×2, LSTM, ensemble) × fold × horizon × {RMSE, MAE, r, dir-acc, Gain vs B0-306, Gain vs B0\*, Gain vs E0, Gain vs champion} + latency p95/p99/max (ms) per model × horizon (§7.4); kèm TEST riêng.
 
 ### 7.3 Visualize (theo origin, không vẽ chuỗi dự báo liên tục)
 
-- **Fig A — origin plot (bắt buộc)**: với mỗi origin t được chọn, một panel: giá thật 60 phút trước t (đường), giá thật tại t+1, t+2, t+3 (điểm đen), điểm dự báo `P̂_{t+1}, P̂_{t+2}, P̂_{t+3}` của từng model (marker màu, nối từ `C_t`), E0 = đường ngang tại `C_t`. Chọn origin mặc định: mỗi ngày VAL/TEST 3 origin cố định (00:00, 08:00, 16:00 UTC) + 2 origin có `|C_{t+3} − C_t|` lớn nhất trong ngày. Lưu `experiments/summary/fig_origin_<YYYYMMDD_HHMM>.png`.
-- **Fig B — tổng hợp mọi model**: bar chart **Gain vs E0 (pp)** per horizon per model (VAL; TEST riêng) — không vẽ RMSE tuyệt đối vì chênh lệch ~0.1% giữa các model không nhìn thấy trên bar (RMSE/MAE để trong bảng) — và heatmap Gain 15 ô vs champion cho từng model.
-- **Fig C — theo thời gian**: hàng trên RMSE của E0 theo ngày (mức biến động); hàng dưới Gain vs E0 theo ngày per model per horizon (VAL + TEST) để thấy ổn định.
-- **Màu/marker**: palette categorical cố định đã validate bằng validator của skill dataviz (8 slot: blue `#2a78d6`, orange `#eb6834`, aqua `#1baf7a`, yellow `#eda100`, magenta `#e87ba4`, green `#008300`, violet `#4a3aa7`, red `#e34948` — thứ tự cố định, không xoay vòng, không đặt hai màu dễ nhầm cạnh nhau); mỗi model một màu + một marker giữ nguyên ở mọi figure; reference B0-306/B0\* xám nét đứt; giá thật đen; horizon/percentile dùng ramp một màu; heatmap diverging xanh↔đỏ. Mapping cụ thể xem `reports/smoke_visualize.py` (`STYLE`).
+- **Màu**: actual **luôn đen**; E0 xám nét đứt. Ảnh so sánh win vs champion dùng màu theo vai trò — win = blue `#2a78d6` (▲), champion = red `#e34948` (●): cặp xa nhau nhất trong palette. Ảnh nhiều model dùng màu + marker **cố định cho từng model** (palette categorical đã validate bằng validator của skill dataviz: blue `#2a78d6`, orange `#eb6834`, aqua `#1baf7a`, yellow `#eda100`, magenta `#e87ba4`, green `#008300`, violet `#4a3aa7`, red `#e34948` — thứ tự cố định, không xoay vòng); tối đa 8 màu mỗi panel, vượt thì tách nhóm; reference B0-306/B0\* xám nét đứt; heatmap diverging xanh↔đỏ, cùng thang màu khi so sánh. Mapping cụ thể: `STYLE` trong `reports/smoke_visualize.py`.
+
+**Sau mỗi model — win_m vs champion hiện tại** (5 file):
+- **Fig H_h** (h = 1, 2, 3 — mỗi horizon 3 ảnh = 3 panel, mỗi panel một cửa sổ 60 origin liên tiếp, cố định: 00:00–01:00, 08:00–09:00, 16:00–17:00 UTC của ngày VAL có RMSE E0 ở giữa 5 ngày): trục x = origin t; chấm đen nối mảnh = giá thật `C_{t+h}` (chuỗi thật); marker màu = `P̂_{t+h}` của win và của champion, **không nối** — mỗi prediction gắn với origin của nó; đường xám đứt = `C_t` (E0).
+- **Fig HM**: 2 heatmap 15 ô (fold × horizon) — của win và của champion, giá trị = Gain vs E0 median 3 seed từng ô, cùng thang màu; tiêu đề ghi MedianGain/WinRate/P10/Worst của mỗi bên và của win vs champion.
+- Lưu `experiments/summary/fig_H{h}_<model>_vs_champion.png`, `fig_HM_<model>_vs_champion.png`.
+
+**Final (TEST)**:
+- **Heatmap của mọi model** (B0-306, B0\*, mọi win_m, ensemble; một panel mỗi model, cùng thang màu): ô = khối 6 giờ × horizon (TEST 2 ngày ≈ 8 khối), giá trị Gain vs E0.
+- **Fig H_h của mọi model** (h = 1, 2, 3): cùng định nghĩa Fig H_h, vẽ prediction của tất cả model trên 3 cửa sổ TEST cố định (02-01 08:00, 02-01 16:00, 02-02 08:00); tách 2 hàng (nhóm A: tree + ensemble; nhóm B: TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.
+- Fig D latency (§7.4) chỉ để theo dõi.
 - Figure chỉ để nhìn; quyết định vẫn theo metric §0.
 
 ### 7.4 Inference latency (chỉ theo dõi — không ảnh hưởng training/loss/quyết định)
@@ -370,9 +380,9 @@ Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `rep
 
 ## 8. Thứ tự triển khai sau khi plan được duyệt
 
-1. Code tối thiểu: `src/data.py` (load + adapter + kiểm tra §1.1 + checksum), `src/split.py` (bảng fold/TEST §1.2, quy tắc biên), `src/features_ext.py` (mỗi cột một hàm), `src/metrics.py` (metric trên giá, Gain, tóm tắt), `src/filter_b0.py` (§1.4: PI, standalone, MI, tier, 3 run kiểm chứng), `src/run_lgbm.py` (B0\* + ext, vòng lặp §2.1, standalone §2.4, log §7), `src/plots.py` (§7.3, palette/marker cố định), `src/latency.py` (§7.4: p95/p99/max, pass đo riêng, assert không đổi prediction); `tests/` cho adapter, biên, target, causality feature, metric E0, decode → giá, PI/MI chỉ dùng đúng partition.
+1. Code tối thiểu: `src/data.py` (load + adapter + kiểm tra §1.1 + checksum), `src/split.py` (bảng fold/TEST §1.2, quy tắc biên), `src/features_ext.py` (mỗi cột một hàm), `src/metrics.py` (metric trên giá, Gain, tóm tắt), `src/filter_b0.py` (§1.4: PI, standalone, MI, tier, 3 run kiểm chứng), `src/run_lgbm.py` (B0\* + ext, vòng lặp §2.1, standalone §2.4, log §7), `src/plots.py` (§7.3: Fig H_h, Fig HM, Final heatmap + H_h mọi model; palette/marker cố định, actual đen), `src/latency.py` (§7.4: p95/p99/max, pass đo riêng, assert không đổi prediction); `tests/` cho adapter, biên, target, causality feature, metric E0, decode → giá, PI/MI chỉ dùng đúng partition.
 2. Smoke end-to-end trên vài trăm dòng (CPU local).
-3. User unlock training → Vast: LightGBM calibrate A (B0-306, `15fixed_306`, ε) → §1.4 lọc → B0\* → LightGBM calibrate B trên B0\* (`15fixed_LGBM`, ε) → vòng lặp 39 candidate → safety-net/prune → confirmation (ES, 3 seed) → F\*_LGBM → champion.
+3. User unlock training → Vast: LightGBM calibrate A (B0-306, `15fixed_306`, ε) → §1.4 lọc → B0\* → LightGBM calibrate B trên B0\* (`15fixed_LGBM`, ε) → vòng lặp 39 candidate → prune PI → 3 seed (median từng ô) → win_LGBM → champion; vẽ Fig H/HM.
 4. XGBoost → CatBoost: mỗi model calibrate riêng trên B0\* (`15fixed_XGB`, `15fixed_Cat`, ε_m) → vòng lặp riêng từ B0\* → F\*_m → champion log.
 5. TimesFM: audit version/covariate API → TFM-POINT → loop nếu có covariate → LoRA nếu thắng E0.
 6. XGB-RF.
@@ -390,7 +400,7 @@ Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `rep
 - "Không ablate lại 306 feature B0" → đổi: lọc nhiễu B0 một lần bằng PI + standalone + MI + kiểm chứng (§1.4) thành B0\*; file `Baseline_LGBM.py` vẫn không sửa; B0-306 vẫn log làm reference.
 - Feature dossier, Wave-1, D-family discovery, second wave → danh sách §2.3 thử lần lượt, từng model một.
 - Một feature set chung → mỗi model một feature set riêng F\*_m.
-- KEEP/DROP 3 vùng, daily-block paired test, confirmation framework → luật §2.1 với ε_m seed + safety-net §2.4.
+- KEEP/DROP 3 vùng, daily-block paired test, confirmation framework → luật §2.1 với ε_m seed; safety-net đã bỏ, chỉ prune PI; confirmation 3 seed = chồng 3 bảng lấy median từng ô → win_m.
 - Metric trên log return → metric trên giá (USD); prediction vẫn log return.
 - Scale data → để sau (§5).
 - TimesFM ladder QMEAN/RECENTER/BTC-CAL → TFM-POINT (+ covariate loop nếu API có) → LoRA khi thắng E0.
