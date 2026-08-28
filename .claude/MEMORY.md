@@ -5,13 +5,13 @@ TRAINING: LOCKED
 
 ## Current Task
 
-2026-08-27: user đơn giản hóa plan; rev 5 = chạy trên snapshot 15 ngày hiện có (Vast), lọc 306 feature B0 → B0* trước Bước 2 (PI + standalone + MI + kiểm chứng), mỗi model tự chọn feature set riêng từ B0*, metric trên giá, champion log, visualize theo origin; scale data để sau. Đã viết `docs/RESEARCH_PLAN.md` rev 5 và `.claude/CLAUDE.md`; bản cũ 2026-08-24 lưu `docs/archive/`. Chưa code, chưa training, chưa cài package.
+2026-08-28: plan rev 8 (xem Decisions) — snapshot 15 ngày (Vast), lọc B0 → B0* theo R1–R4, mọi model từ B0* với 15fixed_m riêng → F*_m, metric trên giá, champion log, latency theo dõi, visualize theo origin; scale data để sau. `docs/RESEARCH_PLAN.md`, `.claude/CLAUDE.md`, agents, `reports/smoke_visualize.*` đã đồng bộ và push (repo private). Bản cũ 2026-08-24 ở `docs/archive/`. Chưa code, chưa training, chưa cài package.
 
 ## Exact Next Step
 
 1. User review plan rev 5 — đã chốt: fold §1.2, số vòng cố định §1.3, chạy Vast. Còn xem: lọc B0 §1.4 (tier/kiểm chứng), thứ tự model §2.2, §2.4, metric trên giá §0, log/visualize §7.
 2. Sau duyệt: code tối thiểu (`src/data.py`, `split.py`, `features_ext.py`, `metrics.py`, `run_lgbm.py` + `tests/`); smoke CPU vài trăm dòng.
-3. User unlock training → Vast: LightGBM §1.3 trên B0-306 → §1.4 lọc → B0* → §1.3 lại trên B0* → vòng lặp → XGBoost → CatBoost → TimesFM (audit API trước) → ExtraTrees → AutoTS (audit trước) → LSTM; champion log sau mỗi model → ensemble → Final TEST 2 ngày → all_models.csv + figure.
+3. User unlock training → Vast: LightGBM §1.3 trên B0-306 (15fixed_306) → §1.4 lọc → B0* → mỗi model calibrate 15fixed_m + ε_m trên B0* rồi vòng lặp riêng: LightGBM → XGBoost → CatBoost → TimesFM (audit API trước) → XGB-RF → AutoTS (audit trước) → LSTM; champion log sau mỗi model → ensemble → Final TEST 2 ngày → all_models.csv + figure.
 4. Phục hồi data đầy đủ + scale data: chỉ khi user quyết (plan §5).
 
 2026-08-28: đã tạo `reports/smoke_visualize.py` + `reports/smoke_visualize.md` + `reports/smoke/*.png` (layout mẫu, SỐ GIẢ, không phải kết quả); đã viết lại 8 agent files + `AGENT.md` theo plan rev 6 (remote-infra giữ nguyên).
