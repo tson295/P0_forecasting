@@ -171,12 +171,12 @@ rounds = pd.DataFrame(
     columns=[f"h={h}" for h in H],
 ).reset_index().rename(columns={"index": "fold"})
 calib_df = pd.DataFrame([
-    {"phase": "A. Lọc B0", "feature set": "B0-306", "model": "LightGBM", "run ES": "1 (seed 8586)", "kết quả": "15fixed_306 + ε_LGBM(B0-306)", "dùng cho": "4 run kiểm chứng R1–R4"},
-    {"phase": "B. Feature search", "feature set": "B0*", "model": "LightGBM", "run ES": "1", "kết quả": "15fixed_B0* + ε_LGBM(B0*)", "dùng cho": "39 candidate → F* (tính một lần, dùng chung)"},
-    {"phase": "C. Trên F*", "feature set": "F*", "model": "LightGBM", "run ES": "1", "kết quả": "15fixed_LGBM + ε", "dùng cho": "safety-net / prune / confirmation của LightGBM"},
-    {"phase": "C. Trên F*", "feature set": "F*", "model": "XGBoost", "run ES": "1", "kết quả": "15fixed_XGB + ε", "dùng cho": "mọi candidate/ablation của XGBoost (từ F*)"},
-    {"phase": "C. Trên F*", "feature set": "F*", "model": "CatBoost", "run ES": "1", "kết quả": "15fixed_Cat + ε", "dùng cho": "mọi candidate/ablation của CatBoost (từ F*)"},
-    {"phase": "C. Trên F*", "feature set": "F*", "model": "XGB-RF / AutoTS / LSTM / TimesFM", "run ES": "—", "kết quả": "chỉ ε (không có số vòng; LSTM ES theo epoch)", "dùng cho": "—"},
+    {"phase": "A. Lọc B0", "feature set": "B0-306", "model": "LightGBM", "run ES": "1 (seed 8586)", "kết quả": "15fixed_306 + ε_LGBM(B0-306)", "dùng cho": "4 run kiểm chứng R1–R4 → B0*"},
+    {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "LightGBM", "run ES": "1", "kết quả": "15fixed_LGBM + ε_LGBM", "dùng cho": "39 candidate + safety-net + prune của LightGBM → F*_LGBM"},
+    {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "XGBoost", "run ES": "1", "kết quả": "15fixed_XGB + ε_XGB", "dùng cho": "39 candidate + safety-net + prune của XGBoost → F*_XGB"},
+    {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "CatBoost", "run ES": "1", "kết quả": "15fixed_Cat + ε_Cat", "dùng cho": "39 candidate + safety-net + prune của CatBoost → F*_Cat"},
+    {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "XGB-RF / AutoTS / LSTM / TimesFM", "run ES": "—", "kết quả": "chỉ ε_m (không có số vòng; LSTM ES theo epoch)", "dùng cho": "vòng lặp riêng của model đó → F*_m"},
+    {"phase": "C. Confirmation", "feature set": "F*_m của chính model", "model": "từng model", "run ES": "3 seed, ES bật", "kết quả": "metric cho champion log + 15fixed_m(F*_m) cho Final", "dùng cho": "so với champion (§3)"},
 ])
 
 # ----------------------------------------------------------------------------- §1.4 b0_filter
@@ -226,7 +226,7 @@ for i, (c, mg) in enumerate(cands, start=1):
     keep = mg >= -EPS_LGBM
     size += int(keep)
     kd_rows.append({
-        "#": i, "cột": c, "thao tác": "thêm",
+        "#": i, "cột": c,
         "MedianGain vs S_m (pp)": f"{mg:+.3f}", "WinRate": f"{s['WinRate']:.2f}",
         "P10Gain": f"{s['P10Gain']:+.3f}", "WorstGain": f"{s['WorstGain']:+.3f}",
         "Gain vs B0* (pp)": f"{mg + 0.03 * i / len(cands):+.3f}", "Gain vs E0 (pp)": f"{0.12 + mg + 0.03 * i / len(cands):+.3f}",
@@ -452,12 +452,13 @@ A("\n**Giải thích.** Mỗi model chạy 3 seed trên feature set của phase 
   "nên ngưỡng của nó rộng hơn — tự động, không chỉnh tay.\n")
 A("\nLịch calibrate số vòng cố định (mỗi phase một run ES trên đúng feature set và đúng model; không dùng chéo):\n")
 A(md_table(calib_df))
-A("\nVí dụ `15fixed_B0*` của LightGBM (best_iteration mà ES dừng ở run calibrate phase B, per fold × horizon; dùng cho cả 39 candidate):\n")
+A("\nVí dụ `15fixed_LGBM` (best_iteration mà ES dừng ở run calibrate của LightGBM trên B0*, per fold × horizon; dùng cho cả 39 candidate của LightGBM):\n")
 A(md_table(rounds))
 A("\n**Giải thích.** \"Số vòng cố định\" = chính best_iteration mà early stopping dừng ở run calibrate (không phải ước lượng thống kê). "
-  "ES trên 1.377 dòng nhiễu, nên chỉ chạy ES một lần mỗi phase rồi cố định cho mọi run của phase đó ⇒ candidate và base cùng số vòng, "
-  "chênh lệch Gain chỉ do feature. Sau khi có B0* thì calibrate lại (15fixed_B0*), sau khi có F* thì calibrate lại lần nữa và riêng từng model "
-  "(15fixed_LGBM / 15fixed_XGB / 15fixed_Cat); không dùng số vòng của B0-306 hay của LightGBM cho model khác.\n")
+  "ES trên 1.377 dòng nhiễu, nên chỉ chạy ES một lần cho mỗi (phase, model) rồi cố định cho mọi run của phase đó ⇒ candidate và base cùng số vòng, "
+  "chênh lệch Gain chỉ do feature. B0* là điểm xuất phát chung: mỗi model (LightGBM, XGBoost, CatBoost) tự calibrate một run ES trên B0* → 15fixed_m riêng, "
+  "rồi tự feature search bằng chính model đó → F*_LGBM, F*_XGB, F*_Cat có thể khác nhau; không model nào kế thừa F* của model khác. "
+  "15fixed_306 chỉ dùng cho lọc B0; không dùng số vòng của LightGBM cho model khác.\n")
 
 A("\n## 2. §1.4 — Lọc 306 feature B0 → B0\\* (`experiments/b0_filter.csv`)\n")
 A("Mẫu 8 dòng (thật sẽ có 306 dòng); mỗi cột có giữ/bỏ riêng cho từng bộ R1–R4:\n")
@@ -476,9 +477,9 @@ A("\n**Giải thích.** Ba điểm số per horizon (median 5 fold): PI = RMSE t
 A("\n## 3. §2.1 — Vòng lặp feature của một model (`experiments/keepdrop_LightGBM.csv`)\n")
 A("Mẫu 8 candidate đầu (thật: 39 dòng/model, mỗi model một file):\n")
 A(md_table(kd_df))
-A(f"\n**Giải thích.** Mỗi dòng = một candidate thử vào bộ hiện tại `S_m` của model; base của Gain là chính model trên `S_m`; số vòng = 15fixed của phase (LightGBM phase B: 15fixed_B0*). "
-  f"Luật thêm: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = {EPS_LGBM:.3f} pp). "
-  "Model khác xuất phát từ F* của LightGBM với 15fixed riêng: cột đã có → `thao tác = bỏ` (chỉ bỏ khi MedianGain > +ε_m), cột chưa có → `thao tác = thêm` (luật trên). "
+A(f"\n**Giải thích.** Mỗi dòng = một candidate thêm vào bộ hiện tại `S_m` của model (xuất phát chung là B0*); base của Gain là chính model trên `S_m`; số vòng = 15fixed_m của model đó (calibrate trên B0*). "
+  f"Luật: `MedianGain ≥ −ε_m` → KEEP (kể cả gần như không đổi), `< −ε_m` → DROP (ε_LGBM giả = {EPS_LGBM:.3f} pp). "
+  "Mỗi model có file riêng (keepdrop_XGBoost.csv, keepdrop_CatBoost.csv, …) với cùng cấu trúc; các F*_m có thể khác nhau. "
   "`gain_standalone` là diagnostic (LightGBM chỉ trên cột đó vs E0): standalone > 0 nhưng vs S_m ≈ 0 ⇒ có tín hiệu nhưng trùng base. "
   "`|S_m| sau` cho thấy bộ feature lớn dần; cuối vòng lặp có safety-net (thử lại block các cột DROP) và prune permutation ≤ 0.\n")
 
