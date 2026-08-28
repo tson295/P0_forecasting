@@ -18,6 +18,14 @@ class SeqBatch:
 
     feats: np.ndarray  # (n_grid, d) float32, đã chuẩn hoá train-only, NaN → 0
     idx: np.ndarray  # chỉ số origin trên lưới
+    perm: dict[int, np.ndarray] | None = None  # PI (§1.4/§2.1a): kênh j lấy cửa sổ của origin perm[j][k] thay cho idx[k]
+
+    def slice(self, a: int, b: int) -> "SeqBatch":
+        return SeqBatch(self.feats, self.idx[a:b], None if not self.perm else {j: np.asarray(v)[a:b] for j, v in self.perm.items()})
+
+    def with_perm(self, perm: dict[int, np.ndarray]) -> "SeqBatch":
+        """Bản sao chỉ khác `perm` (không copy feats/idx) — dùng cho permutation importance."""
+        return SeqBatch(self.feats, self.idx, perm)
 
 
 class LSTMModel:
@@ -39,14 +47,20 @@ class LSTMModel:
         self.batch_size, self.max_epochs, self.patience, self.delta = batch_size, max_epochs, patience, huber_delta
         self.train_device = self.predict_device = "GPU" if device == "cuda" else "CPU"
 
-    def _windows(self, feats_t, idx: np.ndarray):
+    def _windows(self, feats_t, idx: np.ndarray, perm: dict[int, np.ndarray] | None = None):
         import torch
 
         L = self.context
-        i = torch.as_tensor(idx, device=feats_t.device)
+        i = torch.as_tensor(np.asarray(idx), device=feats_t.device)
         offs = torch.arange(-L + 1, 1, device=feats_t.device)
         gather = (i[:, None] + offs[None, :]).clamp_min(0)
-        return feats_t[gather]  # (b, L, d)
+        x = feats_t[gather]  # (b, L, d)
+        if perm:  # PI: thay TOÀN BỘ cửa sổ của kênh j bằng cửa sổ của origin khác (đúng logic xáo cột giữa các origin)
+            for j, alt in perm.items():
+                a = torch.as_tensor(np.asarray(alt), device=feats_t.device)
+                g = (a[:, None] + offs[None, :]).clamp_min(0)
+                x[:, :, j] = feats_t[g][:, :, j]
+        return x
 
     def fit_predict(self, seq_fit: SeqBatch, z_fit: np.ndarray, seq_es: SeqBatch, z_es: np.ndarray, seq_pred: SeqBatch,
                     rounds, seed: int) -> FitResult:
@@ -118,7 +132,8 @@ class LSTMModel:
             outs = []
             with torch.no_grad():
                 for s in range(0, len(seq.idx), self.batch_size):
-                    outs.append(net(self._windows(feats_t, seq.idx[s:s + self.batch_size])).cpu().numpy())
+                    sub = seq.slice(s, s + self.batch_size)
+                    outs.append(net(self._windows(feats_t, sub.idx, sub.perm)).cpu().numpy())
             return np.concatenate(outs).astype(np.float32) if outs else np.zeros((0, 3), np.float32)
 
         preds = predict(seq_pred)

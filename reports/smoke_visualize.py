@@ -375,43 +375,40 @@ lat_df = pd.DataFrame(lat_rows)
 
 
 # ----------------------------------------------------------------------------- figure helpers
-def fake_window(n_origin: int = 60, hmax: int = 3, level: float = PRICE, sig: float = SIG1) -> np.ndarray:
-    """Chuỗi giá thật giả: n_origin origin + hmax bar sau đó; sig = std r1 của cửa sổ (thấp/trung bình/cao)."""
-    r = rng.normal(0.0, sig, n_origin + hmax)
-    return level * np.exp(np.cumsum(r))
+XLAB = ["t", "t+1", "t+2", "t+3"]
 
 
-def fake_pred(price: np.ndarray, h: int, strength: float) -> np.ndarray:
-    """P̂_{t+h} cho mọi origin t: ŷ = strength·r_thật + noise (số giả, strength cao hơn thực tế để nhìn rõ layout)."""
-    n = len(price) - 3
-    c_t = price[:n]
-    r_true = np.log(price[h:h + n] / c_t)
-    yhat = strength * r_true + rng.normal(0.0, 0.35 * SIG1 * np.sqrt(h), n)
-    return c_t * np.exp(yhat)
+def fake_origin(level: float = PRICE, sig: float = SIG1) -> tuple[float, np.ndarray]:
+    """MỘT origin giả: trả (C_t, C_(t+1..t+3)); sig = std r1 của chế độ biến động (thấp/trung bình/cao)."""
+    return level, level * np.exp(np.cumsum(rng.normal(0.0, sig, 3)))
 
 
-def plot_h_windows(path: Path, h: int, windows: list[tuple[str, np.ndarray]], series: list[tuple[str, np.ndarray, str, str, str]],
-                   title: str) -> None:
-    """Một ảnh cho horizon h: 3 panel = 3 cửa sổ origin; chấm đen = giá thật C_{t+h}; marker màu = P̂_{t+h} theo origin.
-    series: (label, preds cho từng cửa sổ nối dài? -> ta truyền list theo cửa sổ riêng), xử lý bởi caller."""
-    fig, axes = plt.subplots(1, len(windows), figsize=(6.2 * len(windows), 4.4))
-    for k, (label, price) in enumerate(windows):
-        ax = axes[k]
-        n = len(price) - 3
-        x = np.arange(n)
-        ax.plot(x, price[h:h + n], color=INK, lw=1.0, marker="o", ms=3.5, label=f"giá thật C_(t+{h})")
-        ax.plot(x, price[:n], color=MUTED, ls="--", lw=0.9, label="E0 (P̂ = C_t)")
-        for name, preds_by_window, color, marker, ls in series:
-            ax.plot(x, preds_by_window[k], color=color, ls="none", marker=marker, ms=6, alpha=0.9, label=name)
-        ax.set_title(f"{label} — h={h}", fontsize=9)
-        ax.set_xlabel("origin t (phút trong cửa sổ)")
-        if k == 0:
-            ax.set_ylabel("USD")
-            ax.legend(fontsize=7, loc="best")
-    fig.suptitle(f"{title}  [{FAKE}]", fontsize=9)
-    fig.tight_layout()
-    fig.savefig(path, dpi=130)
-    plt.close(fig)
+def path_actual(c_t: float, c_fut: np.ndarray) -> np.ndarray:
+    """Đường thực tế: [0, C_(t+1)−C_t, C_(t+2)−C_t, C_(t+3)−C_t]."""
+    return np.r_[0.0, c_fut - c_t]
+
+
+def path_pred(c_t: float, c_fut: np.ndarray, strength: float, sig: float = SIG1) -> np.ndarray:
+    """Đường dự báo: ŷ_h = strength·y_thật + noise → P̂ = C_t·exp(ŷ) → [0, P̂_(t+h) − C_t] (số giả)."""
+    y_true = np.log(c_fut / c_t)
+    yhat = strength * y_true + rng.normal(0.0, 0.35 * sig * np.sqrt([1.0, 2.0, 3.0]))
+    return np.r_[0.0, c_t * np.exp(yhat) - c_t]
+
+
+def panel_path(ax, label: str, c_t: float, c_fut: np.ndarray, series: list[tuple[str, np.ndarray, str, str]], legend: bool) -> None:
+    """Một panel = MỘT origin: x = t, t+1, t+2, t+3; y = thay đổi giá so với C_t; E0 = đường ngang 0; actual đen."""
+    x = np.arange(4)
+    ax.axhline(0.0, color=MUTED, ls="--", lw=0.9, label="E0 (P̂ = C_t) = 0")
+    ax.plot(x, path_actual(c_t, c_fut), color=INK, lw=1.4, marker="o", ms=5, label="actual (C_(t+h) − C_t)")
+    for name, p, color, marker in series:
+        ax.plot(x, p, color=color, lw=1.2, marker=marker, ms=6.5, alpha=0.9, label=name)
+    ax.set_xticks(x)
+    ax.set_xticklabels(XLAB)
+    ax.set_xlabel("bước dự báo từ origin t")
+    ax.set_title(f"{label}  |  C_t = {c_t:,.0f} USD", fontsize=8.5)
+    if legend:
+        ax.set_ylabel("thay đổi giá so với C_t (USD)")
+        ax.legend(fontsize=7, loc="best")
 
 
 def heatmap(ax, mat: np.ndarray, row_labels: list[str], title: str, vmax: float = 0.3) -> None:
@@ -427,19 +424,22 @@ def heatmap(ax, mat: np.ndarray, row_labels: list[str], title: str, vmax: float 
 
 
 # ----------------------------------------------------------------------------- Fig H_h + HM: win vs champion (sau mỗi model)
-# 3 cửa sổ ở 3 ngày VAL/fold KHÁC NHAU: ngày biến động thấp / trung bình / cao (xếp 5 ngày theo std r1 trong ngày ≈ RMSE E0 h=1)
+# 3 origin ở 3 ngày VAL/fold KHÁC NHAU: ngày biến động thấp / trung bình / cao (xếp 5 ngày theo std r1 trong ngày ≈ RMSE E0 h=1);
+# mỗi ngày lấy origin cố định đầu tiên ≥ 12:00 UTC — không chọn theo error/prediction
 _order = np.argsort(e0_val[1])
 VOL_DAYS = [FOLD_DAYS[_order[0]], FOLD_DAYS[_order[2]], FOLD_DAYS[_order[4]]]
-VAL_WINDOWS = [f"{VOL_DAYS[0]} 12:00–13:00 (vol thấp)", f"{VOL_DAYS[1]} 12:00–13:00 (vol trung bình)", f"{VOL_DAYS[2]} 12:00–13:00 (vol cao)"]
-win_prices = [fake_window(level=PRICE * (1 + 0.004 * k), sig=SIG1 * sc) for k, sc in enumerate((0.6, 1.0, 1.6))]
-for h in H:
-    win_preds = [fake_pred(p, h, 0.32) for p in win_prices]
-    ch_preds = [fake_pred(p, h, 0.28) for p in win_prices]
-    plot_h_windows(
-        OUT / f"fig_H{h}_win_vs_champion.png", h, list(zip(VAL_WINDOWS, win_prices)),
-        [(f"win = {WIN}", win_preds, WIN_STYLE[0], WIN_STYLE[1], "none"), (f"champion = {CHAMPION}", ch_preds, CHAMP_STYLE[0], CHAMP_STYLE[1], "none")],
-        f"Fig H{h} — win vs champion, 3 cửa sổ origin, P̂_(t+{h}) theo origin t",
-    )
+VAL_PICKS = [f"{VOL_DAYS[0]} 12:00 (vol thấp)", f"{VOL_DAYS[1]} 12:00 (vol trung bình)", f"{VOL_DAYS[2]} 12:00 (vol cao)"]
+val_origins = [fake_origin(level=PRICE * (1 + 0.004 * k), sig=SIG1 * sc) for k, sc in enumerate((0.6, 1.0, 1.6))]
+fig, axes = plt.subplots(1, 3, figsize=(16.8, 4.4))
+for k, (label, (c_t, c_fut)) in enumerate(zip(VAL_PICKS, val_origins)):
+    sig = SIG1 * (0.6, 1.0, 1.6)[k]
+    panel_path(axes[k], label, c_t, c_fut,
+               [(f"win = {WIN}", path_pred(c_t, c_fut, 0.32, sig), WIN_STYLE[0], WIN_STYLE[1]),
+                (f"champion = {CHAMPION}", path_pred(c_t, c_fut, 0.28, sig), CHAMP_STYLE[0], CHAMP_STYLE[1])], legend=(k == 0))
+fig.suptitle(f"Fig P — forecast path win vs champion: mỗi panel một origin, x = t → t+3, y = thay đổi giá so với C_t  [{FAKE}]", fontsize=9)
+fig.tight_layout()
+fig.savefig(OUT / "fig_path_win_vs_champion.png", dpi=130)
+plt.close(fig)
 
 fig, axes = plt.subplots(1, 2, figsize=(11.5, 5.2))
 row_labels = [f"f{i + 1} {d}" for i, d in enumerate(FOLD_DAYS)]
@@ -471,33 +471,22 @@ fig.suptitle(f"Final — heatmap TEST của mọi model: ô = khối 6 giờ × 
 fig.savefig(OUT / "fig_final_heatmaps.png", dpi=120)
 plt.close(fig)
 
-# 3 cửa sổ 60' trong TEST chọn theo std r1 của cửa sổ: thấp nhất / trung vị / cao nhất (không chồng nhau) — giả định vị trí
-TEST_WINDOWS = ["02-01 03:00–04:00 (vol thấp)", "02-02 09:00–10:00 (vol trung bình)", "02-01 15:00–16:00 (vol cao)"]
-test_prices = [fake_window(level=PRICE * (0.98 + 0.004 * k), sig=SIG1 * sc) for k, sc in enumerate((0.6, 1.0, 1.6))]
+# 3 origin trong TEST: khối 60 origin không chồng nhau chọn theo std r1 thấp nhất / trung vị / cao nhất, lấy origin đầu khối
+TEST_PICKS = ["02-01 03:00 (vol thấp)", "02-02 09:00 (vol trung bình)", "02-01 15:00 (vol cao)"]
+test_origins = [fake_origin(level=PRICE * (0.98 + 0.004 * k), sig=SIG1 * sc) for k, sc in enumerate((0.6, 1.0, 1.6))]
 STRENGTH = {"B0-306": 0.20, "B0*": 0.22, "LightGBM(F*)": 0.28, "XGBoost(F*)": 0.27, "CatBoost(F*)": 0.27, "TFM-POINT": 0.05,
             "XGB-RF(F*)": 0.22, "AutoTS-WR(F*)": 0.20, "AutoTS-MR(F*)": 0.15, "LSTM(F*)": 0.18, "Ensemble": 0.32}
-for h in H:
-    preds = {m: [fake_pred(p, h, STRENGTH[m]) for p in test_prices] for m in STRENGTH}
-    fig, axes = plt.subplots(2, 3, figsize=(18.6, 8.6))
-    for gi, (gname, group) in enumerate([("nhóm A: tree + ensemble", GROUP_A), ("nhóm B: TimesFM / AutoTS / LSTM + reference", GROUP_B)]):
-        for k, (label, price) in enumerate(zip(TEST_WINDOWS, test_prices)):
-            ax = axes[gi, k]
-            n = len(price) - 3
-            x = np.arange(n)
-            ax.plot(x, price[h:h + n], color=INK, lw=1.0, marker="o", ms=3.5, label=f"giá thật C_(t+{h})")
-            ax.plot(x, price[:n], color=MUTED, ls="--", lw=0.9, label="E0 (P̂ = C_t)")
-            for m in group:
-                col, mk, _ = STYLE[m]
-                ax.plot(x, preds[m][k], color=col, ls="none", marker=mk, ms=5.5, alpha=0.9, label=m)
-            ax.set_title(f"{gname} — {label} — h={h}", fontsize=8)
-            ax.set_xlabel("origin t (phút trong cửa sổ)")
-            if k == 0:
-                ax.set_ylabel("USD")
-                ax.legend(fontsize=6.5, loc="best")
-    fig.suptitle(f"Final — Fig H{h} của mọi model trên TEST: P̂_(t+{h}) theo origin t; actual đen; ≤ 8 màu mỗi panel  [{FAKE}]", fontsize=9)
-    fig.tight_layout()
-    fig.savefig(OUT / f"fig_final_H{h}_all_models.png", dpi=120)
-    plt.close(fig)
+paths = {m: [path_pred(c_t, c_fut, STRENGTH[m], SIG1 * sc) for (c_t, c_fut), sc in zip(test_origins, (0.6, 1.0, 1.6))] for m in STRENGTH}
+fig, axes = plt.subplots(2, 3, figsize=(16.8, 8.6))
+for gi, (gname, group) in enumerate([("nhóm A: tree + ensemble", GROUP_A), ("nhóm B: TimesFM / AutoTS / LSTM + reference", GROUP_B)]):
+    for k, (label, (c_t, c_fut)) in enumerate(zip(TEST_PICKS, test_origins)):
+        panel_path(axes[gi, k], f"{gname}\n{label}", c_t, c_fut,
+                   [(m, paths[m][k], STYLE[m][0], STYLE[m][1]) for m in group], legend=(k == 0))
+fig.suptitle(f"Final — forecast path mọi model trên TEST: x = t → t+3, y = thay đổi giá so với C_t; actual đen; ≤ 8 màu mỗi panel  [{FAKE}]",
+             fontsize=9)
+fig.tight_layout()
+fig.savefig(OUT / "fig_final_paths_all_models.png", dpi=120)
+plt.close(fig)
 
 # ----------------------------------------------------------------------------- Fig D: latency (chỉ theo dõi)
 fig, ax = plt.subplots(figsize=(12, 4.2))
@@ -606,23 +595,23 @@ A("Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo v
   "thứ tự slot cố định, không xoay vòng; tối đa 8 màu mỗi panel — vượt thì tách nhóm): "
   + "; ".join(f"{m} = {STYLE[m][0]} `{STYLE[m][1]}`" for m in GROUP_A + GROUP_B)
   + ". Heatmap diverging xanh↔đỏ, cùng thang màu khi so sánh.\n")
-A("### 6.1 Sau mỗi model — win_m vs champion hiện tại: mỗi horizon 3 ảnh (3 cửa sổ origin) + 2 heatmap\n")
-for h in H:
-    A(f"![Fig H{h}](smoke/fig_H{h}_win_vs_champion.png)\n")
+A("### 6.1 Sau mỗi model — win_m vs champion hiện tại: 1 ảnh forecast path (3 origin) + 2 heatmap\n")
+A("![Fig P](smoke/fig_path_win_vs_champion.png)\n")
 A("![Fig HM](smoke/fig_HM_win_vs_champion.png)\n")
-A("**Giải thích.** Fig H_h: mỗi ảnh một horizon; 3 panel = 3 cửa sổ 60 origin ở **3 ngày VAL/fold khác nhau**, đại diện mức biến động thấp / trung bình / cao "
-  "(xếp 5 ngày VAL theo std của r1 trong ngày ≈ RMSE E0 h=1, lấy ngày min / trung vị / max; cửa sổ cố định 12:00–13:00 UTC của mỗi ngày) — tránh một cửa sổ tình cờ dự đoán đẹp làm hiểu sai model. "
-  "Trục x = origin t; chấm đen nối mảnh = giá thật `C_(t+h)` (chuỗi thật); marker màu = `P̂_(t+h)` của win và champion, **không nối** — mỗi prediction gắn với origin của nó, không vẽ chuỗi dự báo liên tục; "
-  "đường xám đứt = `C_t` (E0). Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 tính từ bảng RMSE̅ mean 3 seed, cùng thang màu; "
+A("**Giải thích.** Fig P (forecast path): mỗi panel là **MỘT origin t**; trục x = `t, t+1, t+2, t+3`, trục y = **thay đổi giá so với `C_t`** (USD). "
+  "Đường đen = actual `[0, C_(t+1)−C_t, C_(t+2)−C_t, C_(t+3)−C_t]`; hai đường màu = prediction của win và của champion `[0, P̂_(t+h)−C_t]` với `P̂_(t+h) = C_t·exp(ŷ_h)`; "
+  "đường xám ngang 0 = E0 (`P̂ = C_t`). Ba origin lấy ở **3 ngày VAL/fold khác nhau** đại diện biến động thấp / trung bình / cao "
+  "(xếp 5 ngày VAL theo std r1 trong ngày, lấy min / trung vị / max), mỗi ngày dùng **origin cố định đầu tiên ≥ 12:00 UTC** — chọn theo quy tắc cố định, "
+  "không chọn theo error/prediction. Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 tính từ bảng RMSE̅ mean 3 seed, cùng thang màu; "
   "tiêu đề ghi MedianGain/WinRate/P10/Worst và kết quả win vs champion. Ở mẫu này prediction được vẽ với biên độ lớn hơn thực tế để nhìn rõ layout — "
-  "với tín hiệu thật (~0.1–0.2 pp) các marker sẽ nằm rất sát `C_t`; đó là bình thường.\n")
-A("### 6.2 Final (TEST) — heatmap của mọi model + Fig H_h của mọi model\n")
+  "với tín hiệu thật (~0.1–0.2 pp) đường prediction sẽ nằm rất sát 0; đó là bình thường.\n")
+A("### 6.2 Final (TEST) — heatmap của mọi model + forecast path của mọi model\n")
 A("![Final heatmaps](smoke/fig_final_heatmaps.png)\n")
-for h in H:
-    A(f"![Final H{h}](smoke/fig_final_H{h}_all_models.png)\n")
+A("![Final paths](smoke/fig_final_paths_all_models.png)\n")
 A("**Giải thích.** Heatmap TEST: ô = khối 6 giờ × horizon (2 ngày ≈ 8 khối), giá trị Gain vs E0, một panel mỗi model (B0-306, B0*, mọi win_m, ensemble), cùng thang màu. "
-  "Fig H_h Final: cùng định nghĩa Fig H_h nhưng vẽ prediction của tất cả model trên 3 cửa sổ 60' trong TEST chọn theo std r1 của cửa sổ: thấp nhất / trung vị / cao nhất (không chồng nhau); "
-  "tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.\n")
+  "Forecast path Final: cùng định nghĩa Fig P nhưng vẽ prediction của **tất cả model trên cùng một origin**; 3 origin lấy từ 3 khối 60 origin không chồng nhau trong TEST "
+  "có std r1 thấp nhất / trung vị / cao nhất (origin đại diện = origin đầu khối); tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) "
+  "để mỗi panel ≤ 8 màu; actual đen ở mọi panel.\n")
 
 A("\n## 7. §7.4 — Inference latency (chỉ theo dõi) (`experiments/summary/latency_summary.csv`)\n")
 A(md_table(lat_df))
@@ -638,7 +627,8 @@ A("- RMSE E0 per (fold, h) = 80.000 × 0.000765 × √h × (1 ± 15% nhiễu); R
   "(LightGBM 0.18/0.12/0.05 pp, TFM-POINT âm, Ensemble cao nhất) + nhiễu ô 0.02 pp + nhiễu seed 0.015 pp; 3 seed → mean RMSE từng ô → Gain.\n"
   "- Prune giả: RMSE prune = RMSE unprune × (1 − g/100), g ~ N(0.006, 0.02) mỗi ô mỗi seed. Cửa sổ vol thấp/trung bình/cao: std r1 × 0.6 / 1.0 / 1.6.\n"
   "- MAE = 0.72·RMSE; r ≈ √(2·Gain_vs_E0); dir-acc ≈ 0.5 + 0.4·r; latency, PI, MI, standalone, prune đều là hằng số + nhiễu.\n"
-  "- Giá trong Fig H: random walk 63 phút; prediction = C_t·exp(strength·r_thật + noise) với strength 0.05–0.32 (cao hơn thực tế nhiều lần, chỉ để nhìn layout).\n"
+  "- Origin trong Fig P: C_t cố định, C_(t+1..t+3) = C_t·exp(cumsum(r)) với r ~ N(0, σ); prediction = C_t·exp(strength·y_thật + noise), strength 0.05–0.32 "
+  "(cao hơn thực tế nhiều lần, chỉ để nhìn layout).\n"
   "- Seed 8586; chạy lại cho cùng số. Khi có pipeline thật, script này bị thay bằng `src/plots.py` + log thật.\n")
 
 MD_PATH.write_text("\n".join(md), encoding="utf-8")

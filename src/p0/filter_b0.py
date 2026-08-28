@@ -15,18 +15,27 @@ from .split import Fold
 
 
 def permutation_importance(store: Store, run: RunResult, col_positions: list[int], repeats: int = 3, seed: int = 8586) -> np.ndarray:
-    """ΔRMSE giá (USD) khi xáo cột j trong VAL (mỗi fold, mỗi horizon), trung bình `repeats` lần xáo. Trả (n_cols, F, 3)."""
+    """ΔRMSE giá (USD) khi xáo cột j trong VAL (mỗi fold, mỗi horizon), trung bình `repeats` lần xáo. Trả (n_cols, F, 3).
+
+    Tabular: giá trị cột j của mỗi origin bị thay bằng giá trị của origin khác trong VAL.
+    Sequence (LSTM, `SeqBatch`): CÙNG logic đó ở mức mẫu — toàn bộ cửa sổ 512 phút của KÊNH j được lấy từ origin khác
+    trong VAL (`perm`), không đụng vào các kênh khác, không đổi kiến trúc/context/training.
+    """
     rng = np.random.default_rng(seed)
     out = np.zeros((len(col_positions), len(run.states), 3))
     for fi, st in enumerate(run.states):
         c_t, c_future, rv = store.targets(st.idx_val)
         base = cell_metrics(c_t, c_future, st.yhat)["rmse"]
-        X = np.asarray(st.X_val)
+        is_seq = hasattr(st.X_val, "with_perm")
+        X = st.X_val if is_seq else np.asarray(st.X_val)
         for cj, j in enumerate(col_positions):
             acc = np.zeros(3)
             for _ in range(repeats):
-                Xp = X.copy()
-                Xp[:, j] = rng.permutation(Xp[:, j])
+                if is_seq:
+                    Xp = X.with_perm({int(j): rng.permutation(X.idx)})
+                else:
+                    Xp = X.copy()
+                    Xp[:, j] = rng.permutation(Xp[:, j])
                 z = st.result.predict_z(Xp)
                 yhat = st.transform.decode(z, rv)
                 acc += cell_metrics(c_t, c_future, yhat)["rmse"] - base

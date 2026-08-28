@@ -107,22 +107,26 @@ class Store:
         c_future = np.column_stack([self.close[idx + h] for h in HORIZONS])
         return c_t, c_future, self.fd.rv60[idx]
 
-    def fine_matrix(self, colset: ColSet) -> tuple[np.ndarray, list[str]]:
-        """Feature theo phút cho LSTM: fine feature B0 còn ≥ 1 cột trong colset.b0 (+ rv60) + ext của colset."""
+    def fine_bases(self, colset: ColSet) -> list[str]:
         bases = []
         for n in colset.b0:
             if n.startswith("fine:"):
                 b = n.split(":")[-1]
                 if b not in bases:
                     bases.append(b)
-        cols = [self.fd.fine[:, FINE_FEATURE_NAMES.index(b)] for b in bases]
-        names = [f"fine:{b}" for b in bases]
+        return bases
+
+    def fine_names(self, colset: ColSet) -> list[str]:
+        """Tên kênh của ma trận LSTM theo đúng thứ tự cột (dùng để định vị kênh ext khi tính PI)."""
+        return [f"fine:{b}" for b in self.fine_bases(colset)] + ["rv60"] + list(colset.ext)
+
+    def fine_matrix(self, colset: ColSet) -> tuple[np.ndarray, list[str]]:
+        """Feature theo phút cho LSTM: fine feature B0 còn ≥ 1 cột trong colset.b0 (+ rv60) + ext của colset."""
+        cols = [self.fd.fine[:, FINE_FEATURE_NAMES.index(b)] for b in self.fine_bases(colset)]
         cols.append(self.fd.rv60.astype(np.float32))
-        names.append("rv60")
         for c in colset.ext:
             cols.append(self.ext_column(c))
-            names.append(c)
-        return np.column_stack(cols).astype(np.float32), names
+        return np.column_stack(cols).astype(np.float32), self.fine_names(colset)
 
 
 @dataclass

@@ -363,14 +363,14 @@ Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `rep
 
 - **Màu**: actual **luôn đen**; E0 xám nét đứt. Ảnh so sánh win vs champion dùng màu theo vai trò — win = blue `#2a78d6` (▲), champion = red `#e34948` (●): cặp xa nhau nhất trong palette. Ảnh nhiều model dùng màu + marker **cố định cho từng model** (palette categorical đã validate bằng validator của skill dataviz: blue `#2a78d6`, orange `#eb6834`, aqua `#1baf7a`, yellow `#eda100`, magenta `#e87ba4`, green `#008300`, violet `#4a3aa7`, red `#e34948` — thứ tự cố định, không xoay vòng); tối đa 8 màu mỗi panel, vượt thì tách nhóm; reference B0-306/B0\* xám nét đứt; heatmap diverging xanh↔đỏ, cùng thang màu khi so sánh. Mapping cụ thể: `STYLE` trong `reports/smoke_visualize.py`.
 
-**Sau mỗi model — win_m vs champion hiện tại** (5 file):
-- **Fig H_h** (h = 1, 2, 3 — mỗi horizon 3 ảnh = 3 panel, mỗi panel một cửa sổ 60 origin liên tiếp ở **3 ngày VAL/fold khác nhau**, đại diện mức biến động **thấp / trung bình / cao**: xếp 5 ngày VAL theo std của r1 trong ngày (≈ RMSE E0 h=1), lấy ngày min / trung vị / max; cửa sổ cố định 12:00–13:00 UTC của mỗi ngày — tránh một cửa sổ tình cờ dự đoán đẹp làm hiểu sai model): trục x = origin t; chấm đen nối mảnh = giá thật `C_{t+h}` (chuỗi thật); marker màu = `P̂_{t+h}` của win và của champion, **không nối** — mỗi prediction gắn với origin của nó; đường xám đứt = `C_t` (E0).
+**Sau mỗi model — win_m vs champion hiện tại** (2 file):
+- **Fig P — forecast path** (1 ảnh = 3 panel, mỗi panel MỘT origin `t`): trục x = `t, t+1, t+2, t+3`; trục y = **thay đổi giá so với `C_t`** (USD). Trong panel: **actual** `[0, C_{t+1}−C_t, C_{t+2}−C_t, C_{t+3}−C_t]` (đen), **prediction của win** và **của champion** `[0, P̂_{t+h}−C_t]` với `P̂_{t+h} = C_t·exp(ŷ_h)`, **E0 = đường ngang 0**. Ba origin = ba ngày VAL/fold khác nhau đại diện mức biến động **thấp / trung bình / cao** (xếp 5 ngày VAL theo std r1 trong ngày, lấy min / trung vị / max), mỗi ngày lấy **origin cố định đầu tiên ≥ 12:00 UTC** — chọn theo quy tắc cố định, **không** chọn theo error/prediction.
 - **Fig HM**: 2 heatmap 15 ô (fold × horizon) — của win và của champion, giá trị = Gain vs E0 tính từ bảng `RMSE̅` mean 3 seed, cùng thang màu; tiêu đề ghi MedianGain/WinRate/P10/Worst của mỗi bên và của win vs champion.
-- Lưu `experiments/summary/fig_H{h}_<model>_vs_champion.png`, `fig_HM_<model>_vs_champion.png`.
+- Lưu `experiments/summary/fig_path_<model>_vs_champion.png`, `fig_HM_<model>_vs_champion.png`.
 
 **Final (TEST)**:
 - **Heatmap của mọi model** (B0-306, B0\*, mọi win_m, ensemble; một panel mỗi model, cùng thang màu): ô = khối 6 giờ × horizon (TEST 2 ngày ≈ 8 khối), giá trị Gain vs E0.
-- **Fig H_h của mọi model** (h = 1, 2, 3): cùng định nghĩa Fig H_h, vẽ prediction của tất cả model trên 3 cửa sổ 60 origin trong TEST chọn theo std r1 của cửa sổ: thấp nhất / trung vị / cao nhất (không chồng nhau — cùng nguyên tắc thấp/trung bình/cao); tách 2 hàng (nhóm A: tree + ensemble; nhóm B: TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.
+- **Fig P của mọi model**: cùng định nghĩa forecast path, vẽ prediction của **tất cả model** trên **cùng 3 origin** TEST — chọn theo std r1 của khối 60 origin không chồng nhau: thấp nhất / trung vị / cao nhất, origin đại diện = origin đầu của khối; tách 2 hàng (nhóm A: tree + ensemble; nhóm B: TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel. Lưu `summary/fig_final_paths_all_models.png`.
 - Fig D latency (§7.4) chỉ để theo dõi.
 - Figure chỉ để nhìn; quyết định vẫn theo metric §0.
 

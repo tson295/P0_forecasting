@@ -28,7 +28,8 @@ class FitResult:
     best_iters: tuple[int, int, int]
     predictors: list[Callable[[np.ndarray], np.ndarray]] = field(default_factory=list)  # per horizon: X → z
 
-    def predict_z(self, X: np.ndarray) -> np.ndarray:
+    def predict_z(self, X) -> np.ndarray:
+        """X: ma trận (tree, mỗi predictor một horizon) hoặc SeqBatch (LSTM, một predictor trả (n, 3))."""
         return np.column_stack([p(X) for p in self.predictors]).astype(np.float32)
 
 
@@ -142,9 +143,15 @@ class XGBRFModel(TabularModel):
 
         preds = np.empty((len(X_pred), len(HORIZONS)), dtype=np.float32)
         predictors = []
+        n_tree = int(self.params["n_estimators"])
+        rf_params = {k: v for k, v in self.params.items() if k != "n_estimators"}
         for col in range(len(HORIZONS)):
-            model = xgb.XGBRFRegressor(objective="reg:squarederror", learning_rate=1.0, tree_method="hist", device=self.device,
-                                       random_state=seed + 101 * col, verbosity=0, **self.params)
+            # random-forest mode = 1 vòng boosting với num_parallel_tree cây song song, lr 1.0, reg_lambda 1e-5.
+            # (Chính là những gì XGBRFRegressor đặt bên trong; dùng thẳng XGBRegressor vì XGBRFRegressor đã deprecated
+            #  từ xgboost 3.4 và requirements ghi `xgboost>=3.0` — prediction bit-exact như nhau.)
+            model = xgb.XGBRegressor(objective="reg:squarederror", learning_rate=1.0, tree_method="hist", device=self.device,
+                                     n_estimators=1, num_parallel_tree=n_tree, reg_lambda=1e-5,
+                                     random_state=seed + 101 * col, verbosity=0, **rf_params)
             model.fit(X_fit, z_fit[:, col])
             preds[:, col] = model.predict(X_pred)
             predictors.append(lambda X, m=model: np.asarray(m.predict(X), dtype=np.float32))

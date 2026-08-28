@@ -171,29 +171,21 @@ Minh họa gộp 3 seed (chỉ h=1; thật sẽ là 5 fold × 3 horizon = 15 ô)
 
 Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo vai trò — win = blue `#2a78d6` ▲, champion = red `#e34948` ● (cặp xa nhau nhất), E0 = xám nét đứt. Ảnh nhiều model dùng màu/marker cố định cho từng model (palette categorical đã validate bằng validator của skill dataviz, thứ tự slot cố định, không xoay vòng; tối đa 8 màu mỗi panel — vượt thì tách nhóm): LightGBM(F*) = #2a78d6 `o`; XGBoost(F*) = #eb6834 `^`; CatBoost(F*) = #1baf7a `v`; XGB-RF(F*) = #eda100 `X`; Ensemble = #e34948 `h`; TFM-POINT = #4a3aa7 `P`; AutoTS-WR(F*) = #e87ba4 `<`; AutoTS-MR(F*) = #eb6834 `>`; LSTM(F*) = #008300 `*`; B0-306 = #898781 `s`; B0* = #52514e `D`. Heatmap diverging xanh↔đỏ, cùng thang màu khi so sánh.
 
-### 6.1 Sau mỗi model — win_m vs champion hiện tại: mỗi horizon 3 ảnh (3 cửa sổ origin) + 2 heatmap
+### 6.1 Sau mỗi model — win_m vs champion hiện tại: 1 ảnh forecast path (3 origin) + 2 heatmap
 
-![Fig H1](smoke/fig_H1_win_vs_champion.png)
-
-![Fig H2](smoke/fig_H2_win_vs_champion.png)
-
-![Fig H3](smoke/fig_H3_win_vs_champion.png)
+![Fig P](smoke/fig_path_win_vs_champion.png)
 
 ![Fig HM](smoke/fig_HM_win_vs_champion.png)
 
-**Giải thích.** Fig H_h: mỗi ảnh một horizon; 3 panel = 3 cửa sổ 60 origin ở **3 ngày VAL/fold khác nhau**, đại diện mức biến động thấp / trung bình / cao (xếp 5 ngày VAL theo std của r1 trong ngày ≈ RMSE E0 h=1, lấy ngày min / trung vị / max; cửa sổ cố định 12:00–13:00 UTC của mỗi ngày) — tránh một cửa sổ tình cờ dự đoán đẹp làm hiểu sai model. Trục x = origin t; chấm đen nối mảnh = giá thật `C_(t+h)` (chuỗi thật); marker màu = `P̂_(t+h)` của win và champion, **không nối** — mỗi prediction gắn với origin của nó, không vẽ chuỗi dự báo liên tục; đường xám đứt = `C_t` (E0). Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 tính từ bảng RMSE̅ mean 3 seed, cùng thang màu; tiêu đề ghi MedianGain/WinRate/P10/Worst và kết quả win vs champion. Ở mẫu này prediction được vẽ với biên độ lớn hơn thực tế để nhìn rõ layout — với tín hiệu thật (~0.1–0.2 pp) các marker sẽ nằm rất sát `C_t`; đó là bình thường.
+**Giải thích.** Fig P (forecast path): mỗi panel là **MỘT origin t**; trục x = `t, t+1, t+2, t+3`, trục y = **thay đổi giá so với `C_t`** (USD). Đường đen = actual `[0, C_(t+1)−C_t, C_(t+2)−C_t, C_(t+3)−C_t]`; hai đường màu = prediction của win và của champion `[0, P̂_(t+h)−C_t]` với `P̂_(t+h) = C_t·exp(ŷ_h)`; đường xám ngang 0 = E0 (`P̂ = C_t`). Ba origin lấy ở **3 ngày VAL/fold khác nhau** đại diện biến động thấp / trung bình / cao (xếp 5 ngày VAL theo std r1 trong ngày, lấy min / trung vị / max), mỗi ngày dùng **origin cố định đầu tiên ≥ 12:00 UTC** — chọn theo quy tắc cố định, không chọn theo error/prediction. Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 tính từ bảng RMSE̅ mean 3 seed, cùng thang màu; tiêu đề ghi MedianGain/WinRate/P10/Worst và kết quả win vs champion. Ở mẫu này prediction được vẽ với biên độ lớn hơn thực tế để nhìn rõ layout — với tín hiệu thật (~0.1–0.2 pp) đường prediction sẽ nằm rất sát 0; đó là bình thường.
 
-### 6.2 Final (TEST) — heatmap của mọi model + Fig H_h của mọi model
+### 6.2 Final (TEST) — heatmap của mọi model + forecast path của mọi model
 
 ![Final heatmaps](smoke/fig_final_heatmaps.png)
 
-![Final H1](smoke/fig_final_H1_all_models.png)
+![Final paths](smoke/fig_final_paths_all_models.png)
 
-![Final H2](smoke/fig_final_H2_all_models.png)
-
-![Final H3](smoke/fig_final_H3_all_models.png)
-
-**Giải thích.** Heatmap TEST: ô = khối 6 giờ × horizon (2 ngày ≈ 8 khối), giá trị Gain vs E0, một panel mỗi model (B0-306, B0*, mọi win_m, ensemble), cùng thang màu. Fig H_h Final: cùng định nghĩa Fig H_h nhưng vẽ prediction của tất cả model trên 3 cửa sổ 60' trong TEST chọn theo std r1 của cửa sổ: thấp nhất / trung vị / cao nhất (không chồng nhau); tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.
+**Giải thích.** Heatmap TEST: ô = khối 6 giờ × horizon (2 ngày ≈ 8 khối), giá trị Gain vs E0, một panel mỗi model (B0-306, B0*, mọi win_m, ensemble), cùng thang màu. Forecast path Final: cùng định nghĩa Fig P nhưng vẽ prediction của **tất cả model trên cùng một origin**; 3 origin lấy từ 3 khối 60 origin không chồng nhau trong TEST có std r1 thấp nhất / trung vị / cao nhất (origin đại diện = origin đầu khối); tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.
 
 
 ## 7. §7.4 — Inference latency (chỉ theo dõi) (`experiments/summary/latency_summary.csv`)
@@ -244,5 +236,5 @@ Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo vai 
 - RMSE E0 per (fold, h) = 80.000 × 0.000765 × √h × (1 ± 15% nhiễu); RMSE model per seed = E0 × (1 − skill/100) với skill giả gán sẵn (LightGBM 0.18/0.12/0.05 pp, TFM-POINT âm, Ensemble cao nhất) + nhiễu ô 0.02 pp + nhiễu seed 0.015 pp; 3 seed → mean RMSE từng ô → Gain.
 - Prune giả: RMSE prune = RMSE unprune × (1 − g/100), g ~ N(0.006, 0.02) mỗi ô mỗi seed. Cửa sổ vol thấp/trung bình/cao: std r1 × 0.6 / 1.0 / 1.6.
 - MAE = 0.72·RMSE; r ≈ √(2·Gain_vs_E0); dir-acc ≈ 0.5 + 0.4·r; latency, PI, MI, standalone, prune đều là hằng số + nhiễu.
-- Giá trong Fig H: random walk 63 phút; prediction = C_t·exp(strength·r_thật + noise) với strength 0.05–0.32 (cao hơn thực tế nhiều lần, chỉ để nhìn layout).
+- Origin trong Fig P: C_t cố định, C_(t+1..t+3) = C_t·exp(cumsum(r)) với r ~ N(0, σ); prediction = C_t·exp(strength·y_thật + noise), strength 0.05–0.32 (cao hơn thực tế nhiều lần, chỉ để nhìn layout).
 - Seed 8586; chạy lại cho cùng số. Khi có pipeline thật, script này bị thay bằng `src/plots.py` + log thật.
