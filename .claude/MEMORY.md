@@ -1,6 +1,6 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: CODE XONG ĐỦ 8 MODEL §2.2 (87 unit test + smoke e2e PASS trên data tổng hợp CPU; TimesFM/AutoTS test bằng stub — package chưa cài) / CHỜ ĐƯA LÊN VAST + USER UNLOCK
+PHASE: SẴN SÀNG VAST — code + docs chốt bản cuối (109 unit test + smoke e2e + smoke_visualize PASS trên data tổng hợp CPU; TimesFM/AutoTS mới test bằng stub, canary package thật chạy trên Vast) / CHỜ CHẠY EXPERIMENT
 TRAINING: LOCKED
 
 ## Current Task
