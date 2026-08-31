@@ -10,9 +10,9 @@ catboost>=1.2         # task_type=GPU
 # lightgbm: cài BUILD GPU (OpenCL) trong scripts/vast_bootstrap.sh — wheel pip mặc định không có GPU:
 #   pip install lightgbm --no-binary lightgbm --config-settings=cmake.define.USE_GPU=ON
 # torch: cài theo CUDA của image (vd. pip install torch --index-url https://download.pytorch.org/whl/cu128)
-# TimesFM (§2.2 #4) và AutoTS (§2.2 #6) — adapter đã code; audit xong (docs/reference/audit_timesfm.md, audit_autots.md).
-# CÀI KHI USER CHO PHÉP (plan §2.2: "cài package chỉ khi user cho phép"):
-#   pip install "timesfm[torch]==2.0.2"          # checkpoint google/timesfm-2.5-200m-pytorch, rev 1d952420…, 925 MB, public
-#   pip install autots==1.0.4 statsmodels        # statsmodels là dep bắt buộc của autots
-#   # chỉ khi chạy TimesFM covariate: pip install "jax[cpu]" scikit-learn   (jax[cuda] xung đột wheel với torch cu128)
-#   # chỉ khi chạy TFM-LoRA: pip install "transformers>=5.4" peft accelerate  (checkpoint …-2.5-200m-transformers)
+# TimesFM (§2.2 #4) và AutoTS (§2.2 #6) — `scripts/vast_bootstrap.sh` CÀI SẴN các dòng dưới khi user đã cho phép
+# chạy experiment (pin theo docs/reference/audit_timesfm.md, audit_autots.md). Không cài ngầm ở máy local.
+#   timesfm[torch]==2.0.2      # checkpoint google/timesfm-2.5-200m-pytorch, rev 1d952420…, 925 MB, public
+#   autots==1.0.4 + statsmodels
+#   jax[cpu]                   # xreg của TimesFM covariate; jax[cuda] xung đột wheel nvidia-* với torch cu128
+# LoRA KHÔNG dùng trong giai đoạn này (không cài transformers/peft).

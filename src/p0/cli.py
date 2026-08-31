@@ -507,6 +507,21 @@ def _autots_group(spec: dict) -> str:
     return "mr" if kind == "mr" else f"wr:{int(spec.get('window_size', 60))}"
 
 
+def autots_regressors(cfg: RunConfig) -> dict:
+    """Backend GPU cho regressor BÊN TRONG AutoTS, lấy đúng backend đã resolve ở config — không hard-code.
+
+    `models.lgbm.device_type` (gpu | cuda, do `scripts/vast_bootstrap.sh` ghi sau khi thử build thật) và
+    `models.xgb.device` phải chảy nhất quán sang: AutoTS-WR probe, AutoTS-MR probe, và mọi template LightGBM/xgboost
+    của bake-off. Nếu main LightGBM chạy `cuda` mà AutoTS vẫn xin `gpu` thì LightGBM sẽ lỗi hoặc âm thầm chạy CPU.
+    """
+    from .models_autots import MR_PARAMS, WR_PARAMS
+
+    lgb_dev = str(_params_for(cfg, "lgbm").get("device_type", WR_PARAMS["model_params"]["device_type"]))
+    xgb_dev = str(_params_for(cfg, "xgb").get("device", MR_PARAMS["model_params"]["device"]))
+    return {"LightGBM": {**WR_PARAMS["model_params"], "device_type": lgb_dev},
+            "xgboost": {**MR_PARAMS["model_params"], "device": xgb_dev}}
+
+
 def _autots_probe_model(cfg: RunConfig, group: str, allow_cpu: bool, frozen=None):
     from .models_autots import AutoTSModel
 
@@ -517,6 +532,10 @@ def _autots_probe_model(cfg: RunConfig, group: str, allow_cpu: bool, frozen=None
         kw["window_size"] = int(group.split(":")[1])
     if allow_cpu:
         kw["device"] = "cpu"
+    elif "regression_model" not in kw:  # backend đã resolve, không dùng hằng số hard-code trong models_autots
+        reg = autots_regressors(cfg)
+        name = "LightGBM" if kw["kind"] == "wr" else "xgboost"
+        kw["regression_model"] = {"model": name, "model_params": reg[name]}
     return AutoTSModel(**kw)
 
 
@@ -539,7 +558,9 @@ def autots_bakeoff_fold(cfg: RunConfig, store: Store, fold, colset: ColSet, grou
     probe = _autots_probe_model(cfg, group, allow_cpu)
     df_tr, R_tr = probe.frames(seq, lo, hi)
     say(f"[{fold.name}|{group}] search trên {len(df_tr)} bar (đến {df_tr.index[-1]}), {len(specs)} template × {nv} validation")
-    name, params, all_t = search_best_template(df_tr, R_tr, template_frame(specs, seed=cfg.sel_seed), nv, cfg.sel_seed)
+    reg = None if allow_cpu else autots_regressors(cfg)  # backend GPU đã resolve chảy vào MỌI dòng template
+    tmpl = template_frame(specs, seed=cfg.sel_seed, regressors=reg)
+    name, params, all_t = search_best_template(df_tr, R_tr, tmpl, nv, cfg.sel_seed, regressors=reg)
     return name, params, all_t
 
 

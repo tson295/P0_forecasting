@@ -18,17 +18,24 @@ MODEL_OF = {"wr": "WindowRegression", "mr": "MultivariateRegression"}
 REGRESSOR_GPU = {"LightGBM": dict(WR_PARAMS["model_params"]), "xgboost": dict(MR_PARAMS["model_params"])}
 
 
-def gpu_regression_model(regressor: str, seed: int) -> dict:
-    """`regression_model` ép GPU: LightGBM `device_type='gpu'`, xgboost `device='cuda'` (+ seed vì AutoTS không set cho xgboost)."""
-    if regressor not in REGRESSOR_GPU:
-        raise KeyError(f"regressor phải thuộc {sorted(REGRESSOR_GPU)}: {regressor}")
-    mp = dict(REGRESSOR_GPU[regressor])
+def gpu_regression_model(regressor: str, seed: int, regressors: dict | None = None) -> dict:
+    """`regression_model` ép GPU cho template bake-off.
+
+    `regressors` = backend ĐÃ RESOLVE trên máy (do CLI truyền từ config: `models.lgbm.device_type`,
+    `models.xgb.device`) — KHÔNG hard-code 'gpu'/'cuda': nếu LightGBM trên máy chỉ chạy build CUDA thì
+    AutoTS-WR và mọi template LightGBM cũng phải dùng đúng `device_type='cuda'`.
+    """
+    table = regressors or REGRESSOR_GPU
+    if regressor not in table:
+        raise KeyError(f"regressor phải thuộc {sorted(table)}: {regressor}")
+    mp = dict(table[regressor])
     if regressor.lower() in ("xgboost", "xgbregressor"):
         mp.setdefault("random_state", seed)
     return {"model": regressor, "model_params": mp}
 
 
-def template_frame(specs: list[dict], seed: int, frequency: str = "min", cls_map: dict | None = None) -> "pd.DataFrame":
+def template_frame(specs: list[dict], seed: int, frequency: str = "min", cls_map: dict | None = None,
+                   regressors: dict | None = None) -> "pd.DataFrame":
     """Dựng `initial_template` từ khai báo config. Params lấy từ CHÍNH `get_params()` của class AutoTS → đúng khoá tuyệt đối
     (khoá sai = TypeError lúc chạy). Mọi dòng: regressor GPU, `regression_type='User'`, `datepart_method=None`, `holiday=False`,
     transformation rỗng → feature set không bị thêm cột ngoài F_frozen."""
@@ -45,7 +52,8 @@ def template_frame(specs: list[dict], seed: int, frequency: str = "min", cls_map
 
             cls = {"WindowRegression": WindowRegression, "MultivariateRegression": MultivariateRegression}[name]
         kw = dict(forecast_length=len(HORIZONS), frequency=frequency, regression_type="User", datepart_method=None,
-                  regression_model=gpu_regression_model(spec.get("regressor", "LightGBM"), seed), n_jobs=1, random_seed=seed)
+                  regression_model=gpu_regression_model(spec.get("regressor", "LightGBM"), seed, regressors),
+                  n_jobs=1, random_seed=seed)
         if kind == "wr":
             kw.update(window_size=int(spec.get("window_size", 60)), output_dim="forecast_length",
                       max_windows=int(spec.get("max_windows", 200_000)), normalize_window=False, scale=False, shuffle=False)
@@ -61,7 +69,7 @@ def template_frame(specs: list[dict], seed: int, frequency: str = "min", cls_map
 
 
 def search_best_template(df_tr: "pd.DataFrame", R_tr: "pd.DataFrame", template: "pd.DataFrame", num_validations: int,
-                         seed: int, autots_cls=None) -> tuple[str, dict, "pd.DataFrame"]:
+                         seed: int, autots_cls=None, regressors: dict | None = None) -> tuple[str, dict, "pd.DataFrame"]:
     """Bake-off trên TRAINING-SIDE của fold (df_tr kết thúc trước purge — outer VAL không bao giờ được nhìn thấy).
 
     `max_generations=0` → chỉ chạy đúng các dòng của `template`, không sinh dòng ngẫu nhiên; AutoTS vẫn chạy
@@ -93,5 +101,5 @@ def search_best_template(df_tr: "pd.DataFrame", R_tr: "pd.DataFrame", template: 
     assert params.get("datepart_method") in (None, "None"), "template thắng thêm cột datepart ngoài F_frozen"
     assert not params.get("holiday", False), "template thắng thêm cột holiday ngoài F_frozen"
     assert not trans.get("transformations"), "template thắng có transformer — đường ModelMonster không áp transformer"
-    params["regression_model"] = gpu_regression_model(params["regression_model"]["model"], seed)  # ép lại GPU (§12.5)
+    params["regression_model"] = gpu_regression_model(params["regression_model"]["model"], seed, regressors)  # ép lại GPU (§12.5)
     return name, params, auto.export_template(None, models="all")

@@ -1,86 +1,113 @@
 # Prompt cho session Claude Code mới trên Vast (copy nguyên khối dưới vào session)
 
-> Dùng sau khi: (1) instance Vast đã tạo, (2) repo đã clone vào `~/P0_forecasting`, (3) file `data/BTC_hf_1min.csv` và `data/BTC_lf_5min.csv`
-> đã scp lên (CSV không nằm trong git). User vẫn phải **unlock training** bằng lệnh rõ trong session mới; prompt này không thay lệnh đó.
+> Dùng sau khi: (1) instance Vast đã tạo, (2) repo đã clone vào `~/P0_forecasting`, (3) hai file CSV
+> (`data/BTC_hf_1min.csv`, `data/BTC_lf_5min.csv`) đã scp lên (CSV không nằm trong git).
+> **Prompt này CHÍNH LÀ authorization của user để chạy experiment thật**: sau khi mọi preflight PASS, session tự
+> chuyển `TRAINING: UNLOCKED` và chạy tiếp, không hỏi lại chỉ để unlock.
 
 ---
 
-Bạn là session Claude Code chạy trên máy Vast.ai GPU cho project **P0_forecasting** (BTC 1-phút point forecasting). Đọc theo thứ tự trước khi làm gì:
-`.claude/CLAUDE.md` (hiến pháp rút gọn) → `.claude/MEMORY.md` (trạng thái, `TRAINING:`) → `docs/RESEARCH_PLAN.md` (plan chính thức, rev 9b) → `README.md` → `.claude/AGENT.md` (4 agent: checker, researcher, analyst, infra). `docs/archive/` và `docs/reference/` không có hiệu lực. `reports/smoke_visualize.md` là layout mẫu với số giả, không phải kết quả.
+Bạn là session Claude Code chạy trên máy Vast.ai GPU cho project **P0_forecasting** (BTC 1-phút point forecasting).
+Đọc theo thứ tự trước khi làm gì: `.claude/CLAUDE.md` → `.claude/MEMORY.md` → `docs/RESEARCH_PLAN.md` → `README.md`
+→ `.claude/AGENT.md` (4 agent: checker, researcher, analyst, infra). `docs/archive/` và `docs/reference/` là tham
+khảo/lịch sử, không có hiệu lực; `reports/smoke_visualize.md` là layout mẫu số giả, không phải kết quả.
 
 ## Luật bất biến
 
-1. **Training chỉ trên GPU — cấm training CPU, không fallback.** LightGBM phải là build GPU (`device_type=gpu`, hoặc `cuda` nếu OpenCL không có); XGBoost `device=cuda`; CatBoost `task_type=GPU`; torch CUDA. CPU chỉ cho tính feature, metric, MI/PI, unit test, và predict của thư viện mặc định chạy CPU. `--smoke`/`--allow-cpu` chỉ có tác dụng với dataset tổng hợp — CLI từ chối trên data thật; không tìm cách lách.
-2. **TRAINING lock**: chỉ chạy `calibrate / filter-b0 / loop / ensemble / final` khi `.claude/MEMORY.md` ghi `TRAINING: UNLOCKED` do user ra lệnh rõ ("unlock training" / "bắt đầu training" / "run experiments"). CLI tự kiểm tra và từ chối nếu LOCKED. Chưa unlock → chỉ bootstrap, check-data, unit test.
-3. Mỗi run phải thuộc một bước của plan §8 và trả lời "thuộc bước nào, so với base nào, dùng số vòng/ε của model nào". Không chạy trùng, không idle GPU (Vast tính giờ), không rerun vì quên config (config/log đã persist trong `experiments/`).
-4. TimesFM/AutoTS: giữ đúng ràng buộc đã ghi trong adapter — TFM covariate **1 origin/lời gọi** + covariate dịch 1 bar; AutoTS regressor dịch theo model (MR `f(s−1)`, WR `f(s+window−1)`), không dùng `AutoTS(...)` (search), không sửa site-packages. Không thêm model, metric, feature ngoài plan; không sweep hyperparameter; không sửa `Baseline_LGBM.py`; không đổi luật KEEP/DROP (`MedianGain ≥ −ε_m` KEEP, `< −ε_m` DROP), R1–R4, champion (`> +ε_champion`), gộp 3 seed (mean RMSE từng ô → Gain → median 15 ô). Không đổi vai trò seed (§1.3): `calib_seed` chỉ cho ES lấy số vòng; `eval_seeds` (3) chỉ để đo ε và confirmation; **mọi bước selection dùng đúng một `selection_seed`** — không được đổi seed giữa các Rk/candidate.
-5. `data/` read-only; không đưa secret (Vast API key, SSH key) vào repo/MEMORY; IP/instance id không thành memory. Commit + push sau mỗi bước hoàn tất (`git add -A && git commit && git push`), raw CSV bị `.gitignore` loại.
-6. Sau mỗi bước: cập nhật `.claude/MEMORY.md` (Current Task / Exact Next Step / Experiment Findings chỉ khi có run thật) — MEMORY là trạng thái, không phải log.
+1. **Training chỉ trên GPU — cấm training CPU, không fallback.** Nhưng KHÔNG hard-code một backend cho mọi thư viện:
+   torch/LSTM/TimesFM = CUDA; XGBoost `device=cuda`; CatBoost `task_type=GPU`; LightGBM = `device_type` **thực sự
+   fit được** trên máy (`gpu` build OpenCL hoặc `cuda` build CUDA). `scripts/vast_bootstrap.sh` tự resolve và ghi
+   backend LightGBM vào `configs/p0_15d.json`; backend đó chảy sang cả AutoTS-WR probe và mọi template bake-off
+   (`cli.autots_regressors`). Không có GPU backend hợp lệ cho một model bắt buộc → **DỪNG, hỏi user**.
+2. **TRAINING lock**: trước preflight `.claude/MEMORY.md` vẫn `TRAINING: LOCKED`. Chỉ khi ĐỦ các điều kiện ở
+   "Preflight" mới tự sửa thành `TRAINING: UNLOCKED` rồi chạy tiếp.
+3. Mỗi run phải thuộc một bước của plan §8. Không chạy trùng, không idle GPU (Vast tính giờ). TEST chỉ chạm ở `final`,
+   đúng một lần.
+4. Không thêm model/metric/feature ngoài plan; không sweep hyperparameter; không sửa `Baseline_LGBM.py`; không đổi
+   luật KEEP/DROP (`MedianGain ≥ −ε_m`), R1–R4, champion (`> +ε_champion`), gộp 3 seed, vai trò seed (§1.3:
+   `calib_seed` chỉ cho ES; `eval_seeds` đo ε + confirmation; MỘT `selection_seed` cho mọi bước selection).
+5. TimesFM giữ: zero-shot (không LoRA), mean head `quantile[...,0]`, covariate `per_core_batch_size=1`,
+   1 origin/lời gọi, covariate dịch 1 bar, cộng dồn one-step → `y_1/y_2/y_3`. AutoTS giữ: probe = 2 class cố định,
+   framework chỉ chạy với `initial_template` GPU + `max_generations=0`, search chỉ nhìn training-side (FIT+ES).
+6. `data/` read-only; không ghi đè `data/data_checksums.json`; không đưa secret vào repo/MEMORY/git.
+   Commit + push sau mỗi phase (`git add -A && git commit && git push`); raw CSV bị `.gitignore` loại.
 
-## Bước 0 — Bootstrap và kiểm tra (chưa cần unlock)
+## Preflight (chạy tuần tự, mọi bước phải PASS)
 
 ```bash
-cd ~/P0_forecasting
-tmux new -s p0            # mọi việc dài chạy trong tmux, sống sót SSH disconnect
-bash scripts/vast_bootstrap.sh          # apt OpenCL/boost, pip, LightGBM build GPU, preflight GPU, unit test
-cat experiments/env.txt                 # ghi GPU, version thư viện, kết quả preflight → dán vào MEMORY (Data/Implementation Blockers)
-python run.py check-data --config configs/p0_15d.json     # §1.1 + verify sha256 với data/data_checksums.json đã commit
+cd ~/P0_forecasting && tmux new -s p0        # mọi việc dài chạy trong tmux
+git log --oneline -1                          # ghi commit hash vào báo cáo
+bash scripts/vast_bootstrap.sh                # fail-fast: GPU, apt, pip, timesfm/autots/jax, build+resolve LightGBM,
+                                              # preflight XGB/Cat/torch/LGBM, unit test. Exit != 0 = DỪNG.
+PYTHONPATH=src:. python scripts/vast_canary.py --config configs/p0_15d.json
+python run.py check-data --config configs/p0_15d.json
 ```
-`check-data` phải in: HF 21.916 dòng (2026-01-18 16:15 → 02-02 21:30), `ok: true`, B0-eligible 21.258 origin (01-19 02:46 → 02-02 21:27), 5 fold + TEST đều `OK` với n: FIT 9.887 / 11.327 / 12.767 / 14.207 / 15.647 (Final 17.087), ES 1.377, VAL 1.437, TEST 2.728; dòng cuối `verify … OK — khớp snapshot đã ghi`. Sai bất kỳ số nào, hoặc `KHÔNG KHỚP` / `Thiếu data_checksums.json` → file scp lên không phải snapshot đã kiểm → DỪNG, báo user, không training, KHÔNG chạy `--write-checksums` để ghi đè.
 
-Nếu preflight LightGBM `device_type=gpu` fail nhưng `cuda` OK → đặt `"lgbm": {"device_type": "cuda"}` trong `configs/p0_15d.json` (vẫn GPU). Cả hai fail → DỪNG.
+- `vast_canary.py` = canary **package thật** (không stub) trên data tổng hợp: fit GPU thật của LightGBM/XGBoost/
+  CatBoost/XGB-RF/LSTM; TimesFM load checkpoint + native forecast + mean-head + covariate batch=1 + causal/shift;
+  AutoTS import + WR/MR probe + `future_regressor` thật sự được dùng + bake-off template GPU-safe. Ghi
+  `experiments/canary.json` kèm **ETA theo phase**. Bất kỳ FAIL nào → DỪNG, báo user traceback + API mismatch,
+  **không tự đổi methodology**.
+- `check-data` phải in: HF 21.916 dòng (2026-01-18 16:15 → 02-02 21:30), `ok: true`, B0-eligible 21.258 origin,
+  5 fold + TEST `OK` với n: FIT 9.887/11.327/12.767/14.207/15.647 (Final 17.087), ES 1.377, VAL 1.437, TEST 2.728,
+  và `verify … OK — khớp snapshot đã ghi`. Sai số bất kỳ hoặc `KHÔNG KHỚP` → DỪNG, hỏi user, **không** chạy
+  `--write-checksums` để ghi đè.
 
-## Bước 1–4 — chỉ sau khi user unlock (main session sửa MEMORY thành `TRAINING: UNLOCKED`)
+Đủ điều kiện unlock: commit đúng · bootstrap PASS · canary PASS · `check-data` PASS · `pytest -q -x` PASS.
+→ sửa `.claude/MEMORY.md` thành `TRAINING: UNLOCKED`, commit, rồi chạy tiếp mà không cần hỏi lại.
 
-Chạy tuần tự, mỗi lệnh trong tmux, log ra `experiments/`:
+## Thứ tự chạy (plan §8)
 
 ```bash
-# Phase A: calibrate LightGBM trên B0-306 (15fixed_306 + ε) → lọc B0 → B0*
+# Phase A
 python run.py calibrate --config configs/p0_15d.json --model lgbm --colset b0306
-python run.py filter-b0 --config configs/p0_15d.json          # PI + SA (306 model 1 cột, ~2–4 h) + MI → R1–R4 → experiments/b0_star.json
+python run.py filter-b0 --config configs/p0_15d.json
 
-# Phase B/C: từng model từ B0* (calibrate riêng → 39 candidate → prune PI → 3 seed → win_m → latency → champion + figure)
-python run.py loop --config configs/p0_15d.json --model lgbm   # bắt buộc đầu tiên: champion ban đầu = LightGBM (CLI từ chối model khác khi chưa có champion)
+# Phase B — mỗi model: calibrate ES → fixed rounds → add-one 39 → PI prune → confirmation (ES bật lại) → win → champion
+python run.py loop --config configs/p0_15d.json --model lgbm     # BẮT BUỘC đầu tiên (champion ban đầu §3)
 python run.py loop --config configs/p0_15d.json --model xgb
 python run.py loop --config configs/p0_15d.json --model cat
-# TimesFM + AutoTS: adapter đã code theo docs/reference/audit_timesfm.md / audit_autots.md, nhưng PACKAGE CHƯA CÀI.
-# Cài chỉ khi user cho phép (plan §2.2), rồi smoke import trước khi chạy loop:
-#   pip install "timesfm[torch]==2.0.2"                 # + "jax[cpu]" scikit-learn nếu chạy covariate
-#   pip install autots==1.0.4 statsmodels               # CHƯA xác minh với pandas 3.0.3 → smoke import trước
-# TimesFM: TRƯỚC khi chạy loop, làm canary 1 fold / ~200 origin (audit_timesfm.md §12.6) — chỉ VAL, không TEST:
-#   1) in shape/dtype ma trận xreg thật: phải là (512, 2^ceil(log2(k+1))) float32
-#   2) cắt chuỗi tại t rồi dự báo lại: prediction phải GIỐNG HỆT; assert len(inputs) == 1 ở đường covariate
-#   3) test dịch bar: cố ý đặt f(s) = r1_s (leak) vs f(s) = r1_(s−1) — bản leak phải tốt lên bất thường
-#   4) assert cửa sổ covariate hữu hạn (cần ≥ 1952 bar lịch sử)
-#   5) tách thời gian forward vs xreg: > 100 ms/origin ở k=39 nghĩa là chưa compile per_core_batch_size=1
-#   6) log cả q50 và mean; 7) chạy k=1 với cột nhiễu trắng → phải xấu đi ~0.2–0.6 pp; 8) xác nhận ε_TFM ≈ floor
-python run.py loop --config configs/p0_15d.json --model tfm_b0   # nhánh A: S = B0*
-python run.py loop --config configs/p0_15d.json --model tfm_ext  # nhánh B: S = ∅ (TimesFM native trên r1)
+python run.py loop --config configs/p0_15d.json --model tfm_b0   # TimesFM nhánh A: S = B0*
+python run.py loop --config configs/p0_15d.json --model tfm_ext  # TimesFM nhánh B: S = ∅ (native r1)
+python run.py tfm-final --config configs/p0_15d.json             # TFM_B0_best vs TFM_EXT_best → TimesFM-final
 python run.py loop --config configs/p0_15d.json --model xgbrf
-python run.py loop --config configs/p0_15d.json --model autots_wr
-python run.py loop --config configs/p0_15d.json --model autots_mr
+python run.py loop --config configs/p0_15d.json --model autots_wr   # probe (không champion/ensemble/Final)
+python run.py loop --config configs/p0_15d.json --model autots_mr   # probe
+python run.py autots-search --config configs/p0_15d.json            # framework trên F_WR_best và F_MR_best → AutoTS-final
 python run.py loop --config configs/p0_15d.json --model lstm
 
-python run.py tfm-final     --config configs/p0_15d.json      # §2.2 #4: TFM_B0_best vs TFM_EXT_best → TimesFM-final
-python run.py autots-search --config configs/p0_15d.json      # §2.2 #6: framework AutoTS trên F_WR_best và F_MR_best → AutoTS-final
-python run.py ensemble --config configs/p0_15d.json           # §3 ensemble vs champion
-python run.py final --config configs/p0_15d.json              # §4 TEST một lần: all_models_test.csv + heatmap + Fig H_h mọi model
+# Phase C
+python run.py ensemble --config configs/p0_15d.json
+python run.py final --config configs/p0_15d.json                 # TEST một lần duy nhất
 ```
 
-Output cần có sau mỗi bước (kiểm tra bằng checklist §6 plan trước khi sang bước sau; dùng agent `checker` nếu nghi ngờ):
-- `experiments/calib/<model>_<tag>.json` (rounds 15 ô, ε, rmse, e0), `experiments/log.csv` (mỗi run một dòng, schema cố định: RMSE/MAE/E0/Gain 15 ô, config_hash, train_device), `experiments/runs/<exp_id>/run.json` (+ `pred_val.npz` ở confirmation, `pred_test.npz` ở final).
-- `experiments/b0_filter.csv` (306 dòng: PI/SA/MI per h, cờ ≥ 2/3, keep_R1..R4), `b0_sets.csv` (4 run kiểm chứng + bộ được chọn), `b0_star.json`.
-- `experiments/keepdrop_<model>.csv` (39 dòng), `prune_pi_<model>.csv`, `prune_<model>.csv` (unprune vs prune, RMSE̅ 3 seed, MedianGain, win), `wins/<model>.json` + `<model>_seed{0,1,2}.npz`, `latency_<model>.csv` (p95/p99/max, train/predict device), `champion.json`, `champion_log.csv` (schema cố định: win_m, RMSE̅ hai bên, Gain 15 ô, metric per horizon, latency), `summary/latency_summary.csv` (VAL/TEST, device, lib version), `summary/fig_path_<model>_vs_champion.png` (forecast path 3 origin), `summary/fig_traj_h{1,2,3}_<model>_vs_champion.png` (trajectory toàn bộ VAL), `summary/fig_HM_<model>_vs_champion.png`.
-- Final: `summary/all_models_test.csv` (RMSE/MAE/r/dir-acc, Gain vs E0 / B0-306 / B0* / champion, latency p95/p99/max per h), `summary/fig_final_heatmaps.png`, `summary/fig_final_paths_all_models.png`, `summary/fig_final_traj_h{1,2,3}_all_models.png`, `summary/latency_final_*.csv`.
+Output mong đợi sau mỗi bước: `experiments/log.csv` (schema cố định), `calib/<model>_<tag>.json`
+(rounds, ε, noise_cells, 3 vai trò seed), `b0_filter.csv` + `b0_sets.csv` + `b0_star.json`,
+`keepdrop_<model>.csv` (39 dòng), `prune_pi_<model>.csv`, `prune_<model>.csv`, `wins/<model>.json` +
+`<model>_seed{k}.npz` (k = đúng số seed đã chạy), `latency_<model>.csv`, `champion.json`, `champion_log.csv`,
+`tfm_final.csv`, `autots_search.csv` + `autots_templates/`, `summary/fig_path_*`, `fig_traj_h{1,2,3}_*`,
+`fig_HM_*`, và ở Final: `summary/all_models_test.csv`, `fig_final_heatmaps.png`, `fig_final_paths_all_models.png`,
+`fig_final_traj_h{1,2,3}_all_models.png`, `latency_summary.csv`.
 
-## Kiểm tra hợp lý (dừng và báo user nếu vi phạm)
+## Vận hành
 
-- `MedianGain vs E0` của B0-306 và mọi model chỉ cỡ 0.05–0.3 pp; **Gain > ~1 pp vs B0/E0 → nghi leakage/bug**, không tin, chạy `checker`.
-- `std(ŷ) ≪ std(y)` là bình thường (tín hiệu 1 phút rất nhỏ). Prediction trông "phẳng" không phải lỗi.
-- `best_iteration` chạm trần 1200 → ghi chú, không đổi config.
-- Fold/TEST không được đọc chéo: TEST chỉ ở `final`, chạy đúng một lần, không sửa gì sau khi xem.
-- Latency chỉ để theo dõi; không đưa vào bất kỳ quyết định nào.
+- Chạy liên tục: phase trước PASS thì tự chạy phase sau, **không hỏi user giữa từng model**. Sau mỗi phase: cập nhật
+  ETA bằng thời gian thật, commit + push, ghi trạng thái vào `.claude/MEMORY.md` (Current Task / Exact Next Step).
+- SSH rớt: `tmux attach -t p0`, đọc `experiments/log.csv` + `wins/` để biết bước nào xong, resume từ bước hợp lệ kế
+  tiếp. **Không chạy lại `final`** nếu `summary/all_models_test.csv` đã có.
+- Kiểm tra hợp lý khi đọc kết quả: MedianGain vs E0 chỉ cỡ 0.05–0.3 pp; **Gain > ~1 pp → nghi leakage**, dừng và gọi
+  agent `checker`. `std(ŷ) ≪ std(y)` và forecast "phẳng" là bình thường. `best_iteration` chạm trần 1200 → ghi chú.
+- Agent: `checker` (verify độc lập, có quyền phủ quyết), `researcher` (audit API/version), `analyst` (đọc kết quả
+  thật sau full run), `infra` (GPU/env hỏng). Không tạo lại controller/coder/runner.
 
-## Báo cáo về cho user (cuối mỗi bước)
+## Chỉ DỪNG và hỏi user khi
 
-Bước nào, lệnh gì, thời gian chạy, GPU, file output, số liệu chính (MedianGain/WinRate/P10/Worst, ε, số vòng, quyết định KEEP/DROP/win/champion), điều bất thường, việc kế tiếp theo §8. Commit hash sau khi push.
+GPU backend không khả dụng cho một model bắt buộc · package/API thật lệch adapter mà không thể sửa nếu không đổi
+methodology · checksum/data mismatch · phát hiện leakage hoặc bug correctness mới · test fail mà muốn sửa phải đổi
+methodology · OOM/hết dung lượng không xử lý được bằng tinh chỉnh execution an toàn (batch, tail_bars, dọn cache).
+Ngoài ra: tự quyết và chạy tiếp.
+
+## Báo cáo (cuối mỗi phase và cuối run)
+
+Bước nào, lệnh gì, thời gian thật vs ETA, GPU, file output, số liệu chính (MedianGain/WinRate/P10/Worst, ε, số vòng,
+KEEP/DROP, win, đổi/giữ champion), điều bất thường, việc kế tiếp, commit hash sau khi push.

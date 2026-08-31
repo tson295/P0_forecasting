@@ -11,11 +11,10 @@ Trước đó (2026-08-29): harness đủ 8 model của §2.2 — visualize = fo
 
 ## Exact Next Step
 
-1. Đưa lên Vast: clone repo, scp `data/BTC_hf_1min.csv` + `data/BTC_lf_5min.csv`, mở session Claude mới với `docs/VAST_SESSION_PROMPT.md`; `bash scripts/vast_bootstrap.sh`; `python run.py check-data --config configs/p0_15d.json` phải in `verify … OK`.
-2. User quyết cho cài `timesfm[torch]==2.0.2` và `autots==1.0.4 + statsmodels` (plan §2.2: cài chỉ khi user cho phép). AutoTS CHƯA xác minh với pandas 3.0.3 → smoke import trước; TimesFM covariate cần thêm `jax[cpu]` + sklearn.
-3. User unlock training → `calibrate lgbm b0306` → `filter-b0` → `loop lgbm` (bắt buộc đầu tiên) → `xgb` → `cat` → `tfm` → `xgbrf` → `autots_wr` → `autots_mr` → `lstm` → `ensemble` → `final`.
-4. TFM-LoRA chỉ khi TFM thắng E0 (§2.2 #4c) — cần `transformers>=5.4` + `peft` + checkpoint thứ hai, và phải đo lại zero-shot bằng chính path `transformers`.
-5. Phục hồi data đầy đủ + scale data: chỉ khi user quyết (plan §5).
+1. Đưa lên Vast: clone repo, scp `data/BTC_hf_1min.csv` + `data/BTC_lf_5min.csv`, mở session Claude mới bằng `docs/VAST_SESSION_PROMPT.md` (prompt đó CHÍNH LÀ authorization chạy experiment).
+2. Preflight bắt buộc, fail-fast: `bash scripts/vast_bootstrap.sh` (resolve backend LightGBM gpu|cuda → ghi vào config; cài timesfm 2.0.2 + autots 1.0.4 + jax[cpu]; preflight XGB/Cat/torch; unit test) → `python scripts/vast_canary.py` (canary PACKAGE THẬT + ETA → `experiments/canary.json`) → `python run.py check-data` (verify sha256 + fold).
+3. Đủ 5 điều kiện (commit đúng · bootstrap · canary · check-data · pytest) → session TỰ sửa `TRAINING: UNLOCKED` rồi chạy: `calibrate lgbm b0306` → `filter-b0` → `loop lgbm/xgb/cat/tfm_b0/tfm_ext` → `tfm-final` → `loop xgbrf/autots_wr/autots_mr` → `autots-search` → `loop lstm` → `ensemble` → `final`.
+4. Phục hồi data đầy đủ + scale data: chỉ khi user quyết (plan §5).
 
 ## Decisions (mới nhất trước)
 

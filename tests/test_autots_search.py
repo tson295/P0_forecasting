@@ -62,7 +62,7 @@ def _prepare(tmp_path, store, folds, monkeypatch, ext_wr, ext_mr):
     monkeypatch.setattr(cli, "load_store", lambda c, **k: (store, folds, None, None))
     seen = []
 
-    def fake_search(df_tr, R_tr, template, num_validations, seed, autots_cls=None):
+    def fake_search(df_tr, R_tr, template, num_validations, seed, autots_cls=None, regressors=None):
         seen.append({"df_last": df_tr.index[-1], "n_bar": len(df_tr), "n_tmpl": len(template),
                      "nv": num_validations, "seed": seed, "R_cols": tuple(R_tr.columns)})
         name = "WindowRegression" if "window_size" in str(template.iloc[0].get("ModelParameters", "")) else "MultivariateRegression"
@@ -152,3 +152,26 @@ def test_probe_model_builder_is_callable_for_each_group(tmp_path):
     frozen = cli._autots_probe_model(cfg, "wr:30", allow_cpu=True,
                                      frozen=("WindowRegression", {"window_size": 30, "regression_type": "User"}))
     assert frozen.frozen[0] == "WindowRegression" and frozen.window_size == 30 and frozen.use_es is True
+
+
+def test_autots_backend_follows_resolved_lightgbm(tmp_path):
+    """Backend LightGBM đã resolve (config) phải chảy sang AutoTS-WR probe VÀ mọi template bake-off —
+    không được main LGBM chạy `cuda` còn AutoTS xin `gpu`."""
+    from p0.autots_search import gpu_regression_model
+
+    for lgb_dev in ("gpu", "cuda"):
+        cfg = RunConfig(dataset_label="synthetic_bk", hf_csv="a", lf_csv=None, val_days=["2026-01-03"],
+                        test_start="2026-01-04", root=str(tmp_path),
+                        models={"lgbm": {"device_type": lgb_dev}, "xgb": {"device": "cuda"},
+                                "autots_wr": {"window_size": 60}, "autots_mr": {}})
+        reg = cli.autots_regressors(cfg)
+        assert reg["LightGBM"]["device_type"] == lgb_dev and reg["xgboost"]["device"] == "cuda"
+        wr = cli._autots_probe_model(cfg, "wr:60", allow_cpu=False)
+        mr = cli._autots_probe_model(cfg, "mr", allow_cpu=False)
+        assert wr.regression_model["model_params"]["device_type"] == lgb_dev
+        assert mr.regression_model["model_params"]["device"] == "cuda"
+        # template của bake-off dùng cùng backend
+        assert gpu_regression_model("LightGBM", 1, reg)["model_params"]["device_type"] == lgb_dev
+        assert gpu_regression_model("xgboost", 1, reg)["model_params"]["device"] == "cuda"
+        # smoke/unit CPU vẫn ép cpu, không kéo backend GPU vào
+        assert "device_type" not in cli._autots_probe_model(cfg, "wr:60", allow_cpu=True).regression_model["model_params"]
