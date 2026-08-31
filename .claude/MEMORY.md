@@ -49,7 +49,40 @@ model nào đã xong; KHÔNG chạy lại `final` nếu đã có `summary/all_mo
 
 ## Experiment Findings
 
-(chưa có — chưa chạy experiment thật)
+(dataset 15d `btc_1min_15d_2026-01-18_02-02`, Vast RTX 3090, LightGBM device_type=cuda)
+
+- **Tín hiệu 1 phút gần như bằng 0, đúng như §6.8.** B0-306 gần trùng E0 (đa số ô hơi tệ hơn).
+  Sau B0\* thì base MedianGain vs E0: lgbm +0.0041, xgb +0.1079, cat +0.0076 pp. Không ô nào > 1 pp.
+- **B0-306 bị nhiễu chi phối**: 29/306 cột ĐƠN thắng cả B0-306 ở ≥ 2/3 horizon → B0\* = R4 (chỉ SA+, 72 cột)
+  thắng cả R1/R2/R3. PI+ chỉ có 22 cột, MI+ tới 280 (MI gần như không phân biệt được).
+- **39/39 candidate KEEP ở lgbm/xgb/cat**: không candidate nào tệ hơn −ε_m. Cái tách bạch là prune PI
+  (giữ 14 / 11 / 5 cột ext) — cả ba model đều chọn bản prune. Champion vẫn = lgbm sau 3 model.
+- **TimesFM + 72 covariate B0\* (nhánh tfm_b0) TỆ HƠN E0 rất nhiều: MedianGain vs E0 = −17.67 pp**
+  (từ −9.3 pp ở h1 đến −45.6 pp ở h3). ĐÃ KIỂM TRA, KHÔNG PHẢI BUG:
+  phần RMSE dôi ra so với E0 tăng TUYẾN TÍNH theo h (fold1: 2.33e-4 → 4.41e-4 → 6.68e-4 log-return
+  ≈ 1× / 1.9× / 2.9×) trong khi RMSE của E0 chỉ tăng ~√h ⇒ đúng dạng "một lượng drift giả gần như
+  hằng số mỗi bước bị cộng dồn bởi ŷ_h = Σ r̂". Biên độ ~2.3e-4/bước, NHỎ HƠN biến động 1 phút thật
+  (~5.3e-4) → không phải nổ số, sai dấu hay sai đơn vị. Cơ chế: xreg in-context của TimesFM fit 72
+  regressor yếu trên cửa sổ 512 điểm → β là nhiễu, nhiễu đó cộng vào từng bước one-step.
+  Canary đã verify ngữ nghĩa (mean head, 1 origin/call, cắt chuỗi bit-identical, covariate dịch 1 bar).
+  → Đây là kết quả thí nghiệm hợp lệ; `tfm-final` (so với nhánh native `tfm_ext`) chính là chỗ phân xử.
+
+### Thời gian THẬT đo được (thay cho ETA canary)
+
+| bước | đo được |
+|---|---|
+| calibrate lgbm b0306 | 42 s |
+| filter-b0 (PI + 306 SA + MI + 4 run) | 51m29s |
+| loop lgbm / xgb / cat | 9m04s / 7m11s / 16m48s |
+| **1 pass 5-fold của tfm_b0** (7.185 origin, 72 covariate, 1 origin/lời gọi) | **~36.8 phút** (~307 ms/origin) |
+
+ETA canary (245 h cho tfm_b0) bị thổi phồng vì `torch.compile` warm-up chia cho 8 origin. Nhưng ETA THẬT
+vẫn rất lớn vì **prune PI của model series phải chạy lại forecast**: `permutation_importance` gọi
+`predict_z` cho mỗi (cột ext × 3 lần xáo × 5 fold) — với tree đó là predict trên model đã lưu (8 giây),
+với TimesFM mỗi lần là MỘT pass đầy đủ. Nếu giữ cả 40 cột ext như 3 model tree thì prune PI = 120 pass.
+→ tfm_b0 ≈ 2 (xong) + 39 candidate + 1 + 120 (PI) + 1 (confirm) ≈ 163 pass ≈ **100 h ≈ 4,2 ngày**;
+tfm_ext cùng số pass nhưng ít covariate hơn nên rẻ hơn (~60–80 h). Tổng tới `final` ≈ **8 ngày** chạy liên tục.
+Theo prompt: ETA CHỈ để báo cáo — không dừng, không đổi thứ tự, không bỏ nhánh, không giảm covariate.
 
 ## Data / Implementation Blockers
 

@@ -21,3 +21,4 @@ W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]
 W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0] 
 /home/ubuntu/p0venv/lib/python3.12/site-packages/torch/_inductor/compile_fx.py:322: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
   warnings.warn(
+[p0 23:29:11] [tfm_b0] rounds=None ε=0.0050 pp; base MedianGain vs E0 = -17.6706
