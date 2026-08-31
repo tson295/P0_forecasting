@@ -1,0 +1,14 @@
+START 2026-08-31T20:49:08Z
+[p0 20:49:11] GPU preflight LightGBM: OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 20:49:11] calibrate lgbm trên b0306 (306 cột) — ES một lần (calib_seed = 8586)
+[p0 20:49:28] số vòng cố định: {'fold1_2026-01-27': (49, 2, 18), 'fold2_2026-01-28': (30, 22, 1), 'fold3_2026-01-29': (49, 17, 13), 'fold4_2026-01-30': (1, 9, 6), 'fold5_2026-01-31': (63, 12, 5)}
+[p0 20:49:28] ε: 3 evaluation seed [8587, 8588, 8589] với số vòng cố định (không seed nào làm mốc)
+[p0 20:49:49] ε_lgbm = 0.0656 pp (RMS nhiễu 15 ô; min 0.0049, max 0.1184) → /workspace/P0_forecasting/experiments/calib/lgbm_b0306.json
+
+real	0m41.604s
+user	6m1.052s
+sys	0m2.466s
+STEP_EXIT=0
+END 2026-08-31T20:49:50Z

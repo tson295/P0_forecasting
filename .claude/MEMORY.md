@@ -5,16 +5,24 @@ TRAINING: UNLOCKED
 
 ## Current Task
 
-2026-08-31: sửa protocol seed/calibration theo quyết định user (xem Decisions). `config` có `calib_seed` / `eval_seeds` / `selection_seed`; `metrics.seed_noise_cells` + `seed_noise_eps` theo công thức mới; `harness.seed_noise` trả (ε, bảng noise 15 ô, runs) và `run_at_seed` để tái dùng run ở selection_seed; `cli` dùng đúng vai trò từng seed ở calibrate / filter-b0 / loop / final; calib JSON ghi `noise_cells` + 3 vai trò seed. 87 unit test PASS, smoke e2e PASS (log.csv xác nhận: calibrate/filter_b0/loop/final chỉ dùng selection_seed, confirm dùng đúng 3 eval seed).
+2026-08-31 (Vast RTX 3090, session chạy end-to-end theo `docs/VAST_SESSION_PROMPT.md`): **PHASE A XONG**.
+- Preflight PASS: bootstrap · canary package thật 16/16 · check-data (mọi số khớp + sha256 OK) · pytest 109.
+- `calibrate lgbm b0306` (42 s): `15fixed_306` = fold1 (49,2,18) fold2 (30,22,1) fold3 (49,17,13) fold4 (1,9,6)
+  fold5 (63,12,5); **ε_LGBM(B0-306) = 0.0656 pp** (noise ô 0.005–0.118).
+- `filter-b0` (51m29s): PI+ = 22 cột, SA+ = 72, MI+ = 280. Kiểm chứng vs B0-306 (MedianGain, 15 ô):
+  R1 (289) −0.0020 · R2 (80) +0.0098 · R3 (22) −0.0249 · **R4 (72) +0.0636 → B0\* = R4**.
+  Cả 4 bộ đều ≥ −ε nên đều eligible; R4 cao nhất.
 
-Trước đó (2026-08-29): harness đủ 8 model của §2.2 — visualize = forecast path một origin (x = t..t+3, y = P̂ − C_t); TimesFM + AutoTS implement theo `docs/reference/audit_*.md` (package chưa cài, test bằng stub); PI prune chạy được cho LSTM (SeqBatch.perm) và TimesFM/AutoTS (SeriesBatch.perm); rà tree pipeline 40 kiểm tra đều đúng, chỉ đổi XGBRFRegressor (deprecated) → XGBRegressor num_parallel_tree (bit-exact).
+Trước đó (2026-08-31, code): protocol seed/calibration 3 vai trò (`calib_seed` / `eval_seeds` / `selection_seed`).
+Trước đó (2026-08-29): harness đủ 8 model của §2.2; TimesFM + AutoTS theo `docs/reference/audit_*.md`.
 
 ## Exact Next Step
 
-1. Đưa lên Vast: clone repo, scp `data/BTC_hf_1min.csv` + `data/BTC_lf_5min.csv`, mở session Claude mới bằng `docs/VAST_SESSION_PROMPT.md` (prompt đó CHÍNH LÀ authorization chạy experiment).
-2. Preflight bắt buộc, fail-fast: `bash scripts/vast_bootstrap.sh` (resolve backend LightGBM gpu|cuda → ghi vào config; cài timesfm 2.0.2 + autots 1.0.4 + jax[cpu]; preflight XGB/Cat/torch; unit test) → `python scripts/vast_canary.py` (canary PACKAGE THẬT + ETA → `experiments/canary.json`) → `python run.py check-data` (verify sha256 + fold).
-3. Đủ 5 điều kiện (commit đúng · bootstrap · canary · check-data · pytest) → session TỰ sửa `TRAINING: UNLOCKED` rồi chạy: `calibrate lgbm b0306` → `filter-b0` → `loop lgbm/xgb/cat/tfm_b0/tfm_ext` → `tfm-final` → `loop xgbrf/autots_wr/autots_mr` → `autots-search` → `loop lstm` → `ensemble` → `final`.
-4. Phục hồi data đầy đủ + scale data: chỉ khi user quyết (plan §5).
+Đang chạy Phase B (§8 bước 3), tuần tự, không dừng xin duyệt:
+`loop lgbm` (đang chạy) → `xgb` → `cat` → `tfm_b0` → `tfm_ext` → `tfm-final` → `xgbrf` →
+`autots_wr` → `autots_mr` → `autots-search` → `lstm`; rồi Phase C: `ensemble` → `final` (TEST một lần).
+Resume sau khi rớt SSH: `tmux attach -t p0`; đọc `experiments/log.csv` + `experiments/wins/*.json` để biết
+model nào đã xong; KHÔNG chạy lại `final` nếu đã có `summary/all_models_test.csv`.
 
 ## Decisions (mới nhất trước)
 

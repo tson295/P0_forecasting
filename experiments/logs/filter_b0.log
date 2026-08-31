@@ -1,0 +1,29 @@
+START 2026-08-31T20:50:15Z
+[p0 20:50:17] GPU preflight LightGBM: OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 20:50:18] (a) PI: run baseline B0-306 (15fixed_306, selection_seed 8587) giữ state rồi xáo 306 cột × 3 lần trong VAL
+[p0 20:50:25]    |RMSE base − RMSE calibrate| tối đa 0.0005% (cùng config + selection_seed → phải ≈ 0)
+[p0 20:50:54] (b) SA: 306 model 1 cột (ES, selection_seed) — vs E0 và vs B0-306
+[p0 20:53:50]   SA 25/306 fine:t-32m:candle_return
+[p0 20:56:50]   SA 50/306 fine:t-16m:close_position
+[p0 20:59:45]   SA 75/306 fine:t-8m:log_volume_delta
+[p0 21:02:47]   SA 100/306 fine:t-4m:log_rv5_rv60
+[p0 21:05:39]   SA 125/306 fine:t-2m:time_of_day_sin
+[p0 21:08:34]   SA 150/306 fine:t-1m:macd_hist_5_20_7_volnorm
+[p0 21:11:33]   SA 175/306 fine:t:hma_slope16_volnorm
+[p0 21:14:43]   SA 200/306 coarse:t-256m:rv8
+[p0 21:17:44]   SA 225/306 coarse:t-64m:return8
+[p0 21:20:50]   SA 250/306 coarse:t-32m:log_rv8_rv64
+[p0 21:23:51]   SA 275/306 coarse:t-8m:body8
+[p0 21:26:57]   SA 300/306 coarse:t:time_of_day_cos
+[p0 21:27:41] (c) MI trên FIT (null xáo trộn)
+[p0 21:41:28] CỜ ĐỎ: 29 cột đơn thắng B0-306 (≥ 2/3 horizon) — B0 bị nhiễu chi phối; R3/R4 sẽ tự thắng ở kiểm chứng
+[p0 21:41:28] kiểm chứng R1–R4 (15fixed_306): R1=289, R2=80, R3=22, R4=72
+[p0 21:41:44] B0* = R4 (72 cột) → experiments/b0_star.json
+
+real	51m29.403s
+user	526m12.449s
+sys	2m13.243s
+STEP_EXIT=0
+END 2026-08-31T21:41:44Z
