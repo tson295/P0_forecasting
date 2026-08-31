@@ -32,7 +32,7 @@ from .latency import measure_tabular
 from .logs import load_preds, log_champion, log_latency, log_run, new_exp_id, save_run
 from .loop import (add_one_loop, compare, confirm, decide_win, ensemble_rmse, inverse_mse_weights, load_champion, prune_pi,
                    save_champion)
-from .metrics import cell_metrics, e0_rmse, gain_pp, summarize
+from .metrics import cell_metrics, e0_rmse, gain_pp, mean_rmse_over_seeds, seed_noise_cells, seed_noise_eps, summarize
 from .models import make_model
 from .palette import LABEL
 from .split import Partition, check_fold, make_final, make_folds, utc_ts
@@ -149,8 +149,8 @@ def model_for(cfg: RunConfig, name: str, allow_cpu: bool):
     params = _params_for(cfg, name)
     if allow_cpu:  # smoke/unit: ép CPU rõ ràng
         params = {k: v for k, v in params.items() if k not in ("device_type", "device", "task_type")}
-        params.update({"lgbm": {"device_type": "cpu"}, "xgb": {"device": "cpu"}, "xgbrf": {"device": "cpu"}, "cat": {"task_type": "CPU"},
-                       "lstm": {"device": "cpu"}}.get(name, {}))
+        # mặc định ép `device="cpu"` cho mọi model (xgb, xgbrf, lstm, tfm/tfm_b0/tfm_ext, autots_*); lgbm/cat dùng khoá riêng
+        params.update({"lgbm": {"device_type": "cpu"}, "cat": {"task_type": "CPU"}}.get(name, {"device": "cpu"}))
     return make_model(name, params, allow_cpu=allow_cpu)
 
 
@@ -411,7 +411,9 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     win_dir = exp / "wins"
     win_dir.mkdir(parents=True, exist_ok=True)
     win_payload = {"model": mname, "colset": win.colset.to_dict(), "rmse_mean": win.rmse_mean.tolist(), "e0": win.e0.tolist(), "eps": eps,
-                   "best_iters_by_seed": [b.tolist() for b in win.best_iters], "eval_seeds": list(cfg.eval_seeds), "which": which,
+                   "best_iters_by_seed": [b.tolist() for b in win.best_iters],
+                   # seed THỰC SỰ đã chạy ở confirmation (model tất định như TimesFM chỉ có 1) — phải khớp số file *_seedK.npz
+                   "eval_seeds": [int(r.seed) for r in win.runs], "which": which,
                    "folds": [f.name for f in folds],
                    "median_gain_vs_e0": float(np.median(gain_pp(win.rmse_mean, win.e0)))}
     (win_dir / f"{mname}.json").write_text(json.dumps(win_payload, indent=1), encoding="utf-8")
@@ -555,6 +557,10 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
     """§2.2 #6 (iii) — chạy framework AutoTS trên HAI feature set đã freeze → AutoTS-final.
 
     Input = `wins/autots_wr.json` và `wins/autots_mr.json` (feature set sau prune + confirmation của từng probe).
+    Vai trò seed (§1.3): template search + **chọn candidate** chạy ở `selection_seed`; sau khi AutoTS-final đã FREEZE
+    (feature set + template từng fold) mới chạy lại trên 3 `eval_seeds` để lấy RMSE̅, noise, **ε của chính AutoTS-final**
+    và prediction seed0/1/2 cho ensemble.
+
     Với mỗi frozen set (F_WR_best / F_MR_best; dedup nếu trùng) và mỗi nhóm shift: mỗi fold chạy `AutoTS` với
     `initial_template` do ta khai báo (mọi dòng GPU) + `max_generations=0` **chỉ trên training-side (FIT+ES,
     kết thúc trước purge 60')** → template thắng được FREEZE → refit + rolling predict outer VAL bằng ModelMonster.
@@ -563,22 +569,19 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
     """
     gate(cfg, args, ["autots_wr", "autots_mr"])
     exp = cfg.exp_dir
-    frozen_sets, eps_by_set = {}, {}
+    frozen_sets = {}
     for m in ("autots_wr", "autots_mr"):  # kiểm tra TRƯỚC khi đọc data: framework chỉ chạy sau khi feature set đã freeze
         p = exp / "wins" / f"{m}.json"
         if not p.exists():
             sys.exit(f"Thiếu {p} — phải chạy `loop --model {m}` (add-one → prune → confirmation) trước; "
                      "win sau confirmation chính là feature set được freeze.")
         w = json.loads(p.read_text(encoding="utf-8"))
-        key = f"F_{m.split('_')[1].upper()}_best"
-        frozen_sets[key] = ColSet.from_dict(w["colset"])
-        eps_by_set[key] = float(w["eps"])
+        frozen_sets[f"F_{m.split('_')[1].upper()}_best"] = ColSet.from_dict(w["colset"])
     store, folds, _, _ = load_store(cfg)
     names = list(frozen_sets)
     if frozen_sets[names[0]].names == frozen_sets[names[1]].names:
         say(f"{names[0]} và {names[1]} trùng nhau → dedup, chỉ chạy framework một lần")
         frozen_sets = {f"{names[0]}={names[1]}": frozen_sets[names[0]]}
-        eps_by_set = {f"{names[0]}={names[1]}": eps_by_set[names[0]]}
     groups, nv = autots_search_cfg(cfg)
     say(f"bake-off: {sum(len(v) for v in groups.values())} template / {len(groups)} nhóm shift {list(groups)}, "
         f"num_validations={nv}, {len(frozen_sets)} frozen set × {len(folds)} fold")
@@ -600,52 +603,65 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
                 except Exception:
                     pass
                 say(f"[{set_name}|{group}|{f.name}] template thắng: {name}")
-            # outer VAL: template đã freeze, 3 evaluation seed (search chỉ chạy ở selection_seed — search là bước selection)
-            tables, preds_by_seed, e0_rows = [], [], []
-            for k, sd in enumerate(cfg.eval_seeds):
-                fold_rmse, preds = [], []
-                for f in folds:
-                    m = _autots_probe_model(cfg, group, args.allow_cpu, frozen=frozen_by_fold[f.name])
-                    r = run_config(store, m, colset, [f], rounds=None, seed=sd, keep_states=True)
-                    fold_rmse.append(r.rmse[0])
-                    preds.append(r.preds()[0])
-                    if k == 0:
-                        e0_rows.append(r.e0[0])  # E0 theo TỪNG fold (không phụ thuộc seed, không được nhân bản fold đầu)
-                tables.append(np.array(fold_rmse))
-                preds_by_seed.append(preds)
-            rmse_mean = np.mean(tables, axis=0)
-            e0_tab = np.array(e0_rows)
+            # CHỌN candidate: chấm outer VAL ở ĐÚNG `selection_seed` (§1.3 — không dùng mean 3 eval seed để chọn)
+            fold_rmse, e0_rows = [], []
+            for f in folds:
+                m = _autots_probe_model(cfg, group, args.allow_cpu, frozen=frozen_by_fold[f.name])
+                r = run_config(store, m, colset, [f], rounds=None, seed=cfg.sel_seed, keep_states=False)
+                fold_rmse.append(r.rmse[0])
+                e0_rows.append(r.e0[0])  # E0 theo TỪNG fold (không phụ thuộc seed)
+            rmse_sel, e0_tab = np.array(fold_rmse), np.array(e0_rows)
             key = f"{set_name}|{group}"
-            cands[key] = {"set": set_name, "group": group, "colset": colset, "rmse_mean": rmse_mean, "e0": e0_tab,
-                          "preds_by_seed": preds_by_seed, "templates": frozen_by_fold}
-            g = float(np.median(gain_pp(rmse_mean, e0_tab)))
+            cands[key] = {"set": set_name, "group": group, "colset": colset, "rmse_sel": rmse_sel, "e0": e0_tab,
+                          "templates": frozen_by_fold}
+            g = float(np.median(gain_pp(rmse_sel, e0_tab)))
             rows.append({"candidate": key, "set": set_name, "group": group, "n_ext": len(colset.ext),
-                         "MedianGain_vs_E0": round(g, 4), "rmse_mean": _cells(rmse_mean),
+                         "MedianGain_vs_E0_sel": round(g, 4), "rmse_selection_seed": _cells(rmse_sel),
                          "templates": "|".join(sorted({v[0] for v in frozen_by_fold.values()}))})
-            say(f"[{key}] outer VAL: MedianGain vs E0 = {g:+.4f} pp")
-    pd.DataFrame(rows).to_csv(exp / "autots_search.csv", index=False)
-    final_key = max(cands, key=lambda k: float(np.median(gain_pp(cands[k]["rmse_mean"], cands[k]["e0"]))))
+            say(f"[{key}] outer VAL @ selection_seed {cfg.sel_seed}: MedianGain vs E0 = {g:+.4f} pp")
+    final_key = max(cands, key=lambda k: float(np.median(gain_pp(cands[k]["rmse_sel"], cands[k]["e0"]))))
     fin = cands[final_key]
-    say(f"AutoTS-final = {final_key} ({len(fin['colset'].ext)} cột ext) — chọn bằng metric project trên outer VAL")
+    say(f"AutoTS-final = {final_key} ({len(fin['colset'].ext)} cột ext) — chọn ở selection_seed {cfg.sel_seed}")
+    # CONFIRMATION: winner đã FREEZE (feature set + template từng fold) → chạy lại trên 3 evaluation seed
+    tables, preds_by_seed = [], []
+    for sd in cfg.eval_seeds:
+        fold_rmse, preds = [], []
+        for f in folds:
+            m = _autots_probe_model(cfg, fin["group"], args.allow_cpu, frozen=fin["templates"][f.name])
+            r = run_config(store, m, fin["colset"], [f], rounds=None, seed=sd, keep_states=True)
+            fold_rmse.append(r.rmse[0])
+            preds.append(r.preds()[0])
+        tables.append(np.array(fold_rmse))
+        preds_by_seed.append(preds)
+    rmse_mean = mean_rmse_over_seeds(tables)
+    noise = seed_noise_cells(tables)
+    eps = seed_noise_eps(tables, cfg.eps_floor_pp)  # ε của CHÍNH AutoTS-final, không mượn ε của probe
+    g_fin = float(np.median(gain_pp(rmse_mean, fin["e0"])))
+    say(f"AutoTS-final confirmation {list(cfg.eval_seeds)}: MedianGain vs E0 = {g_fin:+.4f} pp, ε = {eps:.4f} pp")
+    for r_ in rows:
+        if r_["candidate"] == final_key:
+            r_.update({"is_final": True, "MedianGain_vs_E0_confirm": round(g_fin, 4), "eps_autots_final": round(eps, 5)})
+    pd.DataFrame(rows).to_csv(exp / "autots_search.csv", index=False)
     win_dir = exp / "wins"
     win_dir.mkdir(parents=True, exist_ok=True)
-    eps = eps_by_set.get(fin["set"], next(iter(eps_by_set.values())))
     payload = {"model": "autots", "role": "AutoTS-final", "source": final_key, "group": fin["group"],
                "colset": fin["colset"].to_dict(),
-               "rmse_mean": fin["rmse_mean"].tolist(), "e0": fin["e0"].tolist(), "eps": eps,
-               "eval_seeds": list(cfg.eval_seeds), "folds": [f.name for f in folds],
+               "rmse_mean": rmse_mean.tolist(), "e0": fin["e0"].tolist(), "eps": eps,
+               "noise_cells": np.round(noise, 5).tolist(), "seed_rmse": [t.tolist() for t in tables],
+               "rmse_selection_seed": fin["rmse_sel"].tolist(), "selection_seed": cfg.sel_seed,
+               "eval_seeds": [int(sd) for sd in cfg.eval_seeds], "folds": [f.name for f in folds],
                "templates_per_fold": {k: v[0] for k, v in fin["templates"].items()},
-               "median_gain_vs_e0": float(np.median(gain_pp(fin["rmse_mean"], fin["e0"])))}
+               "median_gain_vs_e0": g_fin}
     (win_dir / "autots.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
-    for k, preds in enumerate(fin["preds_by_seed"]):
+    for k, preds in enumerate(preds_by_seed):
         np.savez_compressed(win_dir / f"autots_seed{k}.npz", **{f"idx_{i}": p[0] for i, p in enumerate(preds)},
                             **{f"yhat_{i}": p[1] for i, p in enumerate(preds)})
     _log(cfg, exp_id=new_exp_id("autots_search", "autots"), step="autots_search", model="autots", seed=cfg.sel_seed,
          colset="|".join(fin["colset"].ext), n_cols=len(fin["colset"].names), rounds="bake-off template",
-         base="E0", MedianGain=round(payload["median_gain_vs_e0"], 4), rmse_cells=_cells(fin["rmse_mean"]),
-         e0_cells=_cells(fin["e0"]), decision=f"AutoTS-final={final_key}",
-         note=f"{sum(len(v) for v in groups.values())} template / {len(groups)} nhóm, nv={nv}")
-    champion_step(cfg, "autots", fin["colset"], fin["rmse_mean"], fin["e0"], eps, {"win": "autots_final"})
+         base="E0", MedianGain=round(g_fin, 4), rmse_cells=_cells(rmse_mean), e0_cells=_cells(fin["e0"]),
+         decision=f"AutoTS-final={final_key}",
+         note=f"chọn @seed {cfg.sel_seed}; confirmation {list(cfg.eval_seeds)}; ε={eps:.4f}")
+    champion_step(cfg, "autots", fin["colset"], rmse_mean, fin["e0"], eps, {"win": "autots_final"})
 
 
 def champion_step(cfg: RunConfig, mname: str, colset: ColSet, rmse_mean: np.ndarray, e0: np.ndarray, eps: float,

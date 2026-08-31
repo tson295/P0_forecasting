@@ -110,13 +110,21 @@ def test_search_two_sets_independent_outer_clean_and_project_metric(tmp_path, st
         assert s["df_last"] <= pd.Timestamp(f.es.end, unit="s") - pd.Timedelta(minutes=1)
         assert s["df_last"] <= val_start - pd.Timedelta(minutes=60)
 
-    # G10: AutoTS-final chọn bằng metric project (MedianGain vs E0 trên outer VAL), không phải điểm nội bộ AutoTS
+    # G10: AutoTS-final chọn bằng metric project (không phải điểm nội bộ AutoTS), và chọn Ở SELECTION_SEED
     df = pd.read_csv(exp / "autots_search.csv")
     assert len(df) == n_sets * n_groups
     win = json.loads((exp / "wins" / "autots.json").read_text(encoding="utf-8"))
     assert win["model"] == "autots" and win["role"] == "AutoTS-final"
-    assert win["source"] == df.loc[df["MedianGain_vs_E0"].idxmax(), "candidate"]
-    assert np.isclose(win["median_gain_vs_e0"], df["MedianGain_vs_E0"].max(), atol=1e-3)
+    assert win["source"] == df.loc[df["MedianGain_vs_E0_sel"].idxmax(), "candidate"]  # chọn theo cột @selection_seed
+    assert win["selection_seed"] == cfg.sel_seed and win["eval_seeds"] == list(cfg.eval_seeds)
+    # ε của AutoTS-final tính từ CHÍNH 3 bảng RMSE của nó, không mượn ε của probe (probe eps = 0.02)
+    from p0.metrics import seed_noise_cells, seed_noise_eps
+
+    tabs = [np.array(t) for t in win["seed_rmse"]]
+    assert len(tabs) == len(cfg.eval_seeds)
+    assert np.allclose(win["noise_cells"], np.round(seed_noise_cells(tabs), 5), atol=1e-4)
+    assert np.isclose(win["eps"], seed_noise_eps(tabs, cfg.eps_floor_pp))
+    assert np.allclose(win["rmse_mean"], np.mean(tabs, axis=0))
     assert len(win["templates_per_fold"]) == n_folds  # template freeze theo TỪNG fold
     assert (exp / "wins" / "autots_seed0.npz").exists() and (exp / "wins" / "autots_seed1.npz").exists()
 
