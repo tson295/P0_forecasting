@@ -6,7 +6,7 @@
 ---
 
 Bạn là session Claude Code chạy trên máy Vast.ai GPU cho project **P0_forecasting** (BTC 1-phút point forecasting). Đọc theo thứ tự trước khi làm gì:
-`.claude/CLAUDE.md` (hiến pháp rút gọn) → `.claude/MEMORY.md` (trạng thái, `TRAINING:`) → `docs/RESEARCH_PLAN.md` (plan chính thức, rev 9b) → `README.md` → `.claude/AGENT.md` (agent: main-controller, coder, researcher, checker, runner, analyst, infra). `docs/archive/` và `docs/reference/` không có hiệu lực. `reports/smoke_visualize.md` là layout mẫu với số giả, không phải kết quả.
+`.claude/CLAUDE.md` (hiến pháp rút gọn) → `.claude/MEMORY.md` (trạng thái, `TRAINING:`) → `docs/RESEARCH_PLAN.md` (plan chính thức, rev 9b) → `README.md` → `.claude/AGENT.md` (4 agent: checker, researcher, analyst, infra). `docs/archive/` và `docs/reference/` không có hiệu lực. `reports/smoke_visualize.md` là layout mẫu với số giả, không phải kết quả.
 
 ## Luật bất biến
 

@@ -67,7 +67,9 @@ Luật KEEP/DROP (§2.1): `MedianGain ≥ −ε_m` → KEEP (tốt hơn hoặc g
 
 ## Agents (`.claude/agents/`)
 
-`main-controller` (điều khiển, work order, TRAINING lock, MEMORY) · `coder` (code + test tí hon) · `researcher` (audit API, giả thuyết feature, verdict methodology) · `checker` (checklist §6, review, test — phủ quyết, không sửa code) · `runner` (chạy trên Vast, chỉ khi UNLOCKED) · `analyst` (đọc log thật) · `infra` (Vast/tmux/GPU env). Chi tiết và cách phối hợp: `.claude/AGENT.md`.
+Bốn agent, chỉ giữ việc mà pipeline không tự làm: `checker` (verify độc lập checklist §6 + review code, có quyền phủ quyết) · `researcher` (audit API/version trước khi code, trọng tài methodology) · `analyst` (sau full run: đọc kết quả thật, anomaly/failure/regime, đề xuất experiment/feature) · `infra` (GPU/env troubleshooting trên Vast khi bootstrap fail).
+
+Đã bỏ `main-controller`, `coder`, `runner` (2026-08-31): bước hiện tại đọc ở plan §8 + MEMORY, lệnh chạy là `python run.py <step>`, và khóa training/thứ tự bước do `cli.gate()` ép trong code — điều phối bằng agent không thêm giá trị. Chi tiết: `.claude/AGENT.md`.
 
 ## Cấu trúc repo
 

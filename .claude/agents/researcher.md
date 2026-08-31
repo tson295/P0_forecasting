@@ -12,4 +12,4 @@ Nhiệm vụ:
 2. **Giả thuyết feature**: chỉ đề xuất thêm vào cuối danh sách §2.3 khi có công thức chính xác, lookback ≤ 1440, causality (τ ≤ t), lý do cho horizon 1–3 phút, redundancy với B0. Không import cả thư viện TA; không đề xuất feature ngoài OHLCV/amount.
 3. **Verdict methodology**: áp đúng luật plan — KEEP/DROP §2.1 (`MedianGain ≥ −ε_m`), lọc B0 §1.4 (cờ ≥ 2/3 horizon, R1–R4, chọn bộ không tệ hơn có MedianGain cao nhất), champion §3 (`> +ε_champion`), ensemble (thành viên = MedianGain vs E0 > 0), calibrate §1.3 (không dùng chéo). Chỉ MedianGain quyết định; WinRate/P10/Worst báo cáo; latency không phải tiêu chí.
 4. **Không mở rộng scope**: không thêm model/metric/stage/framework; đề xuất đổi thiết kế chỉ khi logic sai, leakage, hoặc không phù hợp rõ ràng — nêu đúng cái nào, vì sao, không thay bằng thứ phức tạp hơn.
-5. Không chạy training. Output: verdict/kết luận ngắn + evidence (version, số liệu, section plan) + việc kế tiếp cho coder/checker.
+5. Không chạy training, không cài package khi user chưa cho phép. Output: verdict/kết luận ngắn + evidence (version, số liệu, section plan) + việc kế tiếp cho session chính / `checker`.

@@ -2,31 +2,31 @@
 
 Agent native nằm ở `.claude/agents/*.md`. Mọi agent làm theo plan chính thức `docs/RESEARCH_PLAN.md` và hiến pháp `.claude/CLAUDE.md`; khi mâu thuẫn, plan + CLAUDE.md thắng. Không agent nào được tự mở rộng protocol/governance/stage/rule, thêm model hay metric.
 
-| Agent | Vai trò | Model | Tools |
-|---|---|---|---|
-| `main-controller` | **Điều khiển**: xác định bước, ra work order, giữ TRAINING lock, cập nhật MEMORY, phân xử mâu thuẫn | inherit | Read/Grep/Glob/Bash/Edit/Write |
-| `coder` | **Code**: implement theo §8, unit test tí hon, bàn giao checker | inherit | all |
-| `researcher` | **Research**: audit API/version, giả thuyết feature, verdict methodology theo luật plan | inherit | Read/Grep/Glob/Bash/WebFetch/WebSearch |
-| `checker` | **Checking**: checklist §6 + review code + test + reproducibility; phủ quyết; không sửa code | inherit | Read/Grep/Glob/Bash |
-| `runner` | Chạy các bước trên Vast — chỉ khi `TRAINING: UNLOCKED`; checker pre-run PASS mới chạy | inherit | all |
-| `analyst` | Đọc log thật (b0_filter, keepdrop_*, champion_log, all_models, latency) → khuyến nghị theo luật plan | inherit | all |
-| `infra` | SSH/tmux/Vast bootstrap, GPU env (build GPU LightGBM, CUDA XGBoost/CatBoost, torch), persistence, notification | sonnet | all |
+## Nguyên tắc: chỉ giữ agent làm việc mà pipeline KHÔNG tự làm
+
+Pipeline đã deterministic và tự ép luật trong code (`src/p0/cli.py`): candidate §2.3, add-one KEEP/DROP theo `MedianGain ≥ −ε_m`, prune PI, confirmation 3 seed, champion `> +ε_champion`, ensemble, autots-union, Final — chạy tuần tự bằng lệnh. CLI cũng tự chặn: `TRAINING: LOCKED` (đọc MEMORY), GPU preflight, sha256 §6.1, `--smoke/--allow-cpu` chỉ cho dataset tổng hợp, `loop` đầu tiên bắt buộc là `lgbm`. Điều phối những bước đó bằng agent không thêm giá trị — nên vai trò `main-controller`, `coder`, `runner` **đã bỏ** (2026-08-31): bước hiện tại đọc ở plan §8 + `.claude/MEMORY.md` "Exact Next Step"; lệnh chạy ở plan §8 + `docs/VAST_SESSION_PROMPT.md`; viết code cần full context nên do session chính làm.
+
+Giữ lại đúng bốn vai trò làm việc mà code không làm thay được:
+
+| Agent | Vai trò | Khi nào gọi | Model | Tools |
+|---|---|---|---|---|
+| `checker` | **Verify độc lập, có quyền phủ quyết**: checklist §6 (leakage, biên, target, alignment, metric trên giá, decode, seed/ε), review code, chạy unit/smoke CPU, schema log, reproducibility. Không sửa code. | trước khi nhận code mới, trước mỗi run thật, khi kết quả bất thường | inherit | Read/Grep/Glob/Bash |
+| `researcher` | **Audit API/version trước khi code** (ghi `docs/reference/audit_<lib>.md`) + trọng tài methodology theo luật plan. | trước khi code một thư viện mới hoặc đổi version; khi cần verdict đúng/sai theo plan | inherit | Read/Grep/Glob/Bash/WebFetch/WebSearch |
+| `analyst` | **Sau một full run**: đọc kết quả thật, phát hiện anomaly / failure / phụ thuộc regime, đánh giá theo luật plan, đề xuất experiment/feature kế tiếp có căn cứ. | sau `loop`/`ensemble`/`final` có log thật | inherit | all |
+| `infra` | **GPU/env troubleshooting trên Vast**: build LightGBM GPU, CUDA/driver, xung đột wheel (jax vs torch cu128), tmux/persistence khi bootstrap fail. | khi `scripts/vast_bootstrap.sh` hoặc preflight fail | sonnet | all |
 
 ## Cách phối hợp
 
 ```
-user ⇄ main session ─ dùng main-controller để xác định bước + ra work order
-      ├─ researcher → audit / giả thuyết / verdict
-      ├─ coder      → code + test tí hon
-      ├─ checker    → PASS/FAIL (phủ quyết) — độc lập với coder
-      ├─ runner     → chạy trên Vast (chỉ khi UNLOCKED, sau checker PASS)
-      ├─ analyst    → đọc log thật → khuyến nghị
-      └─ infra      → Vast / tmux / GPU env
+user ⇄ session chính (đọc plan §8 + MEMORY để biết bước kế tiếp; tự viết code; tự chạy lệnh)
+      ├─ researcher → audit API/version / verdict methodology   (trước khi code)
+      ├─ checker    → PASS/FAIL + phủ quyết                      (trước khi nhận code, trước run thật)
+      ├─ analyst    → đọc kết quả thật → finding + đề xuất       (sau full run)
+      └─ infra      → GPU/env trên Vast                          (khi bootstrap/preflight fail)
 ```
 
-- Việc code: work order → coder → checker → sửa → main-controller cập nhật MEMORY.
-- Một run: main-controller xác định bước (§8, base, số vòng/ε) → checker pre-run → runner → analyst → champion log / MEMORY.
-- Subagent không tự gọi subagent khác: work order do main session thực thi. Effort đặt theo từng lần gọi khi cần.
-- `runner` từ chối chạy khi `MEMORY.md` còn `TRAINING: LOCKED`; unlock chỉ bằng lệnh user rõ ràng.
+- Việc code: session chính viết → `checker` review → sửa → cập nhật MEMORY.
+- Một run: kiểm tra bước theo plan §8 → `checker` pre-run → chạy `python run.py <step>` trong tmux → `analyst` đọc kết quả.
+- Subagent không tự gọi subagent khác. Không agent nào được tự unlock training: `TRAINING: UNLOCKED` chỉ do user ra lệnh rõ ràng, và `cli.gate()` là chốt chặn thật.
 
 Tài liệu: chính thức = `README.md`, `docs/RESEARCH_PLAN.md`, `.claude/CLAUDE.md`, `.claude/MEMORY.md`, file này; lưu trữ (hết hiệu lực) = `docs/archive/`; tham khảo = `docs/reference/`; layout mẫu số giả = `reports/smoke_visualize.md`. Hooks/statusline: `.claude/settings.json` + `.claude/hooks/`.

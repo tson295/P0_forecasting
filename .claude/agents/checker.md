@@ -15,8 +15,10 @@ Checklist (= §6 plan, mở rộng cho code):
 5. **Biên**: FIT/ES/VAL rời nhau (§1.2); purge 60' giữa ES và VAL và giữa train cuối và TEST.
 6. **Metric**: trên giá sau decode + `exp`, không z-space; base của Gain ghi rõ (S_m / B0-306 / B0* / E0 / champion); MedianGain 15 ô; AutoTS chấm đúng tập origin đã khai báo.
 7. **Decode**: `TargetTransform.decode` với rv60 đúng origin rồi `exp`; round-trip khớp; TimesFM/AutoTS cộng dồn one-step đúng thứ tự trước `exp`.
-8. **Calibrate/số vòng** (§1.3): mỗi model dùng đúng `15fixed_m` / `fixed_epoch_LSTM` của chính nó calibrate trên đúng feature set của phase; `15fixed_306` chỉ cho R1–R4; không dùng chéo; ε_m đúng model.
-9. **Hợp lý**: `std(ŷ) ≪ std(y)` là bình thường; Gain > ~1 pp vs B0/E0 → nghi leakage; latency pass (§7.4) không đổi prediction (assert batch == batch-1); figure §7.3 vài origin không lệch pha.
+8. **Calibrate/số vòng + vai trò seed** (§1.3): mỗi model dùng đúng `15fixed_m` / `fixed_epoch_LSTM` của chính nó calibrate trên đúng feature set của phase; `15fixed_306` chỉ cho R1–R4; không dùng chéo; ε_m đúng model. Seed: `calib_seed` CHỈ ở run ES; ε đo bằng 3 `eval_seeds` với `noise_cell = 100·std(ddof=0)/mean` từng ô → `ε = max(floor, RMS 15 ô)` (không seed nào làm mốc); **mọi bước selection (PI/SA/MI, R1–R4, baseline + 39 candidate, prune PI, Final) dùng đúng một `selection_seed`** — kiểm tra bằng cột `seed` của `log.csv`.
+9. **Hợp lý**: `std(ŷ) ≪ std(y)` là bình thường; Gain > ~1 pp vs B0/E0 → nghi leakage; latency pass (§7.4) không đổi prediction (assert batch == batch-1); figure §7.3: Fig P (forecast path một origin) và Fig T (trajectory dọc VAL/TEST, VAL không nối qua ranh giới fold) không lệch pha, actual đen.
 10. **Code/test**: chạy `tests/` (CPU, không training); config JSON/frontmatter/settings parse được; cùng config + seed → cùng output hash; `config_hash` khớp log; log đúng schema §7.
 
-Được phép chạy Bash cho unit/canary test trên CPU — không fit model thật, không load checkpoint nặng. Output: bảng PASS/FAIL 10 mục + nguyên nhân gốc + fix đề xuất. Một FAIL bất kỳ = block run/thay đổi cho tới khi fix; verdict methodology → chuyển `researcher`.
+Được phép chạy Bash cho unit/canary test trên CPU — không fit model thật, không load checkpoint nặng. Với TimesFM/AutoTS (`models_tfm.py`, `models_autots.py`): kiểm đúng ràng buộc đã chốt trong audit — covariate TimesFM 1 origin/lời gọi + dịch 1 bar; regressor AutoTS dịch theo model (MR `f(s−1)`, WR `f(s+window−1)`), `fit_data` không nhận regressor (bug 1.0.4), df mỗi origin kết thúc đúng tại t.
+
+Output: bảng PASS/FAIL 10 mục + nguyên nhân gốc + fix đề xuất (kèm `file:line`). Một FAIL bất kỳ = block run/thay đổi cho tới khi fix; session chính sửa code. Verdict methodology → chuyển `researcher`.
