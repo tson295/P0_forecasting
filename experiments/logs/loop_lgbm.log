@@ -8,3 +8,50 @@ START 2026-08-31T21:42:16Z
 [p0 21:43:05] [lgbm] 02 vwap_amt_gap_15              Median +0.0087 → KEEP (|S|=74)
 [p0 21:43:16] [lgbm] 03 vwap_amt_gap_60              Median -0.0294 → KEEP (|S|=75)
 [p0 21:43:28] [lgbm] 04 vwap_amt_gap_240             Median -0.0635 → KEEP (|S|=76)
+[p0 21:43:40] [lgbm] 05 ret_60                       Median +0.0149 → KEEP (|S|=77)
+[p0 21:43:50] [lgbm] 06 ret_240                      Median -0.0247 → KEEP (|S|=78)
+[p0 21:44:00] [lgbm] 07 ret_1440                     Median -0.0572 → KEEP (|S|=79)
+[p0 21:44:12] [lgbm] 08 log_rv15_rv240               Median +0.0242 → KEEP (|S|=80)
+[p0 21:44:23] [lgbm] 09 log_rv60_rv1440              Median +0.0092 → KEEP (|S|=81)
+[p0 21:44:34] [lgbm] 10 ret_skew_60                  Median +0.0740 → KEEP (|S|=82)
+[p0 21:44:47] [lgbm] 11 dd_240                       Median -0.0202 → KEEP (|S|=83)
+[p0 21:44:58] [lgbm] 12 ru_240                       Median -0.0393 → KEEP (|S|=84)
+[p0 21:45:10] [lgbm] 13 log_c_ema60                  Median +0.0144 → KEEP (|S|=85)
+[p0 21:45:22] [lgbm] 14 log_c_ema240                 Median -0.0349 → KEEP (|S|=86)
+[p0 21:45:33] [lgbm] 15 log_c_ema1440                Median +0.0429 → KEEP (|S|=87)
+[p0 21:45:44] [lgbm] 16 log_ema60_ema240             Median -0.0208 → KEEP (|S|=88)
+[p0 21:45:54] [lgbm] 17 hma_slope64_volnorm          Median -0.0573 → KEEP (|S|=89)
+[p0 21:46:04] [lgbm] 18 rsi240_centered              Median -0.0055 → KEEP (|S|=90)
+[p0 21:46:15] [lgbm] 19 macd_hist_60_240_60_volnorm  Median +0.0052 → KEEP (|S|=91)
+[p0 21:46:26] [lgbm] 20 bb_pctb_20                   Median -0.0292 → KEEP (|S|=92)
+[p0 21:46:37] [lgbm] 21 bb_pctb_60                   Median +0.0307 → KEEP (|S|=93)
+[p0 21:46:48] [lgbm] 22 bb_logbw_20                  Median +0.0179 → KEEP (|S|=94)
+[p0 21:46:59] [lgbm] 23 log_atr14_c                  Median +0.0242 → KEEP (|S|=95)
+[p0 21:47:09] [lgbm] 24 log_atr14_rv14               Median +0.0216 → KEEP (|S|=96)
+[p0 21:47:21] [lgbm] 25 kcw_20                       Median -0.0870 → KEEP (|S|=97)
+[p0 21:47:34] [lgbm] 26 mfi14_centered               Median +0.0649 → KEEP (|S|=98)
+[p0 21:47:47] [lgbm] 27 mfi60_centered               Median -0.0116 → KEEP (|S|=99)
+[p0 21:47:58] [lgbm] 28 ad_vwclv_5                   Median +0.0142 → KEEP (|S|=100)
+[p0 21:48:10] [lgbm] 29 ad_vwclv_15                  Median -0.0108 → KEEP (|S|=101)
+[p0 21:48:21] [lgbm] 30 ad_vwclv_60                  Median -0.0078 → KEEP (|S|=102)
+[p0 21:48:27] [lgbm] 31 psar_dir                     Median +0.0505 → KEEP (|S|=103)
+[p0 21:48:37] [lgbm] 32 psar_logdist                 Median -0.0865 → KEEP (|S|=104)
+[p0 21:48:50] [lgbm] 33 psar_age_log                 Median +0.0692 → KEEP (|S|=105)
+[p0 21:48:58] [lgbm] 34 dow                          Median +0.0206 → KEEP (|S|=107)
+[p0 21:49:09] [lgbm] 35 log_rv60_med2d               Median -0.0008 → KEEP (|S|=108)
+[p0 21:49:20] [lgbm] 36 log_range_240                Median -0.0266 → KEEP (|S|=109)
+[p0 21:49:31] [lgbm] 37 r5_1                         Median +0.0286 → KEEP (|S|=110)
+[p0 21:49:41] [lgbm] 38 r5_12                        Median +0.0208 → KEEP (|S|=111)
+[p0 21:49:53] [lgbm] 39 log_c5_ema5_12               Median -0.0204 → KEEP (|S|=112)
+[p0 21:49:53] [lgbm] F*_m: 39 KEEP / 0 DROP → /workspace/P0_forecasting/experiments/keepdrop_lgbm.csv
+[p0 21:49:53] [lgbm] F*_m vs baseline: MedianGain = -0.0369 pp
+[p0 21:50:01] [lgbm] prune PI: giữ 14/40 cột ext
+[p0 21:51:09] [lgbm] win_m = prune (MedianGain prune vs unprune -0.0059, ε=0.0966)
+[p0 21:51:17] [lgbm] latency p95 (ms) per h: [1.182, 1.178, 1.178] (predict device CPU)
+[p0 21:51:17] [lgbm] champion: champion ban đầu (champion sau = lgbm)
+
+real	9m3.562s
+user	117m52.756s
+sys	0m29.728s
+STEP_EXIT=0
+END 2026-08-31T21:51:20Z

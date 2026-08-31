@@ -1,0 +1,4 @@
+model,h,n,p95_ms,p99_ms,max_ms,mean_ms,shared,train_device,predict_device,lib_version,threads
+cat,1,1437,1.3544736,1.37210648,2.213231,0.9288721433542102,False,GPU,CPU,catboost 1.2.10,lib_default
+cat,2,1437,0.9280548,0.9474252000000001,1.41785,0.8996304585942938,False,GPU,CPU,catboost 1.2.10,lib_default
+cat,3,1437,0.9241382,0.93045228,0.959851,0.8745094745998607,False,GPU,CPU,catboost 1.2.10,lib_default

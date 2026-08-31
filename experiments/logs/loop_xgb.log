@@ -1,0 +1,61 @@
+START 2026-08-31T21:51:20Z
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [21:51:22] WARNING: /__w/xgboost/xgboost/src/context.cc:55: No visible GPU is found, setting device to CPU.
+  bst.update(dtrain, iteration=i, fobj=obj)
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [21:51:22] WARNING: /__w/xgboost/xgboost/src/context.cc:218: Device is changed from GPU to CPU as we couldn't find any available GPU on the system.
+  bst.update(dtrain, iteration=i, fobj=obj)
+[p0 21:51:22] GPU preflight XGBoost: OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 21:51:22] [xgb] calibrate trên B0* (72 cột) — ES với calib_seed 8586
+[p0 21:51:34] [xgb] rounds={'fold1_2026-01-27': (31, 13, 8), 'fold2_2026-01-28': (6, 6, 9), 'fold3_2026-01-29': (47, 9, 1), 'fold4_2026-01-30': (1, 1, 15), 'fold5_2026-01-31': (10, 15, 1)} ε=0.2822 pp; base MedianGain vs E0 = +0.1079
+[p0 21:51:45] [xgb] 01 vwap_amt_gap_1               Median -0.0562 → KEEP (|S|=73)
+[p0 21:51:53] [xgb] 02 vwap_amt_gap_15              Median -0.0467 → KEEP (|S|=74)
+[p0 21:52:01] [xgb] 03 vwap_amt_gap_60              Median +0.0126 → KEEP (|S|=75)
+[p0 21:52:10] [xgb] 04 vwap_amt_gap_240             Median -0.1252 → KEEP (|S|=76)
+[p0 21:52:18] [xgb] 05 ret_60                       Median +0.0574 → KEEP (|S|=77)
+[p0 21:52:27] [xgb] 06 ret_240                      Median -0.0158 → KEEP (|S|=78)
+[p0 21:52:35] [xgb] 07 ret_1440                     Median -0.0527 → KEEP (|S|=79)
+[p0 21:52:44] [xgb] 08 log_rv15_rv240               Median +0.0427 → KEEP (|S|=80)
+[p0 21:52:53] [xgb] 09 log_rv60_rv1440              Median +0.0053 → KEEP (|S|=81)
+[p0 21:53:02] [xgb] 10 ret_skew_60                  Median +0.0455 → KEEP (|S|=82)
+[p0 21:53:13] [xgb] 11 dd_240                       Median +0.0137 → KEEP (|S|=83)
+[p0 21:53:22] [xgb] 12 ru_240                       Median +0.0199 → KEEP (|S|=84)
+[p0 21:53:32] [xgb] 13 log_c_ema60                  Median -0.0161 → KEEP (|S|=85)
+[p0 21:53:42] [xgb] 14 log_c_ema240                 Median -0.0199 → KEEP (|S|=86)
+[p0 21:53:52] [xgb] 15 log_c_ema1440                Median +0.0188 → KEEP (|S|=87)
+[p0 21:54:02] [xgb] 16 log_ema60_ema240             Median -0.0877 → KEEP (|S|=88)
+[p0 21:54:10] [xgb] 17 hma_slope64_volnorm          Median +0.0019 → KEEP (|S|=89)
+[p0 21:54:19] [xgb] 18 rsi240_centered              Median +0.0044 → KEEP (|S|=90)
+[p0 21:54:27] [xgb] 19 macd_hist_60_240_60_volnorm  Median -0.0088 → KEEP (|S|=91)
+[p0 21:54:37] [xgb] 20 bb_pctb_20                   Median +0.0088 → KEEP (|S|=92)
+[p0 21:54:46] [xgb] 21 bb_pctb_60                   Median +0.0131 → KEEP (|S|=93)
+[p0 21:54:56] [xgb] 22 bb_logbw_20                  Median -0.0039 → KEEP (|S|=94)
+[p0 21:55:05] [xgb] 23 log_atr14_c                  Median -0.0242 → KEEP (|S|=95)
+[p0 21:55:13] [xgb] 24 log_atr14_rv14               Median -0.0023 → KEEP (|S|=96)
+[p0 21:55:24] [xgb] 25 kcw_20                       Median -0.0021 → KEEP (|S|=97)
+[p0 21:55:35] [xgb] 26 mfi14_centered               Median +0.0132 → KEEP (|S|=98)
+[p0 21:55:46] [xgb] 27 mfi60_centered               Median +0.0021 → KEEP (|S|=99)
+[p0 21:55:55] [xgb] 28 ad_vwclv_5                   Median -0.0245 → KEEP (|S|=100)
+[p0 21:56:04] [xgb] 29 ad_vwclv_15                  Median +0.0219 → KEEP (|S|=101)
+[p0 21:56:14] [xgb] 30 ad_vwclv_60                  Median -0.0283 → KEEP (|S|=102)
+[p0 21:56:18] [xgb] 31 psar_dir                     Median +0.0212 → KEEP (|S|=103)
+[p0 21:56:27] [xgb] 32 psar_logdist                 Median -0.0193 → KEEP (|S|=104)
+[p0 21:56:38] [xgb] 33 psar_age_log                 Median +0.0040 → KEEP (|S|=105)
+[p0 21:56:45] [xgb] 34 dow                          Median +0.0811 → KEEP (|S|=107)
+[p0 21:56:54] [xgb] 35 log_rv60_med2d               Median -0.0315 → KEEP (|S|=108)
+[p0 21:57:05] [xgb] 36 log_range_240                Median -0.1102 → KEEP (|S|=109)
+[p0 21:57:13] [xgb] 37 r5_1                         Median -0.0742 → KEEP (|S|=110)
+[p0 21:57:22] [xgb] 38 r5_12                        Median +0.1762 → KEEP (|S|=111)
+[p0 21:57:31] [xgb] 39 log_c5_ema5_12               Median -0.1207 → KEEP (|S|=112)
+[p0 21:57:31] [xgb] F*_m: 39 KEEP / 0 DROP → /workspace/P0_forecasting/experiments/keepdrop_xgb.csv
+[p0 21:57:31] [xgb] F*_m vs baseline: MedianGain = -0.2005 pp
+[p0 21:57:36] [xgb] prune PI: giữ 11/40 cột ext
+[p0 21:58:23] [xgb] win_m = prune (MedianGain prune vs unprune +0.1258, ε=0.2822)
+[p0 21:58:27] [xgb] latency p95 (ms) per h: [0.524, 0.457, 0.45] (predict device GPU)
+[p0 21:58:27] [xgb] champion: giữ (champion sau = lgbm)
+
+real	7m10.971s
+user	101m50.493s
+sys	0m19.279s
+STEP_EXIT=0
+END 2026-08-31T21:58:31Z
