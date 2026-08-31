@@ -134,15 +134,79 @@ def load_store(cfg: RunConfig, need_lf: bool = True, verify: bool = True):
     return store, folds, final, rep
 
 
+CLI_ONLY_PARAMS = {"subset_k"}  # tham số của CLI (chọn baseline), không phải của constructor model
+
+
 def model_for(cfg: RunConfig, name: str, allow_cpu: bool):
     if allow_cpu and not _is_synthetic(cfg):
         sys.exit(f"allow_cpu với dataset '{cfg.dataset_label}' bị cấm (plan §0: training chỉ GPU).")
-    params = cfg.model_params(name)
+    params = {k: v for k, v in cfg.model_params(name).items() if k not in CLI_ONLY_PARAMS}
     if allow_cpu:  # smoke/unit: ép CPU rõ ràng
         params = {k: v for k, v in params.items() if k not in ("device_type", "device", "task_type")}
         params.update({"lgbm": {"device_type": "cpu"}, "xgb": {"device": "cpu"}, "xgbrf": {"device": "cpu"}, "cat": {"task_type": "CPU"},
                        "lstm": {"device": "cpu"}}.get(name, {}))
     return make_model(name, params, allow_cpu=allow_cpu)
+
+
+PROBE_MODELS = ("autots_wr", "autots_mr")  # §2.2 #6: WR/MR cố định CHỈ để dò feature — không phải AutoTS-final,
+# không so champion, không vào ensemble. AutoTS-final do `autots-search` sinh ra sau khi freeze feature set.
+
+
+def tfm_strategy_path(cfg: RunConfig) -> Path:
+    return cfg.exp_dir / "tfm_strategy.json"
+
+
+def resolve_tfm_strategy(cfg: RunConfig, store: Store, b0star: ColSet) -> tuple[str, ColSet]:
+    """§2.2 #4b: chốt MỘT chiến lược covariate cho TOÀN BỘ experiment TimesFM và FREEZE.
+
+    Chiến lược lấy từ `models.tfm.covariate_strategy` trong config (bắt buộc khai báo rõ — không có mặc định ngầm):
+      b0star_full   → covariate = toàn bộ B0* (+ candidate ext khi add-one)
+      b0star_subset → covariate = top-`subset_k` cột B0* theo PI của §1.4 (deterministic, không nhìn thêm VAL/TEST)
+      ext_only      → không dùng B0*; covariate = chỉ các candidate ext (baseline = TFM-native)
+    Lần đầu ghi `experiments/tfm_strategy.json`; các lần sau PHẢI khớp, lệch là dừng — cấm đổi hướng giữa pipeline.
+    """
+    from .models_tfm import COVARIATE_STRATEGIES
+
+    params = cfg.model_params("tfm")
+    strategy = params.get("covariate_strategy")
+    if strategy not in COVARIATE_STRATEGIES:
+        sys.exit(f"models.tfm.covariate_strategy phải được khai báo rõ trong config, thuộc {list(COVARIATE_STRATEGIES)} "
+                 f"(hiện: {strategy!r}). Quyết định này phải chốt TRƯỚC run thật theo docs/reference/audit_timesfm.md §12.")
+    if strategy == "ext_only":
+        base = ColSet((), ())
+    elif strategy == "b0star_full":
+        base = ColSet(b0star.b0, ())
+    else:
+        k = int(params.get("subset_k", 120))
+        base = ColSet(tfm_subset_columns(cfg, b0star, k), ())
+    payload = {"strategy": strategy, "subset_k": int(params.get("subset_k", 0)) if strategy == "b0star_subset" else None,
+               "n_covariate_base": len(base.b0), "columns": list(base.b0), "config_hash": cfg.hash(),
+               "source": "config models.tfm.covariate_strategy + docs/reference/audit_timesfm.md §12"}
+    path = tfm_strategy_path(cfg)
+    if path.exists():
+        old = json.loads(path.read_text(encoding="utf-8"))
+        if (old.get("strategy"), old.get("columns")) != (payload["strategy"], payload["columns"]):
+            sys.exit(f"TimesFM strategy đã freeze ở {path} là '{old.get('strategy')}' ({len(old.get('columns') or [])} cột) "
+                     f"nhưng config yêu cầu '{strategy}' ({len(base.b0)} cột). Không được đổi giữa pipeline — "
+                     "xoá artifact chỉ khi user quyết chạy lại TOÀN BỘ TimesFM từ đầu.")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=1), encoding="utf-8")
+    say(f"[tfm] strategy = {strategy} (freeze) — {len(base.b0)} cột covariate nền + candidate ext")
+    return strategy, base
+
+
+def tfm_subset_columns(cfg: RunConfig, b0star: ColSet, k: int) -> tuple[str, ...]:
+    """Subset deterministic của B0*: xếp theo PI (§1.4, median 5 fold) trung bình 3 horizon, giảm dần; hoà → thứ tự cột B0.
+    Chỉ dùng output đã có của Phase A, không tính thêm gì, không nhìn TEST."""
+    f = cfg.exp_dir / "b0_filter.csv"
+    if not f.exists():
+        sys.exit(f"Thiếu {f} — subset B0* phải dựa trên PI của §1.4; chạy `filter-b0` trước.")
+    df = pd.read_csv(f)
+    pi = df.set_index("col")[[f"PI_h{h}" for h in HORIZONS]].mean(axis=1)
+    order = {c: i for i, c in enumerate(b0star.b0)}
+    cols = sorted(b0star.b0, key=lambda c: (-float(pi.get(c, -np.inf)), order[c]))[:max(1, k)]
+    return tuple(sorted(cols, key=lambda c: order[c]))  # giữ thứ tự cột gốc của B0 cho ổn định
 
 
 def colset_from_arg(store: Store, cfg: RunConfig, arg: str) -> ColSet:
@@ -322,10 +386,26 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     model = model_for(cfg, args.model, args.allow_cpu)
     mname = args.model
     exp = cfg.exp_dir
+    is_probe = mname in PROBE_MODELS
     if load_champion(exp / "champion.json") is None and mname != "lgbm":
         sys.exit("§3: champion ban đầu phải là LightGBM code gốc — chạy `loop --model lgbm` trước.")
+    if mname == "tfm":
+        strategy, base = resolve_tfm_strategy(cfg, store, base)
+        # T0 — TFM-native reference: zero-shot CHỈ trên chuỗi r1, không covariate. Luôn chạy và log, mọi strategy.
+        native = run_config(store, model_for(cfg, "tfm", args.allow_cpu), ColSet((), ()), folds, rounds=None,
+                            seed=cfg.sel_seed, keep_states=False)
+        nat_id = new_exp_id("tfm_native", "tfm")
+        _log(cfg, exp_id=nat_id, step="tfm_native", model="tfm", seed=cfg.sel_seed, colset="native_r1", rounds="zero-shot",
+             **_summ_row(native, native.e0, "E0"), decision="reference", note="T0: chỉ r1, không covariate",
+             train_device=getattr(model, "train_device", ""))
+        save_run(exp, nat_id, {**native.to_dict(), "step": "tfm_native", "strategy": strategy})
+        (exp / "tfm_native.json").write_text(json.dumps(
+            {"rmse": native.rmse.tolist(), "e0": native.e0.tolist(), "strategy_of_run": strategy,
+             "median_gain_vs_e0": float(np.median(gain_pp(native.rmse, native.e0)))}, indent=1), encoding="utf-8")
+        say(f"[tfm] T0 native (chỉ r1): MedianGain vs E0 = {np.median(native.gain_vs(native.e0)):+.4f} pp")
     # phase B calibrate riêng trên B0*
-    say(f"[{mname}] calibrate trên B0* ({len(base.names)} cột) — ES với calib_seed {cfg.calib_seed}")
+    base_label = "B0*" if mname != "tfm" else f"baseline TimesFM ({strategy})"
+    say(f"[{mname}] calibrate trên {base_label} ({len(base.names)} cột) — ES với calib_seed {cfg.calib_seed}")
     cal = calibrate(store, model, base, folds, seed=cfg.calib_seed, keep_states=False)
     rounds = rounds_from(cal) if getattr(model, "supports_rounds", True) else None
     eps, noise, runs = seed_noise(store, model, base, folds, rounds, cfg.eval_seeds, cfg.eps_floor_pp)
@@ -333,6 +413,12 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     if base_run is None:
         base_run = run_config(store, model, base, folds, rounds=rounds, seed=cfg.sel_seed, keep_states=False)
     say(f"[{mname}] rounds={rounds} ε={eps:.4f} pp; base MedianGain vs E0 = {np.median(base_run.gain_vs(base_run.e0)):+.4f}")
+    if mname == "tfm":  # T1: baseline đã chọn so với TFM-native
+        g_nat = float(np.median(gain_pp(base_run.rmse, native.rmse)))
+        say(f"[tfm] T1 baseline ({strategy}, {len(base.b0)} cột) vs native: MedianGain = {g_nat:+.4f} pp")
+        _log(cfg, exp_id=new_exp_id("tfm_baseline", "tfm"), step="tfm_baseline", model="tfm", seed=cfg.sel_seed,
+             colset=strategy, rounds="zero-shot", **_summ_row(base_run, native.rmse, "TFM-native"),
+             decision=f"strategy={strategy}", note=f"n_cov_base={len(base.b0)}", train_device=getattr(model, "train_device", ""))
     (exp / "calib").mkdir(parents=True, exist_ok=True)
     (exp / "calib" / f"{mname}_b0star.json").write_text(json.dumps(
         {"model": mname, "rounds": rounds, "eps": eps, "noise_cells": np.round(noise, 5).tolist(), "calib_seed": cfg.calib_seed,
@@ -357,6 +443,14 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     lr = add_one_loop(store, model, base, base_run.rmse, cands, folds, rounds, eps, cfg.sel_seed, base_run.e0, standalone_fn, on_row)
     lr.table.to_csv(kd_path, index=False)
     say(f"[{mname}] F*_m: {len(lr.kept)} KEEP / {len(lr.dropped)} DROP → {kd_path}")
+    # dòng tổng kết: F*_m so với chính baseline của model (cùng selection_seed, cùng số vòng) — bắt buộc cho TimesFM (§2.2 #4b)
+    g_fin = summarize(gain_pp(lr.final_rmse, base_run.rmse))
+    _log(cfg, exp_id=new_exp_id("loop_final", mname), step="loop_final", model=mname, seed=cfg.sel_seed,
+         colset="|".join(lr.final.ext), n_cols=len(lr.final.names), rounds=json.dumps(rounds), base="baseline_model",
+         MedianGain=round(g_fin["MedianGain"], 4), WinRate=round(g_fin["WinRate"], 4), P10Gain=round(g_fin["P10Gain"], 4),
+         WorstGain=round(g_fin["WorstGain"], 4), rmse_cells=_cells(lr.final_rmse), decision=f"F*_{mname}",
+         note=f"{len(lr.kept)} KEEP / {len(lr.dropped)} DROP", train_device=getattr(model, "train_device", ""))
+    say(f"[{mname}] F*_m vs baseline: MedianGain = {g_fin['MedianGain']:+.4f} pp")
     # prune PI
     pruned, pi_df = prune_pi(store, model, lr.final, folds, rounds, cfg.sel_seed)
     pi_df.to_csv(exp / f"prune_pi_{mname}.csv", index=False)
@@ -399,7 +493,16 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         say(f"[{mname}] latency p95 (ms) per h: {lat['p95_ms'].round(3).tolist()} (predict device {lat['predict_device'].iloc[0]})")
     except Exception as e:  # không được ảnh hưởng pipeline
         say(f"[{mname}] latency bỏ qua: {e}")
-    # §3 champion
+    # §3 champion — model probe (AutoTS WR/MR) KHÔNG tham gia: chúng chỉ dò feature, AutoTS-final do `autots-search` sinh
+    if is_probe:
+        log_champion(exp, {"exp_id": new_exp_id("probe", mname), "model": mname, "win": which, "n_ext": len(win.colset.ext),
+                           "ext_cols": "|".join(win.colset.ext), "MedianGain_vs_E0": round(win_payload["median_gain_vs_e0"], 4),
+                           "rmse_mean_win": _cells(win.rmse_mean), "decision": "probe — không so champion",
+                           "champion_after": (load_champion(exp / "champion.json") or {}).get("model", ""),
+                           "train_device": getattr(model, "train_device", "")})
+        say(f"[{mname}] probe feature-search xong (F_{mname.split('_')[1].upper()}) — không so champion; "
+            "chạy `autots-union` rồi `autots-search` để có AutoTS-final")
+        return
     champ_path = exp / "champion.json"
     champ = load_champion(champ_path)
     win_mae = np.mean([r.mae for r in win.runs], axis=0)
@@ -481,54 +584,75 @@ def champion_step(cfg: RunConfig, mname: str, colset: ColSet, rmse_mean: np.ndar
 
 
 def cmd_autots_union(cfg: RunConfig, args) -> None:
-    """§2.2 #6: SAU KHI cả hai vòng lặp AutoTS xong — mỗi model chạy thêm đúng 1 run với `F*_A1 ∪ F*_A2`,
-    chọn bộ tốt hơn giữa {riêng, tổng hợp} theo MedianGain, rồi so lại với champion (§3)."""
-    gate(cfg, args, ["autots_wr", "autots_mr"])
+    """§2.2 #6 bước 2 — CHỈ chọn feature set, KHÔNG so champion.
+
+    Sau khi cả hai probe (WR, MR) đã có F_WR / F_MR: mỗi probe chạy thêm đúng 1 lần với `F_union = F_WR ∪ F_MR`,
+    chọn bộ tốt hơn giữa {riêng, tổng hợp} theo MedianGain → **F_WR_best**, **F_MR_best**. Hai bộ này được FREEZE
+    và là input duy nhất cho `autots-search` (framework AutoTS thật). Probe không tham gia champion/ensemble.
+    """
+    gate(cfg, args, list(PROBE_MODELS))
     store, folds, _, _ = load_store(cfg)
     exp = cfg.exp_dir
     wins = {}
-    for m in ("autots_wr", "autots_mr"):
+    for m in PROBE_MODELS:
         p = exp / "wins" / f"{m}.json"
         if not p.exists():
-            sys.exit(f"Thiếu {p} — phải chạy `loop --model {m}` cho CẢ HAI model AutoTS trước khi tổng hợp (§2.2 #6).")
+            sys.exit(f"Thiếu {p} — phải chạy `loop --model {m}` cho CẢ HAI probe AutoTS trước khi tổng hợp (§2.2 #6).")
         wins[m] = json.loads(p.read_text(encoding="utf-8"))
     b0 = ColSet.from_dict(wins["autots_wr"]["colset"]).b0
-    union_ext = tuple(dict.fromkeys(list(ColSet.from_dict(wins["autots_wr"]["colset"]).ext)
-                                    + list(ColSet.from_dict(wins["autots_mr"]["colset"]).ext)))
-    say(f"F*_A1 ∪ F*_A2 = {len(union_ext)} cột ext: {'|'.join(union_ext) or '(rỗng)'}")
-    rows = []
+    f_by_model = {m: tuple(ColSet.from_dict(w["colset"]).ext) for m, w in wins.items()}
+    union_ext = tuple(dict.fromkeys(list(f_by_model["autots_wr"]) + list(f_by_model["autots_mr"])))
+    say(f"F_WR = {len(f_by_model['autots_wr'])} cột, F_MR = {len(f_by_model['autots_mr'])} cột, "
+        f"F_union = {len(union_ext)} cột: {'|'.join(union_ext) or '(rỗng)'}")
+    out_dir = exp / "autots_best"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rows, best = [], {}
     for mname, w in wins.items():
         own = ColSet.from_dict(w["colset"])
         own_rmse = np.asarray(w["rmse_mean"])
         eps = float(w["eps"])
+        row = {"model": mname, "n_ext_own": len(own.ext), "n_ext_union": len(union_ext),
+               "F_own": "|".join(own.ext), "F_union": "|".join(union_ext)}
         if tuple(own.ext) == union_ext:
             say(f"[{mname}] tổng hợp trùng bộ riêng — không cần run thêm")
-            rows.append({"model": mname, "choice": "riêng", "n_ext_own": len(own.ext), "n_ext_union": len(union_ext),
-                         "MedianGain_union_vs_own": 0.0})
-            continue
-        model = model_for(cfg, mname, args.allow_cpu)
-        uni = ColSet(b0, union_ext)
-        say(f"[{mname}] run tổng hợp ({len(union_ext)} cột ext), 3 seed")
-        conf = confirm(store, model, uni, folds, cfg.eval_seeds, keep_states=True)
-        s_ = summarize(gain_pp(conf.rmse_mean, own_rmse))
-        choice = "tổng hợp" if s_["MedianGain"] > 0 else "riêng"
-        say(f"[{mname}] MedianGain tổng hợp vs riêng = {s_['MedianGain']:+.4f} → chọn {choice}")
-        rows.append({"model": mname, "choice": choice, "n_ext_own": len(own.ext), "n_ext_union": len(union_ext),
-                     "MedianGain_union_vs_own": round(s_["MedianGain"], 4), "WinRate": round(s_["WinRate"], 4),
-                     "P10Gain": round(s_["P10Gain"], 4), "WorstGain": round(s_["WorstGain"], 4),
-                     "rmse_mean_own": _cells(own_rmse), "rmse_mean_union": _cells(conf.rmse_mean)})
-        if choice == "tổng hợp":
-            w.update({"colset": uni.to_dict(), "rmse_mean": conf.rmse_mean.tolist(), "which": "union",
-                      "best_iters_by_seed": [b.tolist() for b in conf.best_iters],
-                      "median_gain_vs_e0": float(np.median(gain_pp(conf.rmse_mean, conf.e0)))})
-            (exp / "wins" / f"{mname}.json").write_text(json.dumps(w, indent=1), encoding="utf-8")
+            chosen_cs, chosen_rmse, chosen_e0, which = own, own_rmse, np.asarray(w["e0"]), "riêng"
+            row.update({"choice": which, "MedianGain_union_vs_own": 0.0})
+            conf = None
+        else:
+            model = model_for(cfg, mname, args.allow_cpu)
+            uni = ColSet(b0, union_ext)
+            say(f"[{mname}] run tổng hợp ({len(union_ext)} cột ext), {len(cfg.eval_seeds)} seed")
+            conf = confirm(store, model, uni, folds, cfg.eval_seeds, keep_states=True)
+            s_ = summarize(gain_pp(conf.rmse_mean, own_rmse))
+            which = "tổng hợp" if s_["MedianGain"] > 0 else "riêng"
+            say(f"[{mname}] MedianGain tổng hợp vs riêng = {s_['MedianGain']:+.4f} → chọn {which}")
+            row.update({"choice": which, "MedianGain_union_vs_own": round(s_["MedianGain"], 4),
+                        "WinRate": round(s_["WinRate"], 4), "P10Gain": round(s_["P10Gain"], 4), "WorstGain": round(s_["WorstGain"], 4),
+                        "rmse_mean_own": _cells(own_rmse), "rmse_mean_union": _cells(conf.rmse_mean)})
+            chosen_cs = uni if which == "tổng hợp" else own
+            chosen_rmse = conf.rmse_mean if which == "tổng hợp" else own_rmse
+            chosen_e0 = conf.e0 if which == "tổng hợp" else np.asarray(w["e0"])
+        payload = {"model": mname, "role": "probe_best_feature_set", "chosen": which,
+                   "colset": chosen_cs.to_dict(), "F_own": list(own.ext), "F_union": list(union_ext),
+                   "rmse_mean": np.asarray(chosen_rmse).tolist(), "e0": np.asarray(chosen_e0).tolist(), "eps": eps,
+                   "median_gain_vs_e0": float(np.median(gain_pp(np.asarray(chosen_rmse), np.asarray(chosen_e0)))),
+                   "eval_seeds": list(w.get("eval_seeds", cfg.eval_seeds)), "folds": [f.name for f in folds]}
+        (out_dir / f"{mname}.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
+        if conf is not None and which == "tổng hợp":
             for k, r in enumerate(conf.runs):
-                np.savez_compressed(exp / "wins" / f"{mname}_seed{k}.npz",
+                np.savez_compressed(out_dir / f"{mname}_seed{k}.npz",
                                     **{f"idx_{i}": p[0] for i, p in enumerate(r.preds())},
                                     **{f"yhat_{i}": p[1] for i, p in enumerate(r.preds())})
-            champion_step(cfg, mname, uni, conf.rmse_mean, conf.e0, eps, {"win": "union"})
+        best[mname] = payload
+        rows.append(row)
     pd.DataFrame(rows).to_csv(exp / "autots_union.csv", index=False)
-    say(f"→ {exp / 'autots_union.csv'}")
+    (exp / "autots_features.json").write_text(json.dumps(
+        {"F_WR": list(f_by_model["autots_wr"]), "F_MR": list(f_by_model["autots_mr"]), "F_union": list(union_ext),
+         "F_WR_best": best["autots_wr"]["colset"]["ext"], "F_MR_best": best["autots_mr"]["colset"]["ext"],
+         "b0_star_n": len(b0), "identical": best["autots_wr"]["colset"]["ext"] == best["autots_mr"]["colset"]["ext"]},
+        indent=1, ensure_ascii=False), encoding="utf-8")
+    say(f"F_WR_best = {len(best['autots_wr']['colset']['ext'])} cột ext, F_MR_best = {len(best['autots_mr']['colset']['ext'])} cột ext "
+        f"→ {out_dir} (freeze; input của `autots-search`)")
 
 
 def cmd_ensemble(cfg: RunConfig, args) -> None:
@@ -538,7 +662,8 @@ def cmd_ensemble(cfg: RunConfig, args) -> None:
     champ = load_champion(exp / "champion.json")
     if champ is None:
         sys.exit("Chưa có champion.")
-    wins = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in (exp / "wins").glob("*.json")}
+    wins = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in (exp / "wins").glob("*.json")
+            if p.stem not in PROBE_MODELS}  # probe WR/MR không phải thành viên; AutoTS-final (nếu có) mới là
     members = [m for m, w in wins.items() if w["median_gain_vs_e0"] > 0 or m == champ["model"]]
     if len(members) < 2:
         say("Không đủ 2 thành viên — không ensemble.")
@@ -578,6 +703,8 @@ def cmd_final(cfg: RunConfig, args) -> None:
     if (exp / "b0_star.json").exists():
         configs["b0_star"] = ("lgbm", ColSet.load(exp / "b0_star.json"))
     for p in sorted((exp / "wins").glob("*.json")):
+        if p.stem in PROBE_MODELS:  # probe WR/MR chỉ dò feature — AutoTS trên TEST là AutoTS-final (`autots`)
+            continue
         w = json.loads(p.read_text(encoding="utf-8"))
         configs[w["model"]] = (w["model"], ColSet.from_dict(w["colset"]))
     idx_test = final.val.origins(store.ts, store.eligible)

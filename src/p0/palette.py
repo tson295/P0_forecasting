@@ -15,17 +15,18 @@ STYLE = {
     "xgb": (PALETTE[1], "^", "-"),
     "cat": (PALETTE[2], "v", "-"),
     "xgbrf": (PALETTE[3], "X", "-"),
-    "autots_wr": (PALETTE[4], "<", "-"),
+    "autots": (PALETTE[4], "<", "-"),          # AutoTS-final (sau framework search)
+    "autots_wr": (PALETTE[4], "<", ":"),       # probe (diagnostic, không vào champion/ensemble/Final)
     "lstm": (PALETTE[5], "*", "-"),
     "tfm": (PALETTE[6], "P", "-"),
     "ensemble": (PALETTE[7], "h", "-"),
     "autots_mr": (PALETTE[1], ">", ":"),
 }
 GROUP_A = ["lgbm", "xgb", "cat", "xgbrf", "ensemble"]
-GROUP_B = ["tfm", "autots_wr", "autots_mr", "lstm", "b0_306", "b0_star"]
+GROUP_B = ["tfm", "autots", "lstm", "b0_306", "b0_star"]  # probe autots_wr/autots_mr không vẽ ở Final
 LABEL = {
     "b0_306": "B0-306", "b0_star": "B0*", "lgbm": "LightGBM", "xgb": "XGBoost", "cat": "CatBoost", "xgbrf": "XGB-RF",
-    "autots_wr": "AutoTS-WR", "autots_mr": "AutoTS-MR", "lstm": "LSTM", "tfm": "TFM-POINT", "ensemble": "Ensemble", "e0": "E0",
+    "autots": "AutoTS", "autots_wr": "AutoTS-WR(probe)", "autots_mr": "AutoTS-MR(probe)", "lstm": "LSTM", "tfm": "TFM-POINT", "ensemble": "Ensemble", "e0": "E0",
 }
 
 

@@ -270,6 +270,11 @@ def seed_noise(store: Store, model: TabularModel, colset: ColSet, folds: list[Fo
     Mỗi ô (fold, horizon): mu/sigma của các RMSE → noise_cell = 100·sigma/mu (pp); ε = max(floor, RMS 15 ô).
     Không seed nào được dùng làm mốc/mẫu số. Trả (ε, bảng noise 15 ô, các run).
     """
+    if not getattr(model, "seed_dependent", True):
+        # inference tất định (TimesFM zero-shot): 3 seed cho kết quả y hệt → chạy MỘT lần, ε = floor,
+        # nhiễu seed = 0. KHÔNG tạo ngẫu nhiên nhân tạo để giả calibration (§1.3).
+        run = run_config(store, model, colset, folds, rounds=rounds, seed=eval_seeds[0], keep_states=keep_states_seed is not None)
+        return float(floor_pp), np.zeros_like(run.rmse), [run]
     runs = [run_config(store, model, colset, folds, rounds=rounds, seed=s,
                        keep_states=(keep_states_seed is not None and s == keep_states_seed)) for s in eval_seeds]
     tables = [r.rmse for r in runs]

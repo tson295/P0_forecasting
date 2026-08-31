@@ -93,8 +93,10 @@ class Confirmed:
 
 
 def confirm(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], seeds, keep_states: bool = True) -> Confirmed:
-    """Confirmation (§2.1b): 3 seed, ES bật → 3 bảng RMSE → RMSE̅ = mean từng ô."""
-    runs = [run_config(store, model, colset, folds, rounds=None, seed=s, keep_states=keep_states) for s in seeds]
+    """Confirmation (§2.1b): 3 evaluation seed, ES bật → 3 bảng RMSE → RMSE̅ = mean từng ô.
+    Model tất định (TimesFM zero-shot) chạy MỘT lần: 3 seed sẽ cho kết quả y hệt, RMSE̅ = chính bảng đó."""
+    used = list(seeds)[:1] if not getattr(model, "seed_dependent", True) else list(seeds)
+    runs = [run_config(store, model, colset, folds, rounds=None, seed=s, keep_states=keep_states) for s in used]
     return Confirmed(colset, runs, mean_rmse_over_seeds([r.rmse for r in runs]), runs[0].e0)
 
 

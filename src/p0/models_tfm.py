@@ -17,6 +17,11 @@ from .config import HORIZONS
 from .models import FitResult, SeriesBatch, _cpu_guard
 
 CONTEXT = 512
+# Ba chiến lược baseline covariate (§2.2 #4b) — CHỐT MỘT LẦN trước run thật, freeze bằng experiments/tfm_strategy.json:
+#   b0star_full   : r1 backbone + toàn bộ B0* làm covariate
+#   b0star_subset : r1 backbone + subset B0* (deterministic từ PI của §1.4, cap `subset_k`)
+#   ext_only      : r1 native backbone + chỉ 39 ext candidate (không B0*)
+COVARIATE_STRATEGIES = ("b0star_full", "b0star_subset", "ext_only")
 REPO_ID = "google/timesfm-2.5-200m-pytorch"
 REVISION = "1d952420fba87f3c6dee4f240de0f1a0fbc790e3"  # pin theo audit
 _CACHE: dict[tuple, object] = {}
@@ -26,14 +31,20 @@ class TimesFMModel:
     name = "tfm"
     lib = "timesfm"
     supports_rounds = False  # zero-shot: không có số vòng để calibrate (§1.3)
+    seed_dependent = False  # zero-shot, không có nguồn ngẫu nhiên → 3 seed cho kết quả y hệt (§1.3: ε = floor)
     input_kind = "series"
-    series_covariates = "ext"  # covariate = các cột ext đang xét (TimesFM không dùng feature B0)
 
     def __init__(self, device: str = "cuda", allow_cpu: bool = False, repo_id: str = REPO_ID, revision: str = REVISION,
                  context: int = CONTEXT, max_horizon: int = 128, batch_size: int = 256, torch_compile: bool = True,
                  normalize_inputs: bool = True, force_flip_invariance: bool = True, use_mean_head: bool = True,
-                 xreg_mode: str = "xreg + timesfm", xreg_force_on_cpu: bool = True, model: object | None = None):
+                 xreg_mode: str = "xreg + timesfm", xreg_force_on_cpu: bool = True, covariate_strategy: str = "ext_only",
+                 model: object | None = None):
         _cpu_guard(device == "cuda", allow_cpu, "TimesFM")
+        if covariate_strategy not in COVARIATE_STRATEGIES:
+            raise KeyError(f"covariate_strategy phải thuộc {sorted(COVARIATE_STRATEGIES)}: {covariate_strategy}")
+        self.covariate_strategy = covariate_strategy
+        # cột nào của colset thành covariate: ext_only → chỉ ext; b0star_full/b0star_subset → toàn bộ colset (b0 + ext)
+        self.series_covariates = "ext" if covariate_strategy == "ext_only" else "all"
         self.device, self.repo_id, self.revision = device, repo_id, revision
         self.context, self.max_horizon, self.batch_size = int(context), int(max_horizon), int(batch_size)
         self.torch_compile, self.normalize_inputs, self.flip = torch_compile, normalize_inputs, force_flip_invariance

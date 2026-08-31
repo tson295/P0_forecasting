@@ -61,6 +61,7 @@ class TabularModel:
     name: str = "base"
     input_kind: str = "tabular"  # tabular (tree) | sequence (LSTM: SeqBatch) | series (TimesFM/AutoTS: SeriesBatch)
     supports_rounds: bool = True
+    seed_dependent: bool = True  # False = inference tất định, không phụ thuộc seed (TimesFM zero-shot) → ε = floor, chạy 1 lần
     train_device: str = "GPU"
     predict_device: str = "CPU"  # device thực tế khi predict (§7.4): LightGBM/CatBoost luôn CPU (đặc tính thư viện)
     lib: str = ""

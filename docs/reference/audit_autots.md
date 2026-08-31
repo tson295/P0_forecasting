@@ -206,3 +206,122 @@ Ba lưu ý:
   - config cố định (không search, không transformer), `n_jobs=1`, `max_windows` lớn, seed truyền qua `random_seed` + `model_params['random_state']` (xgboost).
 - **checker**: test §6.4 riêng cho AutoTS — với candidate `f`, thay đổi giá trị `f` tại các bar `> t` **không được** đổi prediction tại origin `t`; và kiểm tra `R.loc[s]` đúng bằng `f(s-1)` (MR) / `f(s + window_size - 1)` (WR).
 - **main-controller**: quyết 2 việc — (a) bỏ lưới origin thưa cho AutoTS (khuyến nghị: bỏ, xem §9); (b) cho phép cài `autots==1.0.4` + `statsmodels` để chạy smoke import trên pandas 3.0.3.
+
+---
+
+# §12 — Framework search `AutoTS(...)` với feature set đã FREEZE (audit 2026-08-31)
+
+Ngày: 2026-08-31 · researcher · **chưa cài package, chưa chạy AutoTS** (TRAINING: LOCKED).
+Phương pháp: đọc **source thật** của wheel `autots-1.0.4-py3-none-any.whl` (`pip download --no-deps` vào thư mục tạm, KHÔNG cài vào env). Mọi số dòng là của wheel 1.0.4 (`autots/evaluator/auto_ts.py`, `auto_model.py`, `validation.py`, `autots/models/sklearn.py`, `model_list.py`, `autots/tools/transform.py`). Mọi claim gắn với **autots 1.0.4**.
+
+**Bối cảnh**: thiết kế mới (user chốt 2026-08-31) — WR/MR cố định chỉ là *probe* tìm feature (add-one → prune → F_WR, F_MR, union → F_WR_best / F_MR_best); sau đó **freeze feature set** và chạy `AutoTS(...)` search riêng cho từng frozen set; mỗi fold search **chỉ trên training-side**, freeze template, rolling predict outer VAL, chấm bằng metric của project. Lưu ý: plan rev 9b (dòng 204, 429 của `docs/RESEARCH_PLAN.md`) **đang cấm** "AutoTS tự search" — mục này là audit tính khả thi, không phải đã sửa plan.
+
+## 12.1 Chữ ký thật của `AutoTS.__init__` / `fit` (auto_ts.py:189, :1249)
+
+```python
+AutoTS(forecast_length=14, frequency='infer', prediction_interval=0.9, max_generations=25,
+       no_negatives=False, constraint=None, ensemble=None, initial_template='General+Random',
+       random_seed=2022, holiday_country='US', subset=None, aggfunc='first', na_tolerance=1,
+       metric_weighting={...13 khoa...}, drop_most_recent=0, drop_data_older_than_periods=None,
+       model_list='scalable',            # <- MAC DINH 1.0.4 la 'scalable', KHONG phai 'default'
+       transformer_list="auto", transformer_max_depth=6, models_mode="random",
+       num_validations="auto", models_to_validate=0.15, max_per_model_class=None,
+       skip_slow_models_seconds=None, validation_method='backwards', min_allowed_train_percent=0.5,
+       remove_leading_zeroes=False, prefill_na=None, introduce_na=None, preclean=None,
+       model_interrupt="stop", generation_timeout=None, current_model_file=None, force_gc=False,
+       horizontal_ensemble_validation=True, custom_metric=None, verbose=1, n_jobs=0.5)
+
+AutoTS.fit(df, date_col=None, value_col=None, id_col=None, future_regressor=None,
+           weights={}, result_file=None, grouping_ids=None, validation_indexes=None)
+AutoTS.fit_data(df, date_col=None, value_col=None, id_col=None, future_regressor=None, weights={})
+AutoTS.predict(forecast_length="self", prediction_interval='self', future_regressor=None,
+               hierarchy=None, just_point_forecast=False, fail_on_forecast_nan=True,
+               verbose='self', df=None)
+```
+
+- `initial_template` **chấp nhận `pd.DataFrame`** (auto_ts.py:374 → `self.import_template(df, method='only')`) — cửa duy nhất để nạp template do ta soạn. Sau đó `__init__` lọc theo `model_list` (:417) và **cắt bớt transformer** không thuộc `transformer_list` / vượt `transformer_max_depth` (:426–466) — chỉ cắt bớt, không bao giờ thêm. Template phải có đủ khoá `{"fillna":..., "transformations":{}, "transformation_params":{}}` trong `TransformationParameters` (:440 raise nếu thiếu).
+- `metric_weighting` chỉ nhận khoá trong `all_valid_weightings` (auto_model.py:3171) — `{'rmse_weighting': 1}` hợp lệ.
+- `no_negatives=False` mặc định (KHÔNG ép dương) → đúng cho signed log-return; giữ `False`, `constraint=None`.
+- Phải khai báo tường minh `drop_most_recent=0`, `introduce_na=False`, `prefill_na=None`, `preclean=None`: `introduce_na=None` + NaN ở 2 hàng cuối sẽ **tự chèn NaN** vào đuôi train của validation (auto_ts.py:2280–2290).
+- `n_jobs=0.5` = một nửa số core (`tools/cpu_count.py:60`). **`TemplateWizard` chạy các model TUẦN TỰ** (`for row in template_dict`, auto_model.py:~2190) → không song song giữa model; `n_jobs` chỉ đi vào trong model.
+
+### `future_regressor` ở tầng `AutoTS`: truyền được, nhưng KHÔNG bảo đảm được dùng
+
+- `fit(future_regressor=R)` → `fit_data` lưu `self.future_regressor_train` (:1204). Nếu `R.shape[0] != df.shape[0]` thì **in cảnh báo rồi `reindex(..., fill_value=0)`** (:1193–1200) — im lặng biến thành 0 → phải truyền `R` đúng bằng index của `df`.
+- `R` sau đó được `reindex` theo index train/test của **từng validation split** (:1383–1388, :2269–2274) rồi bơm vào `TemplateWizard`.
+- **Chỉ model có `regression_type='User'` trong `ModelParameters` mới thực sự dùng nó.** `regression_type` **do search sinh ngẫu nhiên**: `WindowRegression.get_new_params` (sklearn.py:2517) → `None` 80% / `'User'` 20%; `MultivariateRegression.get_new_params` (sklearn.py:3683) → `None` 70% / `'User'` 30%. Ngoài ra phần lớn model trong `model_list` mặc định (`'scalable'`) **không nhận regressor** (danh sách nhận: `model_list.py:395`).
+- **Knob duy nhất ép được**: `models_mode='regressor'` → cả hai class kiểm tra `if "regressor" in method: regression_type = "User"` (sklearn.py:2500–2501, :3680–3681). Không có mode nào vừa ép `'User'` vừa ép họ regressor (`generate_regressor_params` so khớp `method` bằng `==`, sklearn.py:1108).
+
+## 12.2 Leakage ra ngoài `df`: KHÔNG. Mọi validation nội bộ nằm TRONG `df` được truyền vào
+
+- `fit` gọi `fit_data(df)` → `self.df_wide_numeric`; toàn bộ index validation sinh bởi `generate_validation_indices` (`evaluator/validation.py:91`) và **mọi nhánh đều là lát của `df_wide_numeric.index`**: `backwards` → `idx[0 : n-(y+1)*fl]` (:180); `even` → `idx[0 : size*(y+1)+fl]` (:189); `seasonal n` → `idx[0:val_per]` (:202); `similarity` → `df.index[df.index <= indx[-1]]` (:151); `seasonal` → `df.index[0:x[-1]]` (:163); `mixed_length` → tuple lát của `idx` (:204–229). `_run_validations` chỉ `df_wide_numeric.reindex(cval_idx)` (:2216–2220). **Không có tham số nào nạp thêm dữ liệu ngoài `df`.**
+- Ngoại lệ duy nhất "dữ liệu ngoài": `holiday_country='US'` (package `holidays`) và `datepart_method` — lịch/thời gian, không phải giá tương lai. Khuyến nghị `holiday_country=None` (`tools/seasonal.py:137 date_part(holiday_country=None)` chấp nhận None).
+- **Kết luận Q2**: truyền `df` = training-side của fold (kết thúc cuối ES, trước purge 60') là ĐỦ để chặn leakage outer VAL. Với fold §1.2, holdout nội bộ của AutoTS rơi vào **cuối ES**, cách VAL ≥ 60' → hợp purge.
+- **CẢNH BÁO methodology (không phải leakage)**: với `forecast_length=3` + `validation_method='backwards'`, mỗi holdout nội bộ chỉ dài **3 bar**. `num_validations='auto'` → 3 (validation.py:72) ⇒ AutoTS chọn template dựa trên **4 × 3 = 12 điểm**. `num_validations='max'` → tối đa 50 ⇒ 153 điểm nhưng nhân số fit lên ~51×. `validation_method='custom'` với tuple `(train_idx, test_idx)` dài hơn sẽ khiến `_run_template` đặt `forecast_length=len(df_test)` (:2087) — tức dự báo một mạch 1.437 bước, KHÔNG phải rolling 3 bước → **không dùng được** để bắt chước protocol của ta.
+
+## 12.3 Freeze template → rolling predict outer VAL (Q3)
+
+### Artifact và thuộc tính sau `fit`
+`best_model` (DataFrame 1 dòng: `ID, Model, ModelParameters, TransformationParameters, Ensemble`), `best_model_name`, `best_model_params` (dict), `best_model_transformation_params` (dict), `best_model_id`, `regressor_used` (auto_ts.py:2004–2029 `parse_best_model`). `export_template(filename, models='best'|'all', n, include_results)` (:2576) ghi `.csv`/`.json` (`save_template`, :2746). `import_best_model(path_or_df)` (:2904) nạp lại + `parse_best_model`. `current_model_file="<path>"` ghi `<path>.json` cho model đang chạy (auto_model.py:875–896).
+
+### KHÔNG dùng đường `AutoTS.fit_data()/predict()` cho rolling — 4 lý do từ source
+1. `_predict` chỉ đi đường "không refit" khi `best_model_name in update_fit` (`model_list.py:461` = `MultivariateRegression, DatepartRegression, GluonTS, WindowRegression, Cassandra, PreprocessingRegression`). Ngoài danh sách đó → `model_forecast(...)` = **refit đầy đủ mỗi origin** (auto_ts.py:2398–2422).
+2. Đường "không refit" gọi `ModelPrediction.fit_data(use_data, future_regressor=use_regr_train)` (:2394) → `MultivariateRegression.fit_data` → **bug `sklearn.py:3337` `future_regressor.reindex(df)`** → `ValueError: Index data must be 1-dimensional`. MR + `regression_type='User'` **crash ngay**.
+3. `ModelPrediction.fit_data` (auto_model.py:1028–1030) **KHÔNG áp transformer**: `self.model.fit_data(df, future_regressor)` với `df` **thô**, trong khi model bên trong đã fit trên `self.transformer_object._fit(df)` = dữ liệu **đã transform** (:898, :906). ⇒ khi template có transformer khác rỗng, đường update nhanh cho dữ liệu **sai thang**. Chỉ an toàn khi `transformations == {}`.
+4. `AutoTS.fit_data` mỗi origin còn chạy `df_cleanup` + `NumericTransformer` + `profile_time_series` + `validate_num_validations` + `generate_validation_indices` (:1087–1232) — vô ích, ~10–50 ms × 14.370 lời gọi.
+
+### Pseudo-code CHUẨN: (a) search → (b) freeze → (c) rolling predict
+
+```python
+# ---------- (a) SEARCH: chi tren training-side cua fold (FIT + ES, ket thuc truoc purge 60') ----------
+from autots import AutoTS
+df_tr = wide(r1, bars[: end_ES])                    # 1 cot 'r1', DatetimeIndex freq 'min', KHONG cham purge/VAL
+R_tr  = regressor_frame(F_frozen, df_tr.index, shift=SHIFT)   # §5: MR R.loc[s]=f(s-1); WR R.loc[s]=f(s+W-1)
+
+auto = AutoTS(
+    forecast_length=3, frequency='min',
+    model_list=['WindowRegression', 'MultivariateRegression'],  # chi 2 ho da audit alignment (§5)
+    models_mode='regressor',              # EP regression_type='User' o MOI candidate (sklearn.py:2500, 3680)
+    initial_template='Random',            # 'General' chi co 1/42 dong dung regressor -> vo dung o day
+    max_generations=G, generation_timeout=T_min, skip_slow_models_seconds=S,
+    num_validations='auto', validation_method='backwards',
+    metric_weighting={'rmse_weighting': 1},
+    ensemble=None, no_negatives=False, constraint=None, drop_most_recent=0, subset=None,
+    introduce_na=False, prefill_na=None, preclean=None, holiday_country=None,
+    transformer_list=[], transformer_max_depth=0,        # xem RUI RO T (12.4)
+    random_seed=selection_seed, n_jobs=1, verbose=0,
+    current_model_file=f"{out}/autots_cur_f{f}_{setname}",
+)
+auto.fit(df_tr, future_regressor=R_tr)     # R_tr phai TRUNG index df_tr (lech -> fill_value=0 am tham)
+
+# ---------- (b) FREEZE ----------
+auto.export_template(f"{out}/tmpl_best_f{f}_{setname}.csv", models='best', n=1)
+auto.export_template(f"{out}/tmpl_all_f{f}_{setname}.csv",  models='all')   # log toan bo candidate da thu
+name, params = auto.best_model_name, auto.best_model_params
+trans        = auto.best_model_transformation_params
+assert str(params.get('regression_type')).lower() == 'user'   # neu khong -> template BO QUA F_frozen -> loai
+assert not trans.get('transformations')                        # co transformer -> khong dung duoc duong nhanh
+assert params.get('datepart_method') in (None, 'None')         # datepart = them cot NGOAI F_frozen (12.4)
+params['regression_model']['model_params'].update(GPU_KW)      # ep GPU thu cong sau khi search (12.5)
+
+# ---------- (c) ROLLING PREDICT tren outer VAL, template da freeze, KHONG refit ----------
+from autots.evaluator.auto_model import ModelMonster
+W = int(params['window_size']) if name == 'WindowRegression' else None
+R = regressor_frame(F_frozen, full_index, shift=(W - 1) if W else -1)   # DUNG LAI theo window_size DA SEARCH
+m = ModelMonster(name, parameters=params, frequency='min', forecast_length=3,
+                 prediction_interval=0.9, holiday_country=None,
+                 random_seed=seed, verbose=0, n_jobs=1)
+m.fit(df_tr, future_regressor=R.reindex(df_tr.index))          # MOT LAN / fold
+for t in val_origins:                                          # 1.437 origin
+    sl = df.loc[:t].tail(TAIL_BARS)                            # chi tau <= t
+    m.fit_data(sl)                                             # cap nhat cua so, KHONG train lai
+    if name == 'MultivariateRegression':
+        m.regressor_train = R.reindex(sl.index)                # va bug sklearn.py:3337 (dung ngu nghia fit())
+    fc = m.predict(forecast_length=3, future_regressor=three_rows_of(f_at(t)),
+                   just_point_forecast=True)
+    y1, y2, y3 = np.cumsum(np.asarray(fc)[:, 0])               # one-step r_hat -> y_h; P_hat = C_t*exp(y_h)
+```
+
+- **Không refit lần nào trong vòng lặp**: `WindowRegression.fit_data` = `basic_profile` + `last_window = df.tail(window_size)` (sklearn.py:2311–2314); `MultivariateRegression.fit_data` = `basic_profile` + `sktraindata = df.tail(min_threshold)` (:3326–3342). Đây đúng bằng vòng lặp đang có trong `src/p0/models_autots.py` — **delta code duy nhất là `_make()` lấy params từ template đã search thay vì hằng số**, cộng việc dựng lại `R` theo `window_size` mới.
+- `output_dim` do search chọn đều chạy được với 3 hàng future regressor giá trị `f(t)`: nhánh `'forecast_length'` dùng `future_regressor.tail(1)` (sklearn.py:2434), nhánh `'1step'` dùng `future_regressor.reindex(index).iloc[x]` (:2380) — vì cả 3 hàng đều bằng `f(t)` nên hai nhánh cho cùng giá trị.
+- Chi phí rolling: như §9 (WR ~2–6 ms/origin, MR ~10–30 ms/origin) → 5 fold × 1.437 origin ≈ **2–10 phút/frozen set**. Không phải nút thắt.
