@@ -1,0 +1,12 @@
+[p0 20:43:06] HF /workspace/P0_forecasting/data/BTC_hf_1min.csv: {"rows": 21916, "start": "2026-01-18 16:15:00+00:00", "end": "2026-02-02 21:30:00+00:00", "aligned": true, "duplicates": 0, "gaps": 0, "max_gap_sec": 60, "ohlc_ok": true, "volume_ok": true, "amount_in_range": true, "amount_available": true, "ok": true}
+[p0 20:43:06] LF /workspace/P0_forecasting/data/BTC_lf_5min.csv: {"rows": 19308, "start": "2026-01-18 16:20:00+00:00", "end": "2026-03-26 17:15:00+00:00", "aligned": true, "duplicates": 0, "gaps": 0, "max_gap_sec": 300, "ohlc_ok": true, "volume_ok": true, "amount_in_range": true, "amount_available": true, "ok": true}
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 20:43:06] B0-eligible origins: 21258 | first 2026-01-19 02:46:00+00:00 | last 2026-02-02 21:30:00+00:00
+[p0 20:43:06] fold1_2026-01-27: FIT 01-19 02:46 → 01-26 00:00 n=9887 | ES 01-26 00:00 → 01-26 23:00 n=1377 | VAL 01-27 00:00 → 01-28 00:00 n=1437 | cuối=T_end−4' True | OK
+[p0 20:43:06] fold2_2026-01-28: FIT 01-19 02:46 → 01-27 00:00 n=11327 | ES 01-27 00:00 → 01-27 23:00 n=1377 | VAL 01-28 00:00 → 01-29 00:00 n=1437 | cuối=T_end−4' True | OK
+[p0 20:43:06] fold3_2026-01-29: FIT 01-19 02:46 → 01-28 00:00 n=12767 | ES 01-28 00:00 → 01-28 23:00 n=1377 | VAL 01-29 00:00 → 01-30 00:00 n=1437 | cuối=T_end−4' True | OK
+[p0 20:43:06] fold4_2026-01-30: FIT 01-19 02:46 → 01-29 00:00 n=14207 | ES 01-29 00:00 → 01-29 23:00 n=1377 | VAL 01-30 00:00 → 01-31 00:00 n=1437 | cuối=T_end−4' True | OK
+[p0 20:43:06] fold5_2026-01-31: FIT 01-19 02:46 → 01-30 00:00 n=15647 | ES 01-30 00:00 → 01-30 23:00 n=1377 | VAL 01-31 00:00 → 02-01 00:00 n=1437 | cuối=T_end−4' True | OK
+[p0 20:43:06] final_TEST: FIT 01-19 02:46 → 01-31 00:00 n=17087 | ES 01-31 00:00 → 01-31 23:00 n=1377 | VAL 02-01 00:00 → 02-02 21:31 n=2728 | cuối=T_end−4' True | OK
+[p0 20:43:06] verify /workspace/P0_forecasting/data/data_checksums.json: OK — khớp snapshot đã ghi

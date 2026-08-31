@@ -1,0 +1,118 @@
+{
+ "backend": {
+  "lightgbm": "cuda",
+  "xgboost": "cuda"
+ },
+ "checks": [
+  {
+   "check": "lgbm fit GPU (1 fold)",
+   "ok": true,
+   "sec": 1.63,
+   "note": "RMSE=[56.18, 76.25, 92.45] best_iters=[3, 19, 8]"
+  },
+  {
+   "check": "xgb fit GPU (1 fold)",
+   "ok": true,
+   "sec": 0.61,
+   "note": "RMSE=[56.21, 76.13, 92.37] best_iters=[11, 1, 1]"
+  },
+  {
+   "check": "cat fit GPU (1 fold)",
+   "ok": true,
+   "sec": 3.79,
+   "note": "RMSE=[56.11, 76.09, 92.68] best_iters=[29, 9, 67]"
+  },
+  {
+   "check": "xgbrf fit GPU (1 fold)",
+   "ok": true,
+   "sec": 1.54,
+   "note": "RMSE=[56.17, 76.17, 92.56] best_iters=[1, 1, 1]"
+  },
+  {
+   "check": "LSTM forward+train CUDA",
+   "ok": true,
+   "sec": 3.58,
+   "note": "RMSE=[56.75, 77.78, 94.69] (train device GPU)"
+  },
+  {
+   "check": "timesfm import + version",
+   "ok": true,
+   "sec": 0.0,
+   "note": "timesfm 2.0.2"
+  },
+  {
+   "check": "TimesFM load checkpoint + compile (native)",
+   "ok": true,
+   "sec": 13.72,
+   "note": "checkpoint google/timesfm-2.5-200m-pytorch@1d952420fba8"
+  },
+  {
+   "check": "TimesFM native forecast (chỉ r1)",
+   "ok": true,
+   "sec": 34.15,
+   "note": "shape=(24, 3) |ŷ|max=1.29e-04 1423.0 ms/origin"
+  },
+  {
+   "check": "TimesFM mean-head = quantile[...,0]",
+   "ok": true,
+   "sec": 0.31,
+   "note": "point(q50) vs mean lệch tối đa 7.841e-06 (head dùng mean)"
+  },
+  {
+   "check": "TimesFM covariate forecast (per_core_batch_size=1)",
+   "ok": true,
+   "sec": 24.52,
+   "note": "3066 ms/origin (batch=1, 2 covariate)"
+  },
+  {
+   "check": "TimesFM causal (τ ≤ t) + shift 1 bar",
+   "ok": true,
+   "sec": 1.08,
+   "note": "cắt-chuỗi bit-identical; covariate dịch đúng 1 bar; 3 bước tương lai = f(t)"
+  },
+  {
+   "check": "autots import + version",
+   "ok": true,
+   "sec": 0.0,
+   "note": "autots 1.0.4"
+  },
+  {
+   "check": "AutoTS-WR probe (LightGBM GPU, rolling)",
+   "ok": true,
+   "sec": 16.92,
+   "note": "LightGBM(cuda) RMSE=[57.25, 77.95, 94.96] 11.8 ms/origin"
+  },
+  {
+   "check": "AutoTS-MR probe (XGBoost cuda, rolling)",
+   "ok": true,
+   "sec": 40.02,
+   "note": "xgboost(cuda) RMSE=[56.05, 76.07, 92.68] 27.8 ms/origin"
+  },
+  {
+   "check": "AutoTS thật sự dùng future_regressor",
+   "ok": true,
+   "sec": 1.52,
+   "note": "đổi regressor → prediction đổi (max Δ=8.04e-05)"
+  },
+  {
+   "check": "AutoTS framework bake-off (max_generations=0)",
+   "ok": true,
+   "sec": 56.37,
+   "note": "best=WindowRegression, 6 fit trong 56s → 9.4s/fit"
+  }
+ ],
+ "timing_ms_per_origin": {
+  "native_ms": 1423.03,
+  "cov_ms": 3065.51,
+  "wr_ms": 11.77,
+  "mr_ms": 27.85
+ },
+ "eta_hours": {
+  "tfm_ext (40 run)": 113.6,
+  "tfm_ext covariate (40 run)": 244.73,
+  "tfm_b0 (40 run, covariate)": 244.73,
+  "autots_wr probe (40 run)": 0.94,
+  "autots_mr probe (40 run)": 2.22,
+  "autots-search (bake-off)": 1.15
+ }
+}

@@ -29,8 +29,12 @@ from .models import FitResult, SeriesBatch, _cpu_guard
 
 TAIL_BARS = 400  # số bar cuối truyền vào fit_data mỗi origin (đủ cho last_window của WR và min_threshold ≥ 90 của MR)
 
+# LƯU Ý (canary trên package thật, 2026-08-31): `autots.models.sklearn.retrieve_regressor` (sklearn.py:471–488)
+# đã tự truyền `verbose=-1, random_state=..., n_jobs=...` cho LGBMRegressor rồi `**model_params`, nên KHÔNG được
+# đặt các khoá đó ở đây (trùng kwargs → TypeError: got multiple values for keyword argument 'verbose'; AutoTS nuốt
+# lỗi này thành "Template Eval Error" và âm thầm bỏ template). Verbosity không phải tham số mô hình.
 WR_PARAMS = {"model": "LightGBM", "model_params": {"device_type": "gpu", "n_estimators": 400, "learning_rate": 0.03, "max_depth": 6,
-                                                   "num_leaves": 31, "verbose": -1}}
+                                                   "num_leaves": 31}}
 MR_PARAMS = {"model": "xgboost", "model_params": {"device": "cuda", "tree_method": "hist", "n_estimators": 400, "learning_rate": 0.03,
                                                   "max_depth": 6}}
 

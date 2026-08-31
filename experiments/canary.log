@@ -1,0 +1,68 @@
+backend đã resolve: LightGBM device_type=cuda · XGBoost device=cuda · CatBoost GPU · torch CUDA
+
+== 1. GPU fit thật: LightGBM / XGBoost / CatBoost / LSTM ==
+  OK   lgbm fit GPU (1 fold)                           1.63s  RMSE=[56.18, 76.25, 92.45] best_iters=[3, 19, 8]
+  OK   xgb fit GPU (1 fold)                            0.61s  RMSE=[56.21, 76.13, 92.37] best_iters=[11, 1, 1]
+  OK   cat fit GPU (1 fold)                            3.79s  RMSE=[56.11, 76.09, 92.68] best_iters=[29, 9, 67]
+  OK   xgbrf fit GPU (1 fold)                          1.54s  RMSE=[56.17, 76.17, 92.56] best_iters=[1, 1, 1]
+  OK   LSTM forward+train CUDA                         3.58s  RMSE=[56.75, 77.78, 94.69] (train device GPU)
+
+== 2. TimesFM (package thật, checkpoint thật) ==
+  OK   timesfm import + version                        0.00s  timesfm 2.0.2
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  OK   TimesFM load checkpoint + compile (native)     13.72s  checkpoint google/timesfm-2.5-200m-pytorch@1d952420fba8
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0831 20:39:49.145000 32195 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+/home/ubuntu/p0venv/lib/python3.12/site-packages/torch/_inductor/compile_fx.py:322: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
+  warnings.warn(
+  OK   TimesFM native forecast (chỉ r1)               34.15s  shape=(24, 3) |ŷ|max=1.29e-04 1423.0 ms/origin
+  OK   TimesFM mean-head = quantile[...,0]             0.31s  point(q50) vs mean lệch tối đa 7.841e-06 (head dùng mean)
+WARNING:jax._src.xla_bridge:An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+  OK   TimesFM covariate forecast (per_core_batch_size=1)   24.52s  3066 ms/origin (batch=1, 2 covariate)
+  OK   TimesFM causal (τ ≤ t) + shift 1 bar            1.08s  cắt-chuỗi bit-identical; covariate dịch đúng 1 bar; 3 bước tương lai = f(t)
+
+== 3. AutoTS (package thật) ==
+  OK   autots import + version                         0.00s  autots 1.0.4
+  OK   AutoTS-WR probe (LightGBM GPU, rolling)        16.92s  LightGBM(cuda) RMSE=[57.25, 77.95, 94.96] 11.8 ms/origin
+  OK   AutoTS-MR probe (XGBoost cuda, rolling)        40.02s  xgboost(cuda) RMSE=[56.05, 76.07, 92.68] 27.8 ms/origin
+  OK   AutoTS thật sự dùng future_regressor            1.52s  đổi regressor → prediction đổi (max Δ=8.04e-05)
+[p0 20:41:47] [fold1_2026-01-05|wr:60] search trên 5066 bar (đến 2026-01-04 22:56:00), 2 template × 2 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 196.45 in 8.19s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 198.99 in 9.71s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 169.89 in 8.19s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 141.64 in 9.87s: 
+  OK   AutoTS framework bake-off (max_generations=0)   56.37s  best=WindowRegression, 6 fit trong 56s → 9.4s/fit
+
+== 4. ETA (từ thời gian đo được, 5 fold × 1.437 origin = 7.185 origin/run) ==
+  tfm_ext (40 run)                   ≈  113.6 h
+  tfm_ext covariate (40 run)         ≈  244.7 h
+  tfm_b0 (40 run, covariate)         ≈  244.7 h
+  autots_wr probe (40 run)           ≈    0.9 h
+  autots_mr probe (40 run)           ≈    2.2 h
+  autots-search (bake-off)           ≈    1.1 h
+  (tree/LSTM: đo trực tiếp ở phase tương ứng; ETA cập nhật lại sau mỗi phase bằng thời gian thật)
+
+→ /workspace/P0_forecasting/experiments/canary.json
+CANARY PASS (16 mục).

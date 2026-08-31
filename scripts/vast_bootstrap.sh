@@ -24,13 +24,23 @@ nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader | 
   || die "nvidia-smi lỗi"
 
 log "== apt: OpenCL + boost (cho LightGBM build GPU) =="
-if command -v apt-get >/dev/null 2>&1; then
+if command -v apt-get >/dev/null 2>&1 && [ "$(id -u)" = "0" ]; then
   apt-get update -qq || die "apt-get update lỗi"
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
       ocl-icd-opencl-dev opencl-headers clinfo libboost-dev libboost-system-dev libboost-filesystem-dev \
       cmake build-essential >/dev/null || die "apt-get install lỗi"
   mkdir -p /etc/OpenCL/vendors
   [ -f /etc/OpenCL/vendors/nvidia.icd ] || echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
+else
+  # Container không chạy bằng root (không có passwordless sudo) → không apt được. Không đổi methodology:
+  # toolchain build phải CÓ SẴN, nếu thiếu thì die. Boost (chỉ cần cho build OpenCL) có thể thiếu → build
+  # OpenCL sẽ fail và script tự fallback sang USE_CUDA; backend cuối cùng vẫn do bước RESOLVE (fit thật) quyết định.
+  log "apt: bỏ qua (uid=$(id -u), không phải root) — dùng toolchain có sẵn"
+  command -v cmake >/dev/null 2>&1 || die "thiếu cmake và không có quyền apt"
+  command -v g++ >/dev/null 2>&1   || die "thiếu g++ và không có quyền apt"
+  [ -e /usr/include/CL/cl.h ]      || die "thiếu OpenCL headers và không có quyền apt"
+  ls /etc/OpenCL/vendors/*.icd >/dev/null 2>&1 || log "không thấy OpenCL ICD"
+  [ -e /usr/include/boost/version.hpp ] || log "thiếu Boost → build LightGBM OpenCL sẽ fail, fallback USE_CUDA"
 fi
 clinfo -l 2>/dev/null | tee -a "$ENV_FILE" || log "clinfo: không thấy platform OpenCL (sẽ thử build CUDA cho LightGBM)"
 
@@ -52,7 +62,18 @@ python -m pip install -q "jax[cpu]" || die "cài jax[cpu] lỗi (xreg của Time
 log "== LightGBM: build GPU rồi RESOLVE backend thật sự fit được =="
 if ! python -c "import lightgbm" 2>/dev/null; then LGB_NEED_BUILD=1; else LGB_NEED_BUILD=0; fi
 build_lgb() {  # $1 = USE_GPU | USE_CUDA
-  python -m pip install -q --force-reinstall --no-binary lightgbm --config-settings=cmake.define."$1"=ON lightgbm
+  local extra=()
+  if [ "$1" = "USE_CUDA" ]; then
+    # Image này có NCCL 2.31 (CUDA 13, device ABI 8) trong khi nvcc là 12.8 (ABI 7) → nvlink từ chối
+    # libnccl_static.a ("ABI version 8 is incompatible with target ABI version 7"). Link NCCL dạng SHARED thì
+    # LightGBM không device-link object của NCCL nữa. Chỉ build đúng arch của GPU đang có (rút ngắn build).
+    # Đây là fix môi trường build, KHÔNG đổi methodology: backend cuối vẫn do bước RESOLVE (fit thật) quyết định.
+    extra+=(--config-settings=cmake.define.BUILD_WITH_SHARED_NCCL=ON)
+    local cc
+    cc=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '. ')
+    [ -n "$cc" ] && extra+=(--config-settings=cmake.define.CMAKE_CUDA_ARCHITECTURES="$cc")
+  fi
+  python -m pip install -q --force-reinstall --no-binary lightgbm --config-settings=cmake.define."$1"=ON "${extra[@]}" lightgbm
 }
 if [ "${FORCE_LGB_BUILD:-1}" = "1" ] || [ "$LGB_NEED_BUILD" = "1" ]; then
   build_lgb USE_GPU || { log "build LightGBM OpenCL thất bại → thử build CUDA"; build_lgb USE_CUDA || die "không build được LightGBM GPU (cả OpenCL lẫn CUDA)"; }
@@ -92,10 +113,16 @@ import importlib, json, sys, warnings
 import numpy as np
 warnings.filterwarnings("ignore")
 cfg = json.loads(open(sys.argv[1], encoding="utf-8").read())
+import importlib.metadata as _md
+_DIST = {"sklearn": "scikit-learn"}  # tên module != tên distribution
 for m in ["numpy", "pandas", "scipy", "sklearn", "lightgbm", "xgboost", "catboost", "torch", "matplotlib",
           "timesfm", "autots", "statsmodels", "jax"]:
     try:
-        print(m, importlib.import_module(m).__version__)
+        mod = importlib.import_module(m)
+        v = getattr(mod, "__version__", None)
+        if v is None:  # timesfm 2.0.2 không export __version__ → lấy từ metadata của distribution
+            v = _md.version(_DIST.get(m, m))
+        print(m, v)
     except Exception as e:
         print(m, "MISSING", e); sys.exit(1)
 import torch

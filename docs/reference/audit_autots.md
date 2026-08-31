@@ -458,7 +458,11 @@ WR_GPU = {                                  # khoa = WindowRegression.get_params
     "regression_model": {"model": "LightGBM",
                          "model_params": {"device_type": "gpu", "n_estimators": 400,
                                           "learning_rate": 0.03, "max_depth": 6,
-                                          "num_leaves": 31, "verbose": -1}},
+                                          "num_leaves": 31}},
+                         # SỬA 2026-08-31 (canary package thật): BỎ "verbose": -1 khỏi model_params —
+                         # retrieve_regressor (dòng 471) đã truyền verbose/random_state/n_jobs rồi, đặt lại
+                         # → TypeError "got multiple values for keyword argument 'verbose'", và AutoTS nuốt
+                         # thành "Template Eval Error" nên template LightGBM bị bỏ im lặng.
 }
 MR_GPU = {                                  # khoa = MultivariateRegression.get_params() (sklearn.py:3766)
     "regression_model": {"model": "xgboost",

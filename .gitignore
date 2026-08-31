@@ -17,3 +17,6 @@ reports/figures/
 
 # Claude Code local-only
 .claude/settings.local.json
+
+# Log bootstrap thô (build LightGBM, pip) — không cần track
+experiments/bootstrap.log
