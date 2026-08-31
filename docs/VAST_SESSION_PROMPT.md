@@ -54,14 +54,15 @@ python run.py loop --config configs/p0_15d.json --model cat
 #   4) assert cửa sổ covariate hữu hạn (cần ≥ 1952 bar lịch sử)
 #   5) tách thời gian forward vs xreg: > 100 ms/origin ở k=39 nghĩa là chưa compile per_core_batch_size=1
 #   6) log cả q50 và mean; 7) chạy k=1 với cột nhiễu trắng → phải xấu đi ~0.2–0.6 pp; 8) xác nhận ε_TFM ≈ floor
-python run.py loop --config configs/p0_15d.json --model tfm    # covariate_strategy = ext_only (đã freeze, audit §12)
+python run.py loop --config configs/p0_15d.json --model tfm_b0   # nhánh A: S = B0*
+python run.py loop --config configs/p0_15d.json --model tfm_ext  # nhánh B: S = ∅ (TimesFM native trên r1)
 python run.py loop --config configs/p0_15d.json --model xgbrf
 python run.py loop --config configs/p0_15d.json --model autots_wr
 python run.py loop --config configs/p0_15d.json --model autots_mr
 python run.py loop --config configs/p0_15d.json --model lstm
 
-python run.py autots-union  --config configs/p0_15d.json      # §2.2 #6 (ii): F_WR_best / F_MR_best, freeze feature set
-python run.py autots-search --config configs/p0_15d.json      # §2.2 #6 (iii): bake-off template GPU → AutoTS-final
+python run.py tfm-final     --config configs/p0_15d.json      # §2.2 #4: TFM_B0_best vs TFM_EXT_best → TimesFM-final
+python run.py autots-search --config configs/p0_15d.json      # §2.2 #6: framework AutoTS trên F_WR_best và F_MR_best → AutoTS-final
 python run.py ensemble --config configs/p0_15d.json           # §3 ensemble vs champion
 python run.py final --config configs/p0_15d.json              # §4 TEST một lần: all_models_test.csv + heatmap + Fig H_h mọi model
 ```

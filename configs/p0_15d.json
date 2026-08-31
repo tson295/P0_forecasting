@@ -83,8 +83,7 @@
     "tfm": {
       "device": "cuda",
       "context": 512,
-      "batch_size": 256,
-      "covariate_strategy": "ext_only"
+      "batch_size": 256
     },
     "autots_wr": {
       "device": "cuda",
@@ -121,7 +120,8 @@
     "lgbm",
     "xgb",
     "cat",
-    "tfm",
+    "tfm_b0",
+    "tfm_ext",
     "xgbrf",
     "autots_wr",
     "autots_mr",

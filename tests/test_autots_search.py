@@ -40,10 +40,11 @@ def _cfg(tmp_path):
 
 
 def _write_best(exp, model, ext):
-    (exp / "autots_best").mkdir(parents=True, exist_ok=True)
-    (exp / "autots_best" / f"{model}.json").write_text(json.dumps(
-        {"model": model, "role": "probe_best_feature_set", "chosen": "riêng",
-         "colset": {"b0": [], "ext": list(ext)}, "rmse_mean": [[50.0, 70.0, 90.0]], "e0": [[100.0, 140.0, 170.0]],
+    """Input của `autots-search` giờ là win sau prune + confirmation của chính probe (không còn stage union)."""
+    (exp / "wins").mkdir(parents=True, exist_ok=True)
+    (exp / "wins" / f"{model}.json").write_text(json.dumps(
+        {"model": model, "which": "prune", "colset": {"b0": [], "ext": list(ext)},
+         "rmse_mean": [[50.0, 70.0, 90.0]], "e0": [[100.0, 140.0, 170.0]],
          "eps": 0.02, "eval_seeds": [1, 2], "median_gain_vs_e0": 0.1}), encoding="utf-8")
 
 
@@ -52,6 +53,11 @@ def _prepare(tmp_path, store, folds, monkeypatch, ext_wr, ext_mr):
     exp = cfg.exp_dir
     _write_best(exp, "autots_wr", ext_wr)
     _write_best(exp, "autots_mr", ext_mr)
+    # tiền đề hợp lệ: champion ban đầu = LightGBM (§3) đã có từ `loop --model lgbm`
+    exp.mkdir(parents=True, exist_ok=True)
+    (exp / "champion.json").write_text(json.dumps(
+        {"model": "lgbm", "colset": {"b0": [], "ext": []}, "rmse_mean": [[60.0, 80.0, 100.0]], "eps": 0.02,
+         "e0": [[100.0, 140.0, 170.0]]}), encoding="utf-8")
     monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
     monkeypatch.setattr(cli, "load_store", lambda c, **k: (store, folds, None, None))
     seen = []
@@ -83,7 +89,7 @@ def test_search_requires_frozen_feature_sets(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
     with pytest.raises(SystemExit) as e:
         cli.cmd_autots_search(cfg, Namespace(smoke=True, allow_cpu=True))
-    assert "autots-union" in str(e.value)  # phải freeze feature set trước khi chạy framework
+    assert "loop --model autots_wr" in str(e.value)  # phải có win sau confirmation trước
 
 
 # ----------------------------------------------------------------------------- G8 + G9 + G10
@@ -125,3 +131,16 @@ def test_search_dedups_identical_sets(tmp_path, store, folds, monkeypatch):
     cli.cmd_autots_search(cfg, Namespace(smoke=True, allow_cpu=True))
     assert len(seen) == 1 * 2 * len(folds)  # hai bộ trùng → chỉ search MỘT set
     assert len(pd.read_csv(exp / "autots_search.csv")) == 2  # 2 nhóm shift của cùng một set
+
+
+def test_probe_model_builder_is_callable_for_each_group(tmp_path):
+    """`_autots_probe_model` phải dựng được model thật cho từng nhóm shift (test khác monkeypatch mất hàm này)."""
+    cfg = _cfg(tmp_path)
+    wr = cli._autots_probe_model(cfg, "wr:60", allow_cpu=True)
+    mr = cli._autots_probe_model(cfg, "mr", allow_cpu=True)
+    assert (wr.name, wr.kind, wr.window_size) == ("autots_wr", "wr", 60)
+    assert (mr.name, mr.kind) == ("autots_mr", "mr")
+    assert wr.shift_bars() == 59 and mr.shift_bars() == -1  # căn thời gian regressor theo từng model
+    frozen = cli._autots_probe_model(cfg, "wr:30", allow_cpu=True,
+                                     frozen=("WindowRegression", {"window_size": 30, "regression_type": "User"}))
+    assert frozen.frozen[0] == "WindowRegression" and frozen.window_size == 30 and frozen.use_es is True

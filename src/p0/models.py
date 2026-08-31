@@ -236,10 +236,13 @@ def make_model(name: str, params: dict | None = None, allow_cpu: bool = False) -
         from .models_lstm import LSTMModel
 
         return LSTMModel(allow_cpu=allow_cpu, **params)
-    if name == "tfm":
+    if name in ("tfm", "tfm_b0", "tfm_ext"):
         from .models_tfm import TimesFMModel
 
-        return TimesFMModel(allow_cpu=allow_cpu, **params)
+        # `tfm_b0` / `tfm_ext` = hai nhánh feature selection; `tfm` = TimesFM-final (scope lấy từ params)
+        scope = {"tfm_b0": "b0star", "tfm_ext": "ext"}.get(name, params.pop("covariate_scope", "ext"))
+        params.pop("covariate_scope", None)
+        return TimesFMModel(allow_cpu=allow_cpu, covariate_scope=scope, name=name, **params)
     if name in ("autots_wr", "autots_mr"):
         from .models_autots import AutoTSModel
 
