@@ -409,6 +409,38 @@ def path_pred(c_t: float, c_fut: np.ndarray, strength: float, sig: float = SIG1)
     return np.r_[0.0, c_t * np.exp(yhat) - c_t]
 
 
+def fake_traj_segments(n_seg: int, n: int, sig: float = SIG1, level: float = PRICE) -> list[tuple[np.ndarray, np.ndarray]]:
+    """n_seg đoạn (mỗi đoạn = một fold), mỗi đoạn n bar: trả (thời gian, giá thật C_(t+h)). Có khoảng trống giữa các đoạn."""
+    out, price = [], level
+    t0 = pd.Timestamp("2026-01-27 00:00", tz=None)
+    for k in range(n_seg):
+        r = rng.normal(0.0, sig, n)
+        seg = price * np.exp(np.cumsum(r))
+        price = seg[-1]
+        idx = pd.date_range(t0 + pd.Timedelta(days=k), periods=n, freq="5min")  # 5' cho ảnh mẫu (thật là 1')
+        out.append((idx.to_numpy(), seg))
+    return out
+
+
+def panel_traj(ax, segs, series: list[tuple[str, float, str, str]], h: int, legend: bool) -> None:
+    """Fig T: actual C_(t+h) (đen) + P̂ = C_t·exp(ŷ) của từng series, x = thời điểm t+h; mỗi fold một đoạn, không nối qua nhau."""
+    for k, (x, actual) in enumerate(segs):
+        ax.plot(x, actual, color=INK, lw=0.9, label=f"actual C_(t+{h})" if k == 0 else None)
+        if k:
+            ax.axvline(x[0], color=MUTED, lw=0.7, ls=":", alpha=0.8)
+    for si, (name, strength, color, marker) in enumerate(series):
+        for k, (x, actual) in enumerate(segs):
+            y_true = np.r_[0.0, np.diff(np.log(actual))]
+            pred = actual * np.exp(-(1 - strength) * y_true + rng.normal(0.0, 0.3 * SIG1 * np.sqrt(h), len(actual)))
+            step = max(1, len(x) // 30)
+            ax.plot(x, pred, color=color, lw=0.9, alpha=0.85, marker=marker, ms=3.5,
+                    markevery=((si * step) // max(1, len(series)), step), label=name if k == 0 else None)
+    ax.set_ylabel("giá BTC (USD)")
+    ax.margins(x=0.01)
+    if legend:
+        ax.legend(fontsize=8, loc="best", ncol=3)
+
+
 def panel_path(ax, label: str, c_t: float, c_fut: np.ndarray, series: list[tuple[str, np.ndarray, str, str]], legend: bool) -> None:
     """Một panel = MỘT origin: x = t, t+1, t+2, t+3; y = thay đổi giá so với C_t; E0 = đường ngang 0; actual đen."""
     x = np.arange(4)
@@ -453,6 +485,18 @@ for k, (label, (c_t, c_fut)) in enumerate(zip(VAL_PICKS, val_origins)):
 fig.suptitle(f"Fig P — forecast path win vs champion: mỗi panel một origin, x = t → t+3, y = thay đổi giá so với C_t  [{FAKE}]", fontsize=9)
 fig.tight_layout()
 fig.savefig(OUT / "fig_path_win_vs_champion.png", dpi=130)
+plt.close(fig)
+
+# Fig T — trajectory toàn bộ VAL (5 fold, không nối qua ranh giới fold); 3 ảnh độc lập h = 1, 2, 3 (mẫu vẽ h = 1)
+val_segs = fake_traj_segments(len(FOLD_DAYS), 240)
+fig, ax = plt.subplots(figsize=(16.5, 5.0))
+panel_traj(ax, val_segs, [(f"win = {WIN}", 0.32, WIN_STYLE[0], WIN_STYLE[1]),
+                          (f"champion = {CHAMPION}", 0.28, CHAMP_STYLE[0], CHAMP_STYLE[1])], 1, legend=True)
+ax.set_xlabel("thời điểm được dự báo t+h (UTC)")
+fig.suptitle(f"Fig T1 — trajectory VAL (win vs champion): actual C_(t+1) vs P̂_(t+1) = C_t·exp(ŷ_1)  [{FAKE}]", fontsize=9)
+fig.autofmt_xdate()
+fig.tight_layout()
+fig.savefig(OUT / "fig_traj_h1_win_vs_champion.png", dpi=130)
 plt.close(fig)
 
 fig, axes = plt.subplots(1, 2, figsize=(11.5, 5.2))
@@ -500,6 +544,19 @@ fig.suptitle(f"Final — forecast path mọi model trên TEST: x = t → t+3, y 
              fontsize=9)
 fig.tight_layout()
 fig.savefig(OUT / "fig_final_paths_all_models.png", dpi=120)
+plt.close(fig)
+
+# Fig T Final — trajectory toàn bộ TEST của mọi model (2 nhóm ≤ 8 màu), 3 ảnh độc lập (mẫu vẽ h = 1)
+test_segs = fake_traj_segments(1, 480, level=PRICE * 0.98)
+fig, axes = plt.subplots(2, 1, figsize=(16.5, 9.5), sharex=True)
+for gi, (gname, group) in enumerate([("nhóm A: tree + ensemble", GROUP_A), ("nhóm B: TimesFM / AutoTS / LSTM + reference", GROUP_B)]):
+    panel_traj(axes[gi], test_segs, [(m, STRENGTH[m], STYLE[m][0], STYLE[m][1]) for m in group], 1, legend=True)
+    axes[gi].set_title(gname, fontsize=8.5)
+axes[1].set_xlabel("thời điểm được dự báo t+h (UTC)")
+fig.suptitle(f"Fig T1 — trajectory TEST của mọi model: actual C_(t+1) (đen) vs P̂_(t+1) = C_t·exp(ŷ_1); giá BTC thô  [{FAKE}]", fontsize=9)
+fig.autofmt_xdate()
+fig.tight_layout()
+fig.savefig(OUT / "fig_final_traj_h1_all_models.png", dpi=120)
 plt.close(fig)
 
 # ----------------------------------------------------------------------------- Fig D: latency (chỉ theo dõi)
@@ -615,6 +672,7 @@ A("Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo v
   + ". Heatmap diverging xanh↔đỏ, cùng thang màu khi so sánh.\n")
 A("### 6.1 Sau mỗi model — win_m vs champion hiện tại: 1 ảnh forecast path (3 origin) + 2 heatmap\n")
 A("![Fig P](smoke/fig_path_win_vs_champion.png)\n")
+A("![Fig T1](smoke/fig_traj_h1_win_vs_champion.png)\n")
 A("![Fig HM](smoke/fig_HM_win_vs_champion.png)\n")
 A("**Giải thích.** Fig P (forecast path): mỗi panel là **MỘT origin t**; trục x = `t, t+1, t+2, t+3`, trục y = **thay đổi giá so với `C_t`** (USD). "
   "Đường đen = actual `[0, C_(t+1)−C_t, C_(t+2)−C_t, C_(t+3)−C_t]`; hai đường màu = prediction của win và của champion `[0, P̂_(t+h)−C_t]` với `P̂_(t+h) = C_t·exp(ŷ_h)`; "
@@ -626,6 +684,7 @@ A("**Giải thích.** Fig P (forecast path): mỗi panel là **MỘT origin t**;
 A("### 6.2 Final (TEST) — heatmap của mọi model + forecast path của mọi model\n")
 A("![Final heatmaps](smoke/fig_final_heatmaps.png)\n")
 A("![Final paths](smoke/fig_final_paths_all_models.png)\n")
+A("![Final traj](smoke/fig_final_traj_h1_all_models.png)\n")
 A("**Giải thích.** Heatmap TEST: ô = khối 6 giờ × horizon (2 ngày ≈ 8 khối), giá trị Gain vs E0, một panel mỗi model (B0-306, B0*, mọi win_m, ensemble), cùng thang màu. "
   "Forecast path Final: cùng định nghĩa Fig P nhưng vẽ prediction của **tất cả model trên cùng một origin**; 3 origin lấy từ 3 khối 60 origin không chồng nhau trong TEST "
   "có std r1 thấp nhất / trung vị / cao nhất (origin đại diện = origin đầu khối); tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) "

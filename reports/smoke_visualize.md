@@ -181,6 +181,8 @@ Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo vai 
 
 ![Fig P](smoke/fig_path_win_vs_champion.png)
 
+![Fig T1](smoke/fig_traj_h1_win_vs_champion.png)
+
 ![Fig HM](smoke/fig_HM_win_vs_champion.png)
 
 **Giải thích.** Fig P (forecast path): mỗi panel là **MỘT origin t**; trục x = `t, t+1, t+2, t+3`, trục y = **thay đổi giá so với `C_t`** (USD). Đường đen = actual `[0, C_(t+1)−C_t, C_(t+2)−C_t, C_(t+3)−C_t]`; hai đường màu = prediction của win và của champion `[0, P̂_(t+h)−C_t]` với `P̂_(t+h) = C_t·exp(ŷ_h)`; đường xám ngang 0 = E0 (`P̂ = C_t`). Ba origin lấy ở **3 ngày VAL/fold khác nhau** đại diện biến động thấp / trung bình / cao (xếp 5 ngày VAL theo std r1 trong ngày, lấy min / trung vị / max), mỗi ngày dùng **origin cố định đầu tiên ≥ 12:00 UTC** — chọn theo quy tắc cố định, không chọn theo error/prediction. Fig HM: 2 heatmap 15 ô (fold × horizon) của win và champion, giá trị = Gain vs E0 tính từ bảng RMSE̅ mean 3 seed, cùng thang màu; tiêu đề ghi MedianGain/WinRate/P10/Worst và kết quả win vs champion. Ở mẫu này prediction được vẽ với biên độ lớn hơn thực tế để nhìn rõ layout — với tín hiệu thật (~0.1–0.2 pp) đường prediction sẽ nằm rất sát 0; đó là bình thường.
@@ -190,6 +192,8 @@ Màu: **actual luôn đen**; ảnh so sánh win vs champion dùng màu theo vai 
 ![Final heatmaps](smoke/fig_final_heatmaps.png)
 
 ![Final paths](smoke/fig_final_paths_all_models.png)
+
+![Final traj](smoke/fig_final_traj_h1_all_models.png)
 
 **Giải thích.** Heatmap TEST: ô = khối 6 giờ × horizon (2 ngày ≈ 8 khối), giá trị Gain vs E0, một panel mỗi model (B0-306, B0*, mọi win_m, ensemble), cùng thang màu. Forecast path Final: cùng định nghĩa Fig P nhưng vẽ prediction của **tất cả model trên cùng một origin**; 3 origin lấy từ 3 khối 60 origin không chồng nhau trong TEST có std r1 thấp nhất / trung vị / cao nhất (origin đại diện = origin đầu khối); tách 2 hàng (nhóm A tree + ensemble; nhóm B TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel.
 

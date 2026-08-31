@@ -1,8 +1,14 @@
-"""§7.3 Figure: forecast path của MỘT origin (x = t, t+1, t+2, t+3; y = thay đổi giá so với C_t).
+"""§7.3 Figure.
 
-- Sau mỗi model: Fig P (win vs champion, 3 origin ở 3 ngày VAL vol thấp/trung bình/cao) + Fig HM (2 heatmap 15 ô).
+**Fig P — forecast path** của MỘT origin (x = t, t+1, t+2, t+3; y = thay đổi giá so với C_t):
+- Sau mỗi model: win vs champion trên 3 origin ở 3 ngày VAL vol thấp/trung bình/cao; + Fig HM (2 heatmap 15 ô).
 - Final: heatmap TEST mọi model (khối 6h × h) + Fig P mọi model trên 3 origin TEST (vol thấp/trung vị/cao).
 Actual luôn đen; E0 = đường ngang 0. Origin chọn theo quy tắc cố định (ngày/khối + giờ), KHÔNG theo error/prediction.
+
+**Fig T — trajectory** (3 ảnh độc lập h = 1, 2, 3), chạy dọc TOÀN BỘ khoảng evaluation theo thời gian, vẽ **giá BTC thô**:
+`actual_h(t) = C[t+h]`, `pred_h(t) = C[t]·exp(ŷ_h(t))`; trục x = timestamp **t+h**. Chỉ vẽ ở đúng hai chỗ đã có figure:
+sau khi win_m so với champion (VAL) và ở Final (TEST). VAL không nối đường xuyên qua khoảng trống giữa các fold
+(mỗi fold một đoạn riêng, vạch đứt xám ở ranh giới).
 """
 from __future__ import annotations
 
@@ -136,6 +142,69 @@ def final_fig_paths(store: Store, picks: list[OriginPick], preds_by_model: dict[
             axes[gi, k].set_title(f"{gname}\n{pick.label}", fontsize=8)
     fig.suptitle("Final — forecast path mọi model trên TEST: x = t → t+3, y = thay đổi giá so với C_t; actual đen; ≤ 8 màu mỗi panel",
                  fontsize=9)
+    fig.tight_layout()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=120)
+    plt.close(fig)
+
+
+# ----------------------------------------------------------------------------- Fig T: trajectory theo thời gian
+def _dt(ts) -> np.ndarray:
+    return pd.to_datetime(np.asarray(ts), unit="s", utc=True).tz_localize(None).to_numpy()
+
+
+def _traj_panel(ax, store: Store, h: int, series: list[tuple[str, list, str, str]], mark_folds: bool) -> None:
+    """Một panel: actual C_(t+h) (đen) + prediction của các series, x = thời điểm t+h. Mỗi fold một đoạn, không nối qua nhau."""
+    segs = series[0][1] if series else []
+    for k, (idx, _) in enumerate(segs):
+        x = _dt(store.ts[idx] + 60 * h)
+        ax.plot(x, store.close[idx + h], color=INK, lw=0.9, label=f"actual C_(t+{h})" if k == 0 else None)
+        if mark_folds and k:
+            ax.axvline(x[0], color=MUTED, lw=0.7, ls=":", alpha=0.8)
+    for si, (label, preds, color, marker) in enumerate(series):
+        for k, (idx, yhat) in enumerate(preds):
+            x = _dt(store.ts[idx] + 60 * h)
+            p_hat = price_from_logret(store.close[idx], yhat)[:, h - 1]
+            step = max(1, len(x) // 30)
+            phase = (si * step) // max(1, len(series))  # lệch pha marker theo series để series vẽ sau không che series trước
+            ax.plot(x, p_hat, color=color, lw=0.9, alpha=0.85, marker=marker, ms=3.5, markevery=(phase, step),
+                    label=label if k == 0 else None)
+    ax.set_ylabel("giá BTC (USD)")
+    ax.margins(x=0.01)
+
+
+def fig_trajectory(store: Store, h: int, series: list[tuple[str, list, str, str]], out: Path, title: str,
+                   mark_folds: bool = True) -> None:
+    """Một ảnh cho một horizon: toàn bộ khoảng evaluation, actual vs prediction theo thời điểm t+h."""
+    fig, ax = plt.subplots(figsize=(16.5, 5.0))
+    _traj_panel(ax, store, h, series, mark_folds)
+    ax.set_xlabel("thời điểm được dự báo t+h (UTC)")
+    ax.legend(fontsize=8, loc="best", ncol=3)
+    fig.suptitle(title, fontsize=9)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=130)
+    plt.close(fig)
+
+
+def final_fig_trajectory(store: Store, h: int, preds_by_model: dict[str, list], out: Path) -> None:
+    """Final: cùng định nghĩa Fig T trên TEST, tách 2 nhóm như Fig P để mỗi panel ≤ 8 màu."""
+    groups = [("nhóm A: tree + ensemble", [m for m in GROUP_A if m in preds_by_model]),
+              ("nhóm B: TimesFM / AutoTS / LSTM + reference", [m for m in GROUP_B if m in preds_by_model])]
+    fig, axes = plt.subplots(2, 1, figsize=(16.5, 9.5), sharex=True)
+    for gi, (gname, group) in enumerate(groups):
+        series = [(LABEL.get(m, m), preds_by_model[m], *style(m)[:2]) for m in group]
+        if not series:
+            axes[gi].axis("off")
+            continue
+        _traj_panel(axes[gi], store, h, series, mark_folds=False)
+        axes[gi].set_title(gname, fontsize=8.5)
+        axes[gi].legend(fontsize=7, loc="best", ncol=4)
+    axes[1].set_xlabel("thời điểm được dự báo t+h (UTC)")
+    fig.suptitle(f"Fig T{h} — trajectory TEST của mọi model: actual C_(t+{h}) (đen) vs P̂_(t+{h}) = C_t·exp(ŷ_{h}); giá BTC thô",
+                 fontsize=9)
+    fig.autofmt_xdate()
     fig.tight_layout()
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=120)

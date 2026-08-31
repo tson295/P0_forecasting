@@ -439,10 +439,13 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         picks = plots.select_vol_origins(store, folds)
         win_preds = win.runs[0].preds()
         champ_preds = load_preds(win_dir / f"{champ_label}_seed0.npz") if (win_dir / f"{champ_label}_seed0.npz").exists() else win_preds
-        plots.fig_path(store, picks, [(f"win = {LABEL.get(mname, mname)}", win_preds, plots.WIN_STYLE[0], plots.WIN_STYLE[1]),
-                                      (f"champion = {LABEL.get(champ_label, champ_label)}", champ_preds, plots.CHAMP_STYLE[0], plots.CHAMP_STYLE[1])],
-                       exp / "summary" / f"fig_path_{mname}_vs_champion.png",
+        series = [(f"win = {LABEL.get(mname, mname)}", win_preds, plots.WIN_STYLE[0], plots.WIN_STYLE[1]),
+                  (f"champion = {LABEL.get(champ_label, champ_label)}", champ_preds, plots.CHAMP_STYLE[0], plots.CHAMP_STYLE[1])]
+        plots.fig_path(store, picks, series, exp / "summary" / f"fig_path_{mname}_vs_champion.png",
                        f"Fig P — forecast path win vs champion ({mname} vs {champ_label}): x = t → t+3, y = thay đổi giá so với C_t")
+        for h in HORIZONS:  # Fig T: trajectory toàn bộ VAL (5 fold, không nối qua ranh giới fold)
+            plots.fig_trajectory(store, h, series, exp / "summary" / f"fig_traj_h{h}_{mname}_vs_champion.png",
+                                 f"Fig T{h} — trajectory VAL ({mname} vs {champ_label}): actual C_(t+{h}) vs P̂_(t+{h}) = C_t·exp(ŷ_{h})")
         footer = f"win vs champion: {decision}" + ("" if champ is None else f" — MedianGain {row['MedianGain_vs_champion']:+.4f} (ε {champ['eps']:.4f})")
         plots.fig_hm(gain_pp(win.rmse_mean, win.e0), champ_tab_e0, [f.name.split('_')[-1] for f in folds], LABEL.get(mname, mname),
                      LABEL.get(champ_label, champ_label), footer, exp / "summary" / f"fig_HM_{mname}_vs_champion.png")
@@ -644,6 +647,8 @@ def cmd_final(cfg: RunConfig, args) -> None:
     plots.final_heatmaps(tables, block_labels, exp / "summary" / "fig_final_heatmaps.png")
     picks = plots.select_vol_origins_test(store, final.val)
     plots.final_fig_paths(store, picks, preds_by_model, exp / "summary" / "fig_final_paths_all_models.png")
+    for h in HORIZONS:  # Fig T: trajectory toàn bộ TEST cho mọi model đang được vẽ
+        plots.final_fig_trajectory(store, h, preds_by_model, exp / "summary" / f"fig_final_traj_h{h}_all_models.png")
     say(f"final → {exp / 'summary'}")
 
 

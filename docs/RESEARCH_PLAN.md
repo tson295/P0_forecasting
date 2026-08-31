@@ -380,11 +380,14 @@ Layout mẫu của mọi bảng/figure dưới đây, với **số giả**: `rep
 **Sau mỗi model — win_m vs champion hiện tại** (2 file):
 - **Fig P — forecast path** (1 ảnh = 3 panel, mỗi panel MỘT origin `t`): trục x = `t, t+1, t+2, t+3`; trục y = **thay đổi giá so với `C_t`** (USD). Trong panel: **actual** `[0, C_{t+1}−C_t, C_{t+2}−C_t, C_{t+3}−C_t]` (đen), **prediction của win** và **của champion** `[0, P̂_{t+h}−C_t]` với `P̂_{t+h} = C_t·exp(ŷ_h)`, **E0 = đường ngang 0**. Ba origin = ba ngày VAL/fold khác nhau đại diện mức biến động **thấp / trung bình / cao** (xếp 5 ngày VAL theo std r1 trong ngày, lấy min / trung vị / max), mỗi ngày lấy **origin cố định đầu tiên ≥ 12:00 UTC** — chọn theo quy tắc cố định, **không** chọn theo error/prediction.
 - **Fig HM**: 2 heatmap 15 ô (fold × horizon) — của win và của champion, giá trị = Gain vs E0 tính từ bảng `RMSE̅` mean 3 seed, cùng thang màu; tiêu đề ghi MedianGain/WinRate/P10/Worst của mỗi bên và của win vs champion.
-- Lưu `experiments/summary/fig_path_<model>_vs_champion.png`, `fig_HM_<model>_vs_champion.png`.
+- **Fig T_h — trajectory** (3 ảnh độc lập h = 1, 2, 3): chạy dọc **toàn bộ VAL** (5 fold) theo thời gian, vẽ **giá BTC thô** — `actual_h(t) = C[t+h]` (đen) và `pred_h(t) = C[t]·exp(ŷ_h(t))` của win và của champion; trục x = **timestamp t+h**. Mỗi fold là một đoạn riêng, **không nối đường xuyên qua khoảng trống giữa các fold** (vạch đứt xám ở ranh giới). Dùng để nhìn model có bám mức giá và có lệch pha/regime nào không — bổ sung cho Fig P, không thay thế.
+- Lưu `experiments/summary/fig_path_<model>_vs_champion.png`, `fig_HM_<model>_vs_champion.png`, `fig_traj_h{1,2,3}_<model>_vs_champion.png`.
 
 **Final (TEST)**:
 - **Heatmap của mọi model** (B0-306, B0\*, mọi win_m, ensemble; một panel mỗi model, cùng thang màu): ô = khối 6 giờ × horizon (TEST 2 ngày ≈ 8 khối), giá trị Gain vs E0.
 - **Fig P của mọi model**: cùng định nghĩa forecast path, vẽ prediction của **tất cả model** trên **cùng 3 origin** TEST — chọn theo std r1 của khối 60 origin không chồng nhau: thấp nhất / trung vị / cao nhất, origin đại diện = origin đầu của khối; tách 2 hàng (nhóm A: tree + ensemble; nhóm B: TimesFM/AutoTS/LSTM + reference) để mỗi panel ≤ 8 màu; actual đen ở mọi panel. Lưu `summary/fig_final_paths_all_models.png`.
+- **Fig T_h của mọi model** (3 ảnh, h = 1, 2, 3): cùng định nghĩa trajectory nhưng chạy dọc **toàn bộ TEST**, vẽ prediction của mọi model đang được visualize; cùng cách tách 2 nhóm. Lưu `summary/fig_final_traj_h{1,2,3}_all_models.png`.
+- Trajectory chỉ được vẽ ở **đúng hai chỗ** này (sau khi win_m so với champion, và Final) — không vẽ ở calibrate, lọc B0, add-one, prune PI hay bước trung gian nào.
 - Fig D latency (§7.4) chỉ để theo dõi.
 - Figure chỉ để nhìn; quyết định vẫn theo metric §0.
 
