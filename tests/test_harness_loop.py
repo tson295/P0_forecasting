@@ -58,8 +58,13 @@ def test_calibrate_seed_noise_and_loop(store, folds):
     cal = calibrate(store, DummyModel(), cs, folds, seed=1)
     rounds = rounds_from(cal)
     assert set(rounds) == {f.name for f in folds}
-    eps, runs = seed_noise(store, DummyModel(), cs, folds, rounds, (1, 2, 3), 0.005)
-    assert eps >= 0.005 and len(runs) == 3
+    eps, noise, runs = seed_noise(store, DummyModel(), cs, folds, rounds, (1, 2, 3), 0.005)
+    assert eps >= 0.005 and len(runs) == 3 and noise.shape == (len(folds), 3)
+    assert [r.seed for r in runs] == [1, 2, 3]  # chỉ evaluation seed; seed ES/calibrate không tham gia đo ε
+    from p0.harness import run_at_seed
+
+    assert run_at_seed(runs, 2) is runs[1] and run_at_seed(runs, 99) is None
+    assert all(tuple(r.best_iters[i]) == rounds[f.name] for r in runs for i, f in enumerate(folds))  # số vòng cố định
     cands = CANDIDATES[:4]
     lr = add_one_loop(store, DummyModel(), cs, runs[0].rmse, cands, folds, rounds, eps, 1, runs[0].e0)
     assert len(lr.table) == 4 and set(lr.table["decision"]) <= {"KEEP", "DROP"}

@@ -34,7 +34,7 @@ def test_config_hash_independent_of_root(tmp_path):
     a = _cfg(tmp_path / "a", "btc_15d")
     b = _cfg(tmp_path / "b", "btc_15d")
     assert a.hash() == b.hash()
-    c = RunConfig(**{**a.to_dict(), "seeds": (1, 2, 3)})
+    c = RunConfig(**{**a.to_dict(), "eval_seeds": (1, 2, 3)})
     assert c.hash() != a.hash()
 
 

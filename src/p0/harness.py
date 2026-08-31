@@ -17,7 +17,7 @@ from .config import HORIZONS
 from .transform import TargetTransform  # bản tái hiện đúng công thức B0 (B0 gốc có bug broadcast in-place, xem transform.py)
 from .data import grid_frame, to_b0_frame
 from .features_ext import ALL_EXT_COLUMNS, compute_ext
-from .metrics import cell_metrics, e0_rmse, gain_pp, seed_noise_eps
+from .metrics import cell_metrics, e0_rmse, gain_pp, seed_noise_cells, seed_noise_eps
 from .models import FitResult, TabularModel
 from .split import Fold
 
@@ -263,10 +263,19 @@ def rounds_from(run: RunResult) -> dict[str, tuple[int, int, int]]:
     return {name: tuple(int(x) for x in run.best_iters[i]) for i, name in enumerate(run.fold_names)}
 
 
-def seed_noise(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], rounds, seeds, floor_pp: float = 0.005,
-               keep_states: bool = True) -> tuple[float, list[RunResult]]:
-    """ε_m (§1.3): chạy 3 seed với số vòng cố định; Gain của seed k vs seed 0 trên 15 ô → std → ε = max(floor, std)."""
-    runs = [run_config(store, model, colset, folds, rounds=rounds, seed=s, keep_states=(keep_states and k == 0)) for k, s in enumerate(seeds)]
-    gains = [runs[k].gain_vs(runs[0].rmse) for k in range(1, len(runs))]
-    eps = seed_noise_eps(gains, floor_pp) if gains else floor_pp
-    return eps, runs
+def seed_noise(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], rounds, eval_seeds, floor_pp: float = 0.005,
+               keep_states_seed: int | None = None) -> tuple[float, np.ndarray, list[RunResult]]:
+    """ε (§1.3): chạy CÁC EVALUATION SEED với số vòng cố định (seed ES/calibrate không tham gia).
+
+    Mỗi ô (fold, horizon): mu/sigma của các RMSE → noise_cell = 100·sigma/mu (pp); ε = max(floor, RMS 15 ô).
+    Không seed nào được dùng làm mốc/mẫu số. Trả (ε, bảng noise 15 ô, các run).
+    """
+    runs = [run_config(store, model, colset, folds, rounds=rounds, seed=s,
+                       keep_states=(keep_states_seed is not None and s == keep_states_seed)) for s in eval_seeds]
+    tables = [r.rmse for r in runs]
+    return seed_noise_eps(tables, floor_pp), seed_noise_cells(tables), runs
+
+
+def run_at_seed(runs: list[RunResult], seed: int) -> RunResult | None:
+    """Lấy run đã có ở đúng seed (tránh chạy lại khi selection_seed nằm trong eval_seeds)."""
+    return next((r for r in runs if int(r.seed) == int(seed)), None)

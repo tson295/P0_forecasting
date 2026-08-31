@@ -34,5 +34,24 @@ def test_gain_and_summary():
 def test_mean_over_seeds_and_eps():
     t = [np.full((5, 3), 60.0), np.full((5, 3), 61.0), np.full((5, 3), 62.0)]
     assert np.allclose(mean_rmse_over_seeds(t), 61.0)
-    gains = [np.full((5, 3), 0.01), np.full((5, 3), -0.01)]
-    assert seed_noise_eps(gains, 0.005) == max(0.005, np.std(np.concatenate([g.ravel() for g in gains])))
+
+
+def test_eps_from_cell_dispersion_no_reference_seed():
+    """§1.3: mỗi ô có 3 RMSE → noise_cell = 100·std(ddof=0)/mean; ε = max(floor, RMS 15 ô). Không seed nào làm mốc."""
+    from p0.metrics import seed_noise_cells
+
+    rng = np.random.default_rng(0)
+    tabs = [60.0 + rng.normal(0, 0.3, (5, 3)) for _ in range(3)]
+    arr = np.stack(tabs)
+    want_cells = 100.0 * arr.std(axis=0, ddof=0) / arr.mean(axis=0)
+    assert np.allclose(seed_noise_cells(tabs), want_cells)
+    eps = seed_noise_eps(tabs, 0.005)
+    assert np.isclose(eps, max(0.005, np.sqrt(np.mean(want_cells ** 2))))
+    # không phụ thuộc thứ tự seed (không có seed nào là denominator/reference)
+    for perm in ([2, 0, 1], [1, 2, 0]):
+        assert np.isclose(seed_noise_eps([tabs[i] for i in perm], 0.005), eps)
+    # 3 seed giống hệt nhau → sigma = 0 → ε = floor; ít hơn 2 bảng → floor
+    same = [np.full((5, 3), 60.0)] * 3
+    assert seed_noise_eps(same, 0.005) == 0.005 and seed_noise_eps(same[:1], 0.005) == 0.005
+    # ε là hệ số biến thiên (pp): RMSE nhân 10 lần nhưng cùng độ phân tán tương đối → ε không đổi
+    assert np.isclose(seed_noise_eps([t * 10 for t in tabs], 0.005), eps)

@@ -66,7 +66,17 @@ def decide(median_gain: float, eps: float) -> str:
     return "KEEP" if median_gain >= -eps else "DROP"
 
 
-def seed_noise_eps(gain_tables_vs_seed0: list[np.ndarray], floor_pp: float = 0.005) -> float:
-    """ε_m = max(floor, std của các Gain (seed k vs seed 0) trên mọi ô)."""
-    g = np.concatenate([np.asarray(t, float).ravel() for t in gain_tables_vs_seed0])
-    return float(max(floor_pp, np.std(g)))
+def seed_noise_cells(rmse_tables: list[np.ndarray]) -> np.ndarray:
+    """Nhiễu seed từng ô (§1.3), đơn vị pp: với S evaluation seed cho ô (fold, horizon) có RMSE R_1..R_S,
+    mu = mean(R), sigma = std(R, ddof=0) → noise_cell = 100·sigma/mu. KHÔNG seed nào làm mốc/mẫu số."""
+    arr = np.stack([np.asarray(t, float) for t in rmse_tables])  # (S, F, 3)
+    mu = arr.mean(axis=0)
+    sigma = arr.std(axis=0, ddof=0)
+    return 100.0 * sigma / mu
+
+
+def seed_noise_eps(rmse_tables: list[np.ndarray], floor_pp: float = 0.005) -> float:
+    """ε = max(floor, sqrt(mean(noise_cell²))) — RMS của nhiễu seed trên 15 ô (cùng đơn vị pp với Gain)."""
+    if len(rmse_tables) < 2:
+        return float(floor_pp)
+    return float(max(floor_pp, np.sqrt(np.mean(seed_noise_cells(rmse_tables) ** 2))))

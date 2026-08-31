@@ -1,0 +1,122 @@
+Phase A:
+                     B0-306
+                        │
+                        ▼
+            seed_calibration + ES
+                        │
+                        ▼
+       lấy best_iteration 5 fold × 3 h
+                        │
+                        ▼
+                  15fixed_306
+                        │
+         ┌──────────────┴───────────────┐
+         │                              │
+         ▼                              ▼
+ ĐO SEED NOISE                    FILTER 306 FEATURE
+         │                              │
+  seed1 + fixed                         ├── PI
+  seed2 + fixed                         ├── SA
+  seed3 + fixed                         └── MI
+         │                              │
+         ▼                              ▼
+  3 bảng RMSE 5×3              PI+/SA+/MI+ từng cột
+         │                              │
+         ▼                              ▼
+     tính ε_306                   R1 / R2 / R3 / R4
+         │                              │
+         │                      train bằng 15fixed_306
+         │                              │
+         │                              ▼
+         │                    RMSE R1/R2/R3/R4
+         │                              │
+         └──────────────┬───────────────┘
+                        ▼
+            so từng Rk với B0-306
+              dùng cùng baseline
+              3-seed mean RMSE
+                        │
+                        ▼
+         MedianGain(Rk vs B0-306)
+                        │
+             MedianGain ≥ -ε_306
+                        │
+                        ▼
+                      B0*
+
+Phase B:
+             B0*
+              │
+     calibrate model + ES
+              │
+         fixed rounds
+              │
+              ▼
+    ┌───────────────────┐
+    │ search 39 feature │
+    │   add-one         │
+    │   fixed rounds    │
+    └─────────┬─────────┘
+              │
+            F*_m
+              │
+        tính PI trên F*_m
+              │
+    bỏ đồng thời ext PI ≤ 0
+              │
+         F*_m^prune
+              │
+     ┌────────┴─────────┐
+     │                  │
+     ▼                  ▼
+  F*_m              F*_m^prune
+UNPRUNED                PRUNED
+		 │                  │
+	 	 │  ES ON + 3 seed  │
+		 │                  │
+		 ▼                  ▼
+3 bảng RMSE         3 bảng RMSE
+ 15 ô                 15 ô
+		 │                  │
+		 ▼                  ▼
+mean 3 seed         mean 3 seed
+ tại từng ô          tại từng ô
+		 │                  │
+		 ▼                  ▼
+15 RMSĒ_unprune     15 RMSĒ_prune
+		 │                  │
+		 └────────┬─────────┘
+		          ▼
+		Gain từng (fold, horizon) (Gain_f,h = 1 - RMSĒ_prune / RMSĒ_unprune)
+              │
+              ▼
+         15 Gain
+              │
+              ▼
+   MedianGain = median(15 Gain)
+              │
+      ┌───────┴────────┐
+      │                │
+MedianGain ≥ -ε_m   MedianGain < -ε_m
+			│                │
+			▼                ▼
+win_m = PRUNE     win_m = UNPRUNED
+			│                │
+			└───────┬────────┘
+							▼
+			model m hoàn chỉnh
+							│
+							▼
+			compare CHAMPION hiện tại (Gain_f,h = 1 - RMSĒ_win / RMSĒ_champion)
+
+              │
+              ▼
+        MedianGain
+              │
+      ┌───────┴────────┐
+      │                │
+ +ε_champion       ≤ +ε_champion
+			│                │
+			▼                ▼
+	ĐỔI CHAMPION       GIỮ CHAMPION
+		= win_m             hiện tại

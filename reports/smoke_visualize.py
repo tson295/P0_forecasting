@@ -32,7 +32,7 @@ rng = np.random.default_rng(8586)
 H = [1, 2, 3]
 FOLD_DAYS = ["01-27", "01-28", "01-29", "01-30", "01-31"]  # VAL 1 ngày/fold (§1.2)
 TEST_DAYS = ["02-01", "02-02"]
-SEEDS = [8586, 8587, 8588]
+SEEDS = [8587, 8588, 8589]  # evaluation seeds (§1.3); calib_seed 8586 chỉ dùng cho run ES
 PRICE = 80_000.0  # mức giá BTC giả định (USD)
 SIG1 = 7.65e-4  # std log-return 1 phút (đo trên snapshot, chỉ để scale số giả)
 
@@ -190,11 +190,25 @@ def secondary(rmse: float, gain_vs_e0_pp: float) -> tuple[float, float, float]:
     return mae, r, dacc
 
 
-# ----------------------------------------------------------------------------- §1.3 ε, lịch calibrate, số vòng
+# ----------------------------------------------------------------------------- §1.3 vai trò seed, ε, lịch calibrate, số vòng
+CALIB_SEED, EVAL_SEEDS, SELECTION_SEED = 8586, (8587, 8588, 8589), 8587
+seed_df = pd.DataFrame([
+    {"seed": f"calib_seed = {CALIB_SEED}", "dùng ở đâu": "CHỈ run ES để lấy số vòng/epoch cố định của phase",
+     "không được dùng làm gì": "không đo ε, không dùng cho bất kỳ bước selection nào"},
+    {"seed": f"eval_seeds = {list(EVAL_SEEDS)}", "dùng ở đâu": "đo ε (số vòng cố định) + confirmation 3 seed (§2.1b)",
+     "không được dùng làm gì": "không seed nào làm mốc/mẫu số của seed khác"},
+    {"seed": f"selection_seed = {SELECTION_SEED}", "dùng ở đâu": "MỌI bước selection: PI/SA/MI + R1–R4 (phase A); baseline B0* + 39 candidate + prune PI (phase B); refit Final",
+     "không được dùng làm gì": "không đổi seed giữa các Rk hoặc giữa các candidate"},
+])
+
+# ε từ nhiễu từng ô: mỗi ô (fold, horizon) có 3 RMSE của 3 evaluation seed → noise = 100·std/mean (pp) → ε = RMS 15 ô
 eps_rows = []
 for m, e in [("LightGBM", 0.021), ("XGBoost", 0.024), ("CatBoost", 0.019), ("XGB-RF", 0.015),
              ("AutoTS-WR", 0.031), ("AutoTS-MR", 0.034), ("LSTM", 0.058)]:
-    eps_rows.append({"model": m, "std_seed (pp)": f"{e:.3f}", "ε_m = max(0.005, std) (pp)": f"{max(0.005, e):.3f}"})
+    cells = np.abs(rng.normal(e, 0.35 * e, len(FOLD_DAYS) * len(H)))  # 15 giá trị noise_cell giả
+    rms = float(np.sqrt(np.mean(cells ** 2)))
+    eps_rows.append({"model": m, "noise_cell nhỏ nhất (pp)": f"{cells.min():.3f}", "lớn nhất (pp)": f"{cells.max():.3f}",
+                     "RMS 15 ô (pp)": f"{rms:.3f}", "ε_m = max(0.005, RMS) (pp)": f"{max(0.005, rms):.3f}"})
 eps_df = pd.DataFrame(eps_rows)
 
 rounds = pd.DataFrame(
@@ -203,13 +217,13 @@ rounds = pd.DataFrame(
     columns=[f"h={h}" for h in H],
 ).reset_index().rename(columns={"index": "fold"})
 calib_df = pd.DataFrame([
-    {"phase": "A. Lọc B0", "feature set": "B0-306", "model": "LightGBM", "run ES": "1 (seed 8586)", "kết quả": "15fixed_306 + ε_LGBM(B0-306)", "dùng cho": "4 run kiểm chứng R1–R4 → B0*"},
+    {"phase": "A. Lọc B0", "feature set": "B0-306", "model": "LightGBM", "run ES": f"1 (calib_seed {CALIB_SEED})", "kết quả": "15fixed_306 + ε_LGBM(B0-306) từ 3 eval seed + baseline tại selection_seed (15 model cho PI)", "dùng cho": "4 run kiểm chứng R1–R4 → B0*"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "LightGBM", "run ES": "1", "kết quả": "15fixed_LGBM + ε_LGBM", "dùng cho": "39 candidate + prune PI của LightGBM"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "XGBoost", "run ES": "1", "kết quả": "15fixed_XGB + ε_XGB", "dùng cho": "39 candidate + prune PI của XGBoost"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "CatBoost", "run ES": "1", "kết quả": "15fixed_Cat + ε_Cat", "dùng cho": "39 candidate + prune PI của CatBoost"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "LSTM", "run ES": "1 (ES theo epoch)", "kết quả": "fixed_epoch_LSTM + ε_LSTM", "dùng cho": "39 candidate + prune PI của LSTM"},
     {"phase": "B. Feature search", "feature set": "B0* (chung)", "model": "XGB-RF / AutoTS / TimesFM", "run ES": "— (cơ chế riêng)", "kết quả": "chỉ ε_m (XGB-RF 1 vòng cố định; TimesFM zero-shot; AutoTS config cố định)", "dùng cho": "vòng lặp riêng của model đó"},
-    {"phase": "C. Prune PI + win", "feature set": "F*_m và F*_m^prune", "model": "từng model", "run ES": "3 seed mỗi configuration, ES bật", "kết quả": "RMSE̅ (mean 3 seed từng ô) → Gain prune vs unprune → MedianGain → win_m (+ số vòng/epoch cho Final)", "dùng cho": "so với champion (§3), figure §7.3"},
+    {"phase": "C. Prune PI + win", "feature set": "F*_m và F*_m^prune", "model": "từng model", "run ES": "3 evaluation seed mỗi configuration, ES bật", "kết quả": "RMSE̅ (mean 3 seed từng ô) → Gain prune vs unprune → MedianGain → win_m (+ số vòng/epoch cho Final)", "dùng cho": "so với champion (§3), figure §7.3"},
 ])
 
 # ----------------------------------------------------------------------------- §1.4 b0_filter
@@ -285,9 +299,9 @@ prune_df = pd.DataFrame([
 # minh họa: 3 seed → mean RMSE từng ô → Gain từng ô (chỉ h=1; thật sẽ là 15 ô)
 stack_df = pd.DataFrame({
     "fold": [f"f{i + 1} {d}" for i, d in enumerate(FOLD_DAYS)],
-    "unprune RMSE seed 8586 / 8587 / 8588 (h=1)": [" / ".join(f"{rmse_seed[WIN][1][s][i]:.2f}" for s in range(3)) for i in range(5)],
+    "unprune RMSE seed 8587 / 8588 / 8589 (h=1)": [" / ".join(f"{rmse_seed[WIN][1][s][i]:.2f}" for s in range(3)) for i in range(5)],
     "RMSE̅ unprune (mean)": [f"{v:.2f}" for v in unp_mean[1]],
-    "prune RMSE seed 8586 / 8587 / 8588 (h=1)": [" / ".join(f"{prune_seed[1][s][i]:.2f}" for s in range(3)) for i in range(5)],
+    "prune RMSE seed 8587 / 8588 / 8589 (h=1)": [" / ".join(f"{prune_seed[1][s][i]:.2f}" for s in range(3)) for i in range(5)],
     "RMSE̅ prune (mean)": [f"{v:.2f}" for v in prn_mean[1]],
     "Gain_{f,1} = 1 − RMSE̅^prune/RMSE̅^unprune (pp)": [f"{v:+.3f}" for v in gain_prune[:, 0]],
 })
@@ -521,11 +535,15 @@ A("Quy ước chung: prediction là log-return `ŷ_h`, metric tính trên **giá
   "Gain từng ô = 1 − RMSE̅_A/RMSE̅_B; MedianGain = median của 15 Gain. "
   "Training chỉ trên GPU; cột device trong bảng latency là device của lời gọi predict.\n")
 
-A("\n## 1. §1.3 — Nhiễu seed ε_m, lịch calibrate, số vòng cố định\n")
+A("\n## 1. §1.3 — Ba vai trò seed, nhiễu seed ε_m, lịch calibrate, số vòng cố định\n")
+A(md_table(seed_df))
+A("")
 A(md_table(eps_df))
-A("\n**Giải thích.** Mỗi model chạy 3 seed trên feature set của phase (xem lịch calibrate bên dưới); `std_seed` là độ lệch chuẩn của Gain giữa các seed "
-  "trên 15 ô; `ε_m` là ngưỡng \"tệ hơn\" dùng cho KEEP/DROP, prune và champion của model đó. LSTM nhiễu seed lớn hơn tree, "
-  "nên ngưỡng của nó rộng hơn — tự động, không chỉnh tay.\n")
+A("\n**Giải thích.** ε đo bằng 3 **evaluation seed** chạy trên feature set của phase với số vòng cố định (seed ES/calibrate KHÔNG tham gia). "
+  "Với mỗi ô (fold, horizon) có ba RMSE R1, R2, R3: `mu = mean`, `sigma = std(ddof=0)`, `noise_cell = 100·sigma/mu` (pp — cùng đơn vị với Gain); "
+  "gộp 15 ô bằng RMS: `ε_m = max(0.005, sqrt(mean(noise_cell²)))`. **Không seed nào được dùng làm mốc/mẫu số** — ε là độ phân tán của chính ba giá trị "
+  "trong từng ô, không phải Gain của seed này so với seed kia. `ε_m` là ngưỡng \"tệ hơn\" dùng cho KEEP/DROP, prune và champion của model đó. "
+  "LSTM nhiễu seed lớn hơn tree nên ngưỡng của nó rộng hơn — tự động, không chỉnh tay.\n")
 A("\nLịch calibrate số vòng/epoch cố định (mỗi (phase, model) một run ES trên đúng feature set; không dùng chéo):\n")
 A(md_table(calib_df))
 A("\nVí dụ `15fixed_LGBM` (best_iteration mà ES dừng ở run calibrate của LightGBM trên B0*, per fold × horizon; dùng cho cả 39 candidate của LightGBM):\n")
@@ -539,7 +557,7 @@ A("\n**Giải thích.** \"Số vòng cố định\" = chính best_iteration mà 
 A("\n## 2. §1.4 — Lọc 306 feature B0 → B0\\* (`experiments/b0_filter.csv`)\n")
 A("Mẫu 8 dòng (thật sẽ có 306 dòng); mỗi cột có giữ/bỏ riêng cho từng bộ R1–R4:\n")
 A(md_table(filt_df))
-A("\nKiểm chứng 4 bộ so với B0-306 (mỗi bộ 1 run LightGBM gốc, số vòng cố định, seed 8586):\n")
+A(f"\nKiểm chứng 4 bộ so với B0-306 (mỗi bộ 1 run LightGBM gốc, `15fixed_306`, CÙNG selection_seed {SELECTION_SEED} với baseline B0-306):\n")
 A(md_table(rsets_df))
 A("\n**Giải thích.** Ba điểm số per horizon (median 5 fold): PI = RMSE tăng thêm (USD) khi xáo cột đó trong VAL; "
   "SA = standalone, LightGBM chỉ trên một cột, Gain so với E0 và so với B0-306; MI − null = mutual information với z-target trên FIT trừ MI với target xáo trộn. "

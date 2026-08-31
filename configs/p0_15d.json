@@ -13,11 +13,13 @@
   "test_end": null,
   "es_hours": 23,
   "purge_minutes": 60,
-  "seeds": [
-    8586,
+  "calib_seed": 8586,
+  "eval_seeds": [
     8587,
-    8588
+    8588,
+    8589
   ],
+  "selection_seed": 8587,
   "eps_floor_pp": 0.005,
   "experiments_dir": "experiments",
   "require_gpu": true,

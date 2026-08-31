@@ -2,6 +2,10 @@
 
 Bước (§8): check-data → calibrate (lgbm, b0306) → filter-b0 → loop --model m (calibrate riêng trên B0*, add-one, prune PI,
 3 seed → win_m, latency, champion + figure) → autots-union (§2.2 #6, sau khi cả hai loop AutoTS xong) → ensemble → final. `smoke-e2e` chạy toàn bộ trên data tổng hợp CPU (chỉ debug).
+Ba vai trò seed tách bạch (§1.3): `calib_seed` (seed0) CHỈ cho run ES tìm số vòng cố định; `eval_seeds` (seed1/2/3) đo ε
+và chạy confirmation 3 seed; `selection_seed` là MỘT seed cố định cho mọi bước selection (R1–R4, baseline + 39 candidate,
+prune PI) để chênh lệch RMSE chỉ đến từ feature set.
+
 Gate: training chỉ khi `.claude/MEMORY.md` ghi `TRAINING: UNLOCKED`; GPU preflight bắt buộc. `--smoke` / `--allow-cpu` CHỈ được chấp nhận
 khi dataset_label bắt đầu bằng "synthetic" (data tổng hợp) — với data thật CLI từ chối (plan §0: cấm training CPU).
 Data thật phải khớp `data/data_checksums.json` (§6.1) ở mọi bước sau check-data.
@@ -22,7 +26,7 @@ from .config import HORIZONS, RunConfig
 from .data import check_ohlcv, read_ohlcv_csv, verify_checksums, write_checksums
 from .features_ext import CANDIDATE_BY_NAME, CANDIDATES
 from .filter_b0 import FilterTable, median_over_folds, mutual_info, permutation_importance, standalone_gain, verify_sets
-from .harness import ColSet, Store, calibrate, rounds_from, run_config, seed_noise
+from .harness import ColSet, Store, calibrate, rounds_from, run_at_seed, run_config, seed_noise
 from .latency import measure_tabular
 from .logs import load_preds, log_champion, log_latency, log_run, new_exp_id, save_run
 from .loop import (add_one_loop, compare, confirm, decide_win, ensemble_rmse, inverse_mse_weights, load_champion, prune_pi,
@@ -218,24 +222,30 @@ def cmd_calibrate(cfg: RunConfig, args) -> dict:
     store, folds, _, _ = load_store(cfg)
     colset = colset_from_arg(store, cfg, args.colset)
     model = model_for(cfg, args.model, args.allow_cpu)
-    say(f"calibrate {args.model} trên {args.colset} ({len(colset.names)} cột) — ES một lần (seed {cfg.seeds[0]})")
-    cal = calibrate(store, model, colset, folds, seed=cfg.seeds[0], keep_states=False)
+    say(f"calibrate {args.model} trên {args.colset} ({len(colset.names)} cột) — ES một lần (calib_seed = {cfg.calib_seed})")
+    cal = calibrate(store, model, colset, folds, seed=cfg.calib_seed, keep_states=False)
     rounds = rounds_from(cal) if getattr(model, "supports_rounds", True) else None
     say(f"số vòng cố định: {rounds}")
-    eps, runs = seed_noise(store, model, colset, folds, rounds, cfg.seeds, cfg.eps_floor_pp, keep_states=False)
-    base = runs[0]
+    say(f"ε: {len(cfg.eval_seeds)} evaluation seed {list(cfg.eval_seeds)} với số vòng cố định (không seed nào làm mốc)")
+    eps, noise, runs = seed_noise(store, model, colset, folds, rounds, cfg.eval_seeds, cfg.eps_floor_pp)
+    base = run_at_seed(runs, cfg.sel_seed)  # bảng RMSE mốc của selection (cùng seed với mọi bước selection)
+    if base is None:
+        base = run_config(store, model, colset, folds, rounds=rounds, seed=cfg.sel_seed, keep_states=False)
     out = {"model": args.model, "tag": args.colset, "colset": colset.to_dict(), "rounds": rounds, "eps": eps,
-           "rmse": base.rmse.tolist(), "e0": base.e0.tolist(), "best_iters_es": cal.best_iters.tolist(), "folds": cal.fold_names,
+           "noise_cells": np.round(noise, 5).tolist(), "calib_seed": cfg.calib_seed, "eval_seeds": list(cfg.eval_seeds),
+           "selection_seed": cfg.sel_seed, "rmse": base.rmse.tolist(), "e0": base.e0.tolist(),
+           "best_iters_es": cal.best_iters.tolist(), "folds": cal.fold_names,
            "seed_rmse": [r.rmse.tolist() for r in runs], "config_hash": cfg.hash()}
     path = cfg.exp_dir / "calib" / f"{args.model}_{args.colset.replace('/', '_')}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(out, indent=1), encoding="utf-8")
     exp_id = new_exp_id("calibrate", args.model, args.colset)
-    _log(cfg, exp_id=exp_id, step="calibrate", model=args.model, seed=cfg.seeds[0], colset=args.colset, rounds=json.dumps(rounds),
-         **_summ_row(base, base.e0, "E0"), decision=f"eps={eps:.4f}", train_device=getattr(model, "train_device", ""))
+    _log(cfg, exp_id=exp_id, step="calibrate", model=args.model, seed=cfg.sel_seed, colset=args.colset, rounds=json.dumps(rounds),
+         **_summ_row(base, base.e0, "E0"), decision=f"eps={eps:.4f}", train_device=getattr(model, "train_device", ""),
+         note=f"calib_seed={cfg.calib_seed} eval_seeds={list(cfg.eval_seeds)} noise_rms={eps:.4f}")
     save_run(cfg.exp_dir, exp_id, {**base.to_dict(), "step": "calibrate", "tag": args.colset, "eps": eps, "rounds_fixed": rounds,
                                    "best_iters_es": cal.best_iters.tolist(), "seed_rmse": out["seed_rmse"], "config_hash": cfg.hash()})
-    say(f"ε_{args.model} = {eps:.4f} pp → {path}")
+    say(f"ε_{args.model} = {eps:.4f} pp (RMS nhiễu 15 ô; min {noise.min():.4f}, max {noise.max():.4f}) → {path}")
     return out
 
 
@@ -253,20 +263,23 @@ def cmd_filter_b0(cfg: RunConfig, args) -> None:
     cal = _load_calib(cfg, "lgbm", "b0306")
     rounds = {k: tuple(v) for k, v in cal["rounds"].items()}
     eps = float(cal["eps"])
-    base_rmse = np.asarray(cal["rmse"])
     model = model_for(cfg, "lgbm", args.allow_cpu)
     names = list(store.b0_names)
     if args.max_cols:
         names = names[: args.max_cols]
     colset = ColSet(tuple(names))
-    say(f"(a) PI: run baseline ES giữ state rồi xáo {len(names)} cột × 3 lần trong VAL")
-    base_run = run_config(store, model, colset, folds, rounds=None, seed=cfg.seeds[0], keep_states=True)
-    pi = median_over_folds(permutation_importance(store, base_run, list(range(len(names))), repeats=3, seed=cfg.seeds[0]))
-    say(f"(b) SA: {len(names)} model 1 cột (ES) — vs E0 và vs B0-306")
-    sa_e0, sa_b0 = standalone_gain(store, model, folds, names, cfg.seeds[0], base_rmse,
+    say(f"(a) PI: run baseline B0-306 (15fixed_306, selection_seed {cfg.sel_seed}) giữ state rồi xáo {len(names)} cột × 3 lần trong VAL")
+    base_run = run_config(store, model, colset, folds, rounds=rounds, seed=cfg.sel_seed, keep_states=True)
+    base_rmse = base_run.rmse  # cùng một run làm mốc cho PI và cho 4 run kiểm chứng R1–R4
+    if len(names) == len(store.b0_names) and "rmse" in cal:  # chỉ so được khi không cắt cột (--max-cols của smoke)
+        d_cal = float(np.max(np.abs(base_rmse / np.asarray(cal["rmse"]) - 1)))
+        say(f"   |RMSE base − RMSE calibrate| tối đa {d_cal * 100:.4f}% (cùng config + selection_seed → phải ≈ 0)")
+    pi = median_over_folds(permutation_importance(store, base_run, list(range(len(names))), repeats=3, seed=cfg.sel_seed))
+    say(f"(b) SA: {len(names)} model 1 cột (ES, selection_seed) — vs E0 và vs B0-306")
+    sa_e0, sa_b0 = standalone_gain(store, model, folds, names, cfg.sel_seed, base_rmse,
                                    progress=lambda k, n, nm: say(f"  SA {k}/{n} {nm}") if k % 25 == 0 else None)
     say("(c) MI trên FIT (null xáo trộn)")
-    mi = mutual_info(store, folds, colset, seed=cfg.seeds[0])
+    mi = mutual_info(store, folds, colset, seed=cfg.sel_seed)
     table = FilterTable(names, pi, sa_e0, sa_b0, mi)
     df = table.to_frame()
     cfg.exp_dir.mkdir(parents=True, exist_ok=True)
@@ -276,14 +289,14 @@ def cmd_filter_b0(cfg: RunConfig, args) -> None:
         say(f"CỜ ĐỎ: {len(red)} cột đơn thắng B0-306 (≥ 2/3 horizon) — B0 bị nhiễu chi phối; R3/R4 sẽ tự thắng ở kiểm chứng")
     sets = table.sets()
     say("kiểm chứng R1–R4 (15fixed_306): " + ", ".join(f"{k}={len(v)}" for k, v in sets.items()))
-    vdf, chosen, runs = verify_sets(store, model, sets, folds, rounds, base_rmse, eps, seed=cfg.seeds[0])
+    vdf, chosen, runs = verify_sets(store, model, sets, folds, rounds, base_rmse, eps, seed=cfg.sel_seed)
     vdf.to_csv(cfg.exp_dir / "b0_sets.csv", index=False)
     star = ColSet(tuple(sets[chosen])) if chosen in sets else colset
     star.save(cfg.exp_dir / "b0_star.json")
     for _, r in vdf.iterrows():
         exp_id = new_exp_id("filter_b0", "lgbm", str(r["set"]))
         extra = _summ_row(runs[r["set"]], base_rmse, "B0-306") if r["set"] in runs else {"base": "B0-306"}
-        _log(cfg, exp_id=exp_id, step="filter_b0", model="lgbm", seed=cfg.seeds[0], colset=str(r["set"]), rounds="15fixed_306", **extra,
+        _log(cfg, exp_id=exp_id, step="filter_b0", model="lgbm", seed=cfg.sel_seed, colset=str(r["set"]), rounds="15fixed_306", **extra,
              decision="B0*" if r["chosen"] else "", note=f"n_cols={r['n_cols']}", train_device=getattr(model, "train_device", ""))
         if r["set"] in runs:
             save_run(cfg.exp_dir, exp_id, {**runs[r["set"]].to_dict(), "step": "filter_b0", "set": str(r["set"]), "base": "B0-306", "eps": eps})
@@ -295,7 +308,7 @@ def _standalone_factory(store, folds, allow_cpu, cfg):
 
     def fn(cand) -> float:
         cs = ColSet((), tuple(cand.columns))
-        run = run_config(store, lgbm, cs, folds, rounds=None, seed=cfg.seeds[0], keep_states=False)
+        run = run_config(store, lgbm, cs, folds, rounds=None, seed=cfg.sel_seed, keep_states=False)
         return float(np.median(run.gain_vs(run.e0)))
 
     return fn
@@ -312,15 +325,19 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     if load_champion(exp / "champion.json") is None and mname != "lgbm":
         sys.exit("§3: champion ban đầu phải là LightGBM code gốc — chạy `loop --model lgbm` trước.")
     # phase B calibrate riêng trên B0*
-    say(f"[{mname}] calibrate trên B0* ({len(base.names)} cột)")
-    cal = calibrate(store, model, base, folds, seed=cfg.seeds[0], keep_states=False)
+    say(f"[{mname}] calibrate trên B0* ({len(base.names)} cột) — ES với calib_seed {cfg.calib_seed}")
+    cal = calibrate(store, model, base, folds, seed=cfg.calib_seed, keep_states=False)
     rounds = rounds_from(cal) if getattr(model, "supports_rounds", True) else None
-    eps, runs = seed_noise(store, model, base, folds, rounds, cfg.seeds, cfg.eps_floor_pp, keep_states=False)
-    base_run = runs[0]
+    eps, noise, runs = seed_noise(store, model, base, folds, rounds, cfg.eval_seeds, cfg.eps_floor_pp)
+    base_run = run_at_seed(runs, cfg.sel_seed)  # mốc của vòng lặp: cùng selection_seed với mọi candidate
+    if base_run is None:
+        base_run = run_config(store, model, base, folds, rounds=rounds, seed=cfg.sel_seed, keep_states=False)
     say(f"[{mname}] rounds={rounds} ε={eps:.4f} pp; base MedianGain vs E0 = {np.median(base_run.gain_vs(base_run.e0)):+.4f}")
     (exp / "calib").mkdir(parents=True, exist_ok=True)
-    (exp / "calib" / f"{mname}_b0star.json").write_text(json.dumps({"model": mname, "rounds": rounds, "eps": eps, "rmse": base_run.rmse.tolist(),
-                                                                     "e0": base_run.e0.tolist(), "colset": base.to_dict()}, indent=1), encoding="utf-8")
+    (exp / "calib" / f"{mname}_b0star.json").write_text(json.dumps(
+        {"model": mname, "rounds": rounds, "eps": eps, "noise_cells": np.round(noise, 5).tolist(), "calib_seed": cfg.calib_seed,
+         "eval_seeds": list(cfg.eval_seeds), "selection_seed": cfg.sel_seed, "rmse": base_run.rmse.tolist(),
+         "e0": base_run.e0.tolist(), "seed_rmse": [r.rmse.tolist() for r in runs], "colset": base.to_dict()}, indent=1), encoding="utf-8")
     # add-one loop
     cands = candidates_from(cfg, args.max_candidates)
     standalone_fn = None if args.no_standalone else _standalone_factory(store, folds, args.allow_cpu, cfg)
@@ -330,23 +347,23 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         exp_id = new_exp_id("loop", mname, row["candidate"])
         row["exp_id"] = exp_id  # vào keepdrop_<m>.csv (§7.2)
         say(f"[{mname}] {row['order']:02d} {row['candidate']:<28} Median {row['MedianGain_vs_S']:+.4f} → {row['decision']} (|S|={row['size_S_after']})")
-        _log(cfg, exp_id=exp_id, step="loop", model=mname, seed=cfg.seeds[0], colset=row["columns"], n_cols=len(run.colset.names),
+        _log(cfg, exp_id=exp_id, step="loop", model=mname, seed=cfg.sel_seed, colset=row["columns"], n_cols=len(run.colset.names),
              rounds=json.dumps(rounds), base="S_m", MedianGain=row["MedianGain_vs_S"], WinRate=row["WinRate"], P10Gain=row["P10Gain"],
              WorstGain=row["WorstGain"], rmse_cells=row["rmse_cells"], mae_cells=_cells(run.mae), e0_cells=_cells(run.e0),
              gain_cells=row["gain_cells_vs_S"], decision=row["decision"], train_device=getattr(model, "train_device", ""))
         save_run(exp, exp_id, {**run.to_dict(), "step": "loop", "candidate": row["candidate"], "decision": row["decision"], "eps": eps,
                                "MedianGain_vs_S": row["MedianGain_vs_S"]})
 
-    lr = add_one_loop(store, model, base, base_run.rmse, cands, folds, rounds, eps, cfg.seeds[0], base_run.e0, standalone_fn, on_row)
+    lr = add_one_loop(store, model, base, base_run.rmse, cands, folds, rounds, eps, cfg.sel_seed, base_run.e0, standalone_fn, on_row)
     lr.table.to_csv(kd_path, index=False)
     say(f"[{mname}] F*_m: {len(lr.kept)} KEEP / {len(lr.dropped)} DROP → {kd_path}")
     # prune PI
-    pruned, pi_df = prune_pi(store, model, lr.final, folds, rounds, cfg.seeds[0])
+    pruned, pi_df = prune_pi(store, model, lr.final, folds, rounds, cfg.sel_seed)
     pi_df.to_csv(exp / f"prune_pi_{mname}.csv", index=False)
     say(f"[{mname}] prune PI: giữ {len(pruned.ext)}/{len(lr.final.ext)} cột ext")
     # confirmation 3 seed → win
-    unp = confirm(store, model, lr.final, folds, cfg.seeds, keep_states=True)
-    prn = confirm(store, model, pruned, folds, cfg.seeds, keep_states=True) if pruned.ext != lr.final.ext else unp
+    unp = confirm(store, model, lr.final, folds, cfg.eval_seeds, keep_states=True)
+    prn = confirm(store, model, pruned, folds, cfg.eval_seeds, keep_states=True) if pruned.ext != lr.final.ext else unp
     which, g, s = decide_win(unp, prn, eps)
     win = prn if which == "prune" else unp
     for tag, conf in (("unprune", unp), ("prune", prn)):
@@ -367,7 +384,8 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     win_dir = exp / "wins"
     win_dir.mkdir(parents=True, exist_ok=True)
     win_payload = {"model": mname, "colset": win.colset.to_dict(), "rmse_mean": win.rmse_mean.tolist(), "e0": win.e0.tolist(), "eps": eps,
-                   "best_iters_by_seed": [b.tolist() for b in win.best_iters], "seeds": list(cfg.seeds), "which": which, "folds": [f.name for f in folds],
+                   "best_iters_by_seed": [b.tolist() for b in win.best_iters], "eval_seeds": list(cfg.eval_seeds), "which": which,
+                   "folds": [f.name for f in folds],
                    "median_gain_vs_e0": float(np.median(gain_pp(win.rmse_mean, win.e0)))}
     (win_dir / f"{mname}.json").write_text(json.dumps(win_payload, indent=1), encoding="utf-8")
     for k, r in enumerate(win.runs):
@@ -488,7 +506,7 @@ def cmd_autots_union(cfg: RunConfig, args) -> None:
         model = model_for(cfg, mname, args.allow_cpu)
         uni = ColSet(b0, union_ext)
         say(f"[{mname}] run tổng hợp ({len(union_ext)} cột ext), 3 seed")
-        conf = confirm(store, model, uni, folds, cfg.seeds, keep_states=True)
+        conf = confirm(store, model, uni, folds, cfg.eval_seeds, keep_states=True)
         s_ = summarize(gain_pp(conf.rmse_mean, own_rmse))
         choice = "tổng hợp" if s_["MedianGain"] > 0 else "riêng"
         say(f"[{mname}] MedianGain tổng hợp vs riêng = {s_['MedianGain']:+.4f} → chọn {choice}")
@@ -522,7 +540,7 @@ def cmd_ensemble(cfg: RunConfig, args) -> None:
     if len(members) < 2:
         say("Không đủ 2 thành viên — không ensemble.")
         return
-    preds = {m: [load_preds(exp / "wins" / f"{m}_seed{k}.npz") for k in range(len(wins[m]["seeds"]))] for m in members}
+    preds = {m: [load_preds(exp / "wins" / f"{m}_seed{k}.npz") for k in range(len(wins[m]["eval_seeds"]))] for m in members}
     eq = ensemble_rmse(store, preds, folds)
     inv = ensemble_rmse(store, preds, folds, inverse_mse_weights({m: np.asarray(wins[m]["rmse_mean"]) for m in members}))
     champ_tab = np.asarray(champ["rmse_mean"])
@@ -583,7 +601,7 @@ def cmd_final(cfg: RunConfig, args) -> None:
 
     for key, (mname, cs) in configs.items():
         model = model_for(cfg, mname, args.allow_cpu)
-        run = run_config(store, model, cs, [final], rounds=None, seed=cfg.seeds[0], keep_states=True)
+        run = run_config(store, model, cs, [final], rounds=None, seed=cfg.sel_seed, keep_states=True)
         yhat = run.states[0].yhat
         yhat_by_model[key] = yhat
         m = cell_metrics(c_t, c_future, yhat)
@@ -600,7 +618,7 @@ def cmd_final(cfg: RunConfig, args) -> None:
             say(f"latency {key} bỏ qua: {e}")
         add_row(key, m, yhat, extra)
         exp_id = new_exp_id("final", key)
-        _log(cfg, exp_id=exp_id, step="final", model=mname, seed=cfg.seeds[0], colset=key, rounds="ES", **_summ_row(run, run.e0, "E0"),
+        _log(cfg, exp_id=exp_id, step="final", model=mname, seed=cfg.sel_seed, colset=key, rounds="ES", **_summ_row(run, run.e0, "E0"),
              train_device=getattr(model, "train_device", ""), decision="TEST", note="final_TEST")
         save_run(exp, exp_id, {**run.to_dict(), "step": "final", "key": key, "test_metrics": {k: np.asarray(v).tolist() for k, v in m.items()}},
                  [(idx_test, yhat)], pred_name="pred_test.npz")
@@ -644,7 +662,8 @@ def cmd_smoke_e2e(cfg_unused, args) -> None:
     val_days = days[-3:]
     test_day = (start + pd.Timedelta(days=int(args.days) - 1)).strftime("%Y-%m-%d 00:00:00")
     cfg = RunConfig(dataset_label="synthetic_smoke", hf_csv="data/hf.csv", lf_csv="data/lf.csv", val_days=val_days, test_start=test_day,
-                    seeds=(1, 2, 3), experiments_dir="experiments", require_gpu=False, root=str(out), candidates=[c.name for c in CANDIDATES])
+                    calib_seed=1, eval_seeds=(2, 3, 4), selection_seed=2, experiments_dir="experiments", require_gpu=False,
+                    root=str(out), candidates=[c.name for c in CANDIDATES])
     (out / "configs").mkdir(exist_ok=True)
     (out / "configs" / "smoke.json").write_text(json.dumps({k: v for k, v in cfg.to_dict().items() if k != "root"}, indent=1), encoding="utf-8")
     (out / ".claude").mkdir(exist_ok=True)
