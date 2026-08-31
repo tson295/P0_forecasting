@@ -1,7 +1,7 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: SẴN SÀNG VAST — code + docs chốt bản cuối (109 unit test + smoke e2e + smoke_visualize PASS trên data tổng hợp CPU; TimesFM/AutoTS mới test bằng stub, canary package thật chạy trên Vast) / CHỜ CHẠY EXPERIMENT
-TRAINING: LOCKED
+PHASE: ĐANG CHẠY TRÊN VAST — preflight PASS toàn bộ (bootstrap · canary package thật 16/16 · check-data · 109 pytest) trên RTX 3090
+TRAINING: UNLOCKED
 
 ## Current Task
 
