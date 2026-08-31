@@ -195,3 +195,165 @@ Plan ước "TFM-POINT vài phút; loop covariate ≈ 1–1.5 h" → **loop cova
 - **coder**: implement TFM-POINT (thay `models_pending.pending("tfm")`) theo §4: batch-object kiểu `SeqBatch`, truyền copy của `inputs`, dùng `quant[..., 0]`, trả `pred_z`. **Chưa** implement covariate cho tới khi main-controller chốt (jax CPU + batch 1 + dịch 1 bar).
 - **checker**: test §6.4 cho TFM — chuỗi cắt tại t và chuỗi đầy đủ phải cho prediction giống hệt; test round-trip `pred_z` → `decode` → `y_h`; nếu làm covariate thì assert `len(inputs) == 1`.
 - **infra**: pin `timesfm[torch]==2.0.2` + revision checkpoint trong `requirements.txt`; **chưa** thêm jax/transformers/peft cho tới khi cần.
+
+---
+
+# §12 — Chiến lược baseline covariate (audit 2026-08-31)
+
+Ngày 2026-08-31 · researcher · **vẫn chưa cài timesfm, chưa tải checkpoint, chưa chạy dòng code timesfm nào.**
+Phương pháp: đọc source thật của wheel `timesfm-2.0.2-py3-none-any.whl` (`pip download --no-deps` vào thư mục tạm, KHÔNG cài) — `timesfm/utils/xreg_lib.py` (521 dòng) và `timesfm/timesfm_2p5/timesfm_2p5_base.py` (424 dòng), `timesfm_2p5_torch.py`, `configs.py`; JAX docs cho `jnp.linalg.pinv`; GitHub `google-research/timesfm@master` cho example. Số đo runtime = **numpy tái hiện đúng đại số của `xreg_lib`** trên máy local (Intel i7-12xxx, numpy 2.4.4 + scipy-openblas) + **proxy torch** cho forward pass (không phải trọng số TimesFM). Mọi claim gắn timesfm **2.0.2**.
+
+## 12.1 Cơ chế xreg — sự thật từ source
+
+**Q1. Ma trận thiết kế.** `create_covariate_matrix` (xreg_lib 327–405):
+
+| Thành phần | Số cột | Dòng |
+|---|---|---|
+| mỗi dynamic **numerical** covariate | **đúng 1 cột** (`_unnest(...)[:, np.newaxis]`), không nội suy, không mở rộng | 357–363 |
+| mỗi static numerical | 1 cột (lặp theo `train_lens`) | 365–367 |
+| mỗi categorical | one-hot (nhiều cột) | 385–396 |
+| intercept | **+1 cột toàn 1.0** (`use_intercept=True` mặc định, `forecast_with_covariates` KHÔNG override) | 401–403 |
+
+Số **hàng** `x_train` = `sum(train_lens)`, với `train_lens` do base quyết định (base 262–274):
+- `xreg_mode="xreg + timesfm"` → `train_lens = [input_len]` = **512** (dòng 272)
+- `xreg_mode="timesfm + xreg"` → `train_lens = [input_len − self.model.p]` = 512 − 32 = **480** (dòng 270; `input_patch_len=32`)
+
+Số hàng `x_test` = `sum(test_lens)` = `len(mảng covariate) − input_len` = **3** (base 277–279). Vậy với k dynamic numerical, context 512, horizon 3, **1 origin**: `x_train` = **(512, k+1)**, `x_test` = **(3, k+1)**. Hàng = số điểm context, **không** phải context + horizon.
+
+**Padding lên lũy thừa 2 (không có trong tài liệu).** `_to_padded_jax_array` (46–57) pad **cả hai chiều** lên `2**ceil(log2(n))` bằng **số 0**, áp cho `x_train`, `x_train_raw`, `flat_targets`, `x_test` (488–491). Cột: k=39 → 40 → **P=64**; k=100 → 101 → **128**; k=150 → 151 → **256**; k=306 → 307 → **512**. Cột 0 không làm sai nghiệm (pinv min-norm cho β=0 ở cột đó, `x_test` cũng 0 ở cột đó) nhưng **quyết định chi phí O(P³) và ngưỡng cắt số học của pinv** (xem Q2).
+
+Chuẩn hoá: cột được z-hoá bằng mean/std **của context** rồi áp cùng stat cho `x_test` (374–377) → causal. Target chuẩn hoá per-input (base 379) rồi `renormalize` ở cuối (base 417–421) → causal.
+
+**Q2. Chính quy hoá.** `ridge` mặc định **0.0** ở cả API công khai (base 209) và `fit()` (xreg_lib 415). Nghiệm (xreg_lib 492–499):
+
+```python
+beta_hat = jnp.linalg.pinv(x_train.T @ x_train + ridge * jnp.eye(x_train.shape[1]),
+                           hermitian=True) @ x_train.T @ flat_targets
+```
+
+- Không có guard nào về `k` vs số hàng, không cảnh báo, không assert. `_assert_covariates` chỉ kiểm tra khớp key và khớp độ dài.
+- Khi k gần/vượt số hàng → `pinv` cho nghiệm **bình phương tối thiểu chuẩn nhỏ nhất (min-norm)**, tức nội suy 512 điểm huấn luyện khi đủ hạng.
+- **JAX chạy float32 mặc định** (`jax_enable_x64=False` → mảng float64 bị hạ xuống float32 khi vào `jnp`). Giải qua **phương trình chuẩn** `X'X` → bình phương số điều kiện; ở float32 đây là điểm yếu số học thật.
+- `jnp.linalg.pinv` mặc định `rtol = 10 * max(rows, cols) * eps` (JAX docs). Với `X'X` là (P, P) float32: **rtol = 10·P·1.19e-7** → 7.6e-5 (P=64), 1.5e-4 (128), 3.05e-4 (256), **6.1e-4 (512)**. Trị riêng dưới `rtol·λ_max` bị cắt ⇒ **PCA-truncation ngầm**, cường độ phụ thuộc float32 **và phụ thuộc P tức phụ thuộc padding**. Hệ quả methodology: rtol **nhảy 2×** mỗi lần k+1 vượt một lũy thừa 2 → so sánh KEEP/DROP hai bên biên (k+1 = 64/65, 128/129, 256/257) trộn "feature có ích" với "mức chính quy hoá đổi". Đo được: rank hiệu dụng trên thiết kế cộng tuyến kiểu chỉ báo kỹ thuật = **27/40 (k=39), 66/101 (k=100), 79/151 (k=150), 71/307 (k=306)** — ở k=306 thư viện **âm thầm bỏ ~3/4 số hướng covariate**, và rank hiệu dụng còn **giảm** khi k tăng vì rtol tăng.
+- `one_hot_encoder_drop = None if ridge > 0 else "first"` (base 349/392) — chỉ ảnh hưởng categorical.
+
+**Q3. `max_rows_per_col`** (xreg_lib 420, 467–477): nghĩa là **cắt số HÀNG**, không phải cột. Nếu khác 0 và `nrows > ncols * max_rows_per_col` thì lấy mẫu ngẫu nhiên (jax PRNGKey **42** cố định, `replace=False`) đúng `ncols * max_rows_per_col` hàng. `0` = **tắt subsample**. Đây là knob **tăng tốc**, làm tỉ lệ n/p **tệ đi**, **không** phải cơ chế chặn under/overdetermined. Giá trị 0 hiện tại của ta là đúng. (Phụ: subsample chỉ áp cho `beta_hat`; `y_hat_context` vẫn dùng toàn bộ hàng — xreg_lib 466, 501.)
+
+**Q4. Giới hạn số covariate.** **Không có** hard limit, assert hay cảnh báo nào theo k. Example chính thức dùng số covariate **một chữ số**: `v1/notebooks/covariates.ipynb` = 1 dyn-numerical + 1 dyn-categorical + 1 static-categorical; `timesfm-forecasting/examples/covariates-forecasting/demo_covariates.py` (418–423) = 1 dyn-numerical (`price`) + 1–3 dyn-categorical + 1–2 static-categorical. **Không có example/tài liệu nào dùng hàng chục, càng không hàng trăm covariate.**
+
+**Q5. `xreg_mode`.** Source (docstring base 224–227 + code 322–421):
+
+| mode | thứ tự | train_len | ghi chú |
+|---|---|---|---|
+| `"xreg + timesfm"` (mặc định, code ta đang dùng) | fit tuyến tính **trên chính target context** trước → TimesFM dự báo **phần dư** `target − xreg_on_context` (base 399–405) → cộng lại | 512 | dùng toàn bộ context |
+| `"timesfm + xreg"` | TimesFM chạy trước (cần backcast) → fit tuyến tính trên **phần dư của backcast** (base 327–333) | 480 | mất 32 hàng (1 patch), thêm nhiễu từ backcast |
+
+**Cảnh báo**: `explain_xreg_modes()` trong `demo_covariates.py` (431–447) mô tả **NGƯỢC** với source, và file đó còn dùng API 1.x (`TimesFmHparams`) không tồn tại trong 2.0.2 → **example đã cũ, tin source**. Với target r1 (gần nhiễu trắng, mean≈0): backcast của TimesFM gần như không giải thích được gì nên hai mode gần tương đương, nhưng `"xreg + timesfm"` giữ đủ 512 hàng, không phụ thuộc backcast, và diễn giải đúng ("hồi quy dự báo r1 theo feature, TimesFM lo phần còn lại") → **giữ `"xreg + timesfm"`**. Không mode nào sửa được vấn đề phương sai ở Q6.
+
+**Căn hàng thực tế** (khớp `covariate_window` trong `src/p0/models_tfm.py`): base cắt train covariate = `covariate_value[input_len − train_len : input_len]` = vị trí 0..511 = `f(t−512)…f(t−1)`, target = `r1[t−511…t]` ⇒ hàng s ghép `r1_s ~ f(s−1)`. Đúng là **hồi quy dự báo một bước trên 512 bar gần nhất**, causal. Ba hàng test mang `f(t)` (giữ giá trị tại t theo plan) ⇒ **đóng góp xreg là một hằng số c cho cả 3 bước** ⇒ vào `y_h = Σ r̂` thành **h·c**.
+
+**Q8. Batch nhiều origin mà mỗi origin có beta riêng: KHÔNG.** Ba lý do trong source: (1) `_unnest` (36–37) nối phẳng toàn batch thành MỘT ma trận và `fit()` giải MỘT `beta_hat` (492–499) — đã ghi ở §5; (2) mẹo "block-diagonal" (đặt tên covariate riêng cho từng origin, các origin khác điền 0) **không** tách được vì cột intercept toàn 1.0 trên mọi hàng (401–403) ghép các origin lại, và chuẩn hoá cột dùng mean/std trên **toàn bộ hàng** (374–377) nên cột có block-0 sau khi trừ mean sẽ khác 0 ở block khác → phá cấu trúc block; (3) chi phí: B origin × k cột → padding lũy thừa 2 (vd B=64, k=39 → 2496 → **4096** cột) → eigh 4096³ đắt hơn 64 lần giải 64³ khoảng ba bậc độ lớn. **Xác nhận lại ràng buộc 1 origin/lời gọi.**
+
+**Q9. GPU / CPU.**
+- Forward pass = torch trên CUDA (`_compiled_decode`, `timesfm_2p5_torch.py` 420–470). `force_flip_invariance=True` ⇒ **2 lần `self.model.decode`** (457–459).
+- Toàn bộ xreg là **numpy + jax**: dựng ma trận, unnest, chuẩn hoá, one-hot = numpy/sklearn (thuần CPU, không có tuỳ chọn GPU); phần giải (`pad`, `X'X`, `pinv`, matmul) = jax, chạy trên `jax.default_device(cpu)` nếu `force_on_cpu=True` (479, 487), ngược lại trên backend jax mặc định (là CPU nếu chỉ cài `jax` bản CPU; là GPU nếu cài `jax[cuda]`).
+- **Sự thật kỹ thuật cho invariant "training chỉ GPU"** (user quyết, researcher không tự quyết): bước xreg ước lượng `beta_hat` bằng **nghiệm đóng (closed-form least squares)** từ đúng cửa sổ context của **một origin** (τ ≤ t), **không gradient, không iteration, không hyperparameter fitting**, và **beta bị vứt sau mỗi lời gọi** — không có artifact học được nào tồn tại giữa các origin hay được tái dùng ở TEST. Về vòng đời tham số nó thuộc nhóm "in-context inference", giống `fit_data` mỗi lời gọi của AutoTS mà plan §7.4 đã chấp nhận ("AutoTS pipeline CPU quanh regression_model GPU"). Nhưng nó **đúng là ước lượng tham số từ dữ liệu** và hàm tên `fit`. Hai lựa chọn: (a) `force_on_cpu=True` + `jax` bản CPU — không đụng nvidia wheel, rủi ro cài đặt thấp; (b) `force_on_cpu=False` + `jax[cuda]` để phần này cũng chạy GPU — kéo bộ wheel `nvidia-*` thứ hai cạnh torch cu128, rủi ro xung đột cao (§9.1) và **không đổi kết quả số học** (vẫn float32).
+
+## 12.2 Q6 — Ý nghĩa thống kê: đây là tiêu chí loại
+
+n = **512 hàng**, p = k + 1 (kể cả intercept). Tỉ lệ n/p: **12.8** (k=39), **5.07** (k=100), **3.39** (k=150), **1.67** (k=306).
+
+Vì đóng góp xreg là hằng số c cho cả 3 bước, sai số ước lượng vào `y_h` theo **h·(ĉ − c)**, còn benchmark E0 có RMSE ≈ σ√h. Do đó **khi feature không có tín hiệu**, tỉ lệ RMSE so với E0 là `sqrt(1 + h·L)` với `L = x₀ᵀ(XᵀX)⁺x₀` (leverage của điểm dự báo). OLS đủ hạng: `E[L] ≈ p/(n−p−1)`.
+
+Đo bằng chính đại số của thư viện (float32, padding lũy thừa 2, cutoff pinv của JAX; 60 cửa sổ/điểm; thiết kế "tech" = cột cộng tuyến kiểu rolling mean/rms/momentum/lag sinh từ một random walk, "iid" = Gaussian độc lập):
+
+| k | P | rank hiệu dụng (tech) | L (iid) | L (tech) | RMSE/E0 h=1 (iid / tech) | h=3 (iid / tech) |
+|---|---|---|---|---|---|---|
+| 1 | 2 | 2.0 | 0.0039 | 0.0041 | 1.002 / 1.002 | 1.006 / 1.006 |
+| 5 | 8 | 5.0 | 0.0134 | 0.0082 | 1.007 / 1.004 | 1.020 / 1.012 |
+| 10 | 16 | 8.0 | 0.0225 | 0.0158 | 1.011 / 1.008 | 1.033 / 1.023 |
+| 20 | 32 | 15.0 | 0.0439 | 0.0333 | 1.022 / 1.016 | 1.064 / 1.049 |
+| **39** | 64 | 27.0 | 0.0867 | 0.0591 | **1.042 / 1.029** | **1.123 / 1.085** |
+| **100** | 128 | 65.9 | 0.2462 | 0.2171 | **1.116 / 1.103** | **1.319 / 1.285** |
+| **150** | 256 | 79.0 | 0.4119 | 0.2438 | **1.188 / 1.115** | **1.495 / 1.316** |
+| 200 | 256 | 77.8 | 0.6412 | 0.2430 | 1.281 / 1.115 | 1.710 / 1.315 |
+| **306** | 512 | 71.3 | 1.5144 | 0.2086 | **1.586 / 1.099** | **2.354 / 1.275** |
+
+(iid khớp lý thuyết `p/(n−p−1)`: k=306 → L = 1.514 đo vs 1.505 lý thuyết ⇒ simulation đúng. Monte-Carlo độc lập với target nhiễu trắng, 300 lần lặp, cho cùng kết luận: k=306 iid → 1.611 / 2.121 / 2.470 ở h=1/2/3.)
+
+**Đọc bảng.**
+1. Mốc so sánh: MEMORY (Pitfalls, từ autocorr lag-1 ≈ −0.06 trên snapshot) — tín hiệu điểm 1 phút **thật** đáng giá ~**0.1–0.2 pp** RMSE ở h=1 và ~**0.03 pp** ở h=3, tức Gain ~0.001–0.002.
+2. Chi phí nhiễu ước lượng ở k=39 là **+2.9 → +4.2 pp** (h=1) và **+8.5 → +12.3 pp** (h=3) — lớn hơn tín hiệu khả dĩ **15–60 lần**. Ở k=100–306 là **+10 → +59 pp** (h=1), **+28 → +135 pp** (h=3) — lớn hơn **100–500 lần**.
+3. **Điểm hoà vốn**: một cột thêm chỉ có lãi khi R² trong cửa sổ 512 bar > ≈ h·(1/n) → **> 0.2% (h=1), > 0.6% (h=3)**, tức |corr| > 4.4% / 7.6%. Hợp lý cho 1–2 feature thật tốt, **không** hợp lý cho 39/100/306 cột cùng lúc: chi phí cộng dồn tuyến tính theo p, tín hiệu thì không.
+4. Với thiết kế cộng tuyến thực tế, **k ≥ 100 không thêm thông tin**: rank hiệu dụng đứng yên ở ~66–79 rồi **giảm** (79 → 77.8 → 71.3 khi k = 150 → 200 → 306) vì rtol tăng theo P. Ở k=306, **236/307 hướng covariate bị vứt trong im lặng** ⇒ vòng lặp add-one có thể thêm một cột mà fit **không đổi gì** (cột rơi dưới ngưỡng cắt) — KEEP/DROP khi đó đo **ngưỡng số học float32**, không đo feature. Đây là lỗi methodology, không phải chuyện tốc độ.
+
+## 12.3 Q7 + Q10 — Runtime, memory
+
+Đo trên **máy local** (Intel i7-12xxx, numpy 2.4.4 + scipy-openblas, float32), tái hiện đúng đại số của `xreg_lib`; min/median trên 25 lần:
+
+| k | P | `create_covariate_matrix` (ms) | giải pinv (ms) | ghi chú |
+|---|---|---|---|---|
+| 39 | 64 | 1.47 / 1.57 | 0.58 / 0.79 | |
+| 100 | 128 | 3.30 / 3.45 | 2.98 / 3.45 | |
+| 150 | 256 | 5.43 / 5.76 | 10.6 / 13.2 | |
+| 200 | 256 | 11.0 / 21.3 | 44.7 / 60.0 | cùng P nhưng nội dung ma trận khác → eigh chậm hơn |
+| 306 | 512 | 19.2 / 30.2 | 281 / 343 | eigh 512³ float32 chi phối |
+
+Chi phí giải ∝ **P³** với P = 2^⌈log2(k+1)⌉ (padding), **không** ∝ k³ — nhảy bậc ở k+1 = 65, 129, 257. Phần dựng ma trận là **Python thuần** (`itertools.chain` trong `_unnest`, xreg_lib 36–37), không tránh được qua API công khai.
+
+**Forward pass batch 1** — không đo được thật (chưa cài timesfm, chưa tải checkpoint). Proxy: stack torch **cùng shape** (20 layer, d=1280, hidden 1280, 16 head, 16 token, output proj 1280→10240; 216.4M tham số) trên RTX 3050 Ti Laptop, 2 decode (flip invariance): **batch 1 = 45.2 ms**, batch 8 = 43.0 ms, batch 64 = 237 ms, **batch 256 = 942 ms**. Quy đổi sang 3090 theo băng thông (936 vs ~192 GB/s; vùng batch 1 là memory/launch-bound): **≈ 5–15 ms/origin**, lấy **10 ms** làm giá trị trung tâm; cộng ~3 ms overhead python của `forecast()` + dispatch/transfer jax.
+
+**Chi phí một run VAL (5 fold × 1437 = 7185 origin) và một vòng lặp 40 run (base + 39 candidate):**
+
+| Chiến lược | k điển hình | ms/origin | phút/run | **giờ cho 40 run** |
+|---|---|---|---|---|
+| **3** — chỉ ext §2.3 | 1 → 39 (P ≤ 64) | ~15 | 1.8 | **1.2 h** (0.9–1.6 h theo dải forward) |
+| **2** — subset B0* 100 | 100 → 139 (P=128) | ~20 | 2.4 | **1.6 h** (1.4–2.1 h) |
+| **2** — subset B0* 150 | 150 → 189 (P=256) | ~32–95 | 3.8–11 | **2.6–7.6 h** |
+| **1** — toàn bộ B0* (=306) | 306 → 345 (P=512) | ~313–386 | 37–46 | **25–31 h** |
+
+Ba lưu ý bắt buộc:
+1. Nếu `|B0*|` sau §1.4 rơi vào 200–256 thì strategy 1 ≈ 5.6–7.6 h; nếu vẫn 306 thì ≈ 25–31 h. **Chi phí của strategy 1 chưa biết được cho tới khi §1.4 chạy xong** → không thể freeze trước run như user yêu cầu.
+2. Toàn bộ phần đắt (eigh) là **CPU đơn luồng trong khi GPU đứng chờ** → xung đột trực tiếp với §0 "Vast tính giờ … không idle".
+3. **Bug chi phí trong code hiện tại** (xem 12.5): `per_core_batch_size=256` dùng chung cho path covariate ⇒ mỗi lời gọi 1 origin bị `forecast()` pad lên đủ 256 series (base 167–168) ⇒ trả tiền forward batch 256 cho mỗi origin. Theo proxy, thêm ~150–250 ms/origin trên 3090 ⇒ **+12–20 h cho 40 run, với mọi strategy**.
+
+**Q10 (strategy 3 cụ thể).** Vòng lặp add-one làm k đi từ 0 (TFM-POINT) → 1 → … ≤ 39; P ≤ 64 nên phần xreg luôn < 2.5 ms/origin. Tính hợp lệ thống kê ở k=39 (trường hợp xấu nhất, giữ hết): +2.9…4.2 pp RMSE ở h=1, +8.5…12.3 pp ở h=3 khi không có tín hiệu. Nhưng **luật §2.1 tự giới hạn**: TimesFM zero-shot deterministic ⇒ ε_TFM ≈ 0 ⇒ KEEP đòi MedianGain ≥ 0 ⇒ candidate vô dụng bị DROP ngay ở bước thêm nó (chi phí +0.2…0.6 pp đã lớn hơn 0). Kỳ vọng thực tế: k cuối cùng nhỏ (0–5 cột), chi phí ≤ +1 pp. Đây là khác biệt lớn nhất so với strategy 1/2: ở S1/S2 **toàn bộ 100–306 cột được nạp vô điều kiện, không cột nào phải qua cửa KEEP/DROP**.
+
+## 12.4 Bảng so sánh 3 strategy + khuyến nghị
+
+| Tiêu chí | **S1: toàn bộ B0\*** (k≈306) | **S2: subset B0\*** (k≈100–150) | **S3: chỉ 39 ext §2.3, add-one** |
+|---|---|---|---|
+| **Correctness / thống kê** | **HỎNG.** n/p = 1.67; nhiễu ước lượng +10…59 pp (h=1), +28…135 pp (h=3) khi không có tín hiệu; rank hiệu dụng 71/307 → 236 hướng bị float32 vứt im lặng; KEEP/DROP đo ngưỡng số học, không đo feature | **XẤU.** n/p = 3.4–5.1; +10…19 pp (h=1), +28…50 pp (h=3); rank hiệu dụng bão hoà ~66–79; rtol nhảy 2× khi k+1 vượt 128/256 → biên so sánh không đồng nhất | **CHẤP NHẬN ĐƯỢC.** n/p ≥ 12.8; +0.2 pp (k=1) → +4.2 pp (k=39, xấu nhất); mọi cột phải qua cửa MedianGain ≥ −ε; điểm hoà vốn R² > 0.2%/0.6% nêu rõ được trong báo cáo |
+| **Leakage safety** | Như nhau cho cả ba: 1 origin/lời gọi + dịch 1 bar là bắt buộc và đủ (§5, §12.1 Q8). S1/S2 có **thêm** rủi ro vận hành: 306 cột × 515 điểm/origin phải dịch và kiểm NaN đúng — bề mặt lỗi lớn hơn ~8× | như S1 | Bề mặt nhỏ nhất; test §6.4 đã có cho đúng các cột ext |
+| **GPU-only** | Tệ nhất: ~343 ms eigh CPU vs ~10 ms forward GPU ⇒ **~97% thời gian GPU idle** | ~3–60 ms CPU vs 10 ms GPU ⇒ 25–86% idle | ~2 ms CPU vs 10 ms GPU ⇒ GPU chi phối, khớp tinh thần §0 |
+| **Runtime thực tế (40 run)** | **25–31 h** (chưa chốt được, phụ thuộc \|B0\*\|) | 1.6–7.6 h | **1.2 h** |
+| **Khớp plan** | **Đổi thiết kế** — trái §2.2 #4b và §2.1 dòng 186 | **Đổi thiết kế** — như S1, cộng thêm quy tắc chọn subset mới (không có trong plan) | **Đúng plan hiện hành**, không cần sửa gì |
+
+**KHUYẾN NGHỊ: chọn S3.** Ba lý do theo thứ tự quan trọng:
+1. **Thống kê**: hồi quy in-context chỉ có **512 hàng**. Ở k ≥ 100, phương sai ước lượng làm RMSE xấu đi 10–135 pp trong khi tín hiệu 1 phút khả dĩ chỉ 0.1–0.2 pp — S1/S2 **được đảm bảo thua E0** trước khi bàn TimesFM tốt hay dở, tức chúng không trả lời được câu hỏi nào cả (§0: mỗi run phải trả lời một câu hỏi).
+2. **Đo cái gì**: ở k lớn, cutoff float32 của `pinv` vứt phần lớn hướng covariate và ngưỡng cutoff còn đổi theo padding lũy thừa 2 ⇒ KEEP/DROP không còn là phép đo về feature.
+3. **Plan**: §2.2 #4b ("§2.1 với candidate §2.3 làm covariate theo phút, **xuất phát không covariate**") và §2.1 dòng 186 ("TimesFM không có feature dạng cột: xuất phát không covariate, thử thêm lần lượt candidate §2.3") **đã** là S3. S1/S2 là mở rộng scope. Dòng 168 ("Input = B0\* + …, với LSTM/TimesFM-covariate là chuỗi theo phút của cùng cột") là câu tổng quát viết cho model dạng bảng và **mâu thuẫn với hai câu đặc thù TimesFM ở trên** → đề nghị main-controller làm rõ dòng 168 thành "(TimesFM: chỉ các cột ext đang KEEP + f, không có B0\*)". Đây là làm rõ mâu thuẫn nội tại, không phải đổi thiết kế.
+
+S2 chỉ nên xét lại nếu (và chỉ nếu) canary cho thấy S3 **thắng E0 rõ** và user muốn thử thêm — khi đó bắt buộc kèm `ridge > 0` (hiện `ridge=0.0`), mà ridge là **tham số mới cần calibrate** ⇒ thêm scope, cần user quyết riêng.
+
+## 12.5 Hai lỗi trong `src/p0/models_tfm.py` phải sửa trước khi chạy (độc lập với strategy)
+
+1. **`per_core_batch_size` cho path covariate.** `_model(with_covariates=True)` vẫn compile với `per_core_batch_size=self.batch_size` (=256). `forecast()` pad `inputs` lên bội của `global_batch_size` (base 167–168) ⇒ mỗi origin chạy forward batch 256. Sửa: instance dùng cho covariate phải compile với `per_core_batch_size=1`. Ảnh hưởng đo được (proxy): 45 ms → 942 ms mỗi lời gọi trên 3050 Ti.
+2. **Head sai ở path covariate.** `_with_covariates` lấy `res[0]` = `new_point_outputs` = **q50** (`decode_index=5`), trong khi `_point` dùng `quant[..., 0]` = **mean**. Metric là RMSE ⇒ phải dùng mean ở cả hai, nếu không Gain "TFM-cov vs TFM-POINT" lẫn cả "q50 vs mean" vào kết quả. Sửa: dùng `res[1]` (`new_quantile_outputs`, kênh 0 = mean) khi `use_mean_head=True`.
+
+Ghi chú nhỏ (không phải lỗi): `forecast()` mutate list `inputs` tại chỗ — code ta luôn truyền list literal mới nên an toàn; hai instance model (POINT và covariate) ⇒ ~1.85 GB VRAM, vẫn thoải mái trên 3090.
+
+## 12.6 Canary phải chạy trên GPU Vast TRƯỚC khi cam kết (đo, không đoán)
+
+Điều kiện: user cho phép cài `timesfm[torch]==2.0.2` + `jax` (CPU) + `scikit-learn` và tải checkpoint. Canary = **1 fold VAL, ~200 origin liên tiếp**, chỉ VAL, không chạm TEST.
+
+1. **Shape & rtol**: gọi `BatchedInContextXRegLinear(...).fit(debug_info=True)` cho 1 origin với k=1 và k=39; in `x_train.shape`, `x_test.shape`, dtype thật của mảng jax, số trị riêng vượt ngưỡng. Phải thấy **(512, 2^⌈log2(k+1)⌉)**, **(4, …)**, **float32**. Nếu dtype là float64 (có ai bật `jax_enable_x64`) thì §12.2 phải tính lại.
+2. **Causality (§6.4)**: cắt chuỗi và covariate tại t rồi chạy lại → prediction phải **giống hệt**. Và assert `len(inputs) == 1` trong mọi lời gọi covariate.
+3. **Dịch 1 bar**: dựng chuỗi giả với `f(s) = r1_s` (leak cố ý) và `f(s) = r1_{s−1}`; bản leak phải cho Gain lớn bất thường, bản đúng thì không. Test này bắt lỗi lệch bar tốt hơn mọi review bằng mắt.
+4. **`assert np.isfinite(covariate_window(...)).all()`** cho origin VAL đầu tiên (cột ext lookback tới 1440 phút, cửa sổ covariate lùi thêm 512 bar ⇒ cần ≥ 1952 bar lịch sử; VAL sớm nhất cách đầu data ~12.2k bar nên an toàn, nhưng phải assert chứ không giả định).
+5. **Thời gian thật/origin**: đo riêng (a) `forecast_with_covariates` tổng, (b) forward batch 1 qua `forecast()` không covariate, (c) hiệu = phần xreg. Xác nhận (b) ∈ 5–15 ms và (c) ≈ 2–3 ms ở k=39. Nếu (a) > 100 ms ở k=39 thì lỗi `per_core_batch_size` chưa được sửa.
+6. **Head**: log cả `point` (q50) và `quantile[..., 0]` (mean) cho 200 origin; xác nhận adapter dùng mean ở **cả hai** path.
+7. **Không tín hiệu = không hại**: chạy k=1 với một cột **nhiễu trắng thuần** làm covariate; RMSE so với TFM-POINT phải xấu đi ~0.2–0.6 pp đúng như §12.2 dự đoán. Lệch nhiều ⇒ mô hình phương sai ở §12.2 sai, phải đánh giá lại trước khi chạy vòng lặp.
+8. **ε_TFM**: chạy TFM-POINT 3 lần (3 evaluation seed §1.3) và xác nhận ε_TFM ≈ 0 (zero-shot deterministic). Nếu > 0 đáng kể thì có nguồn phi-determinism (torch.compile / kernel) phải ghi nhận trước khi áp luật KEEP ≥ −ε.
+
+Nếu canary #5 cho thấy (b) > 30 ms/origin trên 3090 thì tổng của S3 lên ~3 h — vẫn chấp nhận được; nhưng S1 sẽ lên > 35 h ⇒ kết luận không đổi.

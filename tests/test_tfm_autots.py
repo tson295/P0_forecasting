@@ -33,7 +33,14 @@ class StubTFM:
         self.calls.append(("cov", [np.asarray(x).copy() for x in inputs], {k: np.asarray(v[0]).copy() for k, v in
                                                                           (dynamic_numerical_covariates or {}).items()}))
         cov = np.array([v[0] for v in (dynamic_numerical_covariates or {}).values()])
-        return np.array([[float(cov[:, -1].sum()), float(cov[:, 0].sum()), float(inputs[0][-1])]])
+        base = np.array([[float(cov[:, -1].sum()), float(cov[:, 0].sum()), float(inputs[0][-1])]])
+        quant = np.repeat(base[:, :, None], 10, axis=2)
+        return base * 0.5, quant  # như API thật: (point = q50, quantile[..., 0] = mean)
+
+
+def _cov_mean(stub_call):
+    cov = np.array([v for v in stub_call[2].values()])
+    return np.array([float(cov[:, -1].sum()), float(cov[:, 0].sum()), float(stub_call[1][0][-1])])
 
 
 class StubAutoTS:
@@ -198,3 +205,27 @@ def test_autots_positions_are_ext_columns(store):
     assert m.series_covariates == "all" and TimesFMModel(device="cpu", allow_cpu=True, model=StubTFM()).series_covariates == "ext"
     cs = ColSet(store.b0_names[:3], ("ret_60",))
     assert prune_pi.__doc__  # (chỉ khẳng định API tồn tại; PI của AutoTS chạy trong smoke/Vast, không gọi ở đây cho nhanh)
+
+
+# ----------------------------------------------------------------------------- 2 lỗi audit §12 bắt được (2026-08-31)
+def test_tfm_covariate_uses_same_mean_head_as_point(seq):
+    """`point_forecast` là q50; đường covariate phải dùng CÙNG head mean với đường point, nếu không Gain
+    'covariate vs POINT' sẽ lẫn chênh lệch q50-vs-mean."""
+    stub = StubTFM()
+    m = TimesFMModel(device="cpu", allow_cpu=True, context=512, model=stub)
+    small = SeriesBatch(seq.ts, seq.r1, seq.idx[:3], seq.cov, seq.cov_names)
+    yhat = m.predict_series(small)
+    calls = [c for c in stub.calls if c[0] == "cov"]
+    want = np.cumsum(np.stack([_cov_mean(c) for c in calls]), axis=1)  # mean, KHÔNG phải q50 (= 0.5 × mean)
+    assert np.allclose(yhat, want, atol=1e-6)
+    assert not np.allclose(yhat, want * 0.5)
+
+
+def test_tfm_covariate_path_compiles_with_batch_one():
+    """Covariate = 1 origin/lời gọi; nếu compile với per_core_batch_size 256 thì mỗi lời gọi pad 1 series lên 256 (~20× chậm)."""
+    m = TimesFMModel(device="cpu", allow_cpu=True, context=512, batch_size=256, model=StubTFM())
+    assert m.forecast_config_kwargs(True)["per_core_batch_size"] == 1
+    assert m.forecast_config_kwargs(True)["return_backcast"] is True
+    assert m.forecast_config_kwargs(False)["per_core_batch_size"] == 256
+    assert m.forecast_config_kwargs(False)["return_backcast"] is False
+    assert m.forecast_config_kwargs(True)["infer_is_positive"] is False  # không ép dương (§2.2 #4)

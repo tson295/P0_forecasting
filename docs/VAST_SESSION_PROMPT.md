@@ -47,12 +47,21 @@ python run.py loop --config configs/p0_15d.json --model cat
 # Cài chỉ khi user cho phép (plan §2.2), rồi smoke import trước khi chạy loop:
 #   pip install "timesfm[torch]==2.0.2"                 # + "jax[cpu]" scikit-learn nếu chạy covariate
 #   pip install autots==1.0.4 statsmodels               # CHƯA xác minh với pandas 3.0.3 → smoke import trước
-python run.py loop --config configs/p0_15d.json --model tfm
+# TimesFM: TRƯỚC khi chạy loop, làm canary 1 fold / ~200 origin (audit_timesfm.md §12.6) — chỉ VAL, không TEST:
+#   1) in shape/dtype ma trận xreg thật: phải là (512, 2^ceil(log2(k+1))) float32
+#   2) cắt chuỗi tại t rồi dự báo lại: prediction phải GIỐNG HỆT; assert len(inputs) == 1 ở đường covariate
+#   3) test dịch bar: cố ý đặt f(s) = r1_s (leak) vs f(s) = r1_(s−1) — bản leak phải tốt lên bất thường
+#   4) assert cửa sổ covariate hữu hạn (cần ≥ 1952 bar lịch sử)
+#   5) tách thời gian forward vs xreg: > 100 ms/origin ở k=39 nghĩa là chưa compile per_core_batch_size=1
+#   6) log cả q50 và mean; 7) chạy k=1 với cột nhiễu trắng → phải xấu đi ~0.2–0.6 pp; 8) xác nhận ε_TFM ≈ floor
+python run.py loop --config configs/p0_15d.json --model tfm    # covariate_strategy = ext_only (đã freeze, audit §12)
 python run.py loop --config configs/p0_15d.json --model xgbrf
 python run.py loop --config configs/p0_15d.json --model autots_wr
 python run.py loop --config configs/p0_15d.json --model autots_mr
 python run.py loop --config configs/p0_15d.json --model lstm
 
+python run.py autots-union  --config configs/p0_15d.json      # §2.2 #6 (ii): F_WR_best / F_MR_best, freeze feature set
+python run.py autots-search --config configs/p0_15d.json      # §2.2 #6 (iii): bake-off template GPU → AutoTS-final
 python run.py ensemble --config configs/p0_15d.json           # §3 ensemble vs champion
 python run.py final --config configs/p0_15d.json              # §4 TEST một lần: all_models_test.csv + heatmap + Fig H_h mọi model
 ```

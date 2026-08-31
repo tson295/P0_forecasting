@@ -325,3 +325,247 @@ for t in val_origins:                                          # 1.437 origin
 - **Không refit lần nào trong vòng lặp**: `WindowRegression.fit_data` = `basic_profile` + `last_window = df.tail(window_size)` (sklearn.py:2311–2314); `MultivariateRegression.fit_data` = `basic_profile` + `sktraindata = df.tail(min_threshold)` (:3326–3342). Đây đúng bằng vòng lặp đang có trong `src/p0/models_autots.py` — **delta code duy nhất là `_make()` lấy params từ template đã search thay vì hằng số**, cộng việc dựng lại `R` theo `window_size` mới.
 - `output_dim` do search chọn đều chạy được với 3 hàng future regressor giá trị `f(t)`: nhánh `'forecast_length'` dùng `future_regressor.tail(1)` (sklearn.py:2434), nhánh `'1step'` dùng `future_regressor.reindex(index).iloc[x]` (:2380) — vì cả 3 hàng đều bằng `f(t)` nên hai nhánh cho cùng giá trị.
 - Chi phí rolling: như §9 (WR ~2–6 ms/origin, MR ~10–30 ms/origin) → 5 fold × 1.437 origin ≈ **2–10 phút/frozen set**. Không phải nút thắt.
+
+## 12.4 GPU-only (Q4) — VERDICT
+
+**a. Model nhận `regression_model={"model":..., "model_params":{...}}`** (⇒ ép được LightGBM GPU / XGBoost `device='cuda'`): `RollingRegression` (sklearn.py:1732 — **đã bị comment khỏi mọi `model_list`**, model_list.py:399,431), `WindowRegression` (:2163), `DatepartRegression` (:2602), `MultivariateRegression` (:2852), `PreprocessingRegression` (:4023). `model_lists['regressions'] = ['WindowRegression','DatepartRegression','MultivariateRegression','PreprocessingRegression']` (model_list.py:430). Không có `UnivariateRegression`; `MultivariateMotif` **không** nhận `regression_model`. Hai **transformer** cũng dựng regressor sklearn riêng: `DatepartRegressionTransformer` (transform.py:1310), `BTCD` (:3240).
+
+**b. Có ép được MỌI candidate trong search dùng regressor GPU không → KHÔNG.** Bằng chứng dứt khoát:
+1. `generate_regressor_params` (sklearn.py:1081+) **không bao giờ sinh khoá `device` / `device_type`**. Toàn bộ `model_params` ngẫu nhiên là mặc định CPU (LightGBM CPU; `xgb.XGBRegressor` không `device` → CPU).
+2. Danh sách regressor được bốc (`sklearn_model_dict` :761, `multivariate_model_dict` :785) gồm `ElasticNet, MLP, DecisionTree, KNN, Adaboost, SVM, BayesianRidge, HistGradientBoost, ExtraTrees, RadiusNeighbors, PoissonRegresssion, RANSAC, Ridge, RandomForest` — **sklearn thuần, không có đường GPU nào**. Chỉ `LightGBM`/`xgboost` (xác suất ~0,06–0,15) mới có khái niệm GPU.
+3. Biến `gpu` ở sklearn.py:876 là `['Transformer','KerasRNN','MLP','ElasticNetwork']` (= "no dnn"), **không liên quan tree-GPU**; `model_lists['gpu']` (model_list.py:252) là danh sách model DNN. Cả hai không giúp gì.
+4. Kể cả khi nạp `initial_template` GPU, `max_generations >= 1` sẽ **phá** params: `MultivariateRegression` nằm trong `recombination_approved` (model_list.py:344) → `NewGeneticTemplate` dùng `dict_recombination(a, b)` với `b` có thể là `ModelMonster(...).get_new_params(...)` mới (auto_model.py:2945–2965) → khoá `regression_model` (kèm `device`) bị ghi đè bởi params CPU. `WindowRegression` **không** trong `recombination_approved` (:340 đã comment) → rơi vào `random.choice([c0, get_new_params()])` (auto_model.py:2990–2992) → **50% mỗi con là params CPU ngẫu nhiên**.
+5. `models_mode`: `'gradient_boosting'` thu hẹp về `{xgboost, HistGradientBoost, LightGBM, LightGBMRegressorChain}` (sklearn.py:877, 1102) — **vẫn CPU** (HistGradientBoost CPU-only) và **loại trừ** `models_mode='regressor'`. `model_interrupt` chỉ xử lý Ctrl+C. Không có tham số nào giới hạn param space của `regression_model`.
+6. Transformer search có thể kéo `DatepartRegressionTransformer`/`BTCD` → thêm model sklearn CPU ngay trong pipeline transform.
+
+**Kết luận GPU-only**: **KHÔNG thể giới hạn search space của AutoTS 1.0.4 thành GPU-compatible một cách sạch.** Cấu hình duy nhất 100% GPU là `initial_template = <DataFrame do ta soạn, mọi dòng model_params GPU>` + `max_generations=0` + `model_list=['WindowRegression','MultivariateRegression']` + `transformer_list=[]`. Khi đó AutoTS chỉ còn là **"bake-off template do ta liệt kê + validation nội bộ + chấm/chọn best của AutoTS"**, **không còn genetic search**; gọi là "AutoTS framework search" là không đúng.
+
+**c. Nếu chấp nhận search thật thì cái gì chạy CPU** (theo trọng số trong source, `model_list=['WindowRegression','MultivariateRegression']`, `models_mode='regressor'`):
+- `regression_model` bốc từ `sklearn_model_dict`/`multivariate_model_dict`: P(LightGBM) ≈ 0,19/0,11, P(xgboost) ≈ 0,10/0,02 → **~70–85% candidate dùng regressor sklearn CPU-only**; và ngay cả nhánh LightGBM/xgboost cũng **chạy CPU** vì không có khoá `device` ⇒ thực tế **~100% số fit trong search chạy CPU**, trừ khi vá params sau mỗi lần sinh (monkey-patch, không sạch).
+- Quy mô: `df` 1 series × 9,9k–17,1k dòng; `X` = (n_window ≤ max_windows, window_size ≤ 90 + k) với k = |F_frozen| ≈ 40–310 cột (MR thêm ~20 cột rolling nội bộ) → ma trận ~15.000 × 100–400 float64 ≈ 12–48 MB; vừa RAM, nhưng SVM/KNN/RandomForest/RadiusNeighbors trên cỡ này là hàng phút tới hàng chục phút mỗi fit.
+- Nếu mở `model_list` rộng hơn (`'scalable'`, `'fast'`, `'default'`): thêm statsmodels ETS/GLM/VAR/ARDL/UnobservedComponents, Prophet… — CPU 100% **và** phần lớn **không nhận regressor** ⇒ bỏ qua `F_frozen`, thí nghiệm mất ý nghĩa.
+
+**d. Lựa chọn để user quyết** (không tự chọn hộ):
+
+| # | Cấu hình | GPU-only? | Còn là "search"? | Feature set thật sự được dùng? |
+|---|---|---|---|---|
+| A | `initial_template=<ta soạn, GPU>`, `max_generations=0`, `model_list=['WindowRegression','MultivariateRegression']`, `transformer_list=[]` | **CÓ** | Không (bake-off template cố định + validation của AutoTS) | Có (ta ép `regression_type='User'`, `datepart_method=None`) |
+| B | `models_mode='regressor'`, `model_list` 2 model, `max_generations=1–3`, `transformer_list=[]` | **KHÔNG** (≈100% fit trên CPU) | Có (genetic thật) | Có `regression_type='User'`, **nhưng** `datepart_method` ngẫu nhiên thêm cột (WR 10%, MR **80%**) và `holiday=True` (MR 10%) |
+| C | `model_list='scalable'` mặc định | KHÔNG | Có | **Không** — đa số model bỏ qua regressor |
+| D | Không chạy framework search; giữ plan §2.2 #6 (2 model cố định) | CÓ | — | Có |
+
+→ **A và D là hai phương án duy nhất không vi phạm invariant "training chỉ trên GPU, cấm CPU training"** (`.claude/CLAUDE.md`; plan §0 dòng 38). B/C cần user **nới invariant GPU-only** một cách tường minh.
+
+**RỦI RO T (feature set không thật sự freeze)** — kể cả phương án B:
+- `datepart_method` khác None → `date_part(df.index, ...)` được **concat vào `future_regressor`** ở cả fit và predict (sklearn.py:2231–2249 cho WR); MR có `add_date_part_choice` xác suất **0,8** (sklearn.py:3663) ⇒ **thêm cột ngoài `F_frozen`**.
+- MR còn có `holiday=True` (10%), `transformation_dict` nội bộ (25%), `scale_full_X`, `frac_slice` (bỏ bớt dữ liệu train).
+- WR có `fourier_encoding_components` (10%) → biến đổi ngẫu nhiên toàn bộ X; `scale=True` (70%); `max_windows` bốc `5000` (p≈0,15) → **cắt còn 5.000 cửa sổ** trong ~15k; `window_size` tự giảm nếu quá dài (sklearn.py:2259–2265).
+⇒ Muốn "feature set TUYỆT ĐỐI không đổi" thì phải **assert sau khi freeze** (`datepart_method is None`, `holiday is False`) và loại template vi phạm — loại xong thì search còn rất ít, quay về phương án A.
+
+## 12.5 Ép GPU cho template ĐÃ FREEZE (hợp lệ, không đụng search)
+
+`retrieve_regressor` truyền thẳng `model_params` vào constructor (LightGBM sklearn.py:471; xgboost :564) → sau khi có `best_model_params`, ta **update** `params['regression_model']['model_params']`:
+
+```python
+GPU_KW = {"LightGBM": {"device_type": "gpu"},
+          "xgboost":  {"device": "cuda", "tree_method": "hist", "random_state": seed}}  # nhanh xgboost KHONG tu set seed
+```
+
+Nếu `params['regression_model']['model']` **không** thuộc `{LightGBM, xgboost, XGBRegressor}` (≈70–85% khả năng, 12.4c) thì **template thắng không có phiên bản GPU** → refit outer VAL của nó là **CPU training** (vi phạm invariant). Đây là điểm chết của phương án B: không chỉ search chạy CPU, mà **model cuối cùng cũng có thể CPU-only**. Giữ `n_jobs=1` để `MultiOutputRegressor(LGBMRegressor(n_jobs=1), n_jobs=n_jobs)` (sklearn.py:471) không cho 3 model con tranh GPU (đã ghi §7).
+
+## 12.6 Chi phí ước lượng (Q5) — ƯỚC LƯỢNG, chưa đo
+
+Số lần fit trong **một** `AutoTS.fit` với `model_list` 2 model, `initial_template='Random'`:
+- initial template = `RandomTemplate(len(model_list) * 12)` = **24 dòng** (auto_ts.py:380);
+- mỗi generation: `top_n = num_mod_types * max_per_model_class_g` = 2 × 5 = **10** (auto_ts.py:1451–1455);
+- validation: `models_to_validate=0.15` × số kết quả, × `num_validations` (auto = 3) lần (auto_ts.py:1704–1757).
+
+| max_generations | số fit / search | thời gian / search (giả định 2 phút/fit) |
+|---|---|---|
+| 0 | 24 + 3·⌈0,15·24⌉ = **36** | ~1,2 h |
+| 1 | 34 + 3·⌈0,15·34⌉ = **52** | ~1,7 h |
+| 3 | 54 + 3·⌈0,15·54⌉ = **81** | ~2,7 h |
+
+"2 phút/fit" = trung vị giả định cho X ≈ 15.000 × (10–90 + 40–310) trên CPU với `n_jobs=1`; **đuôi rất nặng** (`n_estimators` bốc tới 1794 ở `lightgbmp1`, sklearn.py:933; SVM/KNN/RandomForest trên 15k×300 có thể 10–30 phút/fit) → phải dùng `skip_slow_models_seconds` và `generation_timeout`.
+
+**Tổng cho 5 fold × 2 frozen set** (nếu `F_WR_best == F_MR_best` thì dedup còn 1 set → chia đôi):
+
+| max_generations | 5 fold × 2 set | + rolling predict | Tổng |
+|---|---|---|---|
+| 0 | ~12 h | ~0,3 h | **≈ 12–15 h** |
+| 1 | ~17 h | ~0,3 h | **≈ 17–20 h** |
+| 3 | ~27 h | ~0,3 h | **≈ 27–35 h** |
+
+So sánh: ngân sách của **cả plan** hiện là ≈ 12–25 h máy (MEMORY → Pitfalls). Thêm framework search = **nhân đôi tới nhân ba** tổng chi phí, và phần lớn thời gian đó là CPU (trả tiền giờ GPU của Vast để GPU idle).
+**3 seed §2.1b**: nếu search lại cho từng seed thì ×3 (36–105 h). Khuyến nghị đúng theo §1.3: **search một lần ở `selection_seed`, freeze template, 3 evaluation seed chỉ refit template đã freeze** — search là một bước *selection*, không phải bước đo nhiễu.
+
+## 12.7 Artifact (Q6)
+
+- `auto.export_template(f, models='best', n=1)` → 1 dòng `[ID, Model, ModelParameters, TransformationParameters, Ensemble]`; `models='all'` → mọi candidate đã thử; `include_results=True` kèm metric nội bộ. `.csv` hoặc `.json` (`save_template`, auto_ts.py:2746–2762).
+- Nạp lại: `AutoTS(...).import_best_model(path)` (:2904) hoặc `import_template(path, method='only')` (:2822). Với đường chạy ở 12.3 chỉ cần `json.loads(row['ModelParameters'])` → `ModelMonster(name, parameters=params, ...)`.
+- Ghi thêm cho mỗi (fold, frozen set): `random_seed`, `models_mode`, `model_list`, `max_generations`, `num_validations`, `metric_weighting`, số candidate thử/thất bại (`auto.failure_rate()`), và **`regression_type` + `datepart_method` của template thắng** (bằng chứng feature set có thật sự được dùng và không bị nới).
+- `auto.results('validation')` / `auto.initial_results.model_results` để log điểm nội bộ — **chỉ diagnostic**, không được dùng thay MedianGain (plan §0).
+
+## 12.8 pandas 3.0.3 (Q7)
+
+Quét toàn bộ `autots/` trong wheel 1.0.4: **không** có `.applymap(`, `.iteritems(`, `is_categorical_dtype`, `is_sparse`, `is_datetime64tz_dtype`, hay `DataFrame.append` (mọi `.append(` đều là list). Alias freq cũ (`'M'/'H'/'T'`) chỉ xuất hiện ở `autots/models/gluonts.py:194` (`gluon_freq = "M"`) — model không nằm trong đường ta dùng và `gluonts` không cài. ⇒ Đường `AutoTS(...)` **không có API pandas đã bị xoá ở 3.0** theo grep tĩnh.
+Rủi ro còn lại vẫn là **import-time** (`autots/__init__.py` import `datasets, auto_ts, event_forecasting, transform, shaping, regressor, mlflow, auto_model, anomaly_detector, cassandra, impute, feature_detector`) và **runtime của statsmodels/sklearn** khi search chạm model ngoài họ regression. **CHƯA XÁC MINH bằng chạy thật** — cần smoke import + 1 search tí hon (df 500 bar, `max_generations=0`, `model_list=['WindowRegression']`) sau khi user cho phép cài `autots==1.0.4` + `statsmodels`.
+
+## 12.9 Việc kế tiếp
+
+- **main-controller / user quyết**: (a) có nới invariant "training chỉ GPU" để chạy search thật (phương án B) hay không; (b) nếu không nới → chọn A (bake-off template GPU, `max_generations=0`) hay D (giữ plan §2.2 #6); (c) ngân sách giờ Vast (+12–35 h so với tổng 12–25 h hiện tại); (d) sửa `docs/RESEARCH_PLAN.md` dòng 204/429 nếu bỏ lệnh cấm "AutoTS tự search".
+- **coder** (chỉ khi user chốt): thêm `AutoTSSearchModel` dùng lại nguyên vòng lặp rolling của `src/p0/models_autots.py`, `_make()` lấy từ template đã freeze; dựng lại `R` theo `window_size` đã search; assert `regression_type=='User'`, `transformations=={}`, `datepart_method is None`, `holiday is False`.
+- **checker**: test §6.4 cho đường search — (i) đổi giá trị feature ở bar `> t` không đổi prediction tại `t`; (ii) `df` truyền vào `AutoTS.fit` có `max(index) < VAL_start − 60'`; (iii) template thắng phải có `regression_type='User'`; (iv) prediction từ `ModelMonster(template)` khớp với `auto._predict` trên 1 origin (kiểm tra freeze đúng).
+
+---
+
+## §12.10 — PHƯƠNG ÁN A: nạp `initial_template` GPU (API chính xác) [audit 2026-08-31]
+
+(User chốt phương án A ở §12.4d. Đánh số §12.10 vì §12.7 đã dùng cho Artifact.) Vẫn đọc source wheel 1.0.4, chưa cài, chưa chạy.
+
+### A1. `import_template` — chữ ký thật (auto_ts.py:2822)
+
+```python
+AutoTS.import_template(filename, method="add_on", enforce_model_list=True,
+                       include_ensemble=False, include_horizontal=False, force_validation=False)
+```
+- `filename` nhận **str path (`.csv` / `.json`) HOẶC thẳng `pd.DataFrame`** — `load_template` (:2764) có nhánh `isinstance(filename, pd.DataFrame) → filename.copy()`.
+- `method`: `'add_on'|'add on'|'addon'` → **merge** vào `self.initial_template` đã sinh trong `__init__` (giữ cả template ngẫu nhiên); `'only'|'user only'|'user_only'|'import_only'` → **thay hẳn** `self.initial_template = import_template` (:2885). Giá trị khác → `return ValueError(...)` (trả về, không raise — bẫy im lặng).
+- `enforce_model_list=True` → `_enforce_model_list` (:2788) bỏ dòng có `Model` ngoài `self.model_list`; **raise ValueError nếu còn 0 dòng** khi `method='only'`.
+- `include_ensemble=False` → gọi `unpack_ensemble_models(..., keep_ensemble=False)`; với `Ensemble=0` là no-op (auto_model.py:1238).
+- `force_validation=True` → mọi dòng import được đẩy thẳng vào cross-validation bất kể điểm vòng đầu (`self.validate_import`, :2890 → dùng ở :1785).
+- Docstring dòng 2832: **"Must be done before the AutoTS object is .fit()"** — đúng, `fit` đọc `self.initial_template` ở :1396.
+- **Đơn giản hơn**: truyền thẳng DataFrame vào `initial_template=` của constructor — `__init__:374` tự gọi `self.import_template(df, method='only')`. Dùng cách này thì **không** có template ngẫu nhiên nào được sinh.
+
+### A2. Schema template (bắt buộc)
+
+- Cột: `['Model', 'ModelParameters', 'TransformationParameters', 'Ensemble']` (`self.template_cols`, auto_ts.py:291). `ID` **tuỳ chọn** — `load_template` thử `template_cols_id` trước, KeyError thì lùi về `template_cols` (:2776–2785). Nên tự sinh bằng `create_model_id` (auto_model.py:138) để log/round-trip khớp.
+- `ModelParameters` và `TransformationParameters` phải là **chuỗi JSON**, không phải dict: `TemplateWizard` gọi `json.loads(row['ModelParameters'])` / `json.loads(row['TransformationParameters'])` (auto_model.py:2199–2200); `__init__` cũng `json.loads(row['TransformationParameters'])` khi cắt transformer (:435).
+- `Ensemble` = `0` (int).
+- Khoá hợp lệ trong `ModelParameters` = **đúng khoá của `get_params()`** của class: WR (sklearn.py:2567) và MR (sklearn.py:3766). `ModelMonster` truyền `**parameters` cùng với `frequency, prediction_interval, holiday_country, random_seed, verbose, forecast_length, n_jobs` (auto_model.py:274–285, 369–380) ⇒ **KHÔNG được** đặt 7 khoá này trong `ModelParameters` (trùng kwargs → TypeError). Khoá thiếu sẽ lấy default của class (cả hai class có `**kwargs`), nên **nên ghi đầy đủ** để artifact tái tạo được.
+
+### A3. Snippet ĐÚNG (a) template 2 dòng GPU → (b) AutoTS → (c) fit → (d) best + export
+
+```python
+import json, pandas as pd
+from autots import AutoTS
+from autots.evaluator.auto_model import create_model_id
+
+WR_GPU = {                                  # khoa = WindowRegression.get_params() (sklearn.py:2567)
+    "window_size": 60, "input_dim": "univariate", "output_dim": "forecast_length",
+    "normalize_window": False, "max_windows": 200000, "fourier_encoding_components": None,
+    "scale": False, "datepart_method": None, "regression_type": "User",
+    "regression_model": {"model": "LightGBM",
+                         "model_params": {"device_type": "gpu", "n_estimators": 400,
+                                          "learning_rate": 0.03, "max_depth": 6,
+                                          "num_leaves": 31, "verbose": -1}},
+}
+MR_GPU = {                                  # khoa = MultivariateRegression.get_params() (sklearn.py:3766)
+    "regression_model": {"model": "xgboost",
+                         "model_params": {"device": "cuda", "tree_method": "hist",
+                                          "n_estimators": 400, "learning_rate": 0.03,
+                                          "max_depth": 6, "random_state": 8587}},
+    "mean_rolling_periods": 30, "macd_periods": None, "std_rolling_periods": 7,
+    "max_rolling_periods": 7, "min_rolling_periods": 7,
+    "quantile90_rolling_periods": None, "quantile10_rolling_periods": None,
+    "ewm_alpha": 0.5, "ewm_var_alpha": None, "additional_lag_periods": None,
+    "abs_energy": False, "rolling_autocorr_periods": None, "nonzero_last_n": None,
+    "datepart_method": None, "polynomial_degree": None, "regression_type": "User",
+    "window": 5, "holiday": False, "probabilistic": False, "scale_full_X": False,
+    "cointegration": None, "cointegration_lag": 1, "series_hash": False,
+    "frac_slice": None, "discard_data": None, "transformation_dict": None,
+    "synthetic_boundary_ratio": 0.0, "rolling_skew_periods": None,
+    "diff_periods": None, "rolling_range_periods": None,
+}
+NO_TRANS = {"fillna": None, "transformations": {}, "transformation_params": {}}
+
+def tmpl_row(model, params):
+    return {"ID": create_model_id(model, params, NO_TRANS), "Model": model,
+            "ModelParameters": json.dumps(params),           # PHAI la chuoi JSON
+            "TransformationParameters": json.dumps(NO_TRANS),
+            "Ensemble": 0}
+
+tmpl = pd.DataFrame([tmpl_row("WindowRegression", WR_GPU),
+                     tmpl_row("MultivariateRegression", MR_GPU)])   # + cac bien the window_size / n_estimators
+
+auto = AutoTS(
+    forecast_length=3, frequency='min',
+    model_list=['WindowRegression', 'MultivariateRegression'],
+    initial_template=tmpl,          # DataFrame -> __init__:374 goi import_template(method='only')
+    max_generations=0,              # KHONG sinh the he moi
+    num_validations=10, validation_method='backwards',
+    models_to_validate=0.99,        # 0.99 -> ep 100% (auto_ts.py:1706)
+    max_per_model_class=99,         # KHONG de None: mac dinh = ceil(N/len(model_list))+1 se CAT BOT dong
+    metric_weighting={'rmse_weighting': 1},
+    ensemble=None, no_negatives=False, constraint=None, drop_most_recent=0, subset=None,
+    introduce_na=False, prefill_na=None, preclean=None, holiday_country=None,
+    transformer_list='superfast', transformer_max_depth=0,   # xem A6
+    skip_slow_models_seconds=None, random_seed=selection_seed, n_jobs=1, verbose=1,
+    current_model_file=f"{out}/cur_f{fold}_{setname}",
+)
+auto.fit(df_tr, future_regressor=R_tr)          # df_tr = FIT+ES; R_tr TRUNG index df_tr
+auto.export_template(f"{out}/tmpl_best_f{fold}_{setname}.csv", models='best', n=1)
+auto.export_template(f"{out}/tmpl_all_f{fold}_{setname}.csv",  models='all', include_results=True)
+name, params, trans = auto.best_model_name, auto.best_model_params, auto.best_model_transformation_params
+# -> ModelMonster(name, parameters=params, ...) + vong lap rolling cua §12.3(c)
+```
+
+**Bẫy phải tránh**: nếu template có nhiều dòng cùng một `Model` (ví dụ 8 WR + 2 MR) mà để `max_per_model_class=None` thì `_construct_validation_template` (:1710–1713) đặt `max_per_model_class = ceil(N/2)+1` rồi `.groupby('Model').head(...)` ⇒ **một số dòng WR không bao giờ được validate** và do đó không bao giờ được chọn (`_best_non_horizontal` lọc `Runs >= num_validations+1`, :1954).
+
+### A4. Xác nhận `max_generations=0` (từ source)
+
+- `fit` chạy `_run_template(self.initial_template, ...)` **một lần** (auto_ts.py:1409) → `TemplateWizard` lặp `for row in template_dict` **tuần tự**, 1 fit/dòng (auto_model.py:2195+).
+- Vòng thế hệ: `while current_generation < self.max_generations and ...` (:1430) → với `max_generations=0` **không vào vòng** ⇒ **không thêm dòng nào**. `NewGeneticTemplate` không được gọi. **Không có chỗ nào ép tối thiểu 1 generation.**
+- `ensemble=None` → `self.ensemble = []` (:337) ⇒ bỏ qua toàn bộ khối ensemble (:1500, :1546) và khối horizontal/mosaic (:1610).
+- Vẫn chạy: `_construct_validation_template` (:1533) → `_run_validations` nếu `num_validations > 0` (:1536) → `validation_agg` → `_set_best_model` (:1689). Best = min `Score` với `Score` = `generate_score(metric_weighting)`; mọi trọng số không khai báo mặc định 0 (auto_model.py:3220–3243) ⇒ `{'rmse_weighting': 1}` = chỉ RMSE (RMSE trên **log-return**, không phải trên giá — chỉ dùng để chọn template, KHÔNG thay MedianGain, plan §0).
+- Metric gộp qua các vòng validation bằng **mean** (`validation_aggregation`, auto_model.py:3072: `'rmse': 'mean'`, `'Runs': 'sum'`).
+
+### A5. Số fit thực tế và số điểm chọn best
+
+Công thức (chỉ đúng cho `max_generations=0`, `ensemble=None`):
+
+```
+so_fit = N + M * num_validations
+  N = so dong template (moi dong 1 fit o vong danh gia dau, validation_round = 0)
+  M = so dong qua duoc vong dau (Exceptions.isna()) va duoc chon vao validation_template
+      = N khi models_to_validate >= 0.99 VA max_per_model_class du lon
+so_diem_chon_best = forecast_length * (num_validations + 1) = 3 * (num_validations + 1)
+```
+
+`num_validations='auto'` → 3 (validation.py:71–72, vì `max_possible = n/3 >= 4`); `'max'` → **50** (`50 if max_possible > 51`, :74).
+Với `validation_method='backwards'`, holdout thứ y là **3 bar cuối** của lát `idx[0 : n-(y+1)*3]` (validation.py:180) ⇒ toàn bộ điểm chấm nằm trong **3·(num_validations+1) bar cuối của ES**.
+
+| `num_validations` | số lát | số fit (N=10) | số fit (N=12) | điểm chọn best | ước lượng/search (30 s/fit, GPU) | ×10 search (5 fold × 2 set) |
+|---|---|---|---|---|---|---|
+| 2 | 3 | 30 | 36 | 9 | ~15 phút | ~2,5 h |
+| `'auto'` = 3 | 4 | 40 | 48 | 12 | ~20 phút | ~3,3 h |
+| 5 | 6 | 60 | 72 | 18 | ~30 phút | ~5,0 h |
+| **10** | 11 | **110** | 132 | **33** | ~55 phút | **~9,2 h** |
+| 20 | 21 | 210 | 252 | 63 | ~105 phút | ~17,5 h |
+| `'max'` = 50 | 51 | 510 | 612 | 153 | ~4,3 h | ~43 h (vượt ngân sách) |
+
+"30 s/fit" = trung vị giả định cho LightGBM GPU / XGBoost GPU trên X ≈ 15.000 × (60–90 + k), k = |F_frozen| ≈ 40–310 (§9: "vài giây – 1 phút"). **ƯỚC LƯỢNG, chưa đo.**
+
+**Khuyến nghị: `num_validations=10`, `validation_method='backwards'`** — 33 điểm, ≈9 h cho 5 fold × 2 frozen set (vừa ngân sách 12–15 h, còn chỗ cho rolling predict ~0,3 h và cho hao hụt). Nếu cần rẻ hơn: `num_validations=5` (18 điểm, ~5 h). **Không dùng `'max'`.**
+Cảnh báo methodology (giữ nguyên từ §12.2): 33 điểm nằm gọn trong **33 phút cuối của ES** ⇒ tín hiệu chọn best rất yếu, template thắng có thể khác nhau giữa 5 fold. Đây là giới hạn của AutoTS (điểm chấm luôn là đuôi `forecast_length` của mỗi lát), không sửa được bằng tham số. Phương án thay thế `validation_method='even'` trải đều 3 bar cuối của (num_validations+1) tiền tố cách đều (validation.py:189) — phủ rộng hơn nhưng lát đầu chỉ có ~n/(nv+1) bar train nên các fold không cùng cỡ train. **Quyết định cuối vẫn là MedianGain trên outer VAL (plan §0); điểm nội bộ của AutoTS chỉ là diagnostic.**
+
+### A6. `transformer_list=[]` là BẪY — dùng `'superfast'` + `transformer_max_depth=0`
+
+`transformer_list_to_dict` (transform.py:8980): `if not transformer_list or transformer_list == "all": transformer_list = transformer_dict` ⇒ **`[]` (falsy) được hiểu là "all"**, ngược hoàn toàn với ý định. Trong phương án A điều này **vô hại** vì (i) `RandomTransform` chỉ được gọi khi sinh template ngẫu nhiên — mà `initial_template` là DataFrame nên không sinh; (ii) `NewGeneticTemplate` không chạy (`max_generations=0`); (iii) vòng cắt transformer ở `__init__:426–466` chỉ **bỏ bớt**, và `transformer_max_depth=0` cắt `list(transformations.items())[:0]` = `{}`. Nhưng để đọc code không hiểu nhầm, dùng `transformer_list='superfast'` (alias hợp lệ) + `transformer_max_depth=0`.
+
+**Xác nhận `TransformationParameters` rỗng được chấp nhận và không có transformer mặc định**: `ModelPrediction.__init__` dựng `GeneralTransformer(**{"fillna": None, "transformations": {}, "transformation_params": {}}, ...)` (auto_model.py:846) — signature `GeneralTransformer(fillna=None, transformations={}, transformation_params={}, ...)` (transform.py:8323). `_fit` = `_first_fit` + vòng `for i in sorted(self.transformations.keys())` = **không lặp lần nào** (transform.py:8598–8610); `_first_fit` chỉ gọi `fill_na`, mà `fill_na` là no-op khi không có NaN (`nan_flag` False, :8390+). ⇒ **biến đổi đồng nhất, AutoTS không tự chèn transformer nào.** Bắt buộc phải có đủ 3 khoá trong JSON, nếu thiếu `transformations`/`transformation_params` thì `__init__:440` raise `ValueError("initial_template is missing transformation parameters...")`.
+
+### A7. Round-trip export/import
+
+- `export_template(f, models='best', n=1)` với `include_results=False` trả về **thẳng `self.best_model`** (auto_ts.py:2610–2611) = 1 dòng với cột `template_cols_id` = `['ID','Model','ModelParameters','TransformationParameters','Ensemble']`.
+- `models='all'` → `self.initial_results.model_results[template_cols_id].drop_duplicates()` (:2606) — mọi candidate đã thử. `include_results=True` kèm cột metric nội bộ.
+- **Không mất thông tin**: `ModelParameters` được lưu/đọc nguyên văn chuỗi JSON đã dùng lúc fit (`TemplateWizard` chỉ `json.loads`, không viết lại), nên `regression_model` lồng nhau (`{"model": ..., "model_params": {...}}`) giữ nguyên **kể cả khoá GPU `device_type`/`device`**. Round-trip `json.dumps → csv → read_csv → json.loads` là bit-exact về nội dung dict.
+- Lưu ý CSV: chuỗi JSON chứa dấu `,` và `"` → `to_csv`/`read_csv` xử lý được nhưng **nên dùng `.json`** (`to_json(orient='columns')`, :2756) nếu muốn tránh mọi rủi ro quoting; `load_template` đọc cả hai.
+- `import_best_model(path_or_df)` (:2904) nạp lại + `parse_best_model` → `best_model_name/params/transformation_params`. Với đường chạy §12.3(c) chỉ cần `json.loads(row['ModelParameters'])`.
+- `ID` = `md5(model_str + json.dumps(params) + json.dumps(trans))` sau khi bỏ hết whitespace (auto_model.py:138–154) ⇒ ID ổn định giữa các lần chạy nếu thứ tự khoá dict giữ nguyên.
+
+### A8. Ba lưu ý vận hành
+
+1. `AutoTS.__init__` gọi `random.seed(random_seed)` (:302) và `fit` gọi `random.seed` + `np.random.seed` (:1323–1324) ⇒ **thay đổi RNG toàn cục**; harness phải tự set lại seed sau khi gọi (ảnh hưởng bước sau).
+2. `verbose <= 0` khiến `fit` chạy `warnings.filterwarnings("ignore")` **toàn cục** (:1309–1312). Dùng `verbose=1` nếu không muốn mất warning của harness.
+3. `n_jobs=1` (giữ như §7): `MultiOutputRegressor(LGBMRegressor(n_jobs=1), n_jobs=n_jobs)` (sklearn.py:471) — `n_jobs>1` sẽ cho 3 model con tranh GPU.

@@ -4,7 +4,8 @@
 - Không train, không dùng FIT/ES (`best_iters = 0`); model trả thẳng log-return (`FitResult.is_logret = True`)
   nên KHÔNG đi qua z-space của B0 — plan §6.7: "AutoTS/TimesFM cộng dồn one-step đúng thứ tự trước khi exp".
 - `infer_is_positive=False` (tắt ép dương), `force_flip_invariance=True`, `normalize_inputs=True`; head **mean** (`quantile[...,0]`)
-  vì metric là RMSE (`point_forecast` là q50).
+  vì metric là RMSE (`point_forecast` là q50) — dùng chung một head cho cả đường point và đường covariate.
+- Đường covariate compile riêng với `per_core_batch_size=1` (1 origin/lời gọi; để 256 sẽ pad 1 series lên 256 → ~20× chậm).
 - Covariate (§2.2 #4b): `forecast_with_covariates`, **1 origin mỗi lời gọi** — API fit chung một `beta_hat` cho cả batch nên
   gộp nhiều origin sẽ để origin sau ảnh hưởng origin trước (vi phạm §6.4). Covariate **dịch 1 bar** (vị trí s mang f(s−1))
   và 3 bước tương lai giữ giá trị tại t.
@@ -53,21 +54,25 @@ class TimesFMModel:
         self._injected = model  # chỉ dùng cho unit test (stub); production luôn load checkpoint thật
 
     # ------------------------------------------------------------------ checkpoint
+    def forecast_config_kwargs(self, with_covariates: bool) -> dict:
+        """Tham số `ForecastConfig`. Đường covariate BẮT BUỘC 1 origin/lời gọi → `per_core_batch_size = 1`:
+        để nguyên 256 thì `forecast()` pad 1 series lên 256 (timesfm_2p5_base:167) ⇒ ~20× thời gian mỗi lời gọi
+        (~942 ms thay vì ~45 ms → +12–20 h cho 40 run). Đường point vẫn batch đầy đủ."""
+        return dict(max_context=self.context, max_horizon=self.max_horizon, normalize_inputs=self.normalize_inputs,
+                    per_core_batch_size=1 if with_covariates else self.batch_size,
+                    force_flip_invariance=self.flip,
+                    infer_is_positive=False,  # tắt ép dương (plan §2.2 #4)
+                    return_backcast=with_covariates)  # guard bắt buộc của forecast_with_covariates
+
     def _model(self, with_covariates: bool):
         if self._injected is not None:
             return self._injected
-        key = (self.repo_id, self.revision, self.context, self.max_horizon, self.batch_size, self.normalize_inputs,
-               self.flip, self.torch_compile, with_covariates)
+        key = (self.repo_id, self.revision, self.torch_compile, tuple(sorted(self.forecast_config_kwargs(with_covariates).items())))
         if key not in _CACHE:
             import timesfm
 
             m = timesfm.TimesFM_2p5_200M_torch.from_pretrained(self.repo_id, revision=self.revision, torch_compile=self.torch_compile)
-            m.compile(timesfm.ForecastConfig(
-                max_context=self.context, max_horizon=self.max_horizon, normalize_inputs=self.normalize_inputs,
-                per_core_batch_size=self.batch_size, force_flip_invariance=self.flip,
-                infer_is_positive=False,  # tắt ép dương (plan §2.2 #4)
-                return_backcast=with_covariates,  # guard bắt buộc của forecast_with_covariates
-            ))
+            m.compile(timesfm.ForecastConfig(**self.forecast_config_kwargs(with_covariates)))
             _CACHE[key] = m
         return _CACHE[key]
 
@@ -88,14 +93,20 @@ class TimesFMModel:
         return np.concatenate([np.asarray(past, dtype=np.float32), np.full(len(HORIZONS), float(seq.cov[t, j]), np.float32)])
 
     # ------------------------------------------------------------------ forecast
+    def head(self, res) -> np.ndarray:
+        """Chọn head: `point_forecast` là **q50**, RMSE cần **mean** = `quantile_forecast[..., 0]`.
+        Dùng CHUNG cho cả đường point và đường covariate — nếu khác head thì Gain "covariate vs POINT"
+        sẽ lẫn chênh lệch q50-vs-mean chứ không phải tác dụng của covariate."""
+        point, quant = (res[0], res[1] if len(res) > 1 else None) if isinstance(res, (tuple, list)) else (res, None)
+        return np.asarray(quant)[..., 0] if (self.use_mean_head and quant is not None) else np.asarray(point)
+
     def _point(self, m, ctxs: list[np.ndarray]) -> np.ndarray:
         H = len(HORIZONS)
         out = []
         for s in range(0, len(ctxs), self.batch_size):
             chunk = ctxs[s:s + self.batch_size]
-            point, quant = m.forecast(horizon=H, inputs=list(chunk))  # copy: forecast() mutate list đầu vào
-            arr = np.asarray(quant)[..., 0] if self.use_mean_head else np.asarray(point)  # kênh 0 = mean; point = q50
-            out.append(np.asarray(arr, dtype=np.float64)[:len(chunk), :H])
+            res = m.forecast(horizon=H, inputs=list(chunk))  # copy: forecast() mutate list đầu vào
+            out.append(np.asarray(self.head(res), dtype=np.float64)[:len(chunk), :H])
         return np.concatenate(out) if out else np.zeros((0, H))
 
     def _with_covariates(self, m, seq: SeriesBatch, ctxs: list[np.ndarray]) -> np.ndarray:
@@ -112,8 +123,7 @@ class TimesFMModel:
                 xreg_mode=self.xreg_mode, normalize_xreg_target_per_input=True, ridge=0.0,
                 max_rows_per_col=0, force_on_cpu=self.xreg_force_on_cpu,
             )
-            arr = res[0] if isinstance(res, tuple) else res
-            rows.append(np.asarray(arr, dtype=np.float64).reshape(-1)[:H])
+            rows.append(np.asarray(self.head(res), dtype=np.float64).reshape(-1)[:H])
         return np.stack(rows) if rows else np.zeros((0, H))
 
     def predict_series(self, seq: SeriesBatch) -> np.ndarray:

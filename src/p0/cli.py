@@ -1,7 +1,8 @@
 """CLI: python run.py <step> --config configs/p0_15d.json [--model lgbm] [--smoke] [--allow-cpu]
 
 Bước (§8): check-data → calibrate (lgbm, b0306) → filter-b0 → loop --model m (calibrate riêng trên B0*, add-one, prune PI,
-3 seed → win_m, latency, champion + figure) → autots-union (§2.2 #6, sau khi cả hai loop AutoTS xong) → ensemble → final. `smoke-e2e` chạy toàn bộ trên data tổng hợp CPU (chỉ debug).
+3 seed → win_m, latency, champion + figure) → autots-union (§2.2 #6 ii: freeze F_WR_best/F_MR_best) →
+autots-search (iii: bake-off template GPU → AutoTS-final) → ensemble → final. `smoke-e2e` chạy toàn bộ trên data tổng hợp CPU (chỉ debug).
 Ba vai trò seed tách bạch (§1.3): `calib_seed` (seed0) CHỈ cho run ES tìm số vòng cố định; `eval_seeds` (seed1/2/3) đo ε
 và chạy confirmation 3 seed; `selection_seed` là MỘT seed cố định cho mọi bước selection (R1–R4, baseline + 39 candidate,
 prune PI) để chênh lệch RMSE chỉ đến từ feature set.
@@ -556,6 +557,162 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         say(f"[{mname}] figure bỏ qua: {e}")
 
 
+DEFAULT_AUTOTS_TEMPLATES = [  # bake-off phương án A: mọi dòng GPU; nhóm theo shift regressor (wr:<window> / mr)
+    {"model": "wr", "window_size": 60, "regressor": "LightGBM"},
+    {"model": "wr", "window_size": 60, "regressor": "xgboost"},
+    {"model": "mr", "regressor": "xgboost"},
+    {"model": "mr", "regressor": "LightGBM"},
+]
+
+
+def _autots_group(spec: dict) -> str:
+    """Các dòng template dùng CHUNG một `future_regressor` nên phải cùng phép dịch: MR = f(s−1), WR = f(s+W−1).
+    → chia bake-off theo nhóm cùng shift; chọn giữa các nhóm bằng metric của project trên outer VAL (không phải điểm AutoTS)."""
+    kind = str(spec.get("model", "wr")).lower()
+    kind = {"windowregression": "wr", "multivariateregression": "mr"}.get(kind, kind)
+    return "mr" if kind == "mr" else f"wr:{int(spec.get('window_size', 60))}"
+
+
+def _autots_probe_model(cfg: RunConfig, group: str, allow_cpu: bool, frozen=None):
+    from .models_autots import AutoTSModel
+
+    params = {k: v for k, v in cfg.model_params("autots_wr" if group.startswith("wr") else "autots_mr").items()
+              if k not in CLI_ONLY_PARAMS}
+    params.pop("window_size", None)
+    kw = dict(kind="mr" if group == "mr" else "wr", allow_cpu=allow_cpu, frozen=frozen, **params)
+    if group.startswith("wr:"):
+        kw["window_size"] = int(group.split(":")[1])
+    if allow_cpu:
+        kw["device"] = "cpu"
+    return AutoTSModel(**kw)
+
+
+def autots_bakeoff_fold(cfg: RunConfig, store: Store, fold, colset: ColSet, group: str, specs: list[dict],
+                        nv: int, allow_cpu: bool, cov_all=None) -> tuple[str, dict, object]:
+    """Bake-off template GPU trên TRAINING-SIDE của một fold (FIT+ES, dừng trước purge) → (tên model, params, bảng candidate).
+
+    Dùng chung cho `autots-search` (5 fold VAL) và cho `final` (fold final, để refit AutoTS-final trên TEST).
+    Outer VAL/TEST không bao giờ nằm trong `df_tr`.
+    """
+    from .autots_search import search_best_template, template_frame
+    from .harness import _standardize_fit
+    from .models import SeriesBatch
+
+    idx_fit = fold.fit.origins(store.ts, store.eligible)
+    idx_es = fold.es.origins(store.ts, store.eligible)
+    cov = _standardize_fit(store.grid_matrix(colset) if cov_all is None else cov_all, idx_fit)
+    seq = SeriesBatch(store.ts, store.r1, np.concatenate([idx_fit, idx_es]), cov, tuple(colset.names))
+    lo, hi = int(idx_fit.min()), int(idx_es.max()) + 1
+    probe = _autots_probe_model(cfg, group, allow_cpu)
+    df_tr, R_tr = probe.frames(seq, lo, hi)
+    say(f"[{fold.name}|{group}] search trên {len(df_tr)} bar (đến {df_tr.index[-1]}), {len(specs)} template × {nv} validation")
+    name, params, all_t = search_best_template(df_tr, R_tr, template_frame(specs, seed=cfg.sel_seed), nv, cfg.sel_seed)
+    return name, params, all_t
+
+
+def autots_search_cfg(cfg: RunConfig) -> tuple[dict, int]:
+    """(nhóm shift → danh sách template, num_validations) từ config; mặc định = DEFAULT_AUTOTS_TEMPLATES."""
+    c = cfg.model_params("autots_search")
+    specs = c.get("templates") or DEFAULT_AUTOTS_TEMPLATES
+    groups = {}
+    for sp in specs:
+        groups.setdefault(_autots_group(sp), []).append(sp)
+    return groups, int(c.get("num_validations", 10))
+
+
+def cmd_autots_search(cfg: RunConfig, args) -> None:
+    """§2.2 #6 (iii) — bake-off template GPU trên feature set ĐÃ FREEZE → AutoTS-final.
+
+    Với mỗi frozen set (F_WR_best / F_MR_best; dedup nếu trùng) và mỗi nhóm shift: mỗi fold chạy `AutoTS` với
+    `initial_template` do ta khai báo (mọi dòng GPU) + `max_generations=0` **chỉ trên training-side (FIT+ES,
+    kết thúc trước purge 60')** → template thắng được FREEZE → refit + rolling predict outer VAL bằng ModelMonster.
+    Mọi so sánh cắt ngang nhóm/feature set đều dùng **metric của project** (RMSE/Gain 15 ô → MedianGain),
+    KHÔNG dùng điểm nội bộ của AutoTS. Feature set không đổi trong suốt bake-off (assert trong `search_best_template`).
+    """
+    gate(cfg, args, list(PROBE_MODELS))
+    exp = cfg.exp_dir
+    best_dir = exp / "autots_best"
+    frozen_sets = {}
+    for m in PROBE_MODELS:  # kiểm tra TRƯỚC khi đọc data: framework chỉ được chạy sau khi feature set đã freeze
+        p = best_dir / f"{m}.json"
+        if not p.exists():
+            sys.exit(f"Thiếu {p} — phải chạy `autots-union` trước (feature set phải FREEZE rồi mới search).")
+        w = json.loads(p.read_text(encoding="utf-8"))
+        frozen_sets[f"F_{m.split('_')[1].upper()}_best"] = ColSet.from_dict(w["colset"])
+    store, folds, _, _ = load_store(cfg)
+    names = list(frozen_sets)
+    if frozen_sets[names[0]].names == frozen_sets[names[1]].names:
+        say(f"{names[0]} và {names[1]} trùng nhau → dedup, chỉ search một lần")
+        frozen_sets = {f"{names[0]}={names[1]}": frozen_sets[names[0]]}
+    groups, nv = autots_search_cfg(cfg)
+    say(f"bake-off: {sum(len(v) for v in groups.values())} template / {len(groups)} nhóm shift {list(groups)}, "
+        f"num_validations={nv}, {len(frozen_sets)} frozen set × {len(folds)} fold")
+    tmpl_dir = exp / "autots_templates"
+    tmpl_dir.mkdir(parents=True, exist_ok=True)
+    rows, cands = [], {}
+    for set_name, colset in frozen_sets.items():
+        cov_all = store.grid_matrix(colset)
+        for group, gspecs in groups.items():
+            frozen_by_fold = {}
+            for f in folds:
+                name, params, all_t = autots_bakeoff_fold(cfg, store, f, colset, group, gspecs, nv, args.allow_cpu, cov_all)
+                frozen_by_fold[f.name] = (name, params)
+                tag = f"{set_name}_{group.replace(':', '')}_{f.name}".replace("=", "_")
+                (tmpl_dir / f"best_{tag}.json").write_text(json.dumps({"set": set_name, "group": group, "fold": f.name,
+                                                                      "model": name, "params": params}, indent=1), encoding="utf-8")
+                try:
+                    all_t.to_json(tmpl_dir / f"all_{tag}.json", orient="records", indent=1)
+                except Exception:
+                    pass
+                say(f"[{set_name}|{group}|{f.name}] template thắng: {name}")
+            # outer VAL: template đã freeze, 3 evaluation seed (search chỉ chạy ở selection_seed — search là bước selection)
+            tables, preds_by_seed, e0_rows = [], [], []
+            for k, sd in enumerate(cfg.eval_seeds):
+                fold_rmse, preds = [], []
+                for f in folds:
+                    m = _autots_probe_model(cfg, group, args.allow_cpu, frozen=frozen_by_fold[f.name])
+                    r = run_config(store, m, colset, [f], rounds=None, seed=sd, keep_states=True)
+                    fold_rmse.append(r.rmse[0])
+                    preds.append(r.preds()[0])
+                    if k == 0:
+                        e0_rows.append(r.e0[0])  # E0 theo TỪNG fold (không phụ thuộc seed, không được nhân bản fold đầu)
+                tables.append(np.array(fold_rmse))
+                preds_by_seed.append(preds)
+            rmse_mean = np.mean(tables, axis=0)
+            e0_tab = np.array(e0_rows)
+            key = f"{set_name}|{group}"
+            cands[key] = {"set": set_name, "group": group, "colset": colset, "rmse_mean": rmse_mean, "e0": e0_tab,
+                          "preds_by_seed": preds_by_seed, "templates": frozen_by_fold}
+            g = float(np.median(gain_pp(rmse_mean, e0_tab)))
+            rows.append({"candidate": key, "set": set_name, "group": group, "n_ext": len(colset.ext),
+                         "MedianGain_vs_E0": round(g, 4), "rmse_mean": _cells(rmse_mean),
+                         "templates": "|".join(sorted({v[0] for v in frozen_by_fold.values()}))})
+            say(f"[{key}] outer VAL: MedianGain vs E0 = {g:+.4f} pp")
+    pd.DataFrame(rows).to_csv(exp / "autots_search.csv", index=False)
+    final_key = max(cands, key=lambda k: float(np.median(gain_pp(cands[k]["rmse_mean"], cands[k]["e0"]))))
+    fin = cands[final_key]
+    say(f"AutoTS-final = {final_key} ({len(fin['colset'].ext)} cột ext) — chọn bằng metric project trên outer VAL")
+    win_dir = exp / "wins"
+    win_dir.mkdir(parents=True, exist_ok=True)
+    eps = float(json.loads((best_dir / "autots_wr.json").read_text(encoding="utf-8"))["eps"])
+    payload = {"model": "autots", "role": "AutoTS-final", "source": final_key, "group": fin["group"],
+               "colset": fin["colset"].to_dict(),
+               "rmse_mean": fin["rmse_mean"].tolist(), "e0": fin["e0"].tolist(), "eps": eps,
+               "eval_seeds": list(cfg.eval_seeds), "folds": [f.name for f in folds],
+               "templates_per_fold": {k: v[0] for k, v in fin["templates"].items()},
+               "median_gain_vs_e0": float(np.median(gain_pp(fin["rmse_mean"], fin["e0"])))}
+    (win_dir / "autots.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
+    for k, preds in enumerate(fin["preds_by_seed"]):
+        np.savez_compressed(win_dir / f"autots_seed{k}.npz", **{f"idx_{i}": p[0] for i, p in enumerate(preds)},
+                            **{f"yhat_{i}": p[1] for i, p in enumerate(preds)})
+    _log(cfg, exp_id=new_exp_id("autots_search", "autots"), step="autots_search", model="autots", seed=cfg.sel_seed,
+         colset="|".join(fin["colset"].ext), n_cols=len(fin["colset"].names), rounds="bake-off template",
+         base="E0", MedianGain=round(payload["median_gain_vs_e0"], 4), rmse_cells=_cells(fin["rmse_mean"]),
+         e0_cells=_cells(fin["e0"]), decision=f"AutoTS-final={final_key}",
+         note=f"{sum(len(v) for v in groups.values())} template / {len(groups)} nhóm, nv={nv}")
+    champion_step(cfg, "autots", fin["colset"], fin["rmse_mean"], fin["e0"], eps, {"win": "autots_final"})
+
+
 def champion_step(cfg: RunConfig, mname: str, colset: ColSet, rmse_mean: np.ndarray, e0: np.ndarray, eps: float,
                   extra: dict | None = None) -> str:
     """§3: so bảng RMSE̅ của win_m với champion → đổi/giữ, ghi champion_log.csv. Trả tên champion sau."""
@@ -730,7 +887,17 @@ def cmd_final(cfg: RunConfig, args) -> None:
         preds_by_model[key] = [(idx_test, yhat)]
 
     for key, (mname, cs) in configs.items():
-        model = model_for(cfg, mname, args.allow_cpu)
+        if mname == "autots":  # AutoTS-final: bake-off lại trên training-side của fold final rồi freeze template
+            w = json.loads((exp / "wins" / "autots.json").read_text(encoding="utf-8"))
+            groups, nv = autots_search_cfg(cfg)
+            grp = w.get("group", next(iter(groups)))
+            name, params, _ = autots_bakeoff_fold(cfg, store, final, cs, grp, groups[grp], nv, args.allow_cpu)
+            (exp / "autots_templates").mkdir(parents=True, exist_ok=True)
+            (exp / "autots_templates" / "best_FINAL.json").write_text(json.dumps(
+                {"fold": final.name, "group": grp, "model": name, "params": params}, indent=1), encoding="utf-8")
+            model = _autots_probe_model(cfg, grp, args.allow_cpu, frozen=(name, params))
+        else:
+            model = model_for(cfg, mname, args.allow_cpu)
         run = run_config(store, model, cs, [final], rounds=None, seed=cfg.sel_seed, keep_states=True)
         yhat = run.states[0].yhat
         yhat_by_model[key] = yhat
@@ -834,6 +1001,7 @@ def main(argv=None) -> None:
     s = sub.add_parser("loop", parents=[common(False)]); s.add_argument("--model", required=True); s.add_argument("--max-candidates", type=int, default=None)
     s.add_argument("--no-standalone", action="store_true"); s.add_argument("--latency-origins", type=int, default=None)
     sub.add_parser("autots-union", parents=[common(False)])
+    sub.add_parser("autots-search", parents=[common(False)])
     sub.add_parser("ensemble", parents=[common(False)])
     s = sub.add_parser("final", parents=[common(False)]); s.add_argument("--latency-origins", type=int, default=None)
     s = sub.add_parser("smoke-e2e", parents=[common(False)]); s.add_argument("--out", default="tmp_smoke"); s.add_argument("--days", type=float, default=6)
@@ -843,7 +1011,8 @@ def main(argv=None) -> None:
         return
     cfg = RunConfig.load(args.config)
     {"check-data": cmd_check_data, "calibrate": cmd_calibrate, "filter-b0": cmd_filter_b0, "loop": cmd_loop,
-     "autots-union": cmd_autots_union, "ensemble": cmd_ensemble, "final": cmd_final}[args.cmd](cfg, args)
+     "autots-union": cmd_autots_union, "autots-search": cmd_autots_search, "ensemble": cmd_ensemble,
+     "final": cmd_final}[args.cmd](cfg, args)
 
 
 if __name__ == "__main__":

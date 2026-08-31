@@ -83,7 +83,8 @@
     "tfm": {
       "device": "cuda",
       "context": 512,
-      "batch_size": 256
+      "batch_size": 256,
+      "covariate_strategy": "ext_only"
     },
     "autots_wr": {
       "device": "cuda",
@@ -91,6 +92,29 @@
     },
     "autots_mr": {
       "device": "cuda"
+    },
+    "autots_search": {
+      "num_validations": 10,
+      "templates": [
+        {
+          "model": "wr",
+          "window_size": 60,
+          "regressor": "LightGBM"
+        },
+        {
+          "model": "wr",
+          "window_size": 60,
+          "regressor": "xgboost"
+        },
+        {
+          "model": "mr",
+          "regressor": "xgboost"
+        },
+        {
+          "model": "mr",
+          "regressor": "LightGBM"
+        }
+      ]
     }
   },
   "model_order": [

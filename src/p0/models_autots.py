@@ -11,6 +11,13 @@ r"""AutoTS (§2.2 #6) — 2 model CỐ ĐỊNH, không search. Theo `docs/refere
 - Vá bug autots 1.0.4 `sklearn.py:3337` (`future_regressor.reindex(df)` với df là DataFrame → ValueError): gọi `fit_data(df_slice)`
   KHÔNG truyền regressor rồi tự gán `m.regressor_train` (đúng ngữ nghĩa của `fit`), đồng thời cắt đuôi để không concat cả FIT mỗi origin.
 - Không sửa thư viện; `n_jobs=1` (tránh nhiều process tranh GPU); `max_windows` lớn (mặc định 5000 cắt mất phần lớn FIT).
+
+Giai đoạn (iii) — **bake-off template GPU** (`search_best_template`, plan §2.2 #6, audit §12.4d phương án A / §12.10):
+`AutoTS(initial_template=<DataFrame do ta khai báo, mọi dòng ép GPU>, max_generations=0, transformer_max_depth=0)`
+chỉ chạy đúng các dòng ta nạp + validation nội bộ của AutoTS trên **training-side của fold** rồi chọn best theo RMSE.
+KHÔNG dùng genetic search: `generate_regressor_params` không sinh khoá `device`/`device_type` và mọi generation ≥ 1
+ghi đè params GPU ⇒ sẽ train CPU, vi phạm invariant §0. Template thắng được FREEZE và chạy lại bằng `ModelMonster`
+(`AutoTSModel(frozen=...)`) theo đúng vòng rolling ở trên.
 """
 from __future__ import annotations
 
@@ -42,7 +49,13 @@ class AutoTSModel:
 
     def __init__(self, kind: str = "wr", device: str = "cuda", allow_cpu: bool = False, window_size: int = 60,
                  regression_model: dict | None = None, max_windows: int = 200_000, tail_bars: int = TAIL_BARS,
-                 n_jobs: int = 1, frequency: str = "min", model_cls=None):
+                 n_jobs: int = 1, frequency: str = "min", model_cls=None, frozen: tuple[str, dict] | None = None):
+        # frozen = (tên model AutoTS, params đã search) → chạy lại nguyên trạng bằng ModelMonster (giai đoạn iii)
+        self.frozen = None if frozen is None else (str(frozen[0]), dict(frozen[1]))
+        self.use_es = frozen is not None  # template freeze: refit trên đúng dữ liệu bake-off (FIT+ES)
+        if self.frozen is not None:
+            kind = "wr" if self.frozen[0] == "WindowRegression" else "mr"
+            window_size = int(self.frozen[1].get("window_size", window_size))
         if kind not in ("wr", "mr"):
             raise KeyError(f"AutoTS kind phải là 'wr' hoặc 'mr': {kind}")
         _cpu_guard(device == "cuda", allow_cpu, f"AutoTS-{kind.upper()}")
@@ -83,6 +96,15 @@ class AutoTSModel:
 
     # ------------------------------------------------------------------ model
     def _make(self, seed: int):
+        if self.frozen is not None:  # template đã freeze: dựng lại đúng model + params mà bake-off đã chọn
+            name, params = self.frozen
+            if self._cls is not None:
+                return self._cls(name, parameters=params, frequency=self.frequency, forecast_length=len(HORIZONS),
+                                 prediction_interval=0.9, holiday_country=None, random_seed=seed, verbose=0, n_jobs=self.n_jobs)
+            from autots.evaluator.auto_model import ModelMonster
+
+            return ModelMonster(name, parameters=params, frequency=self.frequency, forecast_length=len(HORIZONS),
+                                prediction_interval=0.9, holiday_country=None, random_seed=seed, verbose=0, n_jobs=self.n_jobs)
         if self._cls is not None:  # stub trong unit test
             cls = self._cls
         elif self.kind == "wr":
@@ -99,11 +121,22 @@ class AutoTSModel:
                        normalize_window=False, scale=False, datepart_method=None, shuffle=False, **common)
         return cls(datepart_method=None, **common)
 
+    def frames(self, seq: SeriesBatch, lo: int, hi: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """(df 1 cột 'r1', R regressor đã dịch) trên các bar [lo, hi) — dùng cho fit và cho bake-off."""
+        return _frame(seq.ts[lo:hi], seq.r1[lo:hi, None], ["r1"]), self.regressor_frame(seq, lo, hi)
+
+    def fit_range(self, X_fit: SeriesBatch, X_es: SeriesBatch | None) -> tuple[int, int]:
+        """Khoảng bar để fit: probe = FIT; template đã freeze (`use_es`) = FIT+ES — đúng bằng dữ liệu bake-off đã dùng."""
+        lo, hi = int(X_fit.idx.min()), int(X_fit.idx.max()) + 1
+        if self.use_es and X_es is not None and len(getattr(X_es, "idx", ())):
+            hi = max(hi, int(X_es.idx.max()) + 1)
+        return lo, hi
+
     def fit_predict(self, X_fit: SeriesBatch, z_fit, X_es, z_es, X_pred: SeriesBatch, rounds, seed: int) -> FitResult:
-        lo, hi = int(X_fit.idx.min()), int(X_fit.idx.max()) + 1  # FIT là lát liên tục trên lưới (đã kiểm không gap §1.1)
-        df_fit = _frame(X_fit.ts[lo:hi], X_fit.r1[lo:hi, None], ["r1"])
+        lo, hi = self.fit_range(X_fit, X_es)  # lát liên tục trên lưới (đã kiểm không gap §1.1), kết thúc trước purge
+        df_fit, R_fit = self.frames(X_fit, lo, hi)
         m = self._make(seed)
-        m.fit(df_fit, future_regressor=self.regressor_frame(X_fit, lo, hi))
+        m.fit(df_fit, future_regressor=R_fit)
         predictor = self._make_predictor(m)
         return FitResult(predictor(X_pred), (0, 0, 0), [predictor], is_logret=True)
 
@@ -127,3 +160,4 @@ class AutoTSModel:
 
         predict.model = m  # model AutoTS đã fit của fold này (debug/kiểm tra)
         return predict
+
