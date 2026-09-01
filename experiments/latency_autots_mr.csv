@@ -1,0 +1,4 @@
+model,h,n,p95_ms,p99_ms,max_ms,mean_ms,shared,train_device,predict_device,lib_version,threads
+autots_mr,1,1437,28.4397866,31.27254948,33.437848,27.644832338204598,True,GPU,GPU,autots 1.0.4,lib_default
+autots_mr,2,1437,28.4397866,31.27254948,33.437848,27.644832338204598,True,GPU,GPU,autots 1.0.4,lib_default
+autots_mr,3,1437,28.4397866,31.27254948,33.437848,27.644832338204598,True,GPU,GPU,autots 1.0.4,lib_default
