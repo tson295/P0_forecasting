@@ -37,7 +37,7 @@ class TimesFMModel:
     def __init__(self, device: str = "cuda", allow_cpu: bool = False, repo_id: str = REPO_ID, revision: str = REVISION,
                  context: int = CONTEXT, max_horizon: int = 128, batch_size: int = 256, torch_compile: bool = True,
                  normalize_inputs: bool = True, force_flip_invariance: bool = True, use_mean_head: bool = True,
-                 xreg_mode: str = "xreg + timesfm", xreg_force_on_cpu: bool = True, covariate_scope: str = "ext",
+                 xreg_mode: str = "xreg + timesfm", xreg_force_on_cpu: bool = False, covariate_scope: str = "ext",
                  name: str = "tfm", model: object | None = None):
         _cpu_guard(device == "cuda", allow_cpu, "TimesFM")
         if covariate_scope not in COVARIATE_SCOPES:
@@ -120,6 +120,9 @@ class TimesFMModel:
                 dynamic_numerical_covariates=dyn, dynamic_categorical_covariates={},
                 static_numerical_covariates={}, static_categorical_covariates={},
                 xreg_mode=self.xreg_mode, normalize_xreg_target_per_input=True, ridge=0.0,
+                # force_on_cpu=False → jax dùng backend mặc định (GPU khi có jax[cuda12]); xreg_lib:479 đặt
+                # device=None thay vì ép jax.devices("cpu")[0], nên khối ước lượng beta_hat (pinv(XᵀX)@Xᵀ@y và
+                # x_test@beta_hat) chạy trên RTX 3090. Invariant §0 "training chỉ GPU" áp dụng cho cả xreg.
                 max_rows_per_col=0, force_on_cpu=self.xreg_force_on_cpu,
             )
             rows.append(np.asarray(self.head(res), dtype=np.float64).reshape(-1)[:H])

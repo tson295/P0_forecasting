@@ -1,24 +1,20 @@
-START 2026-08-31T22:15:31Z
-[p0 22:15:35] GPU preflight torch (tfm_b0): NVIDIA GeForce RTX 3090
+START 2026-09-01T03:47:59Z
+[p0 03:48:03] GPU preflight torch (tfm_b0): NVIDIA GeForce RTX 3090
 /home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
   result = getattr(ufunc, method)(*inputs, **kwargs)
-[p0 22:15:35] [tfm_b0] calibrate trên B0* (72 cột) — ES với calib_seed 8586
-WARNING:jax._src.xla_bridge:An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0] 
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0] 
-W0831 22:15:43.175000 92431 torch/_dynamo/variables/tensor.py:1379] [0/0] 
-/home/ubuntu/p0venv/lib/python3.12/site-packages/torch/_inductor/compile_fx.py:322: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
-  warnings.warn(
-[p0 23:29:11] [tfm_b0] rounds=None ε=0.0050 pp; base MedianGain vs E0 = -17.6706
+[p0 03:48:03] [tfm_b0] calibrate trên B0* (72 cột) — ES với calib_seed 8586
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] 

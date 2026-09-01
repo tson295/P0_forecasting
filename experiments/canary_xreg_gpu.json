@@ -1,0 +1,54 @@
+{
+ "checks": [
+  {
+   "check": "jax default backend = gpu",
+   "ok": true,
+   "sec": 0.42,
+   "note": "jax 0.11.1 backend=gpu devices=[CudaDevice(id=0)]"
+  },
+  {
+   "check": "cấu hình: xreg GPU + 1 origin/lời gọi",
+   "ok": true,
+   "sec": 0.0,
+   "note": "xreg_force_on_cpu=False · per_core_batch_size=1"
+  },
+  {
+   "check": "covariate forecast chạy + output hữu hạn",
+   "ok": true,
+   "sec": 12.67,
+   "note": "shape=(12, 3) |ŷ|max=8.85e-04 682 ms/origin"
+  },
+  {
+   "check": "xreg beta_hat THỰC SỰ trên GPU (không fallback)",
+   "ok": true,
+   "sec": 0.0,
+   "note": "12 lời gọi pinv, beta_hat trên {'gpu'}"
+  },
+  {
+   "check": "giữ đúng 1 origin mỗi lời gọi",
+   "ok": true,
+   "sec": 0.0,
+   "note": "mọi lời gọi forecast_with_covariates có đúng 1 origin (12 lời gọi xreg)"
+  },
+  {
+   "check": "causal (τ ≤ t) + shift 1 bar vẫn đúng",
+   "ok": true,
+   "sec": 1.27,
+   "note": "cắt-chuỗi bit-identical; covariate dịch đúng 1 bar; 3 bước tương lai = f(t)"
+  },
+  {
+   "check": "torch CUDA sống chung với jax GPU",
+   "ok": true,
+   "sec": 0.03,
+   "note": "torch CUDA OK (NVIDIA GeForce RTX 3090); VRAM free 22.3/23.7 GiB"
+  }
+ ],
+ "pinv_devices": [
+  "gpu"
+ ],
+ "pinv_calls": 24,
+ "input_lens": [
+  1
+ ],
+ "ms_per_origin_2cov": 682.25
+}
