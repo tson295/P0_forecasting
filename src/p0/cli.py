@@ -151,6 +151,15 @@ def model_for(cfg: RunConfig, name: str, allow_cpu: bool):
         params = {k: v for k, v in params.items() if k not in ("device_type", "device", "task_type")}
         # mặc định ép `device="cpu"` cho mọi model (xgb, xgbrf, lstm, tfm/tfm_b0/tfm_ext, autots_*); lgbm/cat dùng khoá riêng
         params.update({"lgbm": {"device_type": "cpu"}, "cat": {"task_type": "CPU"}}.get(name, {"device": "cpu"}))
+    elif name in ("autots_wr", "autots_mr") and "regression_model" not in params:
+        # Backend GPU đã RESOLVE (models.lgbm.device_type / models.xgb.device, do vast_bootstrap.sh ghi sau khi
+        # thử fit thật) PHẢI chảy vào regression_model bên trong AutoTS. Thiếu bước này thì AutoTSModel rơi về
+        # hằng số WR_PARAMS/MR_PARAMS với device_type="gpu" (build OpenCL) → trên máy build CUDA sẽ chết ngay:
+        # LightGBMError "GPU Tree Learner was not enabled in this build". `_autots_probe_model` (canary,
+        # autots-search) đã làm đúng việc này; `loop --model autots_*` đi qua model_for nên trước đây bị sót.
+        reg = autots_regressors(cfg)
+        key = "LightGBM" if name == "autots_wr" else "xgboost"
+        params["regression_model"] = {"model": key, "model_params": reg[key]}
     return make_model(name, params, allow_cpu=allow_cpu)
 
 
