@@ -1,0 +1,4 @@
+model,h,n,p95_ms,p99_ms,max_ms,mean_ms,shared,train_device,predict_device,lib_version,threads
+tfm_b0,1,1437,101.2776506,106.62451492000001,126.741172,98.68872098329854,True,GPU,GPU,timesfm,lib_default
+tfm_b0,2,1437,101.2776506,106.62451492000001,126.741172,98.68872098329854,True,GPU,GPU,timesfm,lib_default
+tfm_b0,3,1437,101.2776506,106.62451492000001,126.741172,98.68872098329854,True,GPU,GPU,timesfm,lib_default
