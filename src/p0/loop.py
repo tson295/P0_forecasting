@@ -26,12 +26,22 @@ class LoopResult:
 
 
 def add_one_loop(store: Store, model: TabularModel, base: ColSet, base_rmse: np.ndarray, candidates: list[Candidate], folds: list[Fold],
-                 rounds, eps: float, seed: int, e0_rmse: np.ndarray, standalone_fn=None, on_row=None) -> LoopResult:
+                 rounds, eps: float, seed: int, e0_rmse: np.ndarray, standalone_fn=None, on_row=None, resume=None) -> LoopResult:
     """S := base; với từng candidate: thêm → train (số vòng cố định) → Gain vs S → KEEP nếu ≥ −ε, DROP nếu < −ε.
-    on_row(row: dict, run: RunResult) được gọi sau mỗi candidate (log / save_run; có thể thêm exp_id vào row)."""
-    S, S_rmse = base, base_rmse
-    rows, kept, dropped = [], [], []
-    for i, cand in enumerate(candidates, start=1):
+    on_row(row: dict, run: RunResult) được gọi sau mỗi candidate (log / save_run; có thể thêm exp_id vào row).
+
+    `resume` (tùy chọn) = dict(S, S_rmse, rows, kept, dropped, start) — TIẾP TỤC từ candidate thứ `start` (1-based)
+    với S/S_rmse đã khôi phục từ log đã ghi; `candidates` khi đó phải là phần CHƯA chạy. Không truyền resume
+    thì hành vi y hệt bản cũ (S := base, start = 1)."""
+    if resume:
+        S, S_rmse = resume["S"], resume["S_rmse"]
+        rows, kept, dropped = list(resume["rows"]), list(resume["kept"]), list(resume["dropped"])
+        start = int(resume["start"])
+    else:
+        S, S_rmse = base, base_rmse
+        rows, kept, dropped = [], [], []
+        start = 1
+    for i, cand in enumerate(candidates, start=start):
         cs = S.with_ext(cand.columns)
         run = run_config(store, model, cs, folds, rounds=rounds, seed=seed, keep_states=False)
         g = run.gain_vs(S_rmse)

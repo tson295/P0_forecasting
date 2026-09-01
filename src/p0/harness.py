@@ -204,6 +204,13 @@ def _standardize_fit(feats: np.ndarray, idx_fit: np.ndarray) -> np.ndarray:
 def run_config(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], rounds=None, seed: int = 8586,
                keep_states: bool = True) -> RunResult:
     """Một configuration (model, colset) trên các fold. rounds: None (ES) | tuple(3) | dict[fold.name → tuple(3)]."""
+    # Fold-parallel CHỈ cho TimesFM và CHỈ khi không cần states (calibrate, seed_noise, add-one candidate).
+    # Worker gọi lại đúng hàm này với [một fold] nên nhánh dưới đây chạy y hệt bản tuần tự (§tfm_parallel).
+    if not keep_states and len(folds) > 1:
+        from . import tfm_parallel
+
+        if tfm_parallel.active(model):
+            return tfm_parallel.run_folds(model, colset, folds, rounds, seed)
     F = len(folds)
     rmse = np.zeros((F, 3)); mae = np.zeros((F, 3)); rr = np.zeros((F, 3)); dacc = np.zeros((F, 3)); e0 = np.zeros((F, 3))
     best = np.zeros((F, 3), dtype=int)

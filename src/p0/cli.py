@@ -330,6 +330,59 @@ def _standalone_factory(store, folds, allow_cpu, cfg):
     return fn
 
 
+def _resume_loop_state(cfg: RunConfig, mname: str, base: ColSet, cands: list, calib: dict, standalone_fn):
+    """Khôi phục S_m + lịch sử KEEP/DROP đã ghi để TIẾP TỤC add-one (không chạy lại candidate cũ).
+
+    Nguồn sự thật: `experiments/calib/<m>_base.json` (base_rmse/e0/eps/rounds — KHÔNG tính lại, vì chạy lại
+    calibrate ở process khác sẽ cho base_rmse hơi khác) + các dòng `step=loop, model=<m>` trong log.csv.
+    Kiểm tra chặt, thà DỪNG còn hơn đoán: các candidate đã chạy phải là TIỀN TỐ liên tục theo đúng thứ tự
+    §2.3, n_cols phải khớp |S| hiện tại, và không candidate nào nằm sau điểm dừng được phép đã có log.
+    """
+    log_path = cfg.exp_dir / "log.csv"
+    if not log_path.exists():
+        sys.exit(f"--resume: thiếu {log_path} — không có lịch sử để tiếp tục.")
+    log = pd.read_csv(log_path)
+    done = log[(log["step"] == "loop") & (log["model"] == mname)].drop_duplicates(subset=["colset"], keep="last")
+    by_cols = {str(r["colset"]): r for _, r in done.iterrows()}
+    base_rmse, e0 = np.asarray(calib["rmse"]), np.asarray(calib["e0"])
+    eps = float(calib["eps"])
+    S, S_rmse = base, base_rmse
+    rows, kept, dropped = [], [], []
+    n_done = 0
+    for i, cand in enumerate(cands, start=1):
+        key = "|".join(cand.columns)
+        if key not in by_cols:
+            break
+        r = by_cols[key]
+        cs = S.with_ext(cand.columns)
+        if int(r["n_cols"]) != len(cs.names):
+            sys.exit(f"--resume: candidate {cand.name} ghi n_cols={r['n_cols']} nhưng S hiện tại cho {len(cs.names)} "
+                     "→ lịch sử không khớp S_m, DỪNG (không chạy lại từ đầu).")
+        rmse = np.asarray(json.loads(r["rmse_cells"]))
+        decision = str(r["decision"])
+        if decision not in ("KEEP", "DROP"):
+            sys.exit(f"--resume: decision lạ {decision!r} ở {cand.name} — DỪNG.")
+        size_after = len(cs.names) if decision == "KEEP" else len(S.names)
+        rows.append({"order": i, "candidate": cand.name, "columns": key, "group": cand.group,
+                     "MedianGain_vs_S": float(r["MedianGain"]), "WinRate": float(r["WinRate"]),
+                     "P10Gain": float(r["P10Gain"]), "WorstGain": float(r["WorstGain"]),
+                     "MedianGain_vs_base": float(np.median(gain_pp(rmse, base_rmse))),
+                     "MedianGain_vs_E0": float(np.median(gain_pp(rmse, e0))),
+                     "gain_standalone_E0": float(standalone_fn(cand)) if standalone_fn else np.nan,
+                     "decision": decision, "eps": eps, "size_S_after": size_after,
+                     "rmse_cells": r["rmse_cells"], "gain_cells_vs_S": r["gain_cells"], "exp_id": r["exp_id"]})
+        if decision == "KEEP":
+            S, S_rmse = cs, rmse
+            kept.append(cand.name)
+        else:
+            dropped.append(cand.name)
+        n_done += 1
+    later = [c.name for c in cands[n_done:] if "|".join(c.columns) in by_cols]
+    if later:
+        sys.exit(f"--resume: có candidate đã chạy nằm SAU điểm dừng ({later[:5]}) → lịch sử không liên tục, DỪNG.")
+    return {"S": S, "S_rmse": S_rmse, "rows": rows, "kept": kept, "dropped": dropped, "start": n_done + 1}, n_done
+
+
 def cmd_loop(cfg: RunConfig, args) -> None:
     """§2.1 cho model m từ B0*: calibrate riêng → add-one 39 candidate → prune PI → 3 seed → win_m → latency → §3 champion + figure."""
     gate(cfg, args, [args.model])
@@ -340,26 +393,53 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     # Điểm xuất phát S: mọi model từ B0*, riêng nhánh `tfm_ext` từ ∅ (baseline = TimesFM native trên r1)
     base = ColSet((), ()) if TFM_BRANCH_BASE.get(mname) == "empty" else colset_from_arg(store, cfg, "b0star")
     model = model_for(cfg, args.model, args.allow_cpu)
+    if mname.startswith("tfm"):  # tối ưu THỰC THI: 5 fold độc lập chạy song song (chỉ TimesFM, chỉ run không cần states)
+        from . import tfm_parallel
+
+        nw = tfm_parallel.configure(cfg, model)
+        if nw > 1:
+            say(f"[{mname}] fold-parallel: {nw} worker (P0_TFM_FOLD_WORKERS) — ngữ nghĩa không đổi, ghép theo đúng thứ tự fold")
     if load_champion(exp / "champion.json") is None and mname != "lgbm":
         sys.exit("§3: champion ban đầu phải là LightGBM code gốc — chạy `loop --model lgbm` trước.")
     # phase B calibrate riêng trên B0*
     base_label = "∅ (TimesFM native trên r1)" if not base.names else "B0*"
     say(f"[{mname}] calibrate trên {base_label} ({len(base.names)} cột) — ES với calib_seed {cfg.calib_seed}")
-    cal = calibrate(store, model, base, folds, seed=cfg.calib_seed, keep_states=False)
-    rounds = rounds_from(cal) if getattr(model, "supports_rounds", True) else None
-    eps, noise, runs = seed_noise(store, model, base, folds, rounds, cfg.eval_seeds, cfg.eps_floor_pp)
-    base_run = run_at_seed(runs, cfg.sel_seed)  # mốc của vòng lặp: cùng selection_seed với mọi candidate
-    if base_run is None:
-        base_run = run_config(store, model, base, folds, rounds=rounds, seed=cfg.sel_seed, keep_states=False)
-    say(f"[{mname}] rounds={rounds} ε={eps:.4f} pp; base MedianGain vs E0 = {np.median(base_run.gain_vs(base_run.e0)):+.4f}")
-    (exp / "calib").mkdir(parents=True, exist_ok=True)
-    (exp / "calib" / f"{mname}_base.json").write_text(json.dumps(
-        {"model": mname, "rounds": rounds, "eps": eps, "noise_cells": np.round(noise, 5).tolist(), "calib_seed": cfg.calib_seed,
-         "eval_seeds": list(cfg.eval_seeds), "selection_seed": cfg.sel_seed, "rmse": base_run.rmse.tolist(),
-         "e0": base_run.e0.tolist(), "seed_rmse": [r.rmse.tolist() for r in runs], "colset": base.to_dict()}, indent=1), encoding="utf-8")
-    # add-one loop
+    calib_path = exp / "calib" / f"{mname}_base.json"
     cands = candidates_from(cfg, args.max_candidates)
     standalone_fn = None if args.no_standalone else _standalone_factory(store, folds, args.allow_cpu, cfg)
+    resume_state = None
+    if getattr(args, "resume", False):
+        # TIẾP TỤC: dùng base_rmse/ε/rounds ĐÃ GHI, KHÔNG chạy lại calibrate + seed_noise (chạy lại ở process
+        # khác sẽ cho base_rmse hơi khác → Gain của candidate cũ và mới sẽ không cùng một mốc).
+        if not calib_path.exists():
+            sys.exit(f"--resume: thiếu {calib_path} — không có base đã ghi để tiếp tục.")
+        calib = json.loads(calib_path.read_text(encoding="utf-8"))
+        if calib.get("colset") != base.to_dict():
+            sys.exit("--resume: colset base trong calib khác B0* hiện tại → DỪNG.")
+        rounds, eps = calib["rounds"], float(calib["eps"])
+        if isinstance(rounds, dict):
+            rounds = {k: tuple(v) for k, v in rounds.items()}
+        base_rmse, base_e0 = np.asarray(calib["rmse"]), np.asarray(calib["e0"])
+        resume_state, n_done = _resume_loop_state(cfg, mname, base, cands, calib, standalone_fn)
+        cands = cands[n_done:]
+        say(f"[{mname}] RESUME: {n_done} candidate đã xong (giữ nguyên, không chạy lại) — "
+            f"|S_m| = {len(resume_state['S'].names)} ({len(resume_state['kept'])} KEEP / {len(resume_state['dropped'])} DROP); "
+            f"tiếp tục từ #{resume_state['start']} ({cands[0].name if cands else '—'})")
+        say(f"[{mname}] rounds={rounds} ε={eps:.4f} pp (đọc lại từ calib, không tính lại)")
+    else:
+        cal = calibrate(store, model, base, folds, seed=cfg.calib_seed, keep_states=False)
+        rounds = rounds_from(cal) if getattr(model, "supports_rounds", True) else None
+        eps, noise, runs = seed_noise(store, model, base, folds, rounds, cfg.eval_seeds, cfg.eps_floor_pp)
+        base_run = run_at_seed(runs, cfg.sel_seed)  # mốc của vòng lặp: cùng selection_seed với mọi candidate
+        if base_run is None:
+            base_run = run_config(store, model, base, folds, rounds=rounds, seed=cfg.sel_seed, keep_states=False)
+        base_rmse, base_e0 = base_run.rmse, base_run.e0
+        say(f"[{mname}] rounds={rounds} ε={eps:.4f} pp; base MedianGain vs E0 = {np.median(base_run.gain_vs(base_run.e0)):+.4f}")
+        (exp / "calib").mkdir(parents=True, exist_ok=True)
+        calib_path.write_text(json.dumps(
+            {"model": mname, "rounds": rounds, "eps": eps, "noise_cells": np.round(noise, 5).tolist(), "calib_seed": cfg.calib_seed,
+             "eval_seeds": list(cfg.eval_seeds), "selection_seed": cfg.sel_seed, "rmse": base_run.rmse.tolist(),
+             "e0": base_run.e0.tolist(), "seed_rmse": [r.rmse.tolist() for r in runs], "colset": base.to_dict()}, indent=1), encoding="utf-8")
     kd_path = exp / f"keepdrop_{mname}.csv"
 
     def on_row(row, run):
@@ -373,11 +453,12 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         save_run(exp, exp_id, {**run.to_dict(), "step": "loop", "candidate": row["candidate"], "decision": row["decision"], "eps": eps,
                                "MedianGain_vs_S": row["MedianGain_vs_S"]})
 
-    lr = add_one_loop(store, model, base, base_run.rmse, cands, folds, rounds, eps, cfg.sel_seed, base_run.e0, standalone_fn, on_row)
+    lr = add_one_loop(store, model, base, base_rmse, cands, folds, rounds, eps, cfg.sel_seed, base_e0, standalone_fn,
+                      on_row, resume=resume_state)
     lr.table.to_csv(kd_path, index=False)
     say(f"[{mname}] F*_m: {len(lr.kept)} KEEP / {len(lr.dropped)} DROP → {kd_path}")
     # dòng tổng kết: F*_m so với chính baseline của model (cùng selection_seed, cùng số vòng) — bắt buộc cho TimesFM (§2.2 #4b)
-    g_fin = summarize(gain_pp(lr.final_rmse, base_run.rmse))
+    g_fin = summarize(gain_pp(lr.final_rmse, base_rmse))
     _log(cfg, exp_id=new_exp_id("loop_final", mname), step="loop_final", model=mname, seed=cfg.sel_seed,
          colset="|".join(lr.final.ext), n_cols=len(lr.final.names), rounds=json.dumps(rounds), base="baseline_model",
          MedianGain=round(g_fin["MedianGain"], 4), WinRate=round(g_fin["WinRate"], 4), P10Gain=round(g_fin["P10Gain"], 4),
@@ -947,6 +1028,7 @@ def main(argv=None) -> None:
     s = sub.add_parser("calibrate", parents=[common(False)]); s.add_argument("--model", default="lgbm"); s.add_argument("--colset", default="b0306")
     s = sub.add_parser("filter-b0", parents=[common(False)]); s.add_argument("--max-cols", type=int, default=None)
     s = sub.add_parser("loop", parents=[common(False)]); s.add_argument("--model", required=True); s.add_argument("--max-candidates", type=int, default=None)
+    s.add_argument("--resume", action="store_true", help="tiếp tục add-one từ candidate chưa chạy, dùng base/ε/S_m đã ghi")
     s.add_argument("--no-standalone", action="store_true"); s.add_argument("--latency-origins", type=int, default=None)
     sub.add_parser("tfm-final", parents=[common(False)])
     sub.add_parser("autots-search", parents=[common(False)])
