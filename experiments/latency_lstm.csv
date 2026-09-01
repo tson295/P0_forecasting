@@ -1,0 +1,4 @@
+model,h,n,p95_ms,p99_ms,max_ms,mean_ms,shared,train_device,predict_device,lib_version,threads
+lstm,1,1437,0.8576752,0.8674004,0.893435,0.7864768705636743,True,GPU,GPU,torch 2.11.0+cu128,lib_default
+lstm,2,1437,0.8576752,0.8674004,0.893435,0.7864768705636743,True,GPU,GPU,torch 2.11.0+cu128,lib_default
+lstm,3,1437,0.8576752,0.8674004,0.893435,0.7864768705636743,True,GPU,GPU,torch 2.11.0+cu128,lib_default

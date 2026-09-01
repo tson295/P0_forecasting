@@ -1,0 +1,1125 @@
+START 2026-09-01T21:05:20Z
+[p0 21:05:26] GPU preflight LightGBM: OK
+[p0 21:05:26] GPU preflight AutoTS (1.0.4): OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [21:05:26] WARNING: /__w/xgboost/xgboost/src/context.cc:55: No visible GPU is found, setting device to CPU.
+  bst.update(dtrain, iteration=i, fobj=obj)
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [21:05:26] WARNING: /__w/xgboost/xgboost/src/context.cc:218: Device is changed from GPU to CPU as we couldn't find any available GPU on the system.
+  bst.update(dtrain, iteration=i, fobj=obj)
+[p0 21:05:26] GPU preflight XGBoost: OK
+[p0 21:05:26] GPU preflight AutoTS (1.0.4): OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 21:05:27] bake-off: 4 template / 2 nhóm shift ['wr:60', 'mr'], num_validations=10, 2 frozen set × 5 fold
+[p0 21:05:27] [fold1_2026-01-27|wr:60] search trên 11291 bar (đến 2026-01-26 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 180.25 in 25.22s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 168.6 in 11.55s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 187.6 in 25.52s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 175.99 in 11.42s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 176.29 in 24.41s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 144.12 in 11.43s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 191.17 in 24.66s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+📈 2 - WindowRegression with avg smape 165.41 in 11.45s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 165.23 in 25.06s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 169.7 in 11.44s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 162.87 in 25.91s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 182.64 in 11.43s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 200.0 in 24.66s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 148.0 in 11.45s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 135.89 in 24.32s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 144.34 in 11.43s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 138.51 in 24.76s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 153.08 in 11.41s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 200.0 in 25.57s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 174.9 in 11.42s: 
+[p0 21:12:11] [F_WR_best|wr:60|fold1_2026-01-27] template thắng: WindowRegression
+[p0 21:12:11] [fold2_2026-01-28|wr:60] search trên 12731 bar (đến 2026-01-27 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 164.66 in 27.23s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 155.13 in 11.65s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 146.13 in 27.55s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 87.38 in 11.73s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 148.08 in 27.26s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 165.77 in 11.70s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 178.16 in 28.04s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 192.1 in 12.06s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 132.86 in 26.90s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 176.84 in 11.96s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 177.95 in 27.50s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+📈 2 - WindowRegression with avg smape 174.47 in 11.95s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 156.93 in 26.94s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 134.49 in 11.95s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 186.7 in 27.08s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 190.37 in 11.94s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 139.18 in 27.22s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 100.29 in 11.95s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 165.13 in 27.65s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 188.49 in 11.96s: 
+[p0 21:19:25] [F_WR_best|wr:60|fold2_2026-01-28] template thắng: WindowRegression
+[p0 21:19:25] [fold3_2026-01-29|wr:60] search trên 14171 bar (đến 2026-01-28 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 200.0 in 12.28s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 200.0 in 29.88s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 198.78 in 12.11s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 198.78 in 30.32s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 175.29 in 12.15s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 192.42 in 29.23s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 153.64 in 12.13s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 188.44 in 29.93s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 173.43 in 12.13s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 192.41 in 30.18s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 124.04 in 12.09s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 144.1 in 29.27s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 200.0 in 11.87s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 200.0 in 29.90s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 188.28 in 11.87s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 190.31 in 30.42s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 191.06 in 11.85s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 192.62 in 30.14s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 200.0 in 11.84s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 200.0 in 29.61s: 
+[p0 21:27:09] [F_WR_best|wr:60|fold3_2026-01-29] template thắng: WindowRegression
+[p0 21:27:09] [fold4_2026-01-30|wr:60] search trên 15611 bar (đến 2026-01-29 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 197.15 in 12.08s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 172.91 in 32.77s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 200.0 in 12.05s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 175.11 in 33.48s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 159.03 in 12.05s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 139.24 in 33.38s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 193.28 in 12.05s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+📈 2 - WindowRegression with avg smape 170.28 in 33.35s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 197.13 in 12.07s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+📈 2 - WindowRegression with avg smape 136.25 in 33.46s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 196.3 in 12.06s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+📈 2 - WindowRegression with avg smape 152.97 in 33.76s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 167.93 in 12.03s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 196.29 in 33.24s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 200.0 in 12.05s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+📈 2 - WindowRegression with avg smape 160.55 in 33.62s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 177.75 in 12.04s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 128.96 in 34.35s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 147.11 in 12.01s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 185.97 in 33.39s: 
+[p0 21:35:32] [F_WR_best|wr:60|fold4_2026-01-30] template thắng: WindowRegression
+[p0 21:35:32] [fold5_2026-01-31|wr:60] search trên 17051 bar (đến 2026-01-30 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 200.0 in 37.73s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 182.4 in 12.13s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 164.71 in 38.35s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 196.59 in 12.16s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 200.0 in 38.52s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 153.9 in 12.17s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 181.94 in 38.25s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+📈 2 - WindowRegression with avg smape 133.72 in 12.21s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 180.15 in 39.44s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 199.03 in 12.18s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 200.0 in 38.80s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 200.0 in 12.17s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 163.01 in 38.17s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 178.6 in 12.15s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 196.5 in 39.12s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 200.0 in 12.31s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 136.01 in 38.08s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 91.57 in 12.18s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 169.17 in 37.82s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 200.0 in 12.17s: 
+[p0 21:44:52] [F_WR_best|wr:60|fold5_2026-01-31] template thắng: WindowRegression
+[p0 21:47:36] [F_WR_best|wr:60] outer VAL @ selection_seed 8587: MedianGain vs E0 = -1.8693 pp
+[p0 21:47:36] [fold1_2026-01-27|mr] search trên 11291 bar (đến 2026-01-26 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 171.07 in 4.17s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 198.63 in 4.88s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.19s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 200.0 in 4.92s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.20s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+📈 2 - MultivariateRegression with avg smape 192.61 in 4.83s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 186.8 in 4.19s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 197.74 in 4.84s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 199.51 in 4.22s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 194.44 in 4.89s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.17s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+📈 2 - MultivariateRegression with avg smape 192.61 in 4.88s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 154.5 in 4.34s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 148.43 in 4.89s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.18s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 200.0 in 4.90s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 122.59 in 4.22s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+2 - MultivariateRegression with avg smape 140.84 in 4.88s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 182.8 in 4.19s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 199.83 in 4.88s: 
+[p0 21:49:19] [F_WR_best|mr|fold1_2026-01-27] template thắng: MultivariateRegression
+[p0 21:49:19] [fold2_2026-01-28|mr] search trên 12731 bar (đến 2026-01-27 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 195.74 in 5.46s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+📈 2 - MultivariateRegression with avg smape 181.08 in 4.39s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 153.33 in 5.50s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+📈 2 - MultivariateRegression with avg smape 48.05 in 4.39s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 195.28 in 5.53s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 198.83 in 4.38s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 185.94 in 5.54s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+📈 2 - MultivariateRegression with avg smape 135.54 in 4.39s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 199.37 in 5.55s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 167.02 in 4.35s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 199.96 in 5.54s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+📈 2 - MultivariateRegression with avg smape 186.14 in 4.37s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 199.84 in 5.53s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 159.25 in 4.39s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 188.12 in 5.55s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 147.94 in 4.37s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 197.64 in 5.53s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 113.91 in 4.38s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 198.93 in 5.70s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+📈 2 - MultivariateRegression with avg smape 197.31 in 4.39s: 
+[p0 21:51:10] [F_WR_best|mr|fold2_2026-01-28] template thắng: MultivariateRegression
+[p0 21:51:10] [fold3_2026-01-29|mr] search trên 14171 bar (đến 2026-01-28 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 80.34 in 6.08s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 93.82 in 4.59s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 164.36 in 6.09s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 170.51 in 4.62s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 200.0 in 6.07s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 200.0 in 4.62s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 175.79 in 6.12s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+📈 2 - MultivariateRegression with avg smape 131.15 in 4.59s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 145.98 in 6.13s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 199.91 in 4.61s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 200.0 in 6.02s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 200.0 in 4.58s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 195.86 in 6.05s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 185.75 in 4.60s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 200.0 in 6.07s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 192.8 in 4.60s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 199.23 in 6.11s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 199.12 in 4.58s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 197.11 in 6.09s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+📈 2 - MultivariateRegression with avg smape 129.35 in 4.61s: 
+[p0 21:53:11] [F_WR_best|mr|fold3_2026-01-29] template thắng: MultivariateRegression
+[p0 21:53:11] [fold4_2026-01-30|mr] search trên 15611 bar (đến 2026-01-29 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 191.6 in 6.61s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+📈 2 - MultivariateRegression with avg smape 167.9 in 4.83s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 194.96 in 6.51s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 200.0 in 4.78s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 198.78 in 6.61s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+📈 2 - MultivariateRegression with avg smape 170.96 in 4.79s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 184.0 in 6.60s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+📈 2 - MultivariateRegression with avg smape 153.1 in 4.81s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 177.23 in 6.55s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 193.04 in 4.81s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 194.87 in 6.69s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+📈 2 - MultivariateRegression with avg smape 141.64 in 4.80s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 137.6 in 6.65s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 196.37 in 4.80s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 200.0 in 6.64s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 179.7 in 4.80s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 163.29 in 6.59s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 135.83 in 4.84s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 142.06 in 6.59s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 200.0 in 4.81s: 
+[p0 21:55:19] [F_WR_best|mr|fold4_2026-01-30] template thắng: MultivariateRegression
+[p0 21:55:19] [fold5_2026-01-31|mr] search trên 17051 bar (đến 2026-01-30 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 150.02 in 5.02s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 190.86 in 7.68s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 196.21 in 5.02s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+📈 2 - MultivariateRegression with avg smape 196.07 in 7.60s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 152.49 in 5.16s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 186.55 in 7.67s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 126.25 in 5.02s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 177.59 in 7.71s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 190.12 in 5.03s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 179.22 in 7.58s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 158.23 in 5.01s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 193.19 in 7.54s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 199.45 in 5.01s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 200.0 in 7.68s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 196.73 in 5.03s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 200.0 in 7.74s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 165.99 in 5.02s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 122.46 in 7.68s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 130.16 in 5.01s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 156.23 in 7.64s: 
+[p0 21:57:42] [F_WR_best|mr|fold5_2026-01-31] template thắng: MultivariateRegression
+[p0 22:01:27] [F_WR_best|mr] outer VAL @ selection_seed 8587: MedianGain vs E0 = -2.8361 pp
+[p0 22:01:27] [fold1_2026-01-27|wr:60] search trên 11291 bar (đến 2026-01-26 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 181.94 in 23.16s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 190.81 in 10.83s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 197.35 in 22.63s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 200.0 in 10.82s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 158.66 in 22.35s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 152.62 in 10.80s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 193.7 in 22.52s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+📈 2 - WindowRegression with avg smape 186.92 in 10.78s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 189.76 in 22.62s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+📈 2 - WindowRegression with avg smape 175.44 in 10.78s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 200.0 in 23.53s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+📈 2 - WindowRegression with avg smape 176.54 in 10.76s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 155.12 in 22.58s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 197.54 in 10.76s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 140.51 in 22.22s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+📈 2 - WindowRegression with avg smape 138.4 in 10.77s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 174.61 in 22.40s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 165.01 in 10.78s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 197.1 in 22.84s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 177.36 in 10.77s: 
+[p0 22:07:38] [F_MR_best|wr:60|fold1_2026-01-27] template thắng: WindowRegression
+[p0 22:07:38] [fold2_2026-01-28|wr:60] search trên 12731 bar (đến 2026-01-27 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 158.32 in 10.90s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 166.26 in 24.75s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 73.47 in 10.93s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 125.24 in 25.23s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 185.57 in 10.92s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 168.73 in 24.79s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 108.0 in 10.93s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 176.91 in 24.95s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 136.97 in 10.90s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 151.45 in 24.99s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 174.48 in 10.96s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 182.99 in 25.16s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 142.63 in 10.90s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 142.58 in 24.76s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 139.82 in 10.94s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 179.77 in 24.68s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 134.31 in 10.93s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 197.16 in 24.49s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 179.92 in 10.89s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 188.1 in 24.84s: 
+[p0 22:14:14] [F_MR_best|wr:60|fold2_2026-01-28] template thắng: WindowRegression
+[p0 22:14:14] [fold3_2026-01-29|wr:60] search trên 14171 bar (đến 2026-01-28 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 200.0 in 11.09s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 181.23 in 26.42s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 199.37 in 11.08s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 198.65 in 27.40s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 166.56 in 11.09s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 195.4 in 26.91s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 136.1 in 11.03s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 160.55 in 27.39s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 178.28 in 11.19s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+📈 2 - WindowRegression with avg smape 162.93 in 27.32s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 177.8 in 11.20s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+📈 2 - WindowRegression with avg smape 134.44 in 25.98s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 172.69 in 11.17s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 198.43 in 27.21s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 165.27 in 11.18s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 188.58 in 27.15s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 181.03 in 11.23s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 192.72 in 27.07s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 199.48 in 11.19s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 179.85 in 26.59s: 
+[p0 22:21:16] [F_MR_best|wr:60|fold3_2026-01-29] template thắng: WindowRegression
+[p0 22:21:16] [fold4_2026-01-30|wr:60] search trên 15611 bar (đến 2026-01-29 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 197.91 in 29.77s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 159.76 in 11.31s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 185.64 in 29.78s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 200.0 in 11.35s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 129.2 in 29.79s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 192.46 in 11.35s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 161.19 in 30.01s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 194.8 in 11.34s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 107.48 in 29.67s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 142.39 in 11.39s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 200.0 in 29.92s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 200.0 in 11.36s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 185.96 in 30.38s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 191.99 in 11.36s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 99.75 in 30.43s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 163.85 in 11.26s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 114.29 in 31.27s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 132.76 in 11.23s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 137.85 in 30.29s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 105.35 in 11.34s: 
+[p0 22:28:54] [F_MR_best|wr:60|fold4_2026-01-30] template thắng: WindowRegression
+[p0 22:28:54] [fold5_2026-01-31|wr:60] search trên 17051 bar (đến 2026-01-30 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 161.31 in 34.73s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 184.45 in 11.47s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 156.47 in 35.05s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 161.08 in 11.42s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 172.59 in 33.94s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 170.25 in 11.41s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 116.28 in 34.66s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 161.05 in 11.52s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 200.0 in 35.43s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+📈 2 - WindowRegression with avg smape 180.71 in 11.42s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 191.25 in 34.72s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 193.28 in 11.53s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 159.33 in 34.46s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 113.54 in 11.53s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 200.0 in 35.22s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+📈 2 - WindowRegression with avg smape 147.1 in 11.49s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 155.24 in 34.77s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 68.74 in 11.53s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 172.17 in 34.05s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 200.0 in 11.53s: 
+[p0 22:37:26] [F_MR_best|wr:60|fold5_2026-01-31] template thắng: WindowRegression
+[p0 22:39:47] [F_MR_best|wr:60] outer VAL @ selection_seed 8587: MedianGain vs E0 = -2.2895 pp
+[p0 22:39:47] [fold1_2026-01-27|mr] search trên 11291 bar (đến 2026-01-26 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 193.3 in 3.97s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 200.0 in 4.37s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 200.0 in 3.97s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+📈 2 - MultivariateRegression with avg smape 197.21 in 4.30s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 172.09 in 3.98s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 190.89 in 4.34s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 181.6 in 4.11s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 199.28 in 4.30s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 197.22 in 4.00s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 179.05 in 4.33s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 169.3 in 3.98s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 186.81 in 4.40s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 149.04 in 4.04s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 177.42 in 4.32s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 196.08 in 3.97s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 198.9 in 4.37s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 155.98 in 3.97s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 123.14 in 4.33s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 199.73 in 3.95s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 200.0 in 4.43s: 
+[p0 22:41:21] [F_MR_best|mr|fold1_2026-01-27] template thắng: MultivariateRegression
+[p0 22:41:21] [fold2_2026-01-28|mr] search trên 12731 bar (đến 2026-01-27 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 189.37 in 4.90s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+📈 2 - MultivariateRegression with avg smape 169.61 in 4.14s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 157.86 in 4.84s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+📈 2 - MultivariateRegression with avg smape 138.76 in 4.13s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 184.11 in 4.86s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 187.59 in 4.14s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 192.16 in 4.88s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+📈 2 - MultivariateRegression with avg smape 99.0 in 4.15s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 189.51 in 4.84s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 139.85 in 4.17s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 199.22 in 4.89s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+📈 2 - MultivariateRegression with avg smape 199.18 in 4.16s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 192.11 in 4.95s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 133.57 in 4.31s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 195.53 in 4.94s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 174.39 in 4.16s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 178.32 in 4.87s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 154.69 in 4.14s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 199.09 in 4.89s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+📈 2 - MultivariateRegression with avg smape 192.39 in 4.16s: 
+[p0 22:43:03] [F_MR_best|mr|fold2_2026-01-28] template thắng: MultivariateRegression
+[p0 22:43:03] [fold3_2026-01-29|mr] search trên 14171 bar (đến 2026-01-28 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 87.76 in 4.34s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+📈 2 - MultivariateRegression with avg smape 74.57 in 5.34s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 171.68 in 4.51s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 180.24 in 5.35s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.35s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 200.0 in 5.35s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 156.48 in 4.35s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 168.67 in 5.38s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 199.82 in 4.35s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 132.94 in 5.36s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.36s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 200.0 in 5.32s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 163.09 in 4.36s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 191.52 in 5.31s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.35s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 199.85 in 5.34s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 198.34 in 4.38s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 198.31 in 5.31s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 167.65 in 4.36s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 200.0 in 5.34s: 
+[p0 22:44:53] [F_MR_best|mr|fold3_2026-01-29] template thắng: MultivariateRegression
+[p0 22:44:53] [fold4_2026-01-30|mr] search trên 15611 bar (đến 2026-01-29 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 181.79 in 4.73s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 190.7 in 5.95s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 180.23 in 4.58s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 196.1 in 5.99s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 188.98 in 4.55s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 196.3 in 5.86s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 187.93 in 4.54s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 188.27 in 5.93s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 162.89 in 4.54s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 182.7 in 5.89s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.55s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 200.0 in 5.89s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 144.51 in 4.54s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 189.91 in 5.86s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 154.91 in 4.58s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 190.94 in 5.87s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 110.55 in 4.54s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+2 - MultivariateRegression with avg smape 137.13 in 5.90s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 157.51 in 4.56s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 200.0 in 5.94s: 
+[p0 22:46:51] [F_MR_best|mr|fold4_2026-01-30] template thắng: MultivariateRegression
+[p0 22:46:51] [fold5_2026-01-31|mr] search trên 17051 bar (đến 2026-01-30 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 188.13 in 4.75s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+📈 2 - MultivariateRegression with avg smape 184.05 in 6.59s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 194.39 in 4.79s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+📈 2 - MultivariateRegression with avg smape 191.95 in 6.68s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 142.58 in 4.77s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 185.05 in 6.75s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 149.85 in 4.78s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+📈 2 - MultivariateRegression with avg smape 122.6 in 6.79s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 165.33 in 4.76s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 169.83 in 6.80s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 154.11 in 4.77s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 174.89 in 6.79s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 180.68 in 4.78s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 150.65 in 6.64s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 186.64 in 4.76s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 199.59 in 6.79s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 200.0 in 4.75s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+2 - MultivariateRegression with avg smape 200.0 in 6.70s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 108.97 in 4.78s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 141.03 in 6.75s: 
+[p0 22:49:01] [F_MR_best|mr|fold5_2026-01-31] template thắng: MultivariateRegression
+[p0 22:52:44] [F_MR_best|mr] outer VAL @ selection_seed 8587: MedianGain vs E0 = -3.1829 pp
+[p0 22:52:44] AutoTS-final = F_WR_best|wr:60 (21 cột ext) — chọn ở selection_seed 8587
+[p0 23:00:57] AutoTS-final confirmation [8587, 8588, 8589]: MedianGain vs E0 = -2.0578 pp, ε = 1.1663 pp
+[p0 23:00:57] [autots] champion: giữ (champion sau = xgbrf)
+
+real	115m37.678s
+user	120m1.871s
+sys	0m22.173s
+STEP_EXIT=0
+END 2026-09-01T23:00:58Z

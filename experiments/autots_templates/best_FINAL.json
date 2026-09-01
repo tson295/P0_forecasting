@@ -1,0 +1,27 @@
+{
+ "fold": "final_TEST",
+ "group": "wr:60",
+ "model": "WindowRegression",
+ "params": {
+  "window_size": 60,
+  "input_dim": "univariate",
+  "output_dim": "forecast_length",
+  "normalize_window": false,
+  "max_windows": 200000,
+  "fourier_encoding_components": null,
+  "scale": false,
+  "datepart_method": null,
+  "regression_type": "User",
+  "regression_model": {
+   "model": "xgboost",
+   "model_params": {
+    "device": "cuda",
+    "tree_method": "hist",
+    "n_estimators": 400,
+    "learning_rate": 0.03,
+    "max_depth": 6,
+    "random_state": 8587
+   }
+  }
+ }
+}

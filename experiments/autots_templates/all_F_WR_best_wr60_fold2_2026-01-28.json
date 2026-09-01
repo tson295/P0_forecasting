@@ -1,0 +1,16 @@
+[
+ {
+  "ID":"92596c69eafb886af4e8107f2d90b6cc",
+  "Model":"WindowRegression",
+  "ModelParameters":"{\"window_size\": 60, \"input_dim\": \"univariate\", \"output_dim\": \"forecast_length\", \"normalize_window\": false, \"max_windows\": 200000, \"fourier_encoding_components\": null, \"scale\": false, \"datepart_method\": null, \"regression_type\": \"User\", \"regression_model\": {\"model\": \"LightGBM\", \"model_params\": {\"device_type\": \"cuda\", \"n_estimators\": 400, \"learning_rate\": 0.03, \"max_depth\": 6, \"num_leaves\": 31}}}",
+  "TransformationParameters":"{\"fillna\": null, \"transformations\": {}, \"transformation_params\": {}}",
+  "Ensemble":0
+ },
+ {
+  "ID":"831be14739cc98d614b5f49aa690c100",
+  "Model":"WindowRegression",
+  "ModelParameters":"{\"window_size\": 60, \"input_dim\": \"univariate\", \"output_dim\": \"forecast_length\", \"normalize_window\": false, \"max_windows\": 200000, \"fourier_encoding_components\": null, \"scale\": false, \"datepart_method\": null, \"regression_type\": \"User\", \"regression_model\": {\"model\": \"xgboost\", \"model_params\": {\"device\": \"cuda\", \"tree_method\": \"hist\", \"n_estimators\": 400, \"learning_rate\": 0.03, \"max_depth\": 6, \"random_state\": 8587}}}",
+  "TransformationParameters":"{\"fillna\": null, \"transformations\": {}, \"transformation_params\": {}}",
+  "Ensemble":0
+ }
+]

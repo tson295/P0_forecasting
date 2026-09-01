@@ -1,0 +1,4 @@
+model,h,n,p95_ms,p99_ms,max_ms,mean_ms,shared,train_device,predict_device,lib_version,threads
+b0_star,1,2728,1.59507555,5.577596560000001,9.705334,1.4242407958211145,False,GPU,CPU,lightgbm 4.7.0,lib_default
+b0_star,2,2728,1.30398165,5.484651110000001,9.495839,1.355350513196481,False,GPU,CPU,lightgbm 4.7.0,lib_default
+b0_star,3,2728,1.3040416000000001,5.064589990000001,9.60061,1.3477606708211143,False,GPU,CPU,lightgbm 4.7.0,lib_default

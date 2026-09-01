@@ -1,0 +1,49 @@
+{
+ "set": "F_MR_best",
+ "group": "mr",
+ "fold": "fold3_2026-01-29",
+ "model": "MultivariateRegression",
+ "params": {
+  "regression_model": {
+   "model": "xgboost",
+   "model_params": {
+    "device": "cuda",
+    "tree_method": "hist",
+    "n_estimators": 400,
+    "learning_rate": 0.03,
+    "max_depth": 6,
+    "random_state": 8587
+   }
+  },
+  "mean_rolling_periods": 30,
+  "macd_periods": null,
+  "std_rolling_periods": 7,
+  "max_rolling_periods": 7,
+  "min_rolling_periods": 7,
+  "quantile90_rolling_periods": null,
+  "quantile10_rolling_periods": null,
+  "ewm_alpha": 0.5,
+  "ewm_var_alpha": null,
+  "additional_lag_periods": null,
+  "abs_energy": false,
+  "rolling_autocorr_periods": null,
+  "nonzero_last_n": null,
+  "datepart_method": null,
+  "polynomial_degree": null,
+  "regression_type": "User",
+  "window": 5,
+  "holiday": false,
+  "probabilistic": false,
+  "scale_full_X": false,
+  "cointegration": null,
+  "cointegration_lag": 1,
+  "series_hash": false,
+  "frac_slice": null,
+  "discard_data": null,
+  "transformation_dict": null,
+  "synthetic_boundary_ratio": 0.0,
+  "rolling_skew_periods": null,
+  "diff_periods": null,
+  "rolling_range_periods": null
+ }
+}

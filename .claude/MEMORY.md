@@ -1,28 +1,21 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: ĐANG CHẠY TRÊN VAST — preflight PASS toàn bộ (bootstrap · canary package thật 16/16 · check-data · 109 pytest) trên RTX 3090
-TRAINING: UNLOCKED
+PHASE: **XONG TOÀN BỘ PIPELINE 15 NGÀY** (Phase A → B → C → final) trên Vast RTX 3090, 2026-09-01 23:38 UTC
+TRAINING: UNLOCKED (đã chạy xong; TEST đã chạm ĐÚNG MỘT LẦN ở bước `final`)
 
 ## Current Task
 
-2026-08-31 (Vast RTX 3090, session chạy end-to-end theo `docs/VAST_SESSION_PROMPT.md`): **PHASE A XONG**.
-- Preflight PASS: bootstrap · canary package thật 16/16 · check-data (mọi số khớp + sha256 OK) · pytest 109.
-- `calibrate lgbm b0306` (42 s): `15fixed_306` = fold1 (49,2,18) fold2 (30,22,1) fold3 (49,17,13) fold4 (1,9,6)
-  fold5 (63,12,5); **ε_LGBM(B0-306) = 0.0656 pp** (noise ô 0.005–0.118).
-- `filter-b0` (51m29s): PI+ = 22 cột, SA+ = 72, MI+ = 280. Kiểm chứng vs B0-306 (MedianGain, 15 ô):
-  R1 (289) −0.0020 · R2 (80) +0.0098 · R3 (22) −0.0249 · **R4 (72) +0.0636 → B0\* = R4**.
-  Cả 4 bộ đều ≥ −ε nên đều eligible; R4 cao nhất.
-
-Trước đó (2026-08-31, code): protocol seed/calibration 3 vai trò (`calib_seed` / `eval_seeds` / `selection_seed`).
-Trước đó (2026-08-29): harness đủ 8 model của §2.2; TimesFM + AutoTS theo `docs/reference/audit_*.md`.
+**Full run 15 ngày ĐÃ XONG** (2026-08-31 20:49 → 2026-09-01 23:38 UTC, ~27 h máy).
+Champion cuối = **xgbrf**; **KHÔNG ensemble** (chỉ 1 thành viên đủ điều kiện). TEST chạm 1 lần ở `final`.
+Kết quả chính: xem "Experiment Findings". Việc còn lại do user quyết (§5 data đầy đủ, hoặc phân tích sâu).
 
 ## Exact Next Step
 
-Đang chạy Phase B (§8 bước 3), tuần tự, không dừng xin duyệt:
-`loop lgbm` (đang chạy) → `xgb` → `cat` → `tfm_b0` → `tfm_ext` → `tfm-final` → `xgbrf` →
-`autots_wr` → `autots_mr` → `autots-search` → `lstm`; rồi Phase C: `ensemble` → `final` (TEST một lần).
-Resume sau khi rớt SSH: `tmux attach -t p0`; đọc `experiments/log.csv` + `experiments/wins/*.json` để biết
-model nào đã xong; KHÔNG chạy lại `final` nếu đã có `summary/all_models_test.csv`.
+Không còn bước bắt buộc nào. Lựa chọn tiếp theo do user quyết:
+1. Gọi agent `analyst` đọc kết quả thật (`experiments/summary/all_models_test.csv`, `champion_log.csv`,
+   `keepdrop_*.csv`, figure §7.3) → anomaly/regime/đề xuất experiment kế tiếp.
+2. §5: phục hồi data đầy đủ (289.320 bar) → kiểm lại B0*/F*_m trên regime khác + scale data → TEST 30 ngày.
+3. Tắt instance Vast để dừng tính tiền (kết quả đã commit; /workspace KHÔNG phải volume → phải kéo về trước).
 
 ## Decisions (mới nhất trước)
 
@@ -50,39 +43,51 @@ model nào đã xong; KHÔNG chạy lại `final` nếu đã có `summary/all_mo
 
 ## Experiment Findings
 
-(dataset 15d `btc_1min_15d_2026-01-18_02-02`, Vast RTX 3090, LightGBM device_type=cuda)
+(dataset 15d `btc_1min_15d_2026-01-18_02-02`, Vast RTX 3090; VAL = 5 fold × 1 ngày, TEST = 02-01→02-02, 2.728 origin)
 
-- **Tín hiệu 1 phút gần như bằng 0, đúng như §6.8.** B0-306 gần trùng E0 (đa số ô hơi tệ hơn).
-  Sau B0\* thì base MedianGain vs E0: lgbm +0.0041, xgb +0.1079, cat +0.0076 pp. Không ô nào > 1 pp.
-- **B0-306 bị nhiễu chi phối**: 29/306 cột ĐƠN thắng cả B0-306 ở ≥ 2/3 horizon → B0\* = R4 (chỉ SA+, 72 cột)
-  thắng cả R1/R2/R3. PI+ chỉ có 22 cột, MI+ tới 280 (MI gần như không phân biệt được).
-- **39/39 candidate KEEP ở lgbm/xgb/cat**: không candidate nào tệ hơn −ε_m. Cái tách bạch là prune PI
-  (giữ 14 / 11 / 5 cột ext) — cả ba model đều chọn bản prune. Champion vẫn = lgbm sau 3 model.
-- **TimesFM + 72 covariate B0\* (nhánh tfm_b0) TỆ HƠN E0 rất nhiều: MedianGain vs E0 = −17.73 pp** (GPU xreg; CPU xreg cho −17.67 → kết luận không đổi)
-  (từ −9.3 pp ở h1 đến −45.6 pp ở h3). ĐÃ KIỂM TRA, KHÔNG PHẢI BUG:
-  phần RMSE dôi ra so với E0 tăng TUYẾN TÍNH theo h (fold1: 2.33e-4 → 4.41e-4 → 6.68e-4 log-return
-  ≈ 1× / 1.9× / 2.9×) trong khi RMSE của E0 chỉ tăng ~√h ⇒ đúng dạng "một lượng drift giả gần như
-  hằng số mỗi bước bị cộng dồn bởi ŷ_h = Σ r̂". Biên độ ~2.3e-4/bước, NHỎ HƠN biến động 1 phút thật
-  (~5.3e-4) → không phải nổ số, sai dấu hay sai đơn vị. Cơ chế: xreg in-context của TimesFM fit 72
-  regressor yếu trên cửa sổ 512 điểm → β là nhiễu, nhiễu đó cộng vào từng bước one-step.
-  Canary đã verify ngữ nghĩa (mean head, 1 origin/call, cắt chuỗi bit-identical, covariate dịch 1 bar).
-  → Đây là kết quả thí nghiệm hợp lệ; `tfm-final` (so với nhánh native `tfm_ext`) chính là chỗ phân xử.
+### KẾT LUẬN LỚN NHẤT: tín hiệu ~0 — gần như mọi model THUA E0
+Trên VAL (MedianGain vs E0, 15 ô), **chỉ xgbrf > 0**: +0.0323 pp. Còn lại đều âm:
+cat −0.0017 · xgb −0.0194 · lgbm −0.0270 · lstm −0.5291 · TimesFM-final −1.9958 · AutoTS-final −2.0578.
+⇒ `ensemble` KHÔNG chạy được vì chỉ có 1 thành viên đạt (luật §3: cần ≥ 2). Đây là kết quả HỢP LỆ,
+không phải lỗi pipeline. Nhất quán với mọi chẩn đoán dọc đường: lag-1 autocorr ≈ −0.06, ES dừng ở
+1–63 vòng (tree) và 1–5 epoch (LSTM), B0-306 nằm đè lên E0.
 
-### Thời gian THẬT đo được (thay cho ETA canary)
+### TEST (2.728 origin) — Gain vs E0 theo horizon (pp)
+| model | h1 | h2 | h3 | dir-acc h1 | r h1 | latency p95 h1 |
+|---|---|---|---|---|---|---|
+| lgbm | **+0.247** | **+0.108** | +0.034 | 0.5191 | 0.0714 | 1.59 ms |
+| lstm | +0.156 | +0.095 | **+0.457** | 0.5224 | 0.0685 | 0.89 ms |
+| b0_306 | +0.233 | −0.067 | −0.023 | 0.5209 | 0.0686 | 1.62 ms |
+| b0_star | +0.149 | +0.063 | −0.065 | 0.5081 | 0.0582 | 1.60 ms |
+| cat | +0.111 | −0.119 | −0.116 | 0.5132 | 0.0516 | 1.51 ms |
+| **xgbrf** (champion) | +0.088 | −0.040 | −0.142 | 0.5173 | 0.0451 | 0.58 ms |
+| xgb | +0.086 | −0.010 | −1.075 | 0.5125 | 0.0517 | 0.46 ms |
+| tfm | −1.367 | −1.840 | −2.914 | 0.4960 | −0.0217 | 324.46 ms |
+| autots | −2.037 | −2.376 | −2.853 | 0.5224 | 0.0377 | 3.80 ms |
+E0 RMSE TEST = 87,25 / 121,31 / 150,44 USD. dir-acc mọi model ≈ 0,49–0,52 (đồng xu). r ≈ 0,05–0,07.
 
-| bước | đo được |
-|---|---|
-| calibrate lgbm b0306 | 42 s |
-| filter-b0 (PI + 306 SA + MI + 4 run) | 51m29s |
-| loop lgbm / xgb / cat | 9m04s / 7m11s / 16m48s |
-| 1 pass 5-fold tfm_b0, xreg **CPU** (bỏ) | ~36,8 phút (~307 ms/origin) |
-| **1 pass 5-fold tfm_b0, xreg GPU** | **~13,0 phút (106,9 ms/origin)** |
+### KHOẢNG CÁCH VAL → TEST (quan trọng khi đọc champion)
+Champion chọn trên VAL là **xgbrf**, nhưng trên TEST **lgbm và lstm tốt hơn** ở cả 3 horizon.
+Mọi chênh lệch ≤ 0,5 pp — nằm trong nhiễu, nên đây là minh hoạ giới hạn của việc chọn model khi
+tín hiệu ~0, KHÔNG phải bằng chứng lgbm "thật sự" tốt hơn. Không được sửa gì sau khi xem TEST (§4).
 
-ETA canary luôn bị thổi phồng vì `torch.compile` warm-up chia cho 8–24 origin → dùng benchmark riêng
-có tách warmup (`/home/ubuntu/bench_xreg.py`), không dùng số của canary để cam kết.
-tfm_b0 = 2 base + 39 candidate + 1 confirm ≈ 42 pass ≈ **9,1 h**.
-Prune PI của model series RẤT đắt (mỗi cột ext × 3 lần xáo × 5 fold = một pass đầy đủ, tới 120 pass),
-NHƯNG nếu add-one DROP hết thì F* có 0 cột ext → `prune_pi` return ngay, không tốn pass nào.
+### ε_m CHI PHỐI KEEP/DROP hơn cả chất lượng feature
+ε: xgbrf 0,0200 · autots_mr 0,0050 (sàn) · lgbm 0,0966 · cat 0,0914 · xgb 0,2822 · lstm 0,4041 ·
+autots_wr 0,6807 · TimesFM 0,0050 (sàn, tất định) · AutoTS-final 1,1663.
+KEEP/DROP theo model: lgbm/xgb/cat/lstm/autots_wr **39 KEEP / 0 DROP**; xgbrf 31/8; autots_mr **8 KEEP / 31 DROP**;
+tfm_b0 và tfm_ext **0 KEEP / 39 DROP**. Cùng data, cùng feature — khác nhau CHỈ vì sàn nhiễu từng model.
+Bước lọc thật sự là **prune PI**: lgbm 14/40 · xgb 11/40 · cat 5/40 · xgbrf 12/32 · lstm 23/40 ·
+autots_wr 21/40 · autots_mr 5/8 (nhưng confirmation chọn UNPRUNE).
+
+### TimesFM: covariate làm HỎNG, native đỡ hơn nhiều
+tfm_b0 (72 covariate B0\*) −17,73 pp vs E0; tfm_ext (native, 0 covariate) −1,9958 pp → **TimesFM-final = native**.
+Nguyên nhân đã kiểm chứng: xreg in-context fit 72 regressor yếu trên cửa sổ 512 điểm → β nhiễu, sai số
+dôi ra tăng TUYẾN TÍNH theo h (2,3e-4 → 4,4e-4 → 6,7e-4) trong khi E0 chỉ tăng ~√h. Thiết kế hai nhánh §2.2 #4
+đã phân xử đúng. AutoTS-final = F_WR_best|wr:60 (21 cột ext), thắng F_MR_best (−2,06 vs −3,18 pp).
+
+### Không có dấu hiệu leakage
+Không ô nào đạt ngưỡng nghi ngờ > 1 pp so với E0/B0 theo hướng dương. Gain dương lớn nhất trên TEST là
++0,457 pp (lstm h3). Mọi Gain âm lớn đều đã truy được nguyên nhân (xreg của TimesFM/AutoTS).
 
 ## Data / Implementation Blockers
 

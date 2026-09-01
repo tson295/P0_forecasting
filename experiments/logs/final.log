@@ -1,0 +1,113 @@
+START 2026-09-01T23:09:58Z
+[p0 23:10:00] GPU preflight LightGBM: OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [23:10:00] WARNING: /__w/xgboost/xgboost/src/context.cc:55: No visible GPU is found, setting device to CPU.
+  bst.update(dtrain, iteration=i, fobj=obj)
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [23:10:00] WARNING: /__w/xgboost/xgboost/src/context.cc:218: Device is changed from GPU to CPU as we couldn't find any available GPU on the system.
+  bst.update(dtrain, iteration=i, fobj=obj)
+[p0 23:10:00] GPU preflight XGBoost: OK
+[p0 23:10:01] GPU preflight CatBoost: OK
+[p0 23:10:03] GPU preflight torch (tfm_b0): NVIDIA GeForce RTX 3090
+[p0 23:10:03] GPU preflight torch (tfm_ext): NVIDIA GeForce RTX 3090
+[p0 23:10:03] GPU preflight torch (tfm): NVIDIA GeForce RTX 3090
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [23:10:03] WARNING: /__w/xgboost/xgboost/src/context.cc:55: No visible GPU is found, setting device to CPU.
+  bst.update(dtrain, iteration=i, fobj=obj)
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [23:10:03] WARNING: /__w/xgboost/xgboost/src/context.cc:218: Device is changed from GPU to CPU as we couldn't find any available GPU on the system.
+  bst.update(dtrain, iteration=i, fobj=obj)
+[p0 23:10:03] GPU preflight XGBoost: OK
+[p0 23:10:04] GPU preflight LightGBM: OK
+[p0 23:10:04] GPU preflight AutoTS (1.0.4): OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [23:10:04] WARNING: /__w/xgboost/xgboost/src/context.cc:55: No visible GPU is found, setting device to CPU.
+  bst.update(dtrain, iteration=i, fobj=obj)
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [23:10:04] WARNING: /__w/xgboost/xgboost/src/context.cc:218: Device is changed from GPU to CPU as we couldn't find any available GPU on the system.
+  bst.update(dtrain, iteration=i, fobj=obj)
+[p0 23:10:04] GPU preflight XGBoost: OK
+[p0 23:10:04] GPU preflight AutoTS (1.0.4): OK
+[p0 23:10:04] GPU preflight torch (lstm): NVIDIA GeForce RTX 3090
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 23:10:21] final b0_306: RMSE [87.04, 121.39, 150.48] | Gain vs E0 [0.2326, -0.0667, -0.0229]
+[p0 23:10:35] final b0_star: RMSE [87.12, 121.23, 150.54] | Gain vs E0 [0.1487, 0.0625, -0.0655]
+[p0 23:10:35] [final_TEST|wr:60] search trên 18491 bar (đến 2026-01-31 22:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 173.3 in 43.37s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 103.13 in 12.22s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 178.02 in 42.51s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 191.06 in 12.23s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 149.79 in 43.80s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 166.83 in 12.27s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 141.83 in 42.53s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 186.37 in 12.26s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 110.92 in 43.45s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 166.44 in 12.22s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 155.8 in 43.27s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 160.19 in 12.31s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 200.0 in 43.72s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 200.0 in 12.19s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 150.47 in 42.32s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+📈 2 - WindowRegression with avg smape 143.97 in 12.21s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 115.85 in 43.02s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 114.0 in 12.21s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 184.77 in 43.23s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 190.83 in 12.16s: 
+[p0 23:22:00] final autots: RMSE [89.02, 124.19, 154.73] | Gain vs E0 [-2.0367, -2.3763, -2.8529]
+[p0 23:22:14] final cat: RMSE [87.15, 121.45, 150.62] | Gain vs E0 [0.1115, -0.1187, -0.1163]
+[p0 23:22:29] final lgbm: RMSE [87.03, 121.17, 150.39] | Gain vs E0 [0.2469, 0.108, 0.0342]
+[p0 23:22:36] final lstm: RMSE [87.11, 121.19, 149.76] | Gain vs E0 [0.156, 0.0947, 0.457]
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 23:22:40.512000 253130 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+[p0 23:37:40] final tfm: RMSE [88.44, 123.54, 154.83] | Gain vs E0 [-1.3674, -1.8396, -2.9142]
+[p0 23:37:46] final xgb: RMSE [87.17, 121.32, 152.06] | Gain vs E0 [0.0859, -0.0099, -1.0747]
+[p0 23:37:58] final xgbrf: RMSE [87.17, 121.35, 150.66] | Gain vs E0 [0.0883, -0.04, -0.1421]
+[p0 23:37:58] champion trên TEST = xgbrf
+[p0 23:38:03] final → /workspace/P0_forecasting/experiments/summary
+
+real	28m7.702s
+user	47m39.848s
+sys	1m12.281s
+STEP_EXIT=0
+END 2026-09-01T23:38:05Z

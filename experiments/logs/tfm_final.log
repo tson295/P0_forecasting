@@ -1,0 +1,11 @@
+START 2026-09-01T13:03:49Z
+[p0 13:03:51] [tfm_b0] MedianGain vs E0 = -17.7253 pp (72 cột B0*, 0 cột ext)
+[p0 13:03:51] [tfm_ext] MedianGain vs E0 = -1.9958 pp (0 cột B0*, 0 cột ext)
+[p0 13:03:51] TimesFM-final = tfm_ext (chọn bằng metric project trên VAL)
+[p0 13:03:51] [tfm] champion: giữ (champion sau = lgbm)
+
+real	0m2.338s
+user	0m7.775s
+sys	0m0.248s
+STEP_EXIT=0
+END 2026-09-01T13:03:51Z

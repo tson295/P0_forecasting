@@ -1,0 +1,10 @@
+START 2026-09-01T23:09:55Z
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 23:09:57] Không đủ 2 thành viên — không ensemble.
+
+real	0m2.642s
+user	0m9.183s
+sys	0m0.204s
+STEP_EXIT=0
+END 2026-09-01T23:09:57Z

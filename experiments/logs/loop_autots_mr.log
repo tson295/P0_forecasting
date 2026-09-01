@@ -1,0 +1,62 @@
+START 2026-09-01T16:33:16Z
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [16:33:20] WARNING: /__w/xgboost/xgboost/src/context.cc:55: No visible GPU is found, setting device to CPU.
+  bst.update(dtrain, iteration=i, fobj=obj)
+/home/ubuntu/p0venv/lib/python3.12/site-packages/xgboost/training.py:200: UserWarning: [16:33:20] WARNING: /__w/xgboost/xgboost/src/context.cc:218: Device is changed from GPU to CPU as we couldn't find any available GPU on the system.
+  bst.update(dtrain, iteration=i, fobj=obj)
+[p0 16:33:20] GPU preflight XGBoost: OK
+[p0 16:33:20] GPU preflight AutoTS (1.0.4): OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 16:33:21] [autots_mr] calibrate trên B0* (72 cột) — ES với calib_seed 8586
+[p0 16:47:58] [autots_mr] rounds=None ε=0.0050 pp; base MedianGain vs E0 = -3.0366
+[p0 16:51:47] [autots_mr] 01 vwap_amt_gap_1               Median +0.0051 → KEEP (|S|=73)
+[p0 16:55:35] [autots_mr] 02 vwap_amt_gap_15              Median +0.3373 → KEEP (|S|=74)
+[p0 16:59:24] [autots_mr] 03 vwap_amt_gap_60              Median -0.1255 → DROP (|S|=74)
+[p0 17:03:19] [autots_mr] 04 vwap_amt_gap_240             Median -0.0950 → DROP (|S|=74)
+[p0 17:07:09] [autots_mr] 05 ret_60                       Median -0.1789 → DROP (|S|=74)
+[p0 17:11:06] [autots_mr] 06 ret_240                      Median -0.0407 → DROP (|S|=74)
+[p0 17:14:52] [autots_mr] 07 ret_1440                     Median -0.1968 → DROP (|S|=74)
+[p0 17:18:39] [autots_mr] 08 log_rv15_rv240               Median +0.0389 → KEEP (|S|=75)
+[p0 17:22:27] [autots_mr] 09 log_rv60_rv1440              Median +0.4263 → KEEP (|S|=76)
+[p0 17:26:16] [autots_mr] 10 ret_skew_60                  Median +0.1280 → KEEP (|S|=77)
+[p0 17:30:07] [autots_mr] 11 dd_240                       Median -0.0167 → DROP (|S|=77)
+[p0 17:33:58] [autots_mr] 12 ru_240                       Median +0.3227 → KEEP (|S|=78)
+[p0 17:37:48] [autots_mr] 13 log_c_ema60                  Median -0.6554 → DROP (|S|=78)
+[p0 17:41:39] [autots_mr] 14 log_c_ema240                 Median -0.3929 → DROP (|S|=78)
+[p0 17:45:31] [autots_mr] 15 log_c_ema1440                Median -0.4538 → DROP (|S|=78)
+[p0 17:49:21] [autots_mr] 16 log_ema60_ema240             Median -0.4683 → DROP (|S|=78)
+[p0 17:53:12] [autots_mr] 17 hma_slope64_volnorm          Median -0.0890 → DROP (|S|=78)
+[p0 17:57:01] [autots_mr] 18 rsi240_centered              Median -0.4151 → DROP (|S|=78)
+[p0 18:00:50] [autots_mr] 19 macd_hist_60_240_60_volnorm  Median -0.2275 → DROP (|S|=78)
+[p0 18:04:40] [autots_mr] 20 bb_pctb_20                   Median -0.0266 → DROP (|S|=78)
+[p0 18:08:30] [autots_mr] 21 bb_pctb_60                   Median -0.1790 → DROP (|S|=78)
+[p0 18:12:22] [autots_mr] 22 bb_logbw_20                  Median -0.0675 → DROP (|S|=78)
+[p0 18:16:10] [autots_mr] 23 log_atr14_c                  Median -0.1396 → DROP (|S|=78)
+[p0 18:20:00] [autots_mr] 24 log_atr14_rv14               Median -0.0340 → DROP (|S|=78)
+[p0 18:23:51] [autots_mr] 25 kcw_20                       Median +0.1081 → KEEP (|S|=79)
+[p0 18:27:44] [autots_mr] 26 mfi14_centered               Median -0.0585 → DROP (|S|=79)
+[p0 18:31:37] [autots_mr] 27 mfi60_centered               Median -0.2050 → DROP (|S|=79)
+[p0 18:35:32] [autots_mr] 28 ad_vwclv_5                   Median -0.2494 → DROP (|S|=79)
+[p0 18:39:22] [autots_mr] 29 ad_vwclv_15                  Median -0.1602 → DROP (|S|=79)
+[p0 18:43:20] [autots_mr] 30 ad_vwclv_60                  Median -0.3735 → DROP (|S|=79)
+[p0 18:47:12] [autots_mr] 31 psar_dir                     Median +0.0000 → KEEP (|S|=80)
+[p0 18:51:01] [autots_mr] 32 psar_logdist                 Median -1.5112 → DROP (|S|=80)
+[p0 18:54:52] [autots_mr] 33 psar_age_log                 Median -0.3845 → DROP (|S|=80)
+[p0 18:58:47] [autots_mr] 34 dow                          Median -0.4348 → DROP (|S|=80)
+[p0 19:02:36] [autots_mr] 35 log_rv60_med2d               Median -0.4002 → DROP (|S|=80)
+[p0 19:06:27] [autots_mr] 36 log_range_240                Median -0.4571 → DROP (|S|=80)
+[p0 19:10:18] [autots_mr] 37 r5_1                         Median -0.3557 → DROP (|S|=80)
+[p0 19:14:07] [autots_mr] 38 r5_12                        Median -0.2203 → DROP (|S|=80)
+[p0 19:17:56] [autots_mr] 39 log_c5_ema5_12               Median -0.6112 → DROP (|S|=80)
+[p0 19:17:56] [autots_mr] F*_m: 8 KEEP / 31 DROP → /workspace/P0_forecasting/experiments/keepdrop_autots_mr.csv
+[p0 19:17:56] [autots_mr] F*_m vs baseline: MedianGain = +1.0063 pp
+[p0 20:41:44] [autots_mr] prune PI: giữ 5/8 cột ext
+[p0 21:03:57] [autots_mr] win_m = unprune (MedianGain prune vs unprune -0.1661, ε=0.0050)
+[p0 21:05:18] [autots_mr] latency p95 (ms) per h: [28.44, 28.44, 28.44] (predict device GPU)
+[p0 21:05:18] [autots_mr] probe feature-search xong (8 cột ext) — không so champion; chạy `autots-search` để có model đại diện
+
+real	272m4.405s
+user	331m48.105s
+sys	1m7.861s
+STEP_EXIT=0
+END 2026-09-01T21:05:20Z

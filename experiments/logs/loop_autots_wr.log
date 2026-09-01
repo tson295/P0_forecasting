@@ -1,0 +1,58 @@
+START 2026-09-01T13:38:38Z
+[p0 13:38:43] GPU preflight LightGBM: OK
+[p0 13:38:43] GPU preflight AutoTS (1.0.4): OK
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 13:38:43] [autots_wr] calibrate trên B0* (72 cột) — ES với calib_seed 8586
+[p0 13:45:10] [autots_wr] rounds=None ε=0.6807 pp; base MedianGain vs E0 = -2.4621
+[p0 13:46:59] [autots_wr] 01 vwap_amt_gap_1               Median -0.0964 → KEEP (|S|=73)
+[p0 13:48:46] [autots_wr] 02 vwap_amt_gap_15              Median -0.3201 → KEEP (|S|=74)
+[p0 13:50:31] [autots_wr] 03 vwap_amt_gap_60              Median +0.3518 → KEEP (|S|=75)
+[p0 13:52:18] [autots_wr] 04 vwap_amt_gap_240             Median -0.0712 → KEEP (|S|=76)
+[p0 13:54:04] [autots_wr] 05 ret_60                       Median +0.1372 → KEEP (|S|=77)
+[p0 13:55:51] [autots_wr] 06 ret_240                      Median -0.1140 → KEEP (|S|=78)
+[p0 13:57:36] [autots_wr] 07 ret_1440                     Median -0.1567 → KEEP (|S|=79)
+[p0 13:59:23] [autots_wr] 08 log_rv15_rv240               Median +0.0855 → KEEP (|S|=80)
+[p0 14:01:10] [autots_wr] 09 log_rv60_rv1440              Median +0.0022 → KEEP (|S|=81)
+[p0 14:02:57] [autots_wr] 10 ret_skew_60                  Median -0.3349 → KEEP (|S|=82)
+[p0 14:04:45] [autots_wr] 11 dd_240                       Median +0.1375 → KEEP (|S|=83)
+[p0 14:06:32] [autots_wr] 12 ru_240                       Median -0.1523 → KEEP (|S|=84)
+[p0 14:08:20] [autots_wr] 13 log_c_ema60                  Median -0.1966 → KEEP (|S|=85)
+[p0 14:10:09] [autots_wr] 14 log_c_ema240                 Median +0.0121 → KEEP (|S|=86)
+[p0 14:11:57] [autots_wr] 15 log_c_ema1440                Median +0.2407 → KEEP (|S|=87)
+[p0 14:13:46] [autots_wr] 16 log_ema60_ema240             Median -0.4200 → KEEP (|S|=88)
+[p0 14:15:34] [autots_wr] 17 hma_slope64_volnorm          Median -0.0830 → KEEP (|S|=89)
+[p0 14:17:22] [autots_wr] 18 rsi240_centered              Median -0.2234 → KEEP (|S|=90)
+[p0 14:19:09] [autots_wr] 19 macd_hist_60_240_60_volnorm  Median -0.0053 → KEEP (|S|=91)
+[p0 14:20:58] [autots_wr] 20 bb_pctb_20                   Median -0.0263 → KEEP (|S|=92)
+[p0 14:22:46] [autots_wr] 21 bb_pctb_60                   Median +0.3587 → KEEP (|S|=93)
+[p0 14:24:35] [autots_wr] 22 bb_logbw_20                  Median -0.2680 → KEEP (|S|=94)
+[p0 14:26:26] [autots_wr] 23 log_atr14_c                  Median -0.2810 → KEEP (|S|=95)
+[p0 14:28:17] [autots_wr] 24 log_atr14_rv14               Median +0.2912 → KEEP (|S|=96)
+[p0 14:30:06] [autots_wr] 25 kcw_20                       Median -0.2583 → KEEP (|S|=97)
+[p0 14:31:57] [autots_wr] 26 mfi14_centered               Median +0.2639 → KEEP (|S|=98)
+[p0 14:33:47] [autots_wr] 27 mfi60_centered               Median -0.2060 → KEEP (|S|=99)
+[p0 14:35:37] [autots_wr] 28 ad_vwclv_5                   Median -0.0368 → KEEP (|S|=100)
+[p0 14:37:26] [autots_wr] 29 ad_vwclv_15                  Median -0.0466 → KEEP (|S|=101)
+[p0 14:39:18] [autots_wr] 30 ad_vwclv_60                  Median +0.1485 → KEEP (|S|=102)
+[p0 14:41:04] [autots_wr] 31 psar_dir                     Median +0.1011 → KEEP (|S|=103)
+[p0 14:42:54] [autots_wr] 32 psar_logdist                 Median -0.2226 → KEEP (|S|=104)
+[p0 14:44:47] [autots_wr] 33 psar_age_log                 Median +0.0024 → KEEP (|S|=105)
+[p0 14:46:36] [autots_wr] 34 dow                          Median +0.1596 → KEEP (|S|=107)
+[p0 14:48:27] [autots_wr] 35 log_rv60_med2d               Median -0.0128 → KEEP (|S|=108)
+[p0 14:50:19] [autots_wr] 36 log_range_240                Median -0.1232 → KEEP (|S|=109)
+[p0 14:52:10] [autots_wr] 37 r5_1                         Median -0.0424 → KEEP (|S|=110)
+[p0 14:54:02] [autots_wr] 38 r5_12                        Median -0.1571 → KEEP (|S|=111)
+[p0 14:55:55] [autots_wr] 39 log_c5_ema5_12               Median -0.3059 → KEEP (|S|=112)
+[p0 14:55:55] [autots_wr] F*_m: 39 KEEP / 0 DROP → /workspace/P0_forecasting/experiments/keepdrop_autots_wr.csv
+[p0 14:55:55] [autots_wr] F*_m vs baseline: MedianGain = -0.4735 pp
+[p0 16:22:39] [autots_wr] prune PI: giữ 21/40 cột ext
+[p0 16:32:57] [autots_wr] win_m = prune (MedianGain prune vs unprune +0.2463, ε=0.6807)
+[p0 16:33:15] [autots_wr] latency p95 (ms) per h: [6.495, 6.495, 6.495] (predict device CPU)
+[p0 16:33:15] [autots_wr] probe feature-search xong (21 cột ext) — không so champion; chạy `autots-search` để có model đại diện
+
+real	174m38.095s
+user	233m6.139s
+sys	0m33.198s
+STEP_EXIT=0
+END 2026-09-01T16:33:16Z

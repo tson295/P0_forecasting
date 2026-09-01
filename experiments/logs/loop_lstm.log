@@ -1,0 +1,57 @@
+START 2026-09-01T23:00:58Z
+[p0 23:01:02] GPU preflight torch (lstm): NVIDIA GeForce RTX 3090
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 23:01:02] [lstm] calibrate trên B0* (72 cột) — ES với calib_seed 8586
+[p0 23:01:28] [lstm] rounds={'fold1_2026-01-27': (1, 1, 1), 'fold2_2026-01-28': (1, 1, 1), 'fold3_2026-01-29': (2, 2, 2), 'fold4_2026-01-30': (5, 5, 5), 'fold5_2026-01-31': (1, 1, 1)} ε=0.4041 pp; base MedianGain vs E0 = -0.5373
+[p0 23:01:41] [lstm] 01 vwap_amt_gap_1               Median -0.1531 → KEEP (|S|=73)
+[p0 23:01:50] [lstm] 02 vwap_amt_gap_15              Median +0.1413 → KEEP (|S|=74)
+[p0 23:02:00] [lstm] 03 vwap_amt_gap_60              Median -0.1978 → KEEP (|S|=75)
+[p0 23:02:11] [lstm] 04 vwap_amt_gap_240             Median +0.0828 → KEEP (|S|=76)
+[p0 23:02:22] [lstm] 05 ret_60                       Median -0.0274 → KEEP (|S|=77)
+[p0 23:02:33] [lstm] 06 ret_240                      Median -0.2075 → KEEP (|S|=78)
+[p0 23:02:44] [lstm] 07 ret_1440                     Median +0.0069 → KEEP (|S|=79)
+[p0 23:02:54] [lstm] 08 log_rv15_rv240               Median +0.4278 → KEEP (|S|=80)
+[p0 23:03:05] [lstm] 09 log_rv60_rv1440              Median -0.1413 → KEEP (|S|=81)
+[p0 23:03:16] [lstm] 10 ret_skew_60                  Median -0.1310 → KEEP (|S|=82)
+[p0 23:03:28] [lstm] 11 dd_240                       Median +0.0760 → KEEP (|S|=83)
+[p0 23:03:38] [lstm] 12 ru_240                       Median +0.1125 → KEEP (|S|=84)
+[p0 23:03:49] [lstm] 13 log_c_ema60                  Median -0.0064 → KEEP (|S|=85)
+[p0 23:04:01] [lstm] 14 log_c_ema240                 Median +0.0848 → KEEP (|S|=86)
+[p0 23:04:11] [lstm] 15 log_c_ema1440                Median +0.2039 → KEEP (|S|=87)
+[p0 23:04:22] [lstm] 16 log_ema60_ema240             Median +0.0488 → KEEP (|S|=88)
+[p0 23:04:32] [lstm] 17 hma_slope64_volnorm          Median -0.2333 → KEEP (|S|=89)
+[p0 23:04:42] [lstm] 18 rsi240_centered              Median -0.0098 → KEEP (|S|=90)
+[p0 23:04:53] [lstm] 19 macd_hist_60_240_60_volnorm  Median -0.1028 → KEEP (|S|=91)
+[p0 23:05:04] [lstm] 20 bb_pctb_20                   Median +0.0202 → KEEP (|S|=92)
+[p0 23:05:15] [lstm] 21 bb_pctb_60                   Median +0.0962 → KEEP (|S|=93)
+[p0 23:05:26] [lstm] 22 bb_logbw_20                  Median -0.1220 → KEEP (|S|=94)
+[p0 23:05:36] [lstm] 23 log_atr14_c                  Median -0.0088 → KEEP (|S|=95)
+[p0 23:05:46] [lstm] 24 log_atr14_rv14               Median -0.1939 → KEEP (|S|=96)
+[p0 23:05:58] [lstm] 25 kcw_20                       Median +0.2108 → KEEP (|S|=97)
+[p0 23:06:10] [lstm] 26 mfi14_centered               Median +0.0528 → KEEP (|S|=98)
+[p0 23:06:23] [lstm] 27 mfi60_centered               Median -0.1873 → KEEP (|S|=99)
+[p0 23:06:34] [lstm] 28 ad_vwclv_5                   Median +0.3878 → KEEP (|S|=100)
+[p0 23:06:45] [lstm] 29 ad_vwclv_15                  Median -0.1649 → KEEP (|S|=101)
+[p0 23:06:56] [lstm] 30 ad_vwclv_60                  Median -0.0131 → KEEP (|S|=102)
+[p0 23:07:03] [lstm] 31 psar_dir                     Median -0.1774 → KEEP (|S|=103)
+[p0 23:07:13] [lstm] 32 psar_logdist                 Median -0.2411 → KEEP (|S|=104)
+[p0 23:07:26] [lstm] 33 psar_age_log                 Median +0.0391 → KEEP (|S|=105)
+[p0 23:07:34] [lstm] 34 dow                          Median -0.1546 → KEEP (|S|=107)
+[p0 23:07:45] [lstm] 35 log_rv60_med2d               Median +0.3373 → KEEP (|S|=108)
+[p0 23:07:56] [lstm] 36 log_range_240                Median -0.2801 → KEEP (|S|=109)
+[p0 23:08:07] [lstm] 37 r5_1                         Median -0.0941 → KEEP (|S|=110)
+[p0 23:08:17] [lstm] 38 r5_12                        Median -0.0289 → KEEP (|S|=111)
+[p0 23:08:28] [lstm] 39 log_c5_ema5_12               Median +0.1225 → KEEP (|S|=112)
+[p0 23:08:28] [lstm] F*_m: 39 KEEP / 0 DROP → /workspace/P0_forecasting/experiments/keepdrop_lstm.csv
+[p0 23:08:28] [lstm] F*_m vs baseline: MedianGain = -0.3681 pp
+[p0 23:08:39] [lstm] prune PI: giữ 23/40 cột ext
+[p0 23:09:50] [lstm] win_m = prune (MedianGain prune vs unprune +0.0914, ε=0.4041)
+[p0 23:09:51] [lstm] latency p95 (ms) per h: [0.858, 0.858, 0.858] (predict device GPU)
+[p0 23:09:51] [lstm] champion: giữ (champion sau = xgbrf)
+
+real	8m57.094s
+user	67m48.053s
+sys	0m17.152s
+STEP_EXIT=0
+END 2026-09-01T23:09:55Z

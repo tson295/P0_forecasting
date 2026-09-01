@@ -1,0 +1,148 @@
+START 2026-09-01T10:27:47Z
+[p0 10:27:51] GPU preflight torch (tfm_ext): NVIDIA GeForce RTX 3090
+/home/ubuntu/p0venv/lib/python3.12/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 10:27:52] [tfm_ext] fold-parallel: 5 worker (P0_TFM_FOLD_WORKERS) — ngữ nghĩa không đổi, ghép theo đúng thứ tự fold
+[p0 10:27:52] [tfm_ext] calibrate trên ∅ (TimesFM native trên r1) (0 cột) — ES với calib_seed 8586
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:05.670000 210611 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.008000 210610 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.028000 210613 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.200000 210614 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 10:28:06.533000 210612 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+[p0 10:28:27] [tfm_ext] rounds=None ε=0.0050 pp; base MedianGain vs E0 = -1.9958
+[p0 10:32:32] [tfm_ext] 01 vwap_amt_gap_1               Median -1.2931 → DROP (|S|=0)
+[p0 10:36:17] [tfm_ext] 02 vwap_amt_gap_15              Median -0.7406 → DROP (|S|=0)
+[p0 10:40:01] [tfm_ext] 03 vwap_amt_gap_60              Median -0.5910 → DROP (|S|=0)
+[p0 10:43:52] [tfm_ext] 04 vwap_amt_gap_240             Median -0.5163 → DROP (|S|=0)
+[p0 10:47:40] [tfm_ext] 05 ret_60                       Median -0.5455 → DROP (|S|=0)
+[p0 10:51:23] [tfm_ext] 06 ret_240                      Median -0.0899 → DROP (|S|=0)
+[p0 10:55:11] [tfm_ext] 07 ret_1440                     Median -0.4165 → DROP (|S|=0)
+[p0 10:58:57] [tfm_ext] 08 log_rv15_rv240               Median -0.1254 → DROP (|S|=0)
+[p0 11:02:42] [tfm_ext] 09 log_rv60_rv1440              Median -0.2752 → DROP (|S|=0)
+[p0 11:06:26] [tfm_ext] 10 ret_skew_60                  Median -0.3688 → DROP (|S|=0)
+[p0 11:10:12] [tfm_ext] 11 dd_240                       Median -0.1098 → DROP (|S|=0)
+[p0 11:13:56] [tfm_ext] 12 ru_240                       Median -0.4229 → DROP (|S|=0)
+[p0 11:17:42] [tfm_ext] 13 log_c_ema60                  Median -0.5269 → DROP (|S|=0)
+[p0 11:21:35] [tfm_ext] 14 log_c_ema240                 Median -0.5030 → DROP (|S|=0)
+[p0 11:25:22] [tfm_ext] 15 log_c_ema1440                Median -0.4264 → DROP (|S|=0)
+[p0 11:29:05] [tfm_ext] 16 log_ema60_ema240             Median -0.2421 → DROP (|S|=0)
+[p0 11:32:46] [tfm_ext] 17 hma_slope64_volnorm          Median -0.2974 → DROP (|S|=0)
+[p0 11:36:36] [tfm_ext] 18 rsi240_centered              Median -0.3070 → DROP (|S|=0)
+[p0 11:40:16] [tfm_ext] 19 macd_hist_60_240_60_volnorm  Median -0.2121 → DROP (|S|=0)
+[p0 11:44:00] [tfm_ext] 20 bb_pctb_20                   Median -0.1813 → DROP (|S|=0)
+[p0 11:47:45] [tfm_ext] 21 bb_pctb_60                   Median -0.2084 → DROP (|S|=0)
+[p0 11:51:31] [tfm_ext] 22 bb_logbw_20                  Median -0.4178 → DROP (|S|=0)
+[p0 11:55:15] [tfm_ext] 23 log_atr14_c                  Median -0.3296 → DROP (|S|=0)
+[p0 11:58:56] [tfm_ext] 24 log_atr14_rv14               Median -0.0754 → DROP (|S|=0)
+[p0 12:02:41] [tfm_ext] 25 kcw_20                       Median -0.3015 → DROP (|S|=0)
+[p0 12:06:26] [tfm_ext] 26 mfi14_centered               Median -0.1909 → DROP (|S|=0)
+[p0 12:10:16] [tfm_ext] 27 mfi60_centered               Median -0.1988 → DROP (|S|=0)
+[p0 12:14:06] [tfm_ext] 28 ad_vwclv_5                   Median -0.1332 → DROP (|S|=0)
+[p0 12:17:50] [tfm_ext] 29 ad_vwclv_15                  Median -0.1865 → DROP (|S|=0)
+[p0 12:21:35] [tfm_ext] 30 ad_vwclv_60                  Median -0.0997 → DROP (|S|=0)
+[p0 12:25:13] [tfm_ext] 31 psar_dir                     Median -0.1489 → DROP (|S|=0)
+[p0 12:28:54] [tfm_ext] 32 psar_logdist                 Median -0.6462 → DROP (|S|=0)
+[p0 12:32:43] [tfm_ext] 33 psar_age_log                 Median -0.1812 → DROP (|S|=0)
+[p0 12:36:34] [tfm_ext] 34 dow                          Median -0.1086 → DROP (|S|=0)
+[p0 12:40:20] [tfm_ext] 35 log_rv60_med2d               Median -0.3172 → DROP (|S|=0)
+[p0 12:44:11] [tfm_ext] 36 log_range_240                Median -0.4253 → DROP (|S|=0)
+[p0 12:48:02] [tfm_ext] 37 r5_1                         Median -0.5298 → DROP (|S|=0)
+[p0 12:51:46] [tfm_ext] 38 r5_12                        Median -0.4108 → DROP (|S|=0)
+[p0 12:55:31] [tfm_ext] 39 log_c5_ema5_12               Median -0.6323 → DROP (|S|=0)
+[p0 12:55:31] [tfm_ext] F*_m: 0 KEEP / 39 DROP → /workspace/P0_forecasting/experiments/keepdrop_tfm_ext.csv
+[p0 12:55:31] [tfm_ext] F*_m vs baseline: MedianGain = +0.0000 pp
+[p0 12:55:31] [tfm_ext] prune PI: giữ 0/0 cột ext
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0] or:
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0] to include these operations in the captured graph.
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0] Graph break: from user code at:
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/timesfm_2p5/timesfm_2p5_torch.py", line 101, in forward
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0]     output_embeddings, new_cache = layer(
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 360, in forward
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0]     attn_output, decode_cache = self.attn(
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0]   File "/home/ubuntu/p0venv/lib/python3.12/site-packages/timesfm/torch/transformer.py", line 279, in forward
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+W0901 12:55:37.052000 210528 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+[p0 12:55:49] [tfm_ext] win_m = prune (MedianGain prune vs unprune +0.0000, ε=0.0050)
+[p0 13:03:46] [tfm_ext] latency p95 (ms) per h: [324.52, 324.52, 324.52] (predict device GPU)
+[p0 13:03:46] [tfm_ext] probe feature-search xong (0 cột ext) — không so champion; chạy `tfm-final` để có model đại diện
+
+real	156m1.600s
+user	753m3.491s
+sys	69m2.030s
+STEP_EXIT=0
+END 2026-09-01T13:03:49Z
