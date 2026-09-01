@@ -26,6 +26,7 @@ model nào đã xong; KHÔNG chạy lại `final` nếu đã có `summary/all_mo
 
 ## Decisions (mới nhất trước)
 
+- 2026-09-01 (user chốt, sửa lại quyết định cũ): **invariant "training chỉ GPU" áp dụng cho CẢ bước xreg của TimesFM**, không chỉ mạng neural. Bỏ đề xuất (a) của `audit_timesfm.md` §9.1 (jax[cpu] + `force_on_cpu=True`); dùng (b): cài `jax[cuda12]==0.11.1` + `xreg_force_on_cpu=False`. Trên máy này KHÔNG có xung đột wheel: torch cu128 đã cung cấp sẵn mọi nvidia-* mà jax cần (cudnn 9.19 thoả `<10,>=9.8`), pip chỉ thêm jax-cuda12-pjrt/plugin + nvidia-cuda-nvcc. BẮT BUỘC `XLA_PYTHON_CLIENT_PREALLOCATE=false` (jax mặc định chiếm ~75% VRAM → bóp chết model torch của TimesFM). Giới hạn còn lại phải nói rõ: `create_covariate_matrix` trong timesfm là numpy/sklearn thuần CPU, không có tuỳ chọn GPU — phần đưa lên GPU là đúng bước ước lượng beta_hat. Bằng chứng: `scripts/canary_xreg_gpu.py` chặn `jnp.linalg.pinv` bên trong `xreg_lib` và đọc `.devices()` của beta_hat = {'gpu'} (không suy diễn từ env). Kết quả: 2,9× nhanh hơn; số học lệch 5,2e-06 tuyệt đối (corr 0,9999931) — khác biệt float32 giữa backend, KHÔNG bit-exact.
 - 2026-08-31 (TimesFM + AutoTS, user chốt lại — bản cuối): **TimesFM có ĐÚNG HAI nhánh feature selection**, mỗi nhánh chạy đủ protocol §2.1 (add-one → prune PI → confirmation): `tfm_b0` xuất phát S = B0\*, `tfm_ext` xuất phát S = ∅ (baseline = native trên r1). `tfm-final` so TFM_B0_best vs TFM_EXT_best bằng metric project → TimesFM-final → champion/ensemble/Final. **Bỏ** 3-way covariate strategy, `b0star_subset`, và việc freeze `ext_only` như lựa chọn duy nhất (audit §12 vẫn giữ làm lịch sử nghiên cứu, không còn là quyết định). Giữ 2 bug fix kỹ thuật: cùng head mean `quantile[...,0]` cho cả native lẫn covariate; đường covariate compile `per_core_batch_size=1`; 1 origin/lời gọi; covariate dịch 1 bar.
 - **AutoTS bỏ stage union**: WR/MR cố định là **probe** (mỗi cái từ B0\*, add-one → prune → confirmation → F_WR_best / F_MR_best). `autots-search` chạy framework AutoTS **riêng cho từng bộ** (dedup nếu trùng), template GPU do ta khai báo + `max_generations=0`, search chỉ trên training-side FIT+ES, freeze template rồi rolling predict outer VAL; so `result_WR` vs `result_MR` bằng metric project → AutoTS-final → champion/ensemble/Final. Probe không so champion, không vào ensemble, không refit ở Final.
 - 2026-08-31 (agent, user chốt): còn **4 agent** — `checker` (verify độc lập + phủ quyết), `researcher` (audit API/version + verdict methodology), `analyst` (sau full run: anomaly/failure/regime + đề xuất experiment/feature), `infra` (GPU/env troubleshooting khi bootstrap fail). Bỏ `main-controller`, `coder`, `runner`: pipeline đã deterministic và CLI tự ép luật (TRAINING lock, GPU preflight, checksum §6.1, `--smoke` chỉ cho synthetic, `loop` đầu tiên phải là lgbm), bước hiện tại đọc ở plan §8 + MEMORY, mỗi bước là một lệnh `python run.py`, còn viết code cần full context nên do session chính làm.
@@ -57,7 +58,7 @@ model nào đã xong; KHÔNG chạy lại `final` nếu đã có `summary/all_mo
   thắng cả R1/R2/R3. PI+ chỉ có 22 cột, MI+ tới 280 (MI gần như không phân biệt được).
 - **39/39 candidate KEEP ở lgbm/xgb/cat**: không candidate nào tệ hơn −ε_m. Cái tách bạch là prune PI
   (giữ 14 / 11 / 5 cột ext) — cả ba model đều chọn bản prune. Champion vẫn = lgbm sau 3 model.
-- **TimesFM + 72 covariate B0\* (nhánh tfm_b0) TỆ HƠN E0 rất nhiều: MedianGain vs E0 = −17.67 pp**
+- **TimesFM + 72 covariate B0\* (nhánh tfm_b0) TỆ HƠN E0 rất nhiều: MedianGain vs E0 = −17.73 pp** (GPU xreg; CPU xreg cho −17.67 → kết luận không đổi)
   (từ −9.3 pp ở h1 đến −45.6 pp ở h3). ĐÃ KIỂM TRA, KHÔNG PHẢI BUG:
   phần RMSE dôi ra so với E0 tăng TUYẾN TÍNH theo h (fold1: 2.33e-4 → 4.41e-4 → 6.68e-4 log-return
   ≈ 1× / 1.9× / 2.9×) trong khi RMSE của E0 chỉ tăng ~√h ⇒ đúng dạng "một lượng drift giả gần như
@@ -74,15 +75,14 @@ model nào đã xong; KHÔNG chạy lại `final` nếu đã có `summary/all_mo
 | calibrate lgbm b0306 | 42 s |
 | filter-b0 (PI + 306 SA + MI + 4 run) | 51m29s |
 | loop lgbm / xgb / cat | 9m04s / 7m11s / 16m48s |
-| **1 pass 5-fold của tfm_b0** (7.185 origin, 72 covariate, 1 origin/lời gọi) | **~36.8 phút** (~307 ms/origin) |
+| 1 pass 5-fold tfm_b0, xreg **CPU** (bỏ) | ~36,8 phút (~307 ms/origin) |
+| **1 pass 5-fold tfm_b0, xreg GPU** | **~13,0 phút (106,9 ms/origin)** |
 
-ETA canary (245 h cho tfm_b0) bị thổi phồng vì `torch.compile` warm-up chia cho 8 origin. Nhưng ETA THẬT
-vẫn rất lớn vì **prune PI của model series phải chạy lại forecast**: `permutation_importance` gọi
-`predict_z` cho mỗi (cột ext × 3 lần xáo × 5 fold) — với tree đó là predict trên model đã lưu (8 giây),
-với TimesFM mỗi lần là MỘT pass đầy đủ. Nếu giữ cả 40 cột ext như 3 model tree thì prune PI = 120 pass.
-→ tfm_b0 ≈ 2 (xong) + 39 candidate + 1 + 120 (PI) + 1 (confirm) ≈ 163 pass ≈ **100 h ≈ 4,2 ngày**;
-tfm_ext cùng số pass nhưng ít covariate hơn nên rẻ hơn (~60–80 h). Tổng tới `final` ≈ **8 ngày** chạy liên tục.
-Theo prompt: ETA CHỈ để báo cáo — không dừng, không đổi thứ tự, không bỏ nhánh, không giảm covariate.
+ETA canary luôn bị thổi phồng vì `torch.compile` warm-up chia cho 8–24 origin → dùng benchmark riêng
+có tách warmup (`/home/ubuntu/bench_xreg.py`), không dùng số của canary để cam kết.
+tfm_b0 = 2 base + 39 candidate + 1 confirm ≈ 42 pass ≈ **9,1 h**.
+Prune PI của model series RẤT đắt (mỗi cột ext × 3 lần xáo × 5 fold = một pass đầy đủ, tới 120 pass),
+NHƯNG nếu add-one DROP hết thì F* có 0 cột ext → `prune_pi` return ngay, không tốn pass nào.
 
 ## Data / Implementation Blockers
 

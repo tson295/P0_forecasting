@@ -18,3 +18,4 @@ W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]   Fil
 W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0]     decode_cache.key[:, start:end] = key
 W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] 
 W0901 03:48:16.570000 146025 torch/_dynamo/variables/tensor.py:1379] [0/0] 
+[p0 04:15:13] [tfm_b0] rounds=None ε=0.0050 pp; base MedianGain vs E0 = -17.7252
