@@ -224,10 +224,13 @@ def _heatmap(ax, mat, row_labels, title, vmax=0.3):
 
 
 def fig_hm(win_tab: np.ndarray, champ_tab: np.ndarray, row_labels: list[str], win_label: str, champ_label: str, footer: str, out: Path,
-           suptitle: str = "Fig HM — Gain vs E0 (pp) từ RMSE̅ mean 3 seed, cùng thang màu") -> None:
+           suptitle: str = "Fig HM — Gain vs E0 (pp) từ RMSE̅ mean 3 seed, cùng thang màu",
+           prefixes: tuple[str, str] = ("win", "champion")) -> None:
+    # `prefixes` chỉ đổi CHỮ trên tiêu đề hai panel (mặc định giữ nguyên "win"/"champion"); cặp branch-vs-branch
+    # dùng ("nhánh", "nhánh") vì ở đó không có bên nào là win/champion.
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 5.2))
-    _heatmap(axes[0], win_tab, row_labels, f"win = {win_label}")
-    im = _heatmap(axes[1], champ_tab, row_labels, f"champion = {champ_label}")
+    _heatmap(axes[0], win_tab, row_labels, f"{prefixes[0]} = {win_label}")
+    im = _heatmap(axes[1], champ_tab, row_labels, f"{prefixes[1]} = {champ_label}")
     fig.subplots_adjust(left=0.09, right=0.86, top=0.82, bottom=0.16, wspace=0.45)
     cax = fig.add_axes([0.89, 0.16, 0.02, 0.64])
     fig.colorbar(im, cax=cax, label="Gain vs E0 (pp)")

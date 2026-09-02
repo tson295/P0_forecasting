@@ -680,15 +680,25 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
     """
     gate(cfg, args, ["autots_wr", "autots_mr"])
     exp = cfg.exp_dir
-    frozen_sets = {}
+    frozen_sets, probe_wins = {}, {}
     for m in ("autots_wr", "autots_mr"):  # kiểm tra TRƯỚC khi đọc data: framework chỉ chạy sau khi feature set đã freeze
         p = exp / "wins" / f"{m}.json"
         if not p.exists():
             sys.exit(f"Thiếu {p} — phải chạy `loop --model {m}` (add-one → prune → confirmation) trước; "
                      "win sau confirmation chính là feature set được freeze.")
         w = json.loads(p.read_text(encoding="utf-8"))
+        probe_wins[m] = w  # giữ lại để vẽ figure so sánh hai probe (không dùng cho quyết định nào)
         frozen_sets[f"F_{m.split('_')[1].upper()}_best"] = ColSet.from_dict(w["colset"])
     store, folds, _, _ = load_store(cfg)
+    try:  # figure so SÁNH HAI NHÁNH probe (chỉ để nhìn — AutoTS-final vẫn chọn bằng bake-off + metric bên dưới)
+        compare_figs(cfg, store, folds,
+                     ("autots_wr", _win_preds(exp, "autots_wr"), _tab_e0(probe_wins["autots_wr"])),
+                     ("autots_mr", _win_preds(exp, "autots_mr"), _tab_e0(probe_wins["autots_mr"])),
+                     "autots_wr_vs_autots_mr", "nhánh AutoTS: autots_wr (WindowRegression) vs autots_mr (MultivariateRegression)",
+                     "branch vs branch — AutoTS-final chọn sau bake-off bằng metric project",
+                     prefixes=("nhánh", "nhánh"))
+    except Exception as e:  # figure không bao giờ được làm hỏng pipeline
+        say(f"figure autots_wr_vs_autots_mr bỏ qua: {e}")
     names = list(frozen_sets)
     if frozen_sets[names[0]].names == frozen_sets[names[1]].names:
         say(f"{names[0]} và {names[1]} trùng nhau → dedup, chỉ chạy framework một lần")
@@ -772,7 +782,12 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
          base="E0", MedianGain=round(g_fin, 4), rmse_cells=_cells(rmse_mean), e0_cells=_cells(fin["e0"]),
          decision=f"AutoTS-final={final_key}",
          note=f"chọn @seed {cfg.sel_seed}; confirmation {list(cfg.eval_seeds)}; ε={eps:.4f}")
-    champion_step(cfg, "autots", fin["colset"], rmse_mean, fin["e0"], eps, {"win": "autots_final"})
+    champ_before = load_champion(exp / "champion.json")
+    champ_after = champion_step(cfg, "autots", fin["colset"], rmse_mean, fin["e0"], eps, {"win": "autots_final"})
+    try:  # bộ figure `autots_vs_champion` — trước đây luồng này bỏ qua, nay giống hệt cmd_loop
+        champion_figs(cfg, store, folds, "autots", gain_pp(rmse_mean, np.asarray(fin["e0"])), champ_before, champ_after)
+    except Exception as e:
+        say(f"figure autots_vs_champion bỏ qua: {e}")
 
 
 def champion_step(cfg: RunConfig, mname: str, colset: ColSet, rmse_mean: np.ndarray, e0: np.ndarray, eps: float,
@@ -804,6 +819,70 @@ def champion_step(cfg: RunConfig, mname: str, colset: ColSet, rmse_mean: np.ndar
     return str(row["champion_after"])
 
 
+def _store_for_figs(cfg: RunConfig):
+    """Store + folds CHỈ để vẽ figure (§7.3). Bước chọn nhánh không cần data, nên thiếu data (unit test,
+    môi trường không có CSV/checksum) thì trả (None, None) và bỏ figure — không được làm hỏng luồng chọn."""
+    try:
+        store, folds, _, _ = load_store(cfg)
+        return store, folds
+    except (Exception, SystemExit) as e:  # load_store dùng sys.exit → phải bắt cả SystemExit
+        say(f"figure bỏ qua: không đọc được data ({e})")
+        return None, None
+
+
+def _win_preds(exp: Path, name: str):
+    """Prediction VAL ĐÃ LƯU của một model (`wins/<name>_seed0.npz`). Không chạy lại model."""
+    p = exp / "wins" / f"{name}_seed0.npz"
+    return load_preds(p) if p.exists() else None
+
+
+def compare_figs(cfg: RunConfig, store: Store, folds: list[Fold], left: tuple, right: tuple, tag: str,
+                 title: str, footer: str, prefixes: tuple[str, str] = ("win", "champion")) -> None:
+    """Bộ figure §7.3 cho MỘT cặp: Fig P + Fig T_h (h = 1, 2, 3) + Fig HM → `summary/*_{tag}.png`.
+
+    left/right = (name, preds, tab_e0); `preds` lấy từ `wins/<name>_seed0.npz` đã lưu, `tab_e0` = Gain vs E0
+    15 ô tính từ bảng RMSE̅ đã lưu. CHỈ để nhìn (§7.3 "figure chỉ để nhìn; quyết định vẫn theo metric §0"):
+    không đụng chọn nhánh, champion, ensemble, metric hay log quyết định.
+    """
+    (l_name, l_preds, l_tab), (r_name, r_preds, r_tab) = left, right
+    if store is None or folds is None:
+        return
+    if l_preds is None or r_preds is None:
+        say(f"figure {tag} bỏ qua: thiếu prediction đã lưu (wins/*_seed0.npz)")
+        return
+    l_lab, r_lab = LABEL.get(l_name, l_name), LABEL.get(r_name, r_name)
+    series = [(l_lab, l_preds, plots.WIN_STYLE[0], plots.WIN_STYLE[1]),
+              (r_lab, r_preds, plots.CHAMP_STYLE[0], plots.CHAMP_STYLE[1])]
+    out = cfg.exp_dir / "summary"
+    picks = plots.select_vol_origins(store, folds)
+    plots.fig_path(store, picks, series, out / f"fig_path_{tag}.png",
+                   f"Fig P — {title}: x = t → t+3, y = thay đổi giá so với C_t")
+    for h in HORIZONS:
+        plots.fig_trajectory(store, h, series, out / f"fig_traj_h{h}_{tag}.png",
+                             f"Fig T{h} — trajectory VAL ({title}): actual C_(t+{h}) vs P̂_(t+{h}) = C_t·exp(ŷ_{h})")
+    plots.fig_hm(l_tab, r_tab, [f.name.split("_")[-1] for f in folds], l_lab, r_lab, footer,
+                 out / f"fig_HM_{tag}.png", prefixes=prefixes)
+
+
+def _tab_e0(w: dict) -> np.ndarray:
+    return gain_pp(np.asarray(w["rmse_mean"]), np.asarray(w["e0"]))
+
+
+def champion_figs(cfg: RunConfig, store: Store, folds: list[Fold], mname: str, tab_e0: np.ndarray,
+                  champ_before: dict | None, champ_after: str) -> None:
+    """Bộ figure `<mname>_vs_champion` cho các luồng đại diện (tfm-final, autots-final) — giống hệt cmd_loop.
+
+    So với champion TRƯỚC bước này (đúng đối tượng đã được đem ra so ở §3), `champ_after` chỉ để ghi chú.
+    """
+    if champ_before is None:
+        return
+    cl = str(champ_before["model"])
+    footer = "win vs champion: " + ("đổi" if str(champ_after) == mname else "giữ")
+    compare_figs(cfg, store, folds, (mname, _win_preds(cfg.exp_dir, mname), tab_e0),
+                 (cl, _win_preds(cfg.exp_dir, cl), _tab_e0(champ_before)),
+                 f"{mname}_vs_champion", f"win vs champion ({mname} vs {cl})", footer)
+
+
 def cmd_tfm_final(cfg: RunConfig, args) -> None:
     """§2.2 #4 — chọn TimesFM-final giữa hai nhánh đã hoàn tất (mỗi nhánh đã qua add-one → prune → confirmation).
 
@@ -818,6 +897,7 @@ def cmd_tfm_final(cfg: RunConfig, args) -> None:
             sys.exit(f"Thiếu {p} — phải chạy `loop --model {m}` cho CẢ HAI nhánh TimesFM trước.")
         wins[m] = json.loads(p.read_text(encoding="utf-8"))
     gate(cfg, args, [])
+    store, folds = _store_for_figs(cfg)  # chỉ để vẽ figure (§7.3); không chạy lại model nào
     rows = []
     for m, w in wins.items():
         g = float(np.median(gain_pp(np.asarray(w["rmse_mean"]), np.asarray(w["e0"]))))
@@ -826,6 +906,14 @@ def cmd_tfm_final(cfg: RunConfig, args) -> None:
                      "MedianGain_vs_E0": round(g, 4), "rmse_mean": _cells(np.asarray(w["rmse_mean"]))})
         say(f"[{m}] MedianGain vs E0 = {g:+.4f} pp ({len(w['colset']['b0'])} cột B0*, {len(w['colset']['ext'])} cột ext)")
     pd.DataFrame(rows).to_csv(exp / "tfm_final.csv", index=False)
+    try:  # figure so SÁNH HAI NHÁNH (chỉ để nhìn — không tham gia chọn nhánh ở dòng dưới)
+        compare_figs(cfg, store, folds,
+                     ("tfm_b0", _win_preds(exp, "tfm_b0"), _tab_e0(wins["tfm_b0"])),
+                     ("tfm_ext", _win_preds(exp, "tfm_ext"), _tab_e0(wins["tfm_ext"])),
+                     "tfm_b0_vs_tfm_ext", "nhánh TimesFM: tfm_b0 (S = B0*) vs tfm_ext (native)",
+                     "branch vs branch — chọn TimesFM-final bằng MedianGain vs E0", prefixes=("nhánh", "nhánh"))
+    except Exception as e:  # figure không bao giờ được làm hỏng pipeline
+        say(f"figure tfm_b0_vs_tfm_ext bỏ qua: {e}")
     best = max(rows, key=lambda r: r["MedianGain_vs_E0"])["branch"]
     w = wins[best]
     say(f"TimesFM-final = {best} (chọn bằng metric project trên VAL)")
@@ -842,8 +930,13 @@ def cmd_tfm_final(cfg: RunConfig, args) -> None:
                                                                                 np.asarray(w["e0"])))), 4),
          rmse_cells=_cells(np.asarray(w["rmse_mean"])), e0_cells=_cells(np.asarray(w["e0"])),
          decision=f"TimesFM-final={best}", note="chọn giữa nhánh B0* và nhánh ext")
-    champion_step(cfg, "tfm", ColSet.from_dict(w["colset"]), np.asarray(w["rmse_mean"]), np.asarray(w["e0"]),
-                  float(w["eps"]), {"win": f"tfm_final={best}"})
+    champ_before = load_champion(exp / "champion.json")
+    champ_after = champion_step(cfg, "tfm", ColSet.from_dict(w["colset"]), np.asarray(w["rmse_mean"]),
+                                np.asarray(w["e0"]), float(w["eps"]), {"win": f"tfm_final={best}"})
+    try:  # bộ figure `tfm_vs_champion` — trước đây luồng này bỏ qua, nay giống hệt cmd_loop
+        champion_figs(cfg, store, folds, "tfm", _tab_e0(w), champ_before, champ_after)
+    except Exception as e:
+        say(f"figure tfm_vs_champion bỏ qua: {e}")
 
 
 def cmd_ensemble(cfg: RunConfig, args) -> None:
