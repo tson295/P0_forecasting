@@ -21,9 +21,14 @@ class RunConfig:
     dataset_label: str
     hf_csv: str
     lf_csv: str | None
-    val_days: list[str]
-    test_start: str
+    val_days: list[str] | None = None  # split 15 ngày (§1.2): VAL = các ngày UTC; None khi dùng `split` rolling
+    test_start: str | None = None
     test_end: str | None = None
+    split: dict[str, Any] | None = None  # data đầy đủ (§5): {"mode": "rolling_from_end", n_folds, val_days, fit_days, es_days, test_days}
+    checksums: str = "data/data_checksums.json"  # anchor §6.1 của snapshot mà config này dùng
+    prev_run_dir: str | None = None  # vòng trước (wins/, b0_star.json, keepdrop_*) → S0_m khoá (2026-09-03); None = từ B0*
+    fold_workers: int = 1  # §9: số process chạy song song 5 fold (env P0_FOLD_WORKERS ưu tiên); 1 = tuần tự
+    short_candidates: list[str] | None = None  # giới hạn pool C_short (None = toàn bộ `features_short.SHORT_COLUMNS`)
     es_hours: int = 23
     purge_minutes: int = 60
     calib_seed: int = 8586  # seed0 — CHỈ dùng cho run ES tìm số vòng cố định (§1.3); không dùng để đo ε, không dùng để selection
@@ -43,7 +48,10 @@ class RunConfig:
         d = json.loads(path.read_text(encoding="utf-8"))
         d["eval_seeds"] = tuple(int(s) for s in d.get("eval_seeds", (8587, 8588, 8589)))
         d.setdefault("root", str(path.resolve().parent.parent))
-        return cls(**d)
+        cfg = cls(**d)
+        if cfg.split is None and (not cfg.val_days or not cfg.test_start):
+            raise ValueError(f"{path}: cần `val_days` + `test_start` (split 15 ngày) hoặc `split` (rolling_from_end)")
+        return cfg
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -58,7 +66,7 @@ class RunConfig:
     def hash(self) -> str:
         """Hash cấu hình KHÔNG gồm đường dẫn máy (root, experiments_dir) → cùng config cho cùng hash ở local và Vast."""
         d = self.to_dict()
-        for k in ("root", "experiments_dir"):
+        for k in ("root", "experiments_dir", "fold_workers"):  # fold_workers chỉ là thực thi (env P0_FOLD_WORKERS ghi đè), không đổi kết quả
             d.pop(k, None)
         return config_hash(d)
 

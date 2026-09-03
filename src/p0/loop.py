@@ -67,23 +67,27 @@ def add_one_loop(store: Store, model: TabularModel, base: ColSet, base_rmse: np.
 
 
 def prune_pi(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], rounds, seed: int, repeats: int = 3) -> tuple[ColSet, pd.DataFrame]:
-    """Prune PI (§2.1a): PI trên VAL cho các cột ext; bỏ cột không có cờ PI+ (PI ≤ 0 ở ≥ 2/3 horizon)."""
-    if not colset.ext:
+    """Prune PI (§2.1a): PI trên VAL cho các cột ext MỚI (`colset.new_ext`); bỏ cột không có cờ PI+ (PI ≤ 0 ở ≥ 2/3 horizon).
+
+    Cột ext KHOÁ (S0_m, quyết định 2026-09-03) không được xét và không bao giờ bị bỏ; nếu không có cột mới → trả nguyên."""
+    new = colset.new_ext
+    if not new:
         return colset, pd.DataFrame(columns=["col", "PI_h1", "PI_h2", "PI_h3", "keep"])
     run = run_config(store, model, colset, folds, rounds=rounds, seed=seed, keep_states=True)
     kind = getattr(model, "input_kind", "tabular")
     if kind == "sequence":  # LSTM: input là kênh của fine_matrix, không phải cột của ma trận B0 + ext
         names = store.fine_names(colset)
-        positions = [names.index(c) for c in colset.ext]
-    elif kind == "series":  # covariate = ext (TimesFM) hoặc B0* + ext (AutoTS) → ext nằm ở cuối
+        positions = [names.index(c) for c in new]
+    elif kind == "series":  # covariate = ext (TimesFM) hoặc B0* + ext (AutoTS) → ext nằm ở cuối theo thứ tự colset.ext
         off = len(colset.b0) if getattr(model, "series_covariates", "ext") == "all" else 0
-        positions = [off + i for i in range(len(colset.ext))]
+        positions = [off + colset.ext.index(c) for c in new]
     else:
-        positions = [len(colset.b0) + i for i in range(len(colset.ext))]
+        positions = [len(colset.b0) + colset.ext.index(c) for c in new]
     delta = median_over_folds(permutation_importance(store, run, positions, repeats=repeats, seed=seed))
     keep = flag_2of3(delta)
-    df = pd.DataFrame({"col": list(colset.ext), "PI_h1": delta[:, 0], "PI_h2": delta[:, 1], "PI_h3": delta[:, 2], "keep": keep})
-    pruned = ColSet(colset.b0, tuple(c for c, k in zip(colset.ext, keep) if k))
+    df = pd.DataFrame({"col": list(new), "PI_h1": delta[:, 0], "PI_h2": delta[:, 1], "PI_h3": delta[:, 2], "keep": keep})
+    keep_map = dict(zip(new, keep))
+    pruned = ColSet(colset.b0, tuple(c for c in colset.ext if c in colset.locked or keep_map.get(c, False)), colset.locked)
     return pruned, df
 
 
@@ -93,6 +97,7 @@ class Confirmed:
     runs: list[RunResult]
     rmse_mean: np.ndarray  # RMSE̅ (F, 3): mean 3 seed từng ô
     e0: np.ndarray
+    latency: list[dict] | None = None  # §7.4 của runs[0] (đo trong worker khi fold-parallel, hoặc trong parent)
 
     @property
     def best_iters(self) -> list[np.ndarray]:
@@ -102,12 +107,23 @@ class Confirmed:
         return [r.preds() for r in self.runs]
 
 
-def confirm(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], seeds, keep_states: bool = True) -> Confirmed:
+def confirm(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], seeds, keep_states: bool = True,
+            latency_origins: int | None = None, measure_latency: bool = False) -> Confirmed:
     """Confirmation (§2.1b): 3 evaluation seed, ES bật → 3 bảng RMSE → RMSE̅ = mean từng ô.
-    Model tất định (TimesFM zero-shot) chạy MỘT lần: 3 seed sẽ cho kết quả y hệt, RMSE̅ = chính bảng đó."""
+    Model tất định chạy MỘT lần: 3 seed sẽ cho kết quả y hệt, RMSE̅ = chính bảng đó.
+    Fold-parallel được phép (chỉ cần prediction); latency §7.4 đo cho seed đầu ở fold đầu khi `measure_latency`."""
     used = list(seeds)[:1] if not getattr(model, "seed_dependent", True) else list(seeds)
-    runs = [run_config(store, model, colset, folds, rounds=None, seed=s, keep_states=keep_states) for s in used]
-    return Confirmed(colset, runs, mean_rmse_over_seeds([r.rmse for r in runs]), runs[0].e0)
+    runs = []
+    for k, s in enumerate(used):
+        want_lat = measure_latency and k == 0
+        runs.append(run_config(store, model, colset, folds, rounds=None, seed=s, keep_states=keep_states, parallel_ok=True,
+                               latency_origins=latency_origins if want_lat else None))
+    lat = runs[0].latency
+    if measure_latency and lat is None and runs[0].states and runs[0].states[0].result is not None:
+        from .latency import measure_tabular
+
+        lat = measure_tabular(runs[0], warmup=50, max_origins=latency_origins, model=model).to_dict("records")
+    return Confirmed(colset, runs, mean_rmse_over_seeds([r.rmse for r in runs]), runs[0].e0, lat)
 
 
 def decide_win(unpruned: Confirmed, pruned: Confirmed, eps: float) -> tuple[str, np.ndarray, dict]:

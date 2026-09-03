@@ -1,3 +1,6 @@
+# Sơ đồ vòng 15 NGÀY (lịch sử, đã xong 2026-09-01). Vòng expanded-data (2026-09-03): xem docs/RESEARCH_PLAN.md §0b/§8
+# (S0_m khoá thay B0*, C_short thay 39 candidate, TimesFM-LoRA → XReg, fold-parallel, visualize hậu kỳ).
+
 Phase A:
                      B0-306
                         │

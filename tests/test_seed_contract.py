@@ -1,10 +1,10 @@
 """Hợp đồng seed giữa confirmation → artifact → ensemble (fix 2026-09-01).
 
-1. Model tất định (TimesFM zero-shot): confirmation chỉ chạy 1 seed → `wins/*.json` phải ghi ĐÚNG seed đã chạy
-   và chỉ có `*_seed0.npz`; `tfm-final` copy đúng file của nhánh thắng; `ensemble` không đi tìm seed1/seed2.
+1. Model tất định (zero-shot, tham chiếu): confirmation chỉ chạy 1 seed → `wins/*.json` ghi ĐÚNG seed đã chạy
+   và chỉ có `*_seed0.npz`; `ensemble` không đi tìm seed1/seed2.
 2. AutoTS-final: chọn candidate ở `selection_seed`; chỉ SAU KHI freeze mới chạy 3 `eval_seeds` để lấy RMSE̅/ε.
 3. ε của AutoTS-final tính từ chính 3 bảng RMSE của nó.
-4. `tfm_b0` / `tfm_ext` là alias TimesFM → `--allow-cpu` (synthetic) phải ép `device="cpu"`.
+4. `tfm` (LoRA) với `--allow-cpu` (synthetic) phải ép `device="cpu"` và trỏ adapter_dir vào experiments/<run>/lora.
 """
 import json
 from argparse import Namespace
@@ -38,9 +38,9 @@ def _champion(exp, folds):
 # ----------------------------------------------------------------------------- (4) alias CPU
 def test_tfm_aliases_forced_to_cpu_on_synthetic(tmp_path):
     cfg = _cfg(tmp_path)
-    for name in ("tfm", "tfm_b0", "tfm_ext"):
-        m = cli.model_for(cfg, name, allow_cpu=True)
-        assert m.device == "cpu" and m.train_device == "CPU", name
+    m = cli.model_for(cfg, "tfm", allow_cpu=True)
+    assert m.device == "cpu" and m.train_device == "CPU" and m.name == "tfm"
+    assert str(m.adapter_dir).endswith("lora")  # adapter LoRA là artifact trong experiments/<run>/lora
     for name in ("xgb", "xgbrf", "lstm"):
         assert cli.model_for(cfg, name, allow_cpu=True).train_device == "CPU", name
     assert cli.model_for(cfg, "lgbm", allow_cpu=True).config.device_type == "cpu"
@@ -54,36 +54,17 @@ def test_deterministic_confirmation_runs_one_seed(store, folds):
     assert np.allclose(conf.rmse_mean, conf.runs[0].rmse)
 
 
-def _run_tfm_branch(cfg, store, folds, branch, monkeypatch, tmp_path):
-    """Chạy `cmd_loop` thật cho một nhánh TimesFM (stub package) → sinh wins/<branch>.json + npz."""
-    monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
-    monkeypatch.setattr(cli, "load_store", lambda c, **k: (store, folds, None, None))
-    monkeypatch.setattr(cli, "model_for", lambda c, name, allow_cpu: TimesFMModel(
-        device="cpu", allow_cpu=True, context=512, batch_size=64,
-        covariate_scope="b0star" if name == "tfm_b0" else "ext", name=name, model=StubTFM()))
-    if branch == "tfm_b0":
-        ColSet(store.b0_names[:4]).save(cfg.exp_dir / "b0_star.json")
-    cli.cmd_loop(cfg, Namespace(model=branch, smoke=True, allow_cpu=True, max_candidates=1,
-                                no_standalone=True, latency_origins=20))
-
-
-def test_timesfm_branches_to_ensemble_without_seed_file_crash(tmp_path, store, folds, monkeypatch):
+def test_deterministic_member_to_ensemble_without_seed_file_crash(tmp_path, store, folds, monkeypatch):
+    """Thành viên tất định (1 seed, chỉ *_seed0.npz) + thành viên 2 seed → ensemble lấy min số seed, không đi tìm seed1/seed2."""
     cfg = _cfg(tmp_path)
     exp = cfg.exp_dir
-    _champion(exp, folds[:1])
     use_folds = folds[:1]
-    for branch in ("tfm_ext", "tfm_b0"):
-        _run_tfm_branch(cfg, store, use_folds, branch, monkeypatch, tmp_path)
-        w = json.loads((exp / "wins" / f"{branch}.json").read_text(encoding="utf-8"))
-        # eval_seeds ghi ĐÚNG số run thật (tất định → 1), khớp số file npz
-        assert w["eval_seeds"] == [cfg.eval_seeds[0]], (branch, w["eval_seeds"])
-        assert (exp / "wins" / f"{branch}_seed0.npz").exists()
-        assert not (exp / "wins" / f"{branch}_seed1.npz").exists()
-    cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
-    fin = json.loads((exp / "wins" / "tfm.json").read_text(encoding="utf-8"))
-    assert fin["eval_seeds"] == [cfg.eval_seeds[0]] and (exp / "wins" / "tfm_seed0.npz").exists()
-
-    # ensemble: thành viên thứ hai (lgbm) dùng CHÍNH origin của tfm để hai bên khớp origin
+    _champion(exp, use_folds)
+    m = TimesFMModel(device="cpu", allow_cpu=True, context=512, batch_size=64, covariate_scope="ext", model=StubTFM())
+    conf = confirm(store, m, ColSet((), ("ret_60",)), use_folds, cfg.eval_seeds)
+    w = cli._save_win(exp, "tfm", conf, 0.005, "prune", use_folds)
+    assert w["eval_seeds"] == [cfg.eval_seeds[0]] and (exp / "wins" / "tfm_seed0.npz").exists()
+    assert not (exp / "wins" / "tfm_seed1.npz").exists()
     z = np.load(exp / "wins" / "tfm_seed0.npz")
     n_fold = len([k for k in z.files if k.startswith("idx_")])
     kw = {}
@@ -96,6 +77,7 @@ def test_timesfm_branches_to_ensemble_without_seed_file_crash(tmp_path, store, f
         {"model": "lgbm", "colset": {"b0": [], "ext": []}, "rmse_mean": [[95.0, 135.0, 165.0]] * len(use_folds),
          "e0": [[100.0, 140.0, 170.0]] * len(use_folds), "eps": 0.02, "eval_seeds": [5, 6],
          "median_gain_vs_e0": 0.5}), encoding="utf-8")
+    (exp / "wins" / "tfm.json").write_text(json.dumps({**w, "median_gain_vs_e0": 0.2}), encoding="utf-8")
     monkeypatch.setattr(cli, "load_store", lambda c, **k: (store, use_folds, None, None))
     cli.cmd_ensemble(cfg, Namespace(smoke=True, allow_cpu=True))  # KHÔNG được crash vì thiếu tfm_seed1.npz
     ens = json.loads((exp / "ensemble.json").read_text(encoding="utf-8"))

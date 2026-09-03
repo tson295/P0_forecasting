@@ -7,16 +7,15 @@ __pycache__/
 # Smoke output tạm (data tổng hợp, không phải kết quả)
 tmp_smoke*/
 
-# Raw data: CSV lớn không vào git (integrity anchor: data/data_checksums.json)
+# Raw data: CSV lớn không vào git (integrity anchor: data/data_checksums*.json)
 data/*.csv
 
-# Artifacts sinh ra khi chạy experiment (log.csv canonical thì được track)
-experiments/runs/
-experiments/cache/
+# Bất biến (2026-09-03): KHÔNG có đường dẫn nào dưới experiments/** bị ignore — mọi artifact (runs/, prediction,
+# LoRA adapter, checkpoint, log, cache) đều được track; file nhị phân lớn đi qua Git LFS (.gitattributes).
+# Checkpoint TimesFM gốc tải từ HF KHÔNG nằm trong experiments/ (chỉ ghi model id + revision).
+
+# Figure sinh lại được từ artifact (không phải kết quả) — nằm ngoài experiments/
 reports/figures/
 
 # Claude Code local-only
 .claude/settings.local.json
-
-# Log bootstrap thô (build LightGBM, pip) — không cần track
-experiments/bootstrap.log

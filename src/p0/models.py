@@ -236,13 +236,18 @@ def make_model(name: str, params: dict | None = None, allow_cpu: bool = False) -
         from .models_lstm import LSTMModel
 
         return LSTMModel(allow_cpu=allow_cpu, **params)
-    if name in ("tfm", "tfm_b0", "tfm_ext"):
+    if name == "tfm":
+        # 2026-09-03: TimesFM = LoRA per fold (FIT/ES) → freeze → XReg covariate search trên cùng adapter; xuất phát S = ∅
+        # (native), covariate = các cột ext đang xét. Hai nhánh zero-shot `tfm_b0`/`tfm_ext` của vòng 15 ngày không còn.
+        from .models_tfm import TimesFMLoRAModel
+
+        params.pop("covariate_scope", None)
+        return TimesFMLoRAModel(allow_cpu=allow_cpu, covariate_scope="ext", name="tfm", **params)
+    if name == "tfm_zero_shot":  # chỉ để tham chiếu/kiểm tra (vòng 15 ngày); không nằm trong model_order
         from .models_tfm import TimesFMModel
 
-        # `tfm_b0` / `tfm_ext` = hai nhánh feature selection; `tfm` = TimesFM-final (scope lấy từ params)
-        scope = {"tfm_b0": "b0star", "tfm_ext": "ext"}.get(name, params.pop("covariate_scope", "ext"))
-        params.pop("covariate_scope", None)
-        return TimesFMModel(allow_cpu=allow_cpu, covariate_scope=scope, name=name, **params)
+        scope = params.pop("covariate_scope", "ext")
+        return TimesFMModel(allow_cpu=allow_cpu, covariate_scope=scope, name="tfm_zero_shot", **params)
     if name in ("autots_wr", "autots_mr"):
         from .models_autots import AutoTSModel
 

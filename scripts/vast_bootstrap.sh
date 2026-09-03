@@ -3,15 +3,16 @@
 #
 # FAIL-FAST: mọi blocker đều exit non-zero (không print "DỪNG" rồi chạy tiếp).
 # Training chỉ GPU (plan §0) — nhưng KHÔNG hard-code một backend: script tự RESOLVE backend GPU hợp lệ cho từng
-# thư viện rồi GHI vào configs/p0_15d.json để mọi đường dùng nhất quán:
+# thư viện rồi GHI vào config của run ($CFG, mặc định configs/p0_full.json) để mọi đường dùng nhất quán:
 #   torch/LSTM/TimesFM : CUDA
 #   XGBoost            : device=cuda
 #   CatBoost           : task_type=GPU
+#   jax (xreg TimesFM) : cuda12 (XLA_PYTHON_CLIENT_PREALLOCATE=false)
 #   LightGBM           : device_type = gpu (build OpenCL) HOẶC cuda (build CUDA) — cái nào FIT THẬT được trên máy này;
 #                        backend đó được truyền sang cả AutoTS-WR probe và mọi template LightGBM của bake-off.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-CFG=${CFG:-configs/p0_15d.json}
+CFG=${CFG:-configs/p0_full.json}
 mkdir -p experiments
 ENV_FILE=experiments/env.txt
 : > "$ENV_FILE"
@@ -57,7 +58,9 @@ python -c "import torch, sys; sys.exit(0 if torch.cuda.is_available() else 1)" \
 log "== package cho TimesFM + AutoTS (§2.2 #4/#6) =="
 python -m pip install -q "timesfm[torch]==2.0.2" || die "cài timesfm 2.0.2 lỗi"
 python -m pip install -q "autots==1.0.4" statsmodels || die "cài autots 1.0.4 + statsmodels lỗi"
-python -m pip install -q "jax[cpu]" || die "cài jax[cpu] lỗi (xreg của TimesFM; jax[cuda] xung đột wheel với torch cu128)"
+python -m pip install -q "jax[cuda12]==0.11.1" || die "cài jax[cuda12]==0.11.1 lỗi (xreg của TimesFM trên GPU, quyết định 2026-09-01)"
+export XLA_PYTHON_CLIENT_PREALLOCATE=false  # jax không chiếm trước VRAM (torch/LoRA dùng chung GPU)
+python -c "import jax, sys; d = jax.devices(); print('jax devices:', d); sys.exit(0 if any(k in str(d).lower() for k in ('cuda', 'gpu')) else 1)" | tee -a "$ENV_FILE" || die "jax không thấy GPU (xreg phải chạy GPU)"
 
 log "== LightGBM: build GPU rồi RESOLVE backend thật sự fit được =="
 if ! python -c "import lightgbm" 2>/dev/null; then LGB_NEED_BUILD=1; else LGB_NEED_BUILD=0; fi
@@ -136,6 +139,9 @@ from Baseline_LGBM import LGBMConfig, assert_p100_lightgbm
 dev = cfg["models"]["lgbm"]["device_type"]
 assert_p100_lightgbm(LGBMConfig(require_p100=False, device_type=dev)); print(f"LightGBM assert_p100 (device_type={dev}): OK")
 PY
+
+log "== git lfs =="
+command -v git-lfs >/dev/null 2>&1 && git lfs install --local | tee -a "$ENV_FILE" || log "git-lfs không có: artifact .npz/.pt dưới experiments/ sẽ không push được qua LFS — cài git-lfs trước khi push"
 
 log "== unit test (CPU, không training) =="
 PYTHONPATH=src:. python -m pytest -q -x || die "unit test FAIL — không được training"

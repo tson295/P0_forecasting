@@ -24,26 +24,49 @@ from .split import Fold
 
 @dataclass(frozen=True)
 class ColSet:
+    """Feature set = cột B0 (`b0`) + cột ext (`ext`). `locked` ⊆ `ext` là các cột ext KHOÁ (S0_m của vòng expanded-data,
+    quyết định 2026-09-03): không phải candidate, không bị prune PI bỏ, không thể `without_ext`."""
+
     b0: tuple[str, ...]
     ext: tuple[str, ...] = ()
+    locked: tuple[str, ...] = ()
+
+    def __post_init__(self):
+        bad = [c for c in self.locked if c not in self.ext]
+        if bad:
+            raise ValueError(f"locked phải là tập con của ext: {bad}")
+        if len(set(self.names)) != len(self.names):
+            dup = sorted({c for c in self.names if list(self.names).count(c) > 1})
+            raise ValueError(f"cột trùng tên trong ColSet: {dup}")
 
     @property
     def names(self) -> tuple[str, ...]:
         return self.b0 + self.ext
 
+    @property
+    def new_ext(self) -> tuple[str, ...]:
+        """Cột ext KHÔNG khoá = phần được prune PI xét (feature vừa KEEP trong vòng add-one hiện tại)."""
+        return tuple(c for c in self.ext if c not in self.locked)
+
     def with_ext(self, cols) -> "ColSet":
-        return ColSet(self.b0, self.ext + tuple(c for c in cols if c not in self.ext))
+        return ColSet(self.b0, self.ext + tuple(c for c in cols if c not in self.ext), self.locked)
 
     def without_ext(self, cols) -> "ColSet":
         drop = set(cols)
-        return ColSet(self.b0, tuple(c for c in self.ext if c not in drop))
+        hit = [c for c in drop if c in self.locked]
+        if hit:
+            raise ValueError(f"không được bỏ cột ext đã KHOÁ (S0_m): {hit}")
+        return ColSet(self.b0, tuple(c for c in self.ext if c not in drop), self.locked)
 
     def to_dict(self) -> dict:
-        return {"b0": list(self.b0), "ext": list(self.ext)}
+        d = {"b0": list(self.b0), "ext": list(self.ext)}
+        if self.locked:
+            d["locked"] = list(self.locked)
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> "ColSet":
-        return cls(tuple(d["b0"]), tuple(d.get("ext", ())))
+        return cls(tuple(d["b0"]), tuple(d.get("ext", ())), tuple(d.get("locked", ())))
 
     def save(self, path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,10 +109,24 @@ class Store:
         return self._r1
 
     def ensure_ext(self, cols) -> None:
+        """Cột ext = candidate cũ §2.3 (`features_ext`) hoặc candidate ngắn C_short (`features_short`) — cùng cache."""
+        from .features_short import SHORT_BY_NAME, compute_short
+
         missing = tuple(c for c in cols if c not in self._ext)
-        if missing:
-            df = compute_ext(self.grid, self.raw_lf, columns=missing)
-            for c in missing:
+        if not missing:
+            return
+        old = tuple(c for c in missing if c in ALL_EXT_COLUMNS)
+        short = tuple(c for c in missing if c in SHORT_BY_NAME)
+        unknown = [c for c in missing if c not in old and c not in short]
+        if unknown:
+            raise KeyError(f"cột ext không có định nghĩa (không thuộc §2.3 cũ lẫn C_short): {unknown}")
+        if old:
+            df = compute_ext(self.grid, self.raw_lf, columns=old)
+            for c in old:
+                self._ext[c] = df[c].to_numpy(np.float32)
+        if short:
+            df = compute_short(self.grid, columns=short)
+            for c in short:
                 self._ext[c] = df[c].to_numpy(np.float32)
 
     def ext_column(self, col: str) -> np.ndarray:
@@ -170,6 +207,7 @@ class RunResult:
     best_iters: np.ndarray  # (F, 3)
     fold_names: list[str]
     states: list[FoldState] = field(default_factory=list)
+    latency: list[dict] | None = None  # §7.4 đo trong worker khi chạy fold-parallel (fold đầu), None nếu chưa đo
 
     def gain_vs(self, base_rmse: np.ndarray) -> np.ndarray:
         return gain_pp(self.rmse, base_rmse)
@@ -202,15 +240,20 @@ def _standardize_fit(feats: np.ndarray, idx_fit: np.ndarray) -> np.ndarray:
 
 
 def run_config(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], rounds=None, seed: int = 8586,
-               keep_states: bool = True) -> RunResult:
-    """Một configuration (model, colset) trên các fold. rounds: None (ES) | tuple(3) | dict[fold.name → tuple(3)]."""
-    # Fold-parallel CHỈ cho TimesFM và CHỈ khi không cần states (calibrate, seed_noise, add-one candidate).
-    # Worker gọi lại đúng hàm này với [một fold] nên nhánh dưới đây chạy y hệt bản tuần tự (§tfm_parallel).
-    if not keep_states and len(folds) > 1:
-        from . import tfm_parallel
+               keep_states: bool = True, parallel_ok: bool = False, latency_origins: int | None = None) -> RunResult:
+    """Một configuration (model, colset) trên các fold. rounds: None (ES) | tuple(3) | dict[fold.name → tuple(3)].
 
-        if tfm_parallel.active(model):
-            return tfm_parallel.run_folds(model, colset, folds, rounds, seed)
+    Fold-parallel (§9 quyết định 2026-09-03, `fold_parallel`): 5 fold độc lập chạy ở các process riêng khi
+    `fold_parallel.active(model)`; dùng khi không cần states (calibrate, ε, add-one) hoặc khi caller chỉ cần
+    prediction/best_iters (`parallel_ok=True`, confirmation). Run cần predictor sống (prune PI) giữ tuần tự.
+    Worker gọi lại ĐÚNG hàm này với [một fold] nên nhánh tuần tự dưới đây là định nghĩa duy nhất của phép tính.
+    """
+    if len(folds) > 1 and (not keep_states or parallel_ok):
+        from . import fold_parallel
+
+        if fold_parallel.active(model):
+            return fold_parallel.run_folds(store, model, colset, folds, rounds, seed, want_yhat=keep_states,
+                                           latency_origins=latency_origins if keep_states else None)
     F = len(folds)
     rmse = np.zeros((F, 3)); mae = np.zeros((F, 3)); rr = np.zeros((F, 3)); dacc = np.zeros((F, 3)); e0 = np.zeros((F, 3))
     best = np.zeros((F, 3), dtype=int)

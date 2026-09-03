@@ -4,3 +4,11 @@
 *.md text eol=lf
 *.json text eol=lf
 *.csv -text
+
+# Artifact nhị phân của experiment → Git LFS (quyết định 2026-09-03: experiments/** không bao giờ bị ignore).
+# Áp dụng cho file THÊM MỚI từ đây; 27 file .npz của vòng 15 ngày đã commit dạng blob thường, giữ nguyên (không rewrite history).
+experiments/**/*.npz filter=lfs diff=lfs merge=lfs -text
+experiments/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
+experiments/**/*.pt filter=lfs diff=lfs merge=lfs -text
+experiments/**/*.pth filter=lfs diff=lfs merge=lfs -text
+experiments/**/*.png filter=lfs diff=lfs merge=lfs -text

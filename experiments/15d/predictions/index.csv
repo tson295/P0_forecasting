@@ -1,0 +1,12 @@
+model,file,rows,seeds,folds,which,n_ext,median_gain_vs_e0
+autots,val_pred_autots.csv,21555,3,5,,21,-2.0577542376487568
+autots_mr,val_pred_autots_mr.csv,21555,3,5,unprune,8,-1.8972777374730798
+autots_wr,val_pred_autots_wr.csv,21555,3,5,prune,21,-2.9060714450268366
+cat,val_pred_cat.csv,21555,3,5,prune,5,-0.0017313016970499362
+lgbm,val_pred_lgbm.csv,21555,3,5,prune,14,-0.027043709734031474
+lstm,val_pred_lstm.csv,21555,3,5,prune,23,-0.5291087649174742
+tfm,val_pred_tfm.csv,7185,1,5,prune,0,-1.9957836294910214
+tfm_b0,val_pred_tfm_b0.csv,7185,1,5,prune,0,-17.725266644272097
+tfm_ext,val_pred_tfm_ext.csv,7185,1,5,prune,0,-1.9957836294910214
+xgb,val_pred_xgb.csv,21555,3,5,prune,11,-0.01943054749984352
+xgbrf,val_pred_xgbrf.csv,21555,3,5,prune,12,0.032295290705053326

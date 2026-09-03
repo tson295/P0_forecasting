@@ -1,33 +1,24 @@
-"""Flow feature-selection của TimesFM + AutoTS (rev 2026-08-31: hai nhánh TimesFM, bỏ union AutoTS).
+"""Flow feature-selection chung + TimesFM/AutoTS (rev 2026-09-03: một đường TimesFM-LoRA, AutoTS hai probe, không union).
 
-Khoá đúng những gì §8 yêu cầu:
+Khoá đúng những gì plan yêu cầu:
 - vòng add-one chung: candidate i chạy trên S hiện tại + f_i, KEEP thì candidate sau thấy feature vừa KEEP,
   và model được CHẠY LẠI mỗi khi feature set đổi (không tái dùng prediction cũ);
 - confirmation: model có ES dùng fixed rounds ở add-one/prune nhưng `rounds=None` (ES bật lại) ở confirmation;
-- TimesFM: nhánh B0* thật sự giữ cột B0*, nhánh ext thật sự bắt đầu từ ∅ (native), mỗi nhánh prune+confirm riêng,
-  TimesFM-final chọn giữa hai nhánh bằng metric project;
-- AutoTS: WR/MR đều là probe từ B0*, không còn stage union.
+- TimesFM: chỉ MỘT model `tfm` (LoRA, covariate = ext), không còn `tfm_b0`/`tfm_ext`; covariate không kéo cột B0;
+- AutoTS: WR/MR đều là probe, không còn stage union; probe không chạm framework AutoTS.
 """
-import json
-from argparse import Namespace
+import ast
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from p0 import cli
-from p0.config import RunConfig
 from p0.harness import ColSet, run_config
 from p0.loop import add_one_loop, confirm, prune_pi
 from p0.models import make_model
-from p0.models_tfm import COVARIATE_SCOPES, TimesFMModel
+from p0.models_tfm import COVARIATE_SCOPES, TimesFMLoRAModel, TimesFMModel
 
 from test_tfm_autots import StubTFM
-
-
-def _cfg(tmp_path, **kw):
-    return RunConfig(dataset_label="synthetic_flow", hf_csv="data/hf.csv", lf_csv=None, val_days=["2026-01-03"],
-                     test_start="2026-01-04", root=str(tmp_path), **kw)
 
 
 # ============================================================================= vòng add-one chung
@@ -74,7 +65,6 @@ def test_add_one_reruns_model_on_updated_S(store, folds):
         if lr.table["decision"].iloc[i] == "KEEP":
             kept += list(c.columns)
     assert tuple(lr.final.ext) == tuple(kept)
-    # model thực sự chạy lại: mỗi candidate = len(folds) lần fit; số cột đầu vào = |S hiện tại| + |f_i|
     calls = m.calls[n0:]
     assert len(calls) == len(cands) * len(folds)
     for i, c in enumerate(cands):
@@ -83,7 +73,6 @@ def test_add_one_reruns_model_on_updated_S(store, folds):
 
 
 def test_confirmation_turns_es_back_on(store, folds):
-    """add-one/prune: rounds cố định (ES OFF). confirmation: rounds=None → ES BẬT LẠI, refit từ đầu, 3 eval seed."""
     cs = ColSet(store.b0_names[:6], ("ret_60",))
     rounds = {f.name: (4, 4, 4) for f in folds}
     m = RecordingModel()
@@ -96,31 +85,21 @@ def test_confirmation_turns_es_back_on(store, folds):
     assert len(conf.runs) == 3 and conf.rmse_mean.shape == (len(folds), 3)
 
 
-# ============================================================================= TimesFM: đúng HAI nhánh
-def test_two_branches_only():
+# ============================================================================= TimesFM: MỘT đường LoRA
+def test_single_timesfm_path_only():
     assert COVARIATE_SCOPES == {"b0star": "all", "ext": "ext"}
-    assert cli.TFM_BRANCH_BASE == {"tfm_ext": "empty", "tfm_b0": "b0star"}
-    assert set(cli.PROBE_MODELS) == {"autots_wr", "autots_mr", "tfm_b0", "tfm_ext"}
-    b0 = make_model("tfm_b0", {"device": "cpu"}, allow_cpu=True)
-    ext = make_model("tfm_ext", {"device": "cpu"}, allow_cpu=True)
-    assert (b0.name, b0.covariate_scope, b0.series_covariates) == ("tfm_b0", "b0star", "all")
-    assert (ext.name, ext.covariate_scope, ext.series_covariates) == ("tfm_ext", "ext", "ext")
-    assert not hasattr(b0, "covariate_strategy")  # 3-way strategy + b0star_subset đã bỏ
+    assert set(cli.PROBE_MODELS) == {"autots_wr", "autots_mr", "tfm"} and cli.FINAL_STEP["tfm"] == "tfm-final"
+    assert not hasattr(cli, "TFM_BRANCH_BASE")
+    m = make_model("tfm", {"device": "cpu"}, allow_cpu=True)
+    assert isinstance(m, TimesFMLoRAModel) and (m.name, m.covariate_scope, m.series_covariates) == ("tfm", "ext", "ext")
+    assert m.supports_rounds and m.seed_dependent and m.torch_compile is False
+    for old in ("tfm_b0", "tfm_ext"):
+        with pytest.raises(KeyError):
+            make_model(old, {"device": "cpu"}, allow_cpu=True)
 
 
-def test_branch_b0_keeps_b0_columns_and_adds_candidate(store, folds):
-    """Nhánh A: covariate = B0* + candidate; B0* KHÔNG bị âm thầm loại bỏ, và thêm candidate thì phải chạy lại."""
-    base = ColSet(store.b0_names[:6], ())
-    m = TimesFMModel(device="cpu", allow_cpu=True, context=512, batch_size=64, covariate_scope="b0star", model=StubTFM())
-    st0 = run_config(store, m, base, folds[:1], rounds=None, seed=1).states[0]
-    assert st0.X_val.cov_names == tuple(base.b0) and st0.X_val.cov.shape[1] == 6
-    st1 = run_config(store, m, base.with_ext(("ret_60",)), folds[:1], rounds=None, seed=1).states[0]
-    assert st1.X_val.cov_names == tuple(base.b0) + ("ret_60",) and st1.X_val.cov.shape[1] == 7
-    assert not np.allclose(st0.yhat, st1.yhat)  # forecast + xreg được fit lại với ma trận covariate mới
-
-
-def test_branch_ext_starts_from_native(store, folds):
-    """Nhánh B: S = ∅ → baseline là TimesFM native (chỉ r1); candidate cộng dần; KHÔNG kéo cột B0* vào."""
+def test_timesfm_covariates_are_ext_only_never_b0(store, folds):
+    """Xuất phát S = ∅ (native); covariate chỉ là cột ext đang xét; cột B0 không bao giờ thành covariate."""
     m = TimesFMModel(device="cpu", allow_cpu=True, context=512, batch_size=64, covariate_scope="ext", model=StubTFM())
     st_native = run_config(store, m, ColSet((), ()), folds[:1], rounds=None, seed=1).states[0]
     assert st_native.X_val.cov is None and st_native.X_val.cov_names == ()
@@ -130,62 +109,12 @@ def test_branch_ext_starts_from_native(store, folds):
     assert st_mix.X_val.cov_names == ("ret_60",)
 
 
-def test_prune_positions_per_branch(store, folds):
-    """prune PI trỏ đúng cột ext trong ma trận covariate của TỪNG nhánh (b0star: ext nằm sau b0; ext: từ 0)."""
-    for scope, cs in (("b0star", ColSet(store.b0_names[:4], ("ret_60", "bb_pctb_20"))),
-                      ("ext", ColSet((), ("ret_60", "bb_pctb_20")))):
-        m = TimesFMModel(device="cpu", allow_cpu=True, context=512, batch_size=64, covariate_scope=scope, model=StubTFM())
-        pruned, df = prune_pi(store, m, cs, folds[:1], rounds=None, seed=1, repeats=1)
-        assert list(df["col"]) == list(cs.ext) and pruned.b0 == cs.b0 and set(pruned.ext) <= set(cs.ext)
-
-
-def _win(exp, model, b0, ext, rmse, e0=((100.0, 140.0, 170.0),)):
-    (exp / "wins").mkdir(parents=True, exist_ok=True)
-    (exp / "wins" / f"{model}.json").write_text(json.dumps(
-        {"model": model, "colset": {"b0": list(b0), "ext": list(ext)}, "rmse_mean": [list(r) for r in rmse],
-         "e0": [list(r) for r in e0], "eps": 0.02, "eval_seeds": [1, 2, 3], "which": "prune",
-         "median_gain_vs_e0": 0.1}), encoding="utf-8")
-
-
-def test_tfm_final_picks_better_branch_by_project_metric(tmp_path, monkeypatch):
-    cfg = _cfg(tmp_path)
-    exp = cfg.exp_dir
-    _win(exp, "tfm_b0", ["fine:t:log_ret_1"], ["ret_60"], [(90.0, 130.0, 160.0)])   # kém hơn
-    _win(exp, "tfm_ext", [], ["ret_60", "bb_pctb_20"], [(80.0, 120.0, 150.0)])      # tốt hơn
-    (exp / "champion.json").write_text(json.dumps(
-        {"model": "lgbm", "colset": {"b0": [], "ext": []}, "rmse_mean": [[95.0, 135.0, 165.0]], "eps": 0.02,
-         "e0": [[100.0, 140.0, 170.0]]}), encoding="utf-8")
-    monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
-    cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
-    fin = json.loads((exp / "wins" / "tfm.json").read_text(encoding="utf-8"))
-    assert fin["model"] == "tfm" and fin["role"] == "TimesFM-final"
-    assert fin["branch"] == "tfm_ext" and fin["covariate_scope"] == "ext"
-    df = pd.read_csv(exp / "tfm_final.csv")
-    assert set(df["branch"]) == {"tfm_b0", "tfm_ext"} and len(df) == 2
-    assert df.loc[df["MedianGain_vs_E0"].idxmax(), "branch"] == "tfm_ext"
-    ch = pd.read_csv(exp / "champion_log.csv")
-    assert (ch["model"] == "tfm").any()  # TimesFM-final mới là thứ đi so champion
-
-
-def test_final_step_cannot_become_initial_champion(tmp_path, monkeypatch):
-    """§3: champion ban đầu phải là LightGBM — tfm-final/autots-search không được tự thành champion đầu tiên."""
-    cfg = _cfg(tmp_path)
-    exp = cfg.exp_dir
-    _win(exp, "tfm_b0", [], ["ret_60"], [(90.0, 130.0, 160.0)])
-    _win(exp, "tfm_ext", [], ["ret_60"], [(80.0, 120.0, 150.0)])
-    monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
-    with pytest.raises(SystemExit) as e:
-        cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
-    assert "loop --model lgbm" in str(e.value)
-
-
-def test_tfm_final_requires_both_branches(tmp_path, monkeypatch):
-    cfg = _cfg(tmp_path)
-    _win(cfg.exp_dir, "tfm_b0", [], ["ret_60"], [(90.0, 130.0, 160.0)])
-    monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
-    with pytest.raises(SystemExit) as e:
-        cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
-    assert "tfm_ext" in str(e.value)
+def test_prune_positions_for_series_model_only_new_ext(store, folds):
+    """prune PI của model series trỏ đúng cột ext MỚI (cột khoá không bị xét, không bị bỏ)."""
+    cs = ColSet((), ("ret_60", "bb_pctb_20"), ("ret_60",))
+    m = TimesFMModel(device="cpu", allow_cpu=True, context=512, batch_size=64, covariate_scope="ext", model=StubTFM())
+    pruned, df = prune_pi(store, m, cs, folds[:1], rounds=None, seed=1, repeats=1)
+    assert list(df["col"]) == ["bb_pctb_20"] and "ret_60" in pruned.ext and pruned.locked == ("ret_60",)
 
 
 # ============================================================================= AutoTS: probe, không còn union
@@ -194,14 +123,11 @@ def test_no_union_stage_left():
     src = cli.Path(cli.__file__).read_text(encoding="utf-8")
     assert "autots-union" not in src and "F_union" not in src and "autots_best" not in src
     for m in ("autots_wr", "autots_mr"):
-        assert cli.FINAL_STEP[m] == "autots-search"
-        assert m in cli.PROBE_MODELS and cli.TFM_BRANCH_BASE.get(m) is None  # probe start từ B0* (mặc định)
+        assert cli.FINAL_STEP[m] == "autots-search" and m in cli.PROBE_MODELS
 
 
 def test_probe_models_never_call_autots_framework():
     """Probe chỉ dùng 2 class cố định; framework `AutoTS` nằm ở module riêng `autots_search.py`."""
-    import ast
-
     src = (cli.Path(cli.__file__).parent / "models_autots.py").read_text(encoding="utf-8")
     tree = ast.parse(src)
     imported = {a.name for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}

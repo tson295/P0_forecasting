@@ -61,6 +61,56 @@ def make_folds(first_origin_ts: int, val_days: list[str], purge_minutes: int = 6
     return folds
 
 
+@dataclass(frozen=True)
+class RollingSpec:
+    """Split data đầy đủ (plan §5, neo vào CUỐI data thật — không hard-code ngày): TEST = `test_days` cuối;
+    n_folds VAL liên tiếp `val_days` ngày kết thúc ngay trước TEST; mỗi fold train region rolling = FIT `fit_days`
+    + ES `es_days` (trừ purge) ngay trước VAL; Final refit = cùng train region ngay trước TEST."""
+
+    n_folds: int = 5
+    val_days: int = 3
+    fit_days: int = 40
+    es_days: int = 5
+    test_days: int = 30
+    purge_minutes: int = 60
+
+    @property
+    def days_needed(self) -> int:
+        return self.test_days + self.n_folds * self.val_days + self.fit_days + self.es_days
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "RollingSpec":
+        mode = str(d.get("mode", "rolling_from_end"))
+        if mode != "rolling_from_end":
+            raise ValueError(f"split.mode không hỗ trợ: {mode}")
+        return cls(**{k: int(v) for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+def make_rolling_from_end(first_origin_ts: int, last_bar_ts: int, spec: RollingSpec) -> tuple[list[Fold], Fold]:
+    """(5 fold, final) suy ra từ data thật. Mọi partition half-open; ranh giới là bội của 60 s tính từ T_end."""
+    t_end = int(last_bar_ts) + 60  # exclusive: sau bar cuối
+    test_start = t_end - spec.test_days * DAY_SEC
+    train_len = (spec.fit_days + spec.es_days) * DAY_SEC
+    earliest = test_start - spec.n_folds * spec.val_days * DAY_SEC - train_len
+    if earliest < first_origin_ts:
+        raise ValueError(f"data không đủ: cần ≥ {spec.days_needed} ngày kể từ origin eligible đầu "
+                         f"({pd.Timestamp(first_origin_ts, unit='s', tz='UTC')}), thiếu {(first_origin_ts - earliest) / DAY_SEC:.2f} ngày")
+    purge = spec.purge_minutes * 60
+    folds = []
+    for k in range(spec.n_folds):
+        val_start = test_start - (spec.n_folds - k) * spec.val_days * DAY_SEC
+        val = Partition(val_start, val_start + spec.val_days * DAY_SEC)
+        es_start = val_start - spec.es_days * DAY_SEC
+        es = Partition(es_start, val_start - purge)
+        fit = Partition(es_start - spec.fit_days * DAY_SEC, es_start)
+        day = pd.Timestamp(val_start, unit="s", tz="UTC").strftime("%Y-%m-%d")
+        folds.append(Fold(f"fold{k + 1}_{day}", fit, es, val))
+    es_start = test_start - spec.es_days * DAY_SEC
+    final = Fold("final_TEST", Partition(es_start - spec.fit_days * DAY_SEC, es_start), Partition(es_start, test_start - purge),
+                 Partition(test_start, t_end))
+    return folds, final
+
+
 def make_final(first_origin_ts: int, test_start: str, test_end_ts: int, purge_minutes: int = 60) -> Fold:
     """TEST (§4): refit FIT → ngày trước TEST 00:00; ES = ngày trước TEST − purge; TEST = [test_start, test_end)."""
     t0 = utc_ts(test_start)

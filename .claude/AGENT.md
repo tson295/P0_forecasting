@@ -4,7 +4,7 @@ Agent native nằm ở `.claude/agents/*.md`. Mọi agent làm theo plan chính 
 
 ## Nguyên tắc: chỉ giữ agent làm việc mà pipeline KHÔNG tự làm
 
-Pipeline đã deterministic và tự ép luật trong code (`src/p0/cli.py`): candidate §2.3, add-one KEEP/DROP theo `MedianGain ≥ −ε_m`, prune PI, confirmation 3 seed, champion `> +ε_champion`, ensemble, autots-union, Final — chạy tuần tự bằng lệnh. CLI cũng tự chặn: `TRAINING: LOCKED` (đọc MEMORY), GPU preflight, sha256 §6.1, `--smoke/--allow-cpu` chỉ cho dataset tổng hợp, `loop` đầu tiên bắt buộc là `lgbm`. Điều phối những bước đó bằng agent không thêm giá trị — nên vai trò `main-controller`, `coder`, `runner` **đã bỏ** (2026-08-31): bước hiện tại đọc ở plan §8 + `.claude/MEMORY.md` "Exact Next Step"; lệnh chạy ở plan §8 + `docs/VAST_SESSION_PROMPT.md`; viết code cần full context nên do session chính làm.
+Pipeline đã deterministic và tự ép luật trong code (`src/p0/cli.py`): S0_m khoá + Candidate_m (`lock-s0`), add-one KEEP/DROP theo `MedianGain ≥ −ε_m`, prune PI (chỉ cột mới), confirmation 3 seed, TimesFM-LoRA → freeze → XReg → `tfm-final`, AutoTS probe → `autots-search`, champion `> +ε_champion`, ensemble, Final, `visualize` hậu kỳ — chạy tuần tự bằng lệnh (2026-09-03). CLI cũng tự chặn: `TRAINING: LOCKED` (đọc MEMORY), GPU preflight, sha256 §6.1, LF phủ HF, `--smoke/--allow-cpu` chỉ cho dataset tổng hợp, `loop` đầu tiên bắt buộc là `lgbm`, `loop` cần `s0/` từ `lock-s0`, không vẽ trong training. Điều phối những bước đó bằng agent không thêm giá trị — nên vai trò `main-controller`, `coder`, `runner` **đã bỏ** (2026-08-31): bước hiện tại đọc ở plan §8 + `.claude/MEMORY.md` "Exact Next Step"; lệnh chạy ở plan §8 + `docs/VAST_SESSION_PROMPT.md`; viết code cần full context nên do session chính làm.
 
 Giữ lại đúng bốn vai trò làm việc mà code không làm thay được:
 
@@ -12,8 +12,8 @@ Giữ lại đúng bốn vai trò làm việc mà code không làm thay được
 |---|---|---|---|---|
 | `checker` | **Verify độc lập, có quyền phủ quyết**: checklist §6 (leakage, biên, target, alignment, metric trên giá, decode, seed/ε), review code, chạy unit/smoke CPU, schema log, reproducibility. Không sửa code. | trước khi nhận code mới, trước mỗi run thật, khi kết quả bất thường | inherit | Read/Grep/Glob/Bash |
 | `researcher` | **Audit API/version trước khi code** (ghi `docs/reference/audit_<lib>.md`) + trọng tài methodology theo luật plan. | trước khi code một thư viện mới hoặc đổi version; khi cần verdict đúng/sai theo plan | inherit | Read/Grep/Glob/Bash/WebFetch/WebSearch |
-| `analyst` | **Sau một full run**: đọc kết quả thật, phát hiện anomaly / failure / phụ thuộc regime, đánh giá theo luật plan, đề xuất experiment/feature kế tiếp có căn cứ. | sau `loop`/`ensemble`/`final` có log thật | inherit | all |
-| `infra` | **GPU/env troubleshooting trên Vast**: build LightGBM GPU, CUDA/driver, xung đột wheel (jax vs torch cu128), tmux/persistence khi bootstrap fail. | khi `scripts/vast_bootstrap.sh` hoặc preflight fail | sonnet | all |
+| `analyst` | **Sau một full run**: đọc kết quả thật (vòng 15 ngày ở `experiments/15d/`, vòng expanded-data ở `experiments/full/`), phát hiện anomaly / failure / phụ thuộc regime, đánh giá theo luật plan, đề xuất experiment/feature kế tiếp có căn cứ. | sau `loop`/`ensemble`/`final` có log thật | inherit | all |
+| `infra` | **GPU/env troubleshooting trên Vast**: build LightGBM GPU, CUDA/driver, jax[cuda12] chung GPU với torch (PREALLOCATE=false), Git LFS, tmux/persistence khi bootstrap fail. | khi `scripts/vast_bootstrap.sh` hoặc preflight fail | sonnet | all |
 
 ## Cách phối hợp
 

@@ -1,0 +1,101 @@
+{
+  "dataset_label": "btc_1min_full",
+  "hf_csv": "data/BTC_hf_1min_full.csv",
+  "lf_csv": "data/BTC_lf_5min_full.csv",
+  "checksums": "data/data_checksums_full.json",
+  "split": {
+    "mode": "rolling_from_end",
+    "n_folds": 5,
+    "val_days": 3,
+    "fit_days": 40,
+    "es_days": 5,
+    "test_days": 30,
+    "purge_minutes": 60
+  },
+  "purge_minutes": 60,
+  "calib_seed": 8586,
+  "eval_seeds": [
+    8587,
+    8588,
+    8589
+  ],
+  "selection_seed": 8587,
+  "eps_floor_pp": 0.005,
+  "experiments_dir": "experiments/full",
+  "prev_run_dir": "experiments/15d",
+  "fold_workers": 5,
+  "short_candidates": null,
+  "require_gpu": true,
+  "models": {
+    "lgbm": {
+      "device_type": "cuda"
+    },
+    "xgb": {
+      "device": "cuda"
+    },
+    "cat": {
+      "task_type": "GPU"
+    },
+    "xgbrf": {
+      "device": "cuda"
+    },
+    "lstm": {
+      "device": "cuda"
+    },
+    "tfm": {
+      "device": "cuda",
+      "context": 512,
+      "batch_size": 256,
+      "lora": {
+        "r": 8,
+        "alpha": 16,
+        "dropout": 0.0,
+        "lr": 1e-4,
+        "batch_size": 64,
+        "max_epochs": 20,
+        "patience": 5,
+        "train_stride": 1
+      }
+    },
+    "autots_wr": {
+      "device": "cuda",
+      "window_size": 60
+    },
+    "autots_mr": {
+      "device": "cuda"
+    },
+    "autots_search": {
+      "num_validations": 10,
+      "templates": [
+        {
+          "model": "wr",
+          "window_size": 60,
+          "regressor": "LightGBM"
+        },
+        {
+          "model": "wr",
+          "window_size": 60,
+          "regressor": "xgboost"
+        },
+        {
+          "model": "mr",
+          "regressor": "xgboost"
+        },
+        {
+          "model": "mr",
+          "regressor": "LightGBM"
+        }
+      ]
+    }
+  },
+  "model_order": [
+    "lgbm",
+    "xgb",
+    "cat",
+    "tfm",
+    "xgbrf",
+    "autots_wr",
+    "autots_mr",
+    "lstm"
+  ]
+}

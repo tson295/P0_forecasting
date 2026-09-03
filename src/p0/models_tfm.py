@@ -12,6 +12,10 @@
 """
 from __future__ import annotations
 
+import functools
+import json
+from pathlib import Path
+
 import numpy as np
 
 from .config import HORIZONS
@@ -139,3 +143,243 @@ class TimesFMModel:
     def fit_predict(self, X_fit, z_fit, X_es, z_es, X_pred: SeriesBatch, rounds, seed: int) -> FitResult:
         yhat = self.predict_series(X_pred)  # zero-shot: bỏ qua FIT/ES
         return FitResult(yhat, (0, 0, 0), [self.predict_series], is_logret=True)
+
+
+# =============================================================================== TimesFM-LoRA (quyết định user 2026-09-03)
+# pretrained → LoRA fine-tune per fold trên chuỗi r1 (FIT để học, ES để chọn epoch, VAL không bao giờ thấy) → FREEZE →
+# CÙNG adapter đó cho toàn bộ XReg covariate search (thêm candidate = fit lại xreg, KHÔNG động vào trọng số).
+# Theo `docs/reference/audit_timesfm_lora.md` (timesfm 2.0.2, sdist sha b03885d3…): 80 nn.Linear đích (qkv_proj/out/ff0/ff1 × 20),
+# decode() bọc no_grad nên training tái hiện T:427–500 + T:119–178 có grad; compile() không torch.compile; inject sau
+# load_checkpoint; base đóng băng tường minh; MỘT module dùng chung cho wrapper point (batch) và wrapper covariate (batch 1).
+LORA_TARGETS = ("attn.qkv_proj", "attn.out", "ff0", "ff1")
+LORA_DEFAULTS = {"r": 8, "alpha": 16.0, "dropout": 0.0, "lr": 1e-4, "weight_decay": 0.01, "batch_size": 64, "max_epochs": 20,
+                 "patience": 5, "train_stride": 1, "targets": LORA_TARGETS}
+_LORA_CACHE: dict[str, dict] = {}  # (repo, revision, lora cfg) → {point, cov, module, adapter, ...} — một module cho cả process
+_ADAPTER_STATES: dict[str, dict] = {}  # adapter key → state dict LoRA (A/B) đã freeze
+_ADAPTER_META: dict[str, dict] = {}
+
+
+def _stamp(ts) -> str:
+    import pandas as pd
+
+    return pd.Timestamp(int(ts), unit="s", tz="UTC").strftime("%Y%m%dT%H%M")
+
+
+class TimesFMLoRAModel(TimesFMModel):
+    """TimesFM 2.5 + LoRA per fold. `rounds` = số epoch cố định (như LSTM: calibrate ES → fixed_epoch_TFM; None = ES bật).
+
+    Adapter được cache theo (fold, seed, epoch-mode): mọi candidate của vòng add-one/prune PI ở cùng (fold, selection_seed,
+    fixed epoch) nạp ĐÚNG một adapter đã freeze — không train lại; hash LoRA được kiểm sau mỗi lần predict.
+    Artifact: `<adapter_dir>/<key>.pt` (state dict A/B) + `<key>.json` (meta: epoch, curve, sha256, repo/revision, cấu hình)."""
+
+    supports_rounds = True
+    seed_dependent = True
+
+    def __init__(self, lora: dict | None = None, adapter_dir: str | None = None, **kw):
+        kw["torch_compile"] = False  # audit §3: không torch.compile khi có LoRA (inject sau load_checkpoint, closure đọc self.model lúc gọi)
+        super().__init__(**kw)
+        self.lora = {**LORA_DEFAULTS, **(lora or {})}
+        self.lora["targets"] = tuple(self.lora["targets"])
+        self.adapter_dir = Path(adapter_dir) if adapter_dir else None
+        self.train_calls = 0  # số lần train thật (test: candidate không được làm tăng)
+
+    # ------------------------------------------------------------------ module dùng chung + LoRA
+    def _cache_key(self) -> str:
+        return json.dumps({"repo": self.repo_id, "rev": self.revision, "lora": {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.lora.items()},
+                           "stub": id(self._injected) if self._injected is not None else None}, sort_keys=True)
+
+    def _wrappers(self) -> dict:
+        from .lora import freeze_except_lora, inject_lora
+
+        key = self._cache_key()
+        if key in _LORA_CACHE:
+            return _LORA_CACHE[key]
+        if self._injected is not None:  # unit test: stub có .model (nn.Module) + forecast/forecast_with_covariates (+ train_forward)
+            point = cov = self._injected
+        else:
+            import timesfm
+
+            point = timesfm.TimesFM_2p5_200M_torch.from_pretrained(self.repo_id, revision=self.revision, torch_compile=False)
+            point.compile(timesfm.ForecastConfig(**self.forecast_config_kwargs(False)))
+            cov = timesfm.TimesFM_2p5_200M_torch(torch_compile=False)
+            cov.model = point.model  # MỘT module cho cả hai đường (audit §7): point batch 256, covariate batch 1
+            cov.compile(timesfm.ForecastConfig(**self.forecast_config_kwargs(True)))
+        module = point.model
+        replaced = inject_lora(module, self.lora["targets"], int(self.lora["r"]), float(self.lora["alpha"]), float(self.lora["dropout"]))
+        n_train, n_all = freeze_except_lora(module)
+        if self._injected is None and tuple(self.lora["targets"]) == LORA_TARGETS:
+            # audit_timesfm_lora.md §1/§5: 4 nn.Linear × 20 layer = 80 module; mỗi layer r·(1280+3840) + 3·r·(1280+1280) = r·12800
+            exp_train = int(self.lora["r"]) * 12800 * 20
+            if len(replaced) != 80 or n_train != exp_train:
+                raise RuntimeError(f"TimesFM-LoRA: inject lệch audit — {len(replaced)} module (mong 80), {n_train} tham số học (mong {exp_train})")
+        for p in module.parameters():
+            p.requires_grad_(False)
+        module.eval()
+        _LORA_CACHE[key] = {"point": point, "cov": cov, "module": module, "replaced": replaced, "n_trainable": n_train,
+                            "n_params": n_all, "adapter": None}
+        return _LORA_CACHE[key]
+
+    def _model(self, with_covariates: bool):
+        w = self._wrappers()
+        if w["adapter"] is None:
+            raise RuntimeError("TimesFM-LoRA: chưa có adapter nào được train/nạp — fit_predict phải chạy trước predict")
+        return w["cov"] if with_covariates else w["point"]
+
+    def _load_adapter(self, key: str) -> None:
+        from .lora import load_lora_state_dict
+
+        w = self._wrappers()
+        if w["adapter"] == key:
+            return
+        load_lora_state_dict(w["module"], _ADAPTER_STATES[key])
+        for p in w["module"].parameters():
+            p.requires_grad_(False)
+        w["module"].eval()
+        w["adapter"] = key
+
+    def _assert_frozen(self, key: str) -> None:
+        from .lora import lora_state_dict, state_sha256
+
+        sha = state_sha256(lora_state_dict(self._wrappers()["module"]))
+        if sha != _ADAPTER_META[key]["sha256"]:
+            raise RuntimeError(f"TimesFM-LoRA: trọng số adapter {key} đã bị thay đổi trong lúc predict (sha lệch) — vi phạm freeze")
+
+    # ------------------------------------------------------------------ cửa sổ train (chỉ FIT / ES)
+    def windows(self, seq: SeriesBatch, stride: int = 1) -> tuple[np.ndarray, np.ndarray]:
+        """X (n, L) = r1[t−L+1..t], Y (n, H) = y_h = cumsum(r1[t+1..t+H]) cho t ∈ seq.idx (partition đã đảm bảo t+H < T_end)."""
+        L, H = self.context, len(HORIZONS)
+        idx = np.asarray(seq.idx)[:: max(1, int(stride))]
+        if len(idx) and int(idx.min()) < L - 1:
+            raise ValueError("TimesFM-LoRA: origin không đủ context")
+        if len(idx) and int(idx.max()) + H >= len(seq.r1):
+            raise ValueError("TimesFM-LoRA: target vượt quá chuỗi")
+        X = np.stack([seq.r1[t - L + 1:t + 1] for t in idx]).astype(np.float32) if len(idx) else np.zeros((0, L), np.float32)
+        Y = np.stack([np.cumsum(seq.r1[t + 1:t + 1 + H]) for t in idx]).astype(np.float32) if len(idx) else np.zeros((0, H), np.float32)
+        if not (np.isfinite(X).all() and np.isfinite(Y).all()):
+            raise ValueError("TimesFM-LoRA: cửa sổ train chứa NaN/inf")
+        return X, Y
+
+    # ------------------------------------------------------------------ forward có grad = ĐÚNG đường suy luận (audit §2/§9b)
+    def train_forward(self, x):
+        """x (B, L) float32 → r̂ (B, H) mean-head, tái hiện `_compiled_decode` (T:427–500) + `decode` (T:119–178) CÓ grad."""
+        stub = self._injected
+        if stub is not None and hasattr(stub, "train_forward"):
+            return stub.train_forward(x)
+        import torch
+        from timesfm.torch import util
+
+        module = self._wrappers()["module"]
+        H = len(HORIZONS)
+        if self.normalize_inputs:
+            mu = torch.mean(x, dim=-1, keepdim=True)
+            sigma = torch.std(x, dim=-1, keepdim=True)  # unbiased như T:438–439
+            xn = util.revin(x, mu, sigma, reverse=False)
+        else:
+            mu = sigma = None
+            xn = x
+
+        def core(inp):
+            B = inp.shape[0]
+            patched = torch.reshape(inp, (B, -1, module.p))
+            masks = torch.zeros_like(patched, dtype=torch.bool)
+            n = torch.zeros(B, device=inp.device)
+            m_ = torch.zeros(B, device=inp.device)
+            s_ = torch.zeros(B, device=inp.device)
+            mus, sigs = [], []
+            for i in range(patched.shape[1]):
+                (n, m_, s_), _ = util.update_running_stats(n, m_, s_, patched[:, i], masks[:, i])
+                mus.append(m_)
+                sigs.append(s_)
+            cmu, csig = torch.stack(mus, dim=1), torch.stack(sigs, dim=1)
+            normed = util.revin(patched, cmu, csig, reverse=False)
+            normed = torch.where(masks, 0.0, normed)
+            (_, _, out_ts, _), _ = module(normed, masks, None)
+            ren = torch.reshape(util.revin(out_ts, cmu, csig, reverse=True), (B, -1, module.o, module.q))
+            return ren[:, -1, :H, :]  # (B, H, q) — dự báo sau patch cuối, giống pf_outputs[:, -1, ...][:, :horizon]
+
+        f = core(xn)
+        if self.flip:  # force_flip_invariance: (f(x) − flip(f(−x)))/2, flip giữ kênh 0 (mean) và đảo 1..9
+            g = core(-xn)
+            g = torch.cat([g[..., :1], torch.flip(g[..., 1:], dims=(-1,))], dim=-1)
+            f = (f - g) / 2
+        ch = 0 if self.use_mean_head else module.aridx
+        out = f[..., ch]
+        if mu is not None:
+            out = util.revin(out, mu, sigma, reverse=True)
+        return out
+
+    # ------------------------------------------------------------------ adapter per (fold, seed, epoch-mode)
+    def adapter_key(self, X_fit: SeriesBatch, X_es: SeriesBatch | None, seed: int, epochs: int | None) -> str:
+        fit = f"fit{_stamp(X_fit.ts[X_fit.idx[0]])}-{_stamp(X_fit.ts[X_fit.idx[-1]])}"
+        es = f"_es{_stamp(X_es.ts[X_es.idx[0]])}-{_stamp(X_es.ts[X_es.idx[-1]])}" if (X_es is not None and len(X_es.idx)) else ""
+        return f"tfm_lora_{fit}{es}_seed{int(seed)}_{'es' if epochs is None else f'ep{int(epochs)}'}"
+
+    def _ensure_adapter(self, key: str, X_fit: SeriesBatch, X_es: SeriesBatch | None, seed: int, epochs: int | None) -> dict:
+        import torch
+
+        from .lora import lora_state_dict, state_sha256, train_lora
+
+        if key in _ADAPTER_STATES:
+            return _ADAPTER_META[key]
+        path = (self.adapter_dir / f"{key}.pt") if self.adapter_dir else None
+        if path is not None and path.exists():
+            sd = torch.load(path, map_location="cpu", weights_only=True)
+            meta = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
+            if state_sha256(sd) != meta["sha256"]:
+                raise RuntimeError(f"adapter {path}: sha256 không khớp meta")
+            want = {"repo_id": self.repo_id, "revision": self.revision, "context": self.context,
+                    "lora": {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.lora.items()}}
+            got = {k: meta.get(k) for k in want}
+            if got != want:
+                raise RuntimeError(f"adapter {path}: meta không khớp model hiện tại (repo/revision/context/lora): {got} vs {want}")
+            _ADAPTER_STATES[key], _ADAPTER_META[key] = sd, meta
+            return meta
+        w = self._wrappers()
+        module = w["module"]
+        X, Y = self.windows(X_fit, int(self.lora["train_stride"]))
+        if X_es is not None and epochs is None:
+            Xe, Ye = self.windows(X_es, 1)
+        else:
+            Xe = Ye = None
+        scale = float(np.std(Y[:, 0])) if len(Y) and float(np.std(Y[:, 0])) > 0 else 1.0  # hằng số ổn định optimizer, không đổi argmin
+
+        def fwd(xb):
+            return torch.cumsum(self.train_forward(xb), dim=1) / scale  # ŷ_h = cumsum(r̂) (§6.7), cùng thang với Y/scale
+
+        self.train_calls += 1
+        res = train_lora(fwd, module, X, Y / scale, Xe, (Ye / scale if Ye is not None else None), epochs=epochs,
+                         max_epochs=int(self.lora["max_epochs"]), patience=int(self.lora["patience"]), lr=float(self.lora["lr"]),
+                         batch_size=int(self.lora["batch_size"]), seed=int(seed), device=self.device,
+                         weight_decay=float(self.lora["weight_decay"]))
+        for p in module.parameters():
+            p.requires_grad_(False)
+        module.eval()
+        sd = lora_state_dict(module)
+        meta = {"key": key, "best_epoch": res["best_epoch"], "mode": res["mode"], "curve": res["curve"], "sha256": res["sha256"],
+                "n_trainable": res["n_trainable"], "n_params": res["n_params"], "seed": int(seed), "epochs_fixed": epochs,
+                "n_windows_fit": int(len(X)), "n_windows_es": int(0 if Xe is None else len(Xe)), "target_scale": scale,
+                "fit_range": [_stamp(X_fit.ts[X_fit.idx[0]]), _stamp(X_fit.ts[X_fit.idx[-1]])],
+                "es_range": [_stamp(X_es.ts[X_es.idx[0]]), _stamp(X_es.ts[X_es.idx[-1]])] if X_es is not None and len(X_es.idx) else None,
+                "repo_id": self.repo_id, "revision": self.revision, "lora": {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.lora.items()},
+                "replaced_modules": w["replaced"], "context": self.context, "torch": torch.__version__}
+        if path is not None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            torch.save(sd, path)
+            path.with_suffix(".json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
+        _ADAPTER_STATES[key], _ADAPTER_META[key] = sd, meta
+        w["adapter"] = key
+        return meta
+
+    def _predict_with(self, key: str, seq: SeriesBatch) -> np.ndarray:
+        self._load_adapter(key)
+        out = self.predict_series(seq)
+        self._assert_frozen(key)
+        return out
+
+    def fit_predict(self, X_fit: SeriesBatch, z_fit, X_es: SeriesBatch, z_es, X_pred: SeriesBatch, rounds, seed: int) -> FitResult:
+        epochs = int(rounds[0]) if rounds is not None else None
+        key = self.adapter_key(X_fit, X_es, seed, epochs)
+        meta = self._ensure_adapter(key, X_fit, X_es, seed, epochs)
+        yhat = self._predict_with(key, X_pred)
+        e = int(meta["best_epoch"])
+        return FitResult(yhat, (e, e, e), [functools.partial(self._predict_with, key)], is_logret=True)

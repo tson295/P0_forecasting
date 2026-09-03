@@ -14,5 +14,5 @@ catboost>=1.2         # task_type=GPU
 # chạy experiment (pin theo docs/reference/audit_timesfm.md, audit_autots.md). Không cài ngầm ở máy local.
 #   timesfm[torch]==2.0.2      # checkpoint google/timesfm-2.5-200m-pytorch, rev 1d952420…, 925 MB, public
 #   autots==1.0.4 + statsmodels
-#   jax[cpu]                   # xreg của TimesFM covariate; jax[cuda] xung đột wheel nvidia-* với torch cu128
-# LoRA KHÔNG dùng trong giai đoạn này (không cài transformers/peft).
+#   jax[cuda12]==0.11.1        # xreg của TimesFM chạy GPU (quyết định 2026-09-01); cần XLA_PYTHON_CLIENT_PREALLOCATE=false
+# LoRA TimesFM (2026-09-03) tự chứa trong src/p0/lora.py — KHÔNG cài transformers/peft. Checkpoint TimesFM tải từ HF khi chạy (không commit).
