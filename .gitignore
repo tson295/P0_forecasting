@@ -7,8 +7,12 @@ __pycache__/
 # Smoke output tạm (data tổng hợp, không phải kết quả)
 tmp_smoke*/
 
-# Raw data: CSV lớn không vào git (integrity anchor: data/data_checksums*.json)
+# Data: CSV tuỳ tiện KHÔNG vào git, NHƯNG hai file canonical của vòng 2 năm thì CÓ (quyết định user 2026-09-04d):
+# clone + `git lfs pull` là đã có đủ input cho `check-data` — không cần scp, không cần derive-lf.
+# Anchor toàn vẹn: data/data_checksums_2y.json + data/BTC_5m_2y.derivation.json (sha nguồn của LF).
 data/*.csv
+!data/BTC_1m_2y.csv
+!data/BTC_5m_2y.csv
 
 # Bất biến (2026-09-03): KHÔNG có đường dẫn nào dưới experiments/** bị ignore — mọi artifact (runs/, prediction,
 # LoRA adapter, checkpoint, log, cache) đều được track; file nhị phân lớn đi qua Git LFS (.gitattributes).

@@ -1,7 +1,12 @@
 """Checker log KHÔNG tương tác (quyết định user 2026-09-04): mọi finding ghi vào `experiments/<run>/checker_log.jsonl`.
 
-- Bất biến cứng do code ép (checksum, biên leakage, target ngoài partition, artifact S0/Candidate malformed, GPU không có / CPU
-  fallback, TEST chạy lần hai, TRAINING LOCKED, LF không phủ HF): `hard_fail` ghi ERROR rồi thoát ngay — KHÔNG hỏi user.
+- Bất biến cứng do code ép (checksum, biên leakage, target ngoài partition, artifact S0/Candidate malformed,
+  TEST chạy lần hai, TRAINING LOCKED, LF không phủ HF): `hard_fail` ghi ERROR rồi thoát ngay — KHÔNG hỏi user. Đây là thí nghiệm
+  KHÔNG HỢP LỆ, không phải lựa chọn tài nguyên → không bao giờ có tuỳ chọn "chạy tiếp".
+- **NGOẠI LỆ DUY NHẤT (quyết định user 2026-09-04d, §10): SỰ CỐ TÀI NGUYÊN GPU** — không có GPU, GPU được giao biến mất,
+  CUDA không dùng được, backend không train được trên GPU, phát hiện CPU fallback, định tuyến GPU sai, worker CUDA không
+  khởi động/chết, OOM khiến đường GPU không đi tiếp được: `gpu_stop` DỪNG AN TOÀN (giữ nguyên artifact đã xong, ghi log),
+  KHÔNG CPU fallback, KHÔNG tự đổi batch/hyperparameter/methodology, rồi **HỎI USER muốn xử lý thế nào** (exit code 3).
 - Finding tư vấn (tương quan cao, nghi dư thừa, gain bất thường, quan sát runtime, ghi chú methodology không vi phạm bất biến):
   `record` với WARN/INFO rồi tiếp tục — KHÔNG hỏi user.
 - Agent `checker` cũng ghi finding qua `scripts/checker_record.py` (cùng schema); ERROR = chặn run cho tới khi sửa, WARN = ghi và đi tiếp.
@@ -45,6 +50,41 @@ def hard_fail(exp_dir: Path | str | None, stage: str, check_id: str, message: st
     """Bất biến cứng bị vi phạm: ghi ERROR rồi dừng ngay (SystemExit), không hỏi user."""
     record(exp_dir, stage, "ERROR", check_id, message, model, file, ref)
     sys.exit(f"[{check_id}] {message}")
+
+
+GPU_STOP_EXIT = 3  # exit code riêng: "dừng vì tài nguyên GPU, đang chờ user quyết" (khác 1 = lỗi/bất biến thường)
+
+
+def gpu_stop(exp_dir: Path | str | None, stage: str, check_id: str, message: str, model: str = "",
+             detail: str = "", options=()) -> NoReturn:
+    """Sự cố TÀI NGUYÊN GPU (§10) — ngoại lệ DUY NHẤT được dừng và HỎI USER.
+
+    Ghi ERROR (ref=USER_DECISION_REQUIRED) → in khối thông báo rõ ràng → thoát với `GPU_STOP_EXIT`.
+    KHÔNG chuyển sang CPU, KHÔNG đổi batch/hyperparameter/methodology, KHÔNG xoá artifact đã hoàn tất.
+    """
+    record(exp_dir, stage, "ERROR", check_id, f"[CẦN USER QUYẾT] {message}" + (f" | {detail}" if detail else ""),
+           model=model, ref="USER_DECISION_REQUIRED")
+    opts = list(options) or [
+        "sửa/đổi GPU (driver, instance khác, GPU rảnh) rồi chạy lại ĐÚNG bước vừa dừng",
+        "chạy tiếp trên MỘT GPU: export P0_GPU_DEVICES=0 (chậm hơn, khoa học không đổi)",
+        "dừng hẳn run này và báo lại",
+    ]
+    lines = ["", "=" * 78,
+             "DỪNG AN TOÀN: SỰ CỐ TÀI NGUYÊN GPU — CẦN USER QUYẾT (không tự xử lý)",
+             "=" * 78,
+             f"Bước: {stage}" + (f" | model: {model}" if model else ""),
+             f"Sự cố: {message}"]
+    if detail:
+        lines.append(f"Chi tiết: {detail}")
+    lines += ["",
+              "- KHÔNG có CPU fallback (training chỉ GPU).",
+              "- KHÔNG tự đổi batch / hyperparameter / seed / methodology để 'chạy cho xong'.",
+              f"- Artifact đã hoàn tất được giữ nguyên: {exp_dir}",
+              "", "Bạn muốn xử lý thế nào?"]
+    lines += [f"  {i + 1}. {o}" for i, o in enumerate(opts)]
+    lines += ["=" * 78, ""]
+    print("\n".join(lines), flush=True)
+    sys.exit(GPU_STOP_EXIT)
 
 
 def read(exp_dir: Path | str) -> list[dict]:

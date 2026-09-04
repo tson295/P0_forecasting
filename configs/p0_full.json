@@ -29,7 +29,7 @@
     1
   ],
   "gpu_slots_per_device": 1,
-  "max_branches": 2,
+  "max_branches": 4,
   "defer_champion": true,
   "short_candidates": null,
   "require_gpu": true,

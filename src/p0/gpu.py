@@ -17,6 +17,31 @@ from __future__ import annotations
 
 import os
 
+
+class GpuResourceError(RuntimeError):
+    """Sự cố TÀI NGUYÊN GPU (không có GPU, GPU biến mất, backend không train được trên GPU, routing sai, OOM,
+    worker CUDA chết). Đây là TÌNH HUỐNG DUY NHẤT được phép DỪNG AN TOÀN VÀ HỎI USER (quyết định user 2026-09-04d,
+    §10) — không bao giờ tự chuyển CPU, không tự đổi batch/hyperparameter/methodology.
+
+    Vi phạm bất biến KHOA HỌC (checksum, leakage, biên target, artifact S0 malformed, TEST lần hai) KHÔNG dùng lớp
+    này: chúng vẫn hard-fail tự động, không hỏi (thí nghiệm không hợp lệ, không phải lựa chọn tài nguyên)."""
+
+
+# dấu hiệu lỗi TÀI NGUYÊN GPU trong thông điệp của thư viện/worker (không dùng để đoán lỗi khoa học)
+GPU_FAILURE_PATTERNS = (
+    "cuda out of memory", "out of memory", "oom", "cuda error", "cudaerror", "no cuda-capable device",
+    "cuda driver", "cuda unavailable", "cuda không", "không có cuda", "cuda_visible_devices", "nvml",
+    "gpu preflight", "device=cuda", "cpu fallback", "no kernel image", "insufficient driver",
+    "worker process chết", "worker gpu không khởi động", "gpu vật lý", "xla", "cublas", "cudnn", "nvrtc",
+)
+
+
+def is_gpu_failure(message) -> bool:
+    """True khi thông điệp lỗi mang dấu hiệu SỰ CỐ TÀI NGUYÊN GPU (→ dừng an toàn + hỏi user, §10)."""
+    m = str(message).lower()
+    return any(pat in m for pat in GPU_FAILURE_PATTERNS)
+
+
 ENV_DEVICES = "P0_GPU_DEVICES"           # "0,1" — danh sách GPU vật lý dùng làm worker
 ENV_SLOTS = "P0_GPU_SLOTS_PER_DEVICE"    # số task nặng đồng thời trên MỖI GPU (mặc định 1)
 ENV_WORKERS = "P0_FOLD_WORKERS"          # override tổng số worker (tương thích ngược §9 bản 2026-09-03)
@@ -106,14 +131,86 @@ def device_report(require_gpu: bool = True) -> dict:
             rep["device_name"] = str(props.name)
             rep["device_uuid"] = str(getattr(props, "uuid", "") or "")
             rep["backend"] = "torch"
-    except Exception as e:  # torch chưa cài (worker chỉ chạy tree model) — không phải lỗi
-        rep["torch_error"] = f"{type(e).__name__}: {e}"
+    except Exception as e:  # torch chưa cài (worker chỉ chạy tree model): KHÔNG xác nhận được uuid/số GPU thấy được
+        rep["torch_error"] = f"{type(e).__name__}: {e}"  # → `gpu-probe` sẽ báo WARN vì thiếu bằng chứng uuid
     if require_gpu:
         n = rep["torch_device_count"]
         if n is not None and n != 1:
             raise RuntimeError(f"worker {rep['worker_id']}: thấy {n} GPU (mong đúng 1 = GPU vật lý {rep['gpu_physical_id']}) — "
                                f"CUDA_VISIBLE_DEVICES={rep['cuda_visible_devices']!r}; không có CPU fallback.")
     return rep
+
+
+BACKENDS = ("torch", "xgboost", "lightgbm", "catboost", "jax", "timesfm")
+
+
+def backend_probe(backends=BACKENDS, lgbm_device_type: str = "cuda") -> dict:
+    """Chạy MỘT phép tính GPU nhỏ THẬT cho từng backend, NGAY TRONG worker đã mask (§11).
+
+    Trả {backend: {"status": ok | fail | missing, "detail": ...}}. `ok` = thư viện đã cài VÀ chạy được trên GPU
+    được giao; `fail` = đã cài nhưng KHÔNG dùng được GPU (→ sự cố tài nguyên GPU, §10); `missing` = chưa cài
+    (vấn đề môi trường/bootstrap, không phải sự cố GPU). KHÔNG train thật, không tải checkpoint.
+    """
+    import numpy as np
+
+    out: dict[str, dict] = {}
+    x = np.random.default_rng(0).normal(size=(256, 4)).astype(np.float32)
+    for b in backends:
+        try:
+            if b == "torch":
+                import torch
+
+                if not torch.cuda.is_available() or torch.cuda.device_count() < 1:
+                    raise RuntimeError(f"torch.cuda.is_available()={torch.cuda.is_available()} device_count={torch.cuda.device_count()}")
+                t = torch.ones(1024, device="cuda")
+                val = float((t * 2).sum().item())
+                props = torch.cuda.get_device_properties(0)
+                out[b] = {"status": "ok", "detail": f"{props.name} | uuid={getattr(props, 'uuid', '')} | sum={val:.0f}"}
+            elif b == "xgboost":
+                import xgboost as xgb
+
+                if not bool(xgb.build_info().get("USE_CUDA", False)):
+                    raise RuntimeError("wheel XGBoost không build CUDA (USE_CUDA=False)")
+                m = xgb.XGBRegressor(n_estimators=3, device="cuda", tree_method="hist")
+                m.fit(x, x[:, 0])
+                import json as _json
+
+                dev = str(_json.loads(m.get_booster().save_config())["learner"]["generic_param"]["device"])
+                if not dev.startswith("cuda"):
+                    raise RuntimeError(f"booster báo device={dev!r} ≠ cuda")
+                out[b] = {"status": "ok", "detail": f"booster device={dev}"}
+            elif b == "lightgbm":
+                import lightgbm as lgb
+
+                m = lgb.LGBMRegressor(n_estimators=8, num_leaves=7, max_bin=63, device_type=lgbm_device_type,
+                                      gpu_use_dp=False, verbose=-1, n_jobs=1)
+                m.fit(x, x[:, 0])
+                out[b] = {"status": "ok", "detail": f"device_type={lgbm_device_type} fit OK"}
+            elif b == "catboost":
+                from catboost import CatBoostRegressor
+
+                CatBoostRegressor(iterations=3, task_type="GPU", devices="0", verbose=False, allow_writing_files=False).fit(x, x[:, 0])
+                out[b] = {"status": "ok", "detail": "task_type=GPU devices=0 fit OK"}
+            elif b == "jax":
+                import jax
+                import jax.numpy as jnp
+
+                devs = jax.devices()
+                plat = {str(d.platform) for d in devs}
+                if not plat & {"gpu", "cuda"}:
+                    raise RuntimeError(f"jax.devices() = {devs} (không phải GPU)")
+                val = float(jnp.ones(1024).sum())
+                out[b] = {"status": "ok", "detail": f"{devs[0].device_kind} | sum={val:.0f}"}
+            elif b == "timesfm":
+                import timesfm  # noqa: F401  — chỉ kiểm đã cài đúng version; KHÔNG tải checkpoint trong probe
+                from importlib import metadata as _md
+
+                out[b] = {"status": "ok", "detail": f"timesfm {_md.version('timesfm')} (import OK, không tải checkpoint)"}
+        except ImportError as e:
+            out[b] = {"status": "missing", "detail": f"{type(e).__name__}: {e}"}
+        except Exception as e:  # đã cài nhưng KHÔNG chạy được trên GPU → sự cố tài nguyên GPU
+            out[b] = {"status": "fail", "detail": f"{type(e).__name__}: {str(e)[:200]}"}
+    return out
 
 
 def peak_vram_mb(reset: bool = True) -> float | None:

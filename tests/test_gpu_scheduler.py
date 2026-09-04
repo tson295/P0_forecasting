@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 
 from p0 import cli, fold_parallel, gpu, scheduler
+from p0.checker_log import read as read_checker
 from p0.config import RunConfig
 from p0.harness import ColSet, run_config
 from p0.orchestrate import Branch, build_dag, run_dag
@@ -487,3 +488,267 @@ def test_orchestrate_requires_deferred_champion_and_dry_run_lists_dag(tmp_path, 
     args.dry_run = False
     with pytest.raises(SystemExit, match="defer_champion"):  # nhánh song song mà không hoãn champion → từ chối
         cmd_orchestrate(cfg, args)
+
+
+# ----------------------------------------------------------------------------- (18)(19)(20) gpu-probe: UUID + backend trong worker
+def _fake_probe_result(worker_id, device, uuid, backends):
+    return {"report": {"worker_id": worker_id, "gpu_physical_id": device, "cuda_visible_devices": str(device),
+                       "device_name": "RTX 5000 Ada", "device_uuid": uuid, "torch_device_count": 1},
+            "backends": backends}
+
+
+OK_BACKENDS = {b: {"status": "ok", "detail": "probe OK"} for b in ("torch", "xgboost", "lightgbm", "catboost", "jax", "timesfm")}
+
+
+def _patch_probe_scheduler(monkeypatch, results):
+    """Thay GpuScheduler trong cmd_gpu_probe bằng bản giả trả `results` cho task backend_probe."""
+    calls = {"backend_probe": 0, "probe": 0, "tasks": []}
+
+    class FakeSched:
+        def __init__(self, cfg, allow_cpu=False, exp_dir=None, light=False):
+            self.exp_dir = exp_dir
+
+        def start(self):
+            return self
+
+        def submit(self, tasks, branch=None):
+            calls["tasks"].append([t.kind for t in tasks])
+            if tasks[0].kind == "backend_probe":
+                calls["backend_probe"] += len(tasks)
+                assert len(tasks) == len(results), "phải probe MỌI worker (mỗi GPU vật lý một task)"
+                return list(results)
+            calls["probe"] += len(tasks)
+            return [{"gpu_physical_id": i % 2, "tag": t.payload.get("tag")} for i, t in enumerate(tasks)]
+
+        def reports(self):
+            return {r["report"]["worker_id"]: r["report"] for r in results}
+
+        def shutdown(self):
+            pass
+
+    monkeypatch.setattr("p0.scheduler.GpuScheduler", FakeSched)
+    return calls
+
+
+def test_gpu_probe_requires_distinct_uuid_per_worker(tmp_path, two_gpu, monkeypatch):
+    """(18) hai worker báo CÙNG UUID = định tuyến GPU sai → dừng an toàn + hỏi user (exit 3)."""
+    cfg = _cfg(tmp_path)
+    same = "uuid-AAA"
+    _patch_probe_scheduler(monkeypatch, [_fake_probe_result(0, 0, same, OK_BACKENDS), _fake_probe_result(1, 1, same, OK_BACKENDS)])
+    with pytest.raises(SystemExit) as e:
+        cli.cmd_gpu_probe(cfg, Namespace(allow_cpu=True, backends=None))
+    assert e.value.code == 3  # exit riêng: chờ user quyết
+    rows = [r for r in read_checker(cfg.exp_dir) if r["check_id"] == "GPU_UUID_COLLISION"]
+    assert rows and rows[-1]["severity"] == "ERROR" and rows[-1]["ref"] == "USER_DECISION_REQUIRED"
+    assert json.loads((cfg.exp_dir / "gpu_probe.json").read_text(encoding="utf-8"))["verdict"] == "GPU_UUID_COLLISION"
+
+
+def test_gpu_probe_passes_with_distinct_uuid_and_probes_every_gpu(tmp_path, two_gpu, monkeypatch):
+    """(19)(20) mỗi GPU cấu hình được probe bằng MỘT task chạy trong worker đã mask; UUID phân biệt → PASS."""
+    cfg = _cfg(tmp_path)
+    calls = _patch_probe_scheduler(monkeypatch, [_fake_probe_result(0, 0, "uuid-A", OK_BACKENDS),
+                                                 _fake_probe_result(1, 1, "uuid-B", OK_BACKENDS)])
+    cli.cmd_gpu_probe(cfg, Namespace(allow_cpu=True, backends=None))
+    assert calls["backend_probe"] == 2 and calls["tasks"][0] == ["backend_probe", "backend_probe"]
+    saved = json.loads((cfg.exp_dir / "gpu_probe.json").read_text(encoding="utf-8"))
+    assert saved["verdict"] == "OK" and sorted(saved["uuids"].values()) == ["uuid-A", "uuid-B"]
+    assert {w["report"]["gpu_physical_id"] for w in saved["workers"].values()} == {0, 1}
+    ck = [r["check_id"] for r in read_checker(cfg.exp_dir)]
+    assert "GPU_UUID_DISTINCT" in ck and "GPU_SYMMETRIC" in ck
+
+
+def test_gpu_probe_stops_when_installed_backend_cannot_use_gpu(tmp_path, two_gpu, monkeypatch):
+    """(21)(22) backend đã cài nhưng không chạy được GPU → KHÔNG fallback CPU, dừng an toàn + hỏi user."""
+    cfg = _cfg(tmp_path)
+    bad = {**OK_BACKENDS, "lightgbm": {"status": "fail", "detail": "LightGBMError: CUDA Tree Learner was not enabled"}}
+    _patch_probe_scheduler(monkeypatch, [_fake_probe_result(0, 0, "uuid-A", OK_BACKENDS), _fake_probe_result(1, 1, "uuid-B", bad)])
+    with pytest.raises(SystemExit) as e:
+        cli.cmd_gpu_probe(cfg, Namespace(allow_cpu=True, backends=None))
+    assert e.value.code == 3
+    rows = [r for r in read_checker(cfg.exp_dir) if r["check_id"] == "BACKEND_GPU_FAILED"]
+    assert rows and rows[-1]["ref"] == "USER_DECISION_REQUIRED" and "worker1/lightgbm" in rows[-1]["message"]
+    assert json.loads((cfg.exp_dir / "gpu_probe.json").read_text(encoding="utf-8"))["verdict"] == "BACKEND_GPU_FAILED"
+
+
+def test_missing_backend_is_env_warning_not_gpu_failure(tmp_path, two_gpu, monkeypatch):
+    """Thư viện CHƯA CÀI = vấn đề môi trường (WARN, chạy tiếp), không phải sự cố tài nguyên GPU."""
+    cfg = _cfg(tmp_path)
+    miss = {**OK_BACKENDS, "timesfm": {"status": "missing", "detail": "ModuleNotFoundError: timesfm"}}
+    _patch_probe_scheduler(monkeypatch, [_fake_probe_result(0, 0, "uuid-A", miss), _fake_probe_result(1, 1, "uuid-B", miss)])
+    cli.cmd_gpu_probe(cfg, Namespace(allow_cpu=True, backends=None))  # KHÔNG raise
+    sev = {r["check_id"]: r["severity"] for r in read_checker(cfg.exp_dir)}
+    assert sev.get("BACKEND_MISSING") == "WARN" and sev.get("GPU_SYMMETRIC") == "PASS"
+
+
+def test_backend_probe_task_runs_inside_masked_worker(tmp_path, two_gpu):
+    """(20) task `backend_probe` thực thi TRONG worker: báo cáo mang đúng worker_id/GPU vật lý của process đó."""
+    cfg = _cfg(tmp_path)
+    sch = _sched(cfg)
+    try:
+        out = sch.submit([Task(kind="backend_probe", stage="gpu_probe", payload={"backends": ["torch"], "lgbm_device_type": "cpu"})
+                          for _ in range(2)])
+    finally:
+        sch.shutdown()
+    ids = sorted(r["report"]["gpu_physical_id"] for r in out)
+    assert ids == [0, 1]  # mỗi task chạy ở một worker khác nhau, mỗi worker một GPU vật lý
+    for r in out:
+        assert str(r["report"]["cuda_visible_devices"]) == str(r["report"]["gpu_physical_id"])
+        assert set(r["backends"]) == {"torch"}
+
+
+# ----------------------------------------------------------------------------- (22)(23)(24) chính sách dừng/hỏi
+def test_gpu_resource_failure_is_the_only_user_prompt(tmp_path, capsys):
+    from p0.checker_log import gpu_stop, hard_fail
+    from p0.checker_log import record as ck_record
+
+    exp = tmp_path / "experiments"
+    # (22) sự cố GPU: ERROR + ref USER_DECISION_REQUIRED + exit 3 + có phương án cho user
+    with pytest.raises(SystemExit) as e:
+        gpu_stop(exp, "loop", "GPU_RESOURCE_FAILURE", "GPU 1 biến mất giữa chừng", model="xgb")
+    assert e.value.code == 3
+    out = capsys.readouterr().out
+    assert "CẦN USER QUYẾT" in out and "Bạn muốn xử lý thế nào?" in out and "KHÔNG có CPU fallback" in out
+    rows = read_checker(exp)
+    assert rows[-1]["severity"] == "ERROR" and rows[-1]["ref"] == "USER_DECISION_REQUIRED"
+    # (23) finding thường: ghi rồi đi tiếp, KHÔNG hỏi
+    ck_record(exp, "loop", "WARN", "UNUSUAL_GAIN", "gain 1.2 pp")
+    ck_record(exp, "loop", "INFO", "NOTE", "ghi chú")
+    out = capsys.readouterr().out
+    assert "Bạn muốn xử lý" not in out
+    # (24) vi phạm bất biến khoa học: dừng ngay, KHÔNG có tuỳ chọn "chạy tiếp"
+    with pytest.raises(SystemExit) as e:
+        hard_fail(exp, "load_store", "CHECKSUM_MISMATCH", "sha256 lệch")
+    assert e.value.code != 3 and "CHECKSUM_MISMATCH" in str(e.value)
+    out = capsys.readouterr().out
+    assert "Bạn muốn xử lý" not in out and "chạy tiếp" not in out
+
+
+def test_gpu_failure_classification():
+    assert gpu.is_gpu_failure("CUDA out of memory") and gpu.is_gpu_failure("worker process chết (exitcode=1)")
+    assert gpu.is_gpu_failure("GPU preflight XGBoost: booster báo device='cpu'")
+    assert not gpu.is_gpu_failure("checksum data không khớp §6.1")
+    assert not gpu.is_gpu_failure("locked_ext phải là tập con của ext")
+
+
+def test_cli_main_turns_gpu_resource_error_into_user_decision_stop(tmp_path, monkeypatch, capsys):
+    """(22) BẤT KỲ bước nào ném GpuResourceError → CLI dừng an toàn và hỏi user (exit 3), không CPU fallback."""
+    cfg = _cfg(tmp_path)
+    cfg_path = tmp_path / "configs" / "cli.json"
+    cfg_path.parent.mkdir(exist_ok=True)
+    d = {k: v for k, v in cfg.to_dict().items() if k != "root"}
+    cfg_path.write_text(json.dumps(d), encoding="utf-8")
+
+    def boom(c, a):
+        raise gpu.GpuResourceError("worker GPU không khởi động được (không có CPU fallback) — worker 1: CUDA driver lỗi")
+
+    monkeypatch.setattr(cli, "cmd_lock_s0", boom)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["lock-s0", "--config", str(cfg_path)])
+    assert e.value.code == 3
+    out = capsys.readouterr().out
+    assert "DỪNG AN TOÀN" in out and "CPU fallback" in out
+    rows = [r for r in read_checker(cfg.exp_dir) if r["check_id"] == "GPU_RESOURCE_FAILURE"]
+    assert rows and rows[-1]["ref"] == "USER_DECISION_REQUIRED"
+
+
+# ----------------------------------------------------------------------------- (25)(26) đồng thời tối đa = số slot GPU
+def _max_concurrency(rows):
+    ev = []
+    for r in rows:
+        ev.append((r["t_start"], 1))
+        ev.append((r["t_end"], -1))
+    cur = best = 0
+    for _, d in sorted(ev):
+        cur += d
+        best = max(best, cur)
+    return best
+
+
+def test_one_slot_per_gpu_means_at_most_two_heavy_tasks(tmp_path, two_gpu):
+    """(25) gpu_slots_per_device=1 → không bao giờ quá 2 task nặng chạy cùng lúc."""
+    cfg = _cfg(tmp_path)
+    sch = _sched(cfg)
+    try:
+        sch.submit([Task(kind="probe", payload={"sleep_ms": 200, "tag": f"c{i}"}) for i in range(8)])
+    finally:
+        sch.shutdown()
+    rows = [r for r in _log(cfg) if r["kind"] == "probe"]
+    assert len(rows) == 8 and _max_concurrency(rows) <= 2
+
+
+def test_four_branches_feed_queue_without_raising_gpu_concurrency(tmp_path, two_gpu):
+    """(26) max_branches=4: bốn nhánh cùng đẩy task, nhưng GPU đồng thời vẫn = 2 (không oversubscribe)."""
+    cfg = _cfg(tmp_path)
+    sch = _sched(cfg)
+    errs = []
+
+    def branch(name):
+        try:
+            scheduler.set_branch(name)
+            sch.submit([Task(kind="probe", payload={"sleep_ms": 150, "tag": f"{name}{i}"}) for i in range(3)])
+        except BaseException as e:  # noqa: BLE001
+            errs.append(e)
+
+    threads = [threading.Thread(target=branch, args=(f"loop:m{i}",)) for i in range(4)]
+    try:
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    finally:
+        sch.shutdown()
+    assert not errs
+    rows = [r for r in _log(cfg) if r["kind"] == "probe"]
+    assert len(rows) == 12
+    assert _max_concurrency(rows) <= 2  # số worker GPU quyết định, KHÔNG phải số nhánh
+    assert len({r["branch"] for r in rows}) == 4  # cả bốn nhánh đều được phục vụ (không starvation)
+    assert {r["gpu_physical_id"] for r in rows} == {0, 1}
+
+
+def test_config_execution_knobs_are_not_in_scientific_hash(tmp_path):
+    """max_branches/gpu_devices/gpu_slots_per_device/defer_champion chỉ là thực thi → không đổi config_hash."""
+    from p0.config import RunConfig
+
+    base = _cfg(tmp_path).to_dict()
+    base.pop("root", None)
+    a = RunConfig(**{**base, "eval_seeds": tuple(base["eval_seeds"]), "root": str(tmp_path)})
+    b = RunConfig(**{**base, "eval_seeds": tuple(base["eval_seeds"]), "root": str(tmp_path),
+                     "max_branches": 4, "gpu_devices": [0, 1], "gpu_slots_per_device": 1, "defer_champion": True})
+    assert a.hash() == b.hash()
+
+
+def test_gpu_stop_inside_a_branch_keeps_user_decision_exit_code(tmp_path, capsys):
+    """(22) `gpu_stop` xảy ra TRONG một nhánh của orchestrate vẫn thoát bằng exit 3 (chờ user quyết),
+    không bị hạ cấp thành lỗi thường — và thông điệp chỉ in MỘT lần."""
+    from p0.checker_log import GPU_STOP_EXIT, gpu_stop
+    from p0.orchestrate import build_dag, run_dag
+
+    exp = tmp_path / "experiments"
+    branches = build_dag(["lgbm", "xgb"])
+
+    def run_branch(b):
+        if b.name == "loop:xgb":
+            gpu_stop(exp, "loop", "GPU_RESOURCE_FAILURE", "GPU 1 hết VRAM giữa add-one", model="xgb")
+        time.sleep(0.05)
+
+    with pytest.raises(SystemExit) as e:
+        run_dag(branches, run_branch, max_active=2)
+    assert e.value.code == GPU_STOP_EXIT == 3
+    out = capsys.readouterr().out
+    assert out.count("DỪNG AN TOÀN") == 1 and "CPU fallback" in out
+    rows = [r for r in read_checker(exp) if r["check_id"] == "GPU_RESOURCE_FAILURE"]
+    assert rows and rows[-1]["ref"] == "USER_DECISION_REQUIRED"
+    assert dict((b.name, b.status) for b in branches)["loop:xgb"] == "error"
+
+
+def test_gpu_probe_requires_every_configured_gpu_to_be_probed(tmp_path, two_gpu, monkeypatch):
+    """(19) nếu không probe đủ mọi worker/GPU thì KHÔNG được kết luận PASS — dừng và hỏi user."""
+    cfg = _cfg(tmp_path)
+    only_one = [_fake_probe_result(0, 0, "uuid-A", OK_BACKENDS)]  # scheduler giả chỉ trả về 1 worker
+    _patch_probe_scheduler(monkeypatch, only_one)
+    monkeypatch.setattr("p0.gpu.worker_slots", lambda cfg=None: ([0, 1], 1, 1))  # submit 1 task nhưng cấu hình 2 GPU
+    with pytest.raises(SystemExit) as e:
+        cli.cmd_gpu_probe(cfg, Namespace(allow_cpu=True, backends=None))
+    assert e.value.code == 3
+    rows = [r for r in read_checker(cfg.exp_dir) if r["check_id"] == "GPU_PROBE_COVERAGE"]
+    assert rows and rows[-1]["ref"] == "USER_DECISION_REQUIRED"

@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import fold_parallel, gpu, scheduler
+from .checker_log import GPU_STOP_EXIT
 from .checker_log import record as ck_record
 from .config import RunConfig
 
@@ -82,12 +83,20 @@ def run_dag(branches: list[Branch], run_branch, max_active: int, on_event=None) 
     cv = threading.Condition(lock)
     active: dict[str, Branch] = {}
     failed: list[Branch] = []
+    gpu_stopped: list[int] = []  # nhánh đã gọi `checker_log.gpu_stop` (đã ghi ERROR + hỏi user) → giữ nguyên exit code
 
     def worker(b: Branch) -> None:
         try:
             run_branch(b)
             with cv:
                 b.status, b.ended_at = "done", time.time()
+        except SystemExit as e:  # §10: gpu_stop dừng an toàn bên trong nhánh — KHÔNG được biến thành lỗi thường
+            with cv:
+                b.status, b.ended_at, b.error = "error", time.time(), f"SystemExit: {e.code}"
+                if int(e.code or 0) == GPU_STOP_EXIT:
+                    b.error = f"GpuResourceError (đã dừng an toàn và hỏi user, exit {GPU_STOP_EXIT})"
+                    gpu_stopped.append(GPU_STOP_EXIT)
+                failed.append(b)
         except BaseException as e:  # noqa: BLE001 — lỗi nhánh phải nổi lên rõ ràng
             with cv:
                 b.status, b.ended_at, b.error = "error", time.time(), f"{type(e).__name__}: {e}"
@@ -124,8 +133,13 @@ def run_dag(branches: list[Branch], run_branch, max_active: int, on_event=None) 
     for b in branches:
         if b.thread is not None:
             b.thread.join()
+    if gpu_stopped:  # thông điệp + ERROR đã do gpu_stop in/ghi một lần rồi → chỉ giữ đúng exit code, không lặp lại
+        raise SystemExit(GPU_STOP_EXIT)
     if failed:
-        raise RuntimeError("; ".join(f"{b.name}: {b.error}" for b in failed))
+        msg = "; ".join(f"{b.name}: {b.error}" for b in failed)
+        if any("GpuResourceError" in (b.error or "") or gpu.is_gpu_failure(b.error) for b in failed):
+            raise gpu.GpuResourceError(msg)  # §10: giữ NGUYÊN loại lỗi tài nguyên GPU để CLI hỏi user
+        raise RuntimeError(msg)
     return branches
 
 

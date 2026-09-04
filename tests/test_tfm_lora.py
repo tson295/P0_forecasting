@@ -309,7 +309,7 @@ def test_loop_tfm_end_to_end_with_stub(tmp_path, store, folds, monkeypatch):
     i_base = conf_rows.index[conf_rows["colset"] == "baseline"]
     i_raw = conf_rows.index[conf_rows["colset"].isin(["unprune", "prune"])]
     assert len(i_raw) and (not len(i_base) or i_base.min() > i_raw.max())  # (1) raw vs pruned XONG rồi mới dựng baseline
-    assert (log.loc[log["step"] == "calibrate", "note"].str.contains("LoRA FIT \+ ES")).any()  # (24) calibrate = LoRA FIT + ES
+    assert (log.loc[log["step"] == "calibrate", "note"].str.contains(r"LoRA FIT \+ ES")).any()  # (24) calibrate = LoRA FIT + ES
     assert len(pd.read_csv(exp / f"keepdrop_tfm.csv")) == 2 and (exp / "calib" / "tfm_base.json").exists()
     assert not list((exp / "summary").glob("*.png")) if (exp / "summary").exists() else True  # không vẽ trong training
     ch = pd.read_csv(exp / "champion_log.csv")
@@ -333,3 +333,83 @@ def test_new_tfm_baseline_is_lora_native_and_b0_never_enters_xreg(tmp_path, stor
     assert st.X_val.cov_names == ("ret_2",) and st.X_val.cov.shape[1] == 1  # B0* KHÔNG được đưa vào XReg
     st0 = run_config(store, stub, ColSet(store.b0_names[:5]), folds[:1], rounds=(1, 1, 1), seed=1, keep_states=True).states[0]
     assert st0.X_val.cov is None  # chỉ B0 → native (không covariate)
+
+
+# ------------------------------- (6)(7)(8) confirmation chấm HAI HỆ THỐNG HOÀN CHỈNH, cùng adapter đã freeze
+def test_confirmation_scores_complete_systems_not_bare_xreg(tmp_path, store, folds, monkeypatch):
+    """F_raw và F_pruned được chấm dưới dạng {TimesFM-LoRA + XReg(F)} trên CÙNG adapter — không có
+    "XReg vs XReg" và không có XReg đứng một mình."""
+    cfg = _cfg(tmp_path)
+    exp = cfg.exp_dir
+    (exp / "s0").mkdir(parents=True)
+    _champion(exp)
+    ColSet((), ()).save(exp / "s0" / "tfm.json")
+    (exp / "s0" / "candidates_tfm.json").write_text(json.dumps(
+        {"model": "tfm", "candidates": list(SHORT_COLUMNS[:2]), "audit_dataset_label": cfg.dataset_label}), encoding="utf-8")
+    model = _model(tmp_path, StubLoRATFM())
+    monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
+    monkeypatch.setattr(cli, "load_store", lambda c, **k: (store, folds[:1], None, None))
+    monkeypatch.setattr(cli, "model_for", lambda c, name, allow_cpu: model)
+    cli.cmd_loop(cfg, Namespace(model="tfm", smoke=True, allow_cpu=True, max_candidates=None, no_standalone=True,
+                                latency_origins=None, resume=False))
+    # (6) bảng prune ghi rõ hệ thống của TỪNG bên
+    df = pd.read_csv(exp / "prune_tfm.csv")
+    assert list(df["system"]) == ["TimesFM-LoRA + XReg(F_raw)", "TimesFM-LoRA + XReg(F_pruned)"]
+    src = json.loads((exp / "wins" / f"{cli.TFM_XREG_WIN}.json").read_text(encoding="utf-8"))["feature_set_source"]
+    assert src["compared_systems"] == ["TimesFM-LoRA + XReg(F_raw)", "TimesFM-LoRA + XReg(F_pruned)"]
+    # (8) hai bên confirmation dùng CÙNG adapter LoRA đã freeze
+    assert src["same_frozen_lora_adapter"] is True
+    xr = json.loads((exp / "wins" / f"{cli.TFM_XREG_WIN}.json").read_text(encoding="utf-8"))
+    base = json.loads((exp / "wins" / f"{cli.TFM_BASELINE_WIN}.json").read_text(encoding="utf-8"))
+    assert xr["lora_adapters"] and xr["lora_adapters"] == base["lora_adapters"]
+    assert xr["scored_system_per_candidate"].startswith("TimesFM-LoRA + XReg(")
+    # (7) không nơi nào mô tả quyết định là "XReg vs XReg" / "XReg vs LoRA"
+    for f in (exp / "prune_tfm.csv", exp / "wins" / f"{cli.TFM_XREG_WIN}.json", exp / "wins" / f"{cli.TFM_BASELINE_WIN}.json"):
+        txt = f.read_text(encoding="utf-8").lower()
+        assert "xreg vs xreg" not in txt and "xreg vs lora" not in txt and "xreg vs native" not in txt
+
+
+def test_official_docs_never_say_xreg_vs_xreg():
+    """(7) mô tả chính thức (code + doc đang hiệu lực) không được dùng cách gọi sai."""
+    import pathlib as _p
+
+    root = _p.Path(__file__).resolve().parents[1]
+    files = list((root / "src" / "p0").glob("*.py")) + [root / "README.md", root / ".claude" / "CLAUDE.md",
+                                                        root / ".claude" / "AGENT.md", root / "docs" / "VAST_SESSION_PROMPT.md"]
+    files += list((root / ".claude" / "agents").glob("*.md"))
+    negation = ("không phải", "không bao giờ", "không gọi", "cấm", "sai", "never", "not ", "đừng")
+    for f in files:
+        for i, line in enumerate(f.read_text(encoding="utf-8").lower().splitlines(), 1):
+            for bad in ("xreg vs xreg", "xreg vs lora", "xreg vs timesfm"):
+                if bad in line and not any(n in line for n in negation):  # chỉ chấp nhận khi câu đang PHỦ ĐỊNH cách gọi đó
+                    raise AssertionError(f"{f}:{i} còn mô tả sai {bad!r}: {line.strip()[:120]}")
+
+
+# ------------------------------- (13)(15) TFM-final LƯU rồi CHỜ; chỉ được so champion ở replay
+def test_tfm_final_saves_representative_and_waits_for_replay(tmp_path, monkeypatch):
+    cfg = _cfg(tmp_path)
+    object.__setattr__(cfg, "defer_champion", True)
+    exp = cfg.exp_dir
+    exp.mkdir(parents=True)
+    _champion(exp)
+    _win(exp, cli.TFM_BASELINE_WIN, [], [(90.0, 130.0, 160.0)], eps=0.02)
+    _win(exp, cli.TFM_XREG_WIN, ["ret_2"], [(80.0, 120.0, 150.0)])
+    monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
+    cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
+    fin = json.loads((exp / "wins" / "tfm.json").read_text(encoding="utf-8"))
+    assert fin["representative"] == "tfm" and fin["configuration"] == cli.TFM_XREG_WIN  # (13) đã LƯU đại diện
+    ch = pd.read_csv(exp / "champion_log.csv") if (exp / "champion_log.csv").exists() else None
+    assert ch is None or not (ch["model"] == "tfm").any()  # (13) CHƯA so champion
+    assert json.loads((exp / "champion.json").read_text(encoding="utf-8"))["model"] == "lgbm"  # champion chưa đổi
+    # (15) đại diện TimesFM ĐỦ TƯ CÁCH champion ở bước replay
+    (exp / "champion.json").unlink()
+    for m, rmse in (("lgbm", [[95.0, 135.0, 165.0]]), ("xgb", [[96.0, 136.0, 166.0]])):
+        (exp / "wins" / f"{m}.json").write_text(json.dumps(
+            {"model": m, "colset": {"b0": [], "ext": []}, "rmse_mean": rmse, "e0": [[100.0, 140.0, 170.0]], "eps": 0.02,
+             "eval_seeds": [1, 2], "which": "prune", "median_gain_vs_e0": 0.3, "champion_extra": {"win": "prune"}}), encoding="utf-8")
+    object.__setattr__(cfg, "model_order", ["lgbm", "xgb", "tfm"])
+    cli.cmd_champion_replay(cfg, Namespace(allow_partial=False, force_replay=False))
+    ch = pd.read_csv(exp / "champion_log.csv")
+    order = [m for m in ch["model"].tolist() if m in ("lgbm", "xgb", "tfm")]
+    assert order == ["lgbm", "xgb", "tfm"]  # thứ tự methodology cố định, tfm là đại diện hợp lệ
+    assert json.loads((exp / "champion.json").read_text(encoding="utf-8"))["model"] == "tfm"  # RMSE tfm tốt nhất

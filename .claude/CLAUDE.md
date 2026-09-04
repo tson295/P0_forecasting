@@ -1,6 +1,6 @@
 # P0_forecasting — Hiến pháp (bản rút gọn 2026-09-04)
 
-File này chỉ giữ invariants. Kế hoạch nghiên cứu: `docs/RESEARCH_PLAN.md` (rev 10.3). Code: `src/p0/` + `run.py` (§8 plan); prompt Vast: `docs/VAST_SESSION_PROMPT.md`. Trạng thái hiện tại: `.claude/MEMORY.md` (auto-import cuối file). Bản cũ ở `docs/archive/` và tài liệu tham khảo ở `docs/reference/` không có hiệu lực (trừ audit API được plan trích dẫn). Agents: `.claude/AGENT.md`.
+File này chỉ giữ invariants. Kế hoạch nghiên cứu: `docs/RESEARCH_PLAN.md` (rev 10.3). Code: `src/p0/` + `run.py` (§8 plan); prompt Vast: `docs/VAST_SESSION_PROMPT.md`. Trạng thái hiện tại: `.claude/MEMORY.md` (auto-import cuối file). Bản cũ ở `docs/archive/` và tài liệu tham khảo ở `docs/reference/` không có hiệu lực (trừ audit API được plan trích dẫn). Agents: `.claude/AGENT.md` (pha vận hành: checker · run-monitor · infra · analyst hậu-run · researcher dormant).
 
 Khi mâu thuẫn: quyết định user mới nhất > `docs/RESEARCH_PLAN.md` > file này > code hiện có > đề xuất. **Không tự mở rộng protocol/governance/stage/rule/framework khi user không yêu cầu.** Chỉ đổi thiết kế đã có khi phát hiện logic sai, leakage, hoặc model/metric rõ ràng không phù hợp — và nói rõ cái nào, vì sao, không thay bằng thứ phức tạp hơn.
 
@@ -10,6 +10,10 @@ Khi mâu thuẫn: quyết định user mới nhất > `docs/RESEARCH_PLAN.md` > 
 
 ## Data
 
+- **Data canonical NẰM TRONG REPO qua Git LFS (2026-09-04d)**: `data/BTC_1m_2y.csv` + `data/BTC_5m_2y.csv` được TRACK
+  (`.gitignore` có ngoại lệ `!`, `.gitattributes` chỉ LFS đúng hai file này) → `git clone` + `git lfs pull` là đủ chạy
+  `check-data`, KHÔNG cần scp, KHÔNG cần `derive-lf` (lệnh này ở lại làm công cụ tái lập/kiểm chứng). Mọi `data/*.csv`
+  khác vẫn bị ignore. Sha256 phải khớp `data/data_checksums_2y.json` + `data/BTC_5m_2y.derivation.json`.
 - Nguồn: OHLCV 1 phút Binance (`datetime,timestamp,open,high,low,close,volume,amount`; UTC, lưới 60 s) + bar 5 phút cho feature 5'. `data\` read-only; không trộn `*_close.csv`; không tự fetch data mới khi user chưa yêu cầu. Mỗi config trỏ đúng snapshot + file checksum sha256 riêng (§6.1) — CLI từ chối chạy khi CSV không khớp; không ghi đè file checksum khi chưa có lệnh user.
 - **Vòng hiện tại = data 2 NĂM thật (2026-09-04)**: `configs/p0_full.json` → nguồn canonical `data/BTC_1m_2y.csv` (1.051.201 bar 60 s, 2024-09-03 16:29 → 2026-09-03 16:29 UTC; cột `ts` được alias thành `timestamp` trong bộ nhớ, không sửa file; sha256 `559ce040…f097`) + LF 5' **dẫn xuất tất định** `data/BTC_5m_2y.csv` bằng `python run.py derive-lf` (bar 5' đã đóng, nhãn T = bar cuối, bỏ nhóm thiếu, sidecar `.derivation.json` ghi sha nguồn; `check-data` hard-fail nếu LF không dẫn xuất từ HF hiện tại). Anchor `data/data_checksums_2y.json` (không ghi đè anchor cũ). Kết quả ở `experiments/full/`. Không dùng `data/BTC_hf_1min_full.csv`. **Split `rolling_spread` (§1.5 plan)**: TEST = 30 ngày cuối; 5 fold VAL 3 ngày **rải đều** trên toàn bộ lịch sử trước TEST (từ VAL sớm nhất còn đủ FIT + ES tới VAL muộn nhất ngay trước TEST — trên data này 2025-01-07, 05-30, 10-19, 2026-03-11, 08-01); mỗi fold train region ROLLING = FIT **120 ngày** + ES 5 ngày (trừ purge 60') ngay trước VAL; Final refit = FIT 120 + ES 5 trước TEST. Không expanding, không FIT 365/730 cho từng candidate. Không hard-code ngày. Vòng 15 ngày (2026-01-18 → 02-02) đã xong: `configs/p0_15d.json` (split `make_folds` calendar, không đổi), artifact `experiments/15d/` — lịch sử, không sửa, không đổi tên.
 - OHLCV-only: không giả định và không đặt tên feature như order book, trades, order-flow, funding, OI… `amount/volume` là VWAP thật theo trade trong bar; biến thể volume-weighted tính từ TP·V phải mang tên `proxy`.
@@ -32,6 +36,17 @@ Khi mâu thuẫn: quyết định user mới nhất > `docs/RESEARCH_PLAN.md` > 
 ## Training state & bất biến cứng (không tương tác)
 
 `TRAINING: LOCKED` (xem MEMORY). Chỉ user unlock bằng lệnh rõ ("unlock training" / "bắt đầu training" / "run experiments"). Viết code không phải permission để train. **Training/inference trên data thật chỉ trên GPU — cấm CPU, không CPU fallback, không hỏi user**: GPU không có hoặc backend không thực sự CUDA (preflight XGBoost kiểm `build_info USE_CUDA` + booster device) → dừng ngay bằng `checker_log.hard_fail`. CPU chỉ cho việc không phải training: tính feature, metric, MI/PI, overlap audit, unit/smoke test synthetic, visualize, và predict của thư viện mặc định chạy CPU (LightGBM/CatBoost). Vast tính giờ: mỗi run phải thuộc một bước và trả lời một câu hỏi; không idle, không chạy trùng.
+
+**Ngoại lệ tương tác DUY NHẤT — sự cố TÀI NGUYÊN GPU** (2026-09-04d): không có GPU, GPU được giao biến mất, CUDA/backend
+không train được trên GPU, phát hiện CPU fallback, định tuyến GPU sai (UUID trùng), worker CUDA chết, OOM chặn đường GPU
+→ `checker_log.gpu_stop`: DỪNG AN TOÀN (giữ artifact đã xong, flush log), **KHÔNG CPU fallback**, **KHÔNG tự đổi
+batch/hyperparameter/seed/methodology**, ghi ERROR `ref=USER_DECISION_REQUIRED`, in phương án và **HỎI USER** (exit 3).
+Mọi vi phạm bất biến KHOA HỌC khác (checksum, leakage, biên, S0 malformed, TEST lần hai, TRAINING LOCKED) vẫn dừng tự
+động, không hỏi, không có tuỳ chọn "chạy tiếp" — đó là thí nghiệm không hợp lệ, không phải lựa chọn tài nguyên.
+
+**Agent theo pha vận hành** (2026-09-04d): `checker` (trước `orchestrate` + trước `final`) · `run-monitor` (theo dõi
+run, CHỈ đọc) · `infra` (GPU/env hỏng) · `analyst` (HẬU run) · `researcher` (DORMANT, chỉ khi user yêu cầu đổi
+methodology). Chi tiết `.claude/AGENT.md`.
 
 **Checker không tương tác** (2026-09-04): mọi finding → `experiments/<run>/checker_log.jsonl` (timestamp, stage, model, severity PASS/INFO/WARN/ERROR, check_id, message, file, ref). Bất biến cứng do code ép và tự dừng (checksum lệch, biên leakage, target ngoài partition, artifact S0/Candidate_m malformed, GPU/CPU fallback, TEST lần hai, TRAINING LOCKED, LF không phủ HF). Finding tư vấn (tương quan cao, nghi dư thừa, gain bất thường, runtime, ghi chú methodology) = WARN/INFO, ghi rồi tiếp tục. Agent `checker` ghi qua `scripts/checker_record.py`; ERROR chặn run cho tới khi sửa + PASS cùng check_id; **không bao giờ hỏi user "tiếp hay dừng"**.
 

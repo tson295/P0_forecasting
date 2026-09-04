@@ -12,3 +12,7 @@ experiments/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
 experiments/**/*.pt filter=lfs diff=lfs merge=lfs -text
 experiments/**/*.pth filter=lfs diff=lfs merge=lfs -text
 experiments/**/*.png filter=lfs diff=lfs merge=lfs -text
+
+# Data canonical của vòng 2 năm (2026-09-04d): CHỈ hai file này đi Git LFS — không LFS mọi data/*.csv.
+data/BTC_1m_2y.csv filter=lfs diff=lfs merge=lfs -text
+data/BTC_5m_2y.csv filter=lfs diff=lfs merge=lfs -text

@@ -1,10 +1,10 @@
 ---
 name: infra
-description: GPU/env troubleshooting cho P0_forecasting trên Vast.ai — khi scripts/vast_bootstrap.sh hoặc GPU preflight fail: build LightGBM GPU (OpenCL/CUDA), xgboost/catboost CUDA, torch wheel, xung đột dependency (jax vs torch cu128), tmux/persistence. Dùng khi môi trường hỏng, KHÔNG dùng để điều phối bước hay chạy experiment.
+description: ON-DEMAND (2026-09-04d — chỉ khi bootstrap/CUDA/driver/backend GPU/Git LFS/môi trường/OOM hỏng; đặc biệt khi `gpu-probe` hoặc run dừng với ERROR ref=USER_DECISION_REQUIRED). GPU/env troubleshooting cho P0_forecasting trên Vast.ai — khi scripts/vast_bootstrap.sh hoặc GPU preflight fail: build LightGBM GPU (OpenCL/CUDA), xgboost/catboost CUDA, torch wheel, xung đột dependency (jax vs torch cu128), tmux/persistence. Dùng khi môi trường hỏng, KHÔNG dùng để điều phối bước hay chạy experiment.
 model: sonnet
 ---
 
-Bootstrap bình thường **đã tự động**: `scripts/vast_bootstrap.sh` (apt OpenCL/boost → pip → build LightGBM GPU → preflight GPU → unit test) và `docs/VAST_SESSION_PROMPT.md` (lệnh từng bước, output mong đợi). Chỉ gọi agent này khi script/preflight **fail** hoặc môi trường hỏng — không lặp lại việc script đã làm, không điều phối bước, không chạy training.
+Gọi khi và chỉ khi: `scripts/vast_bootstrap.sh` fail, CUDA/driver hỏng, backend không chạy được GPU (`gpu-probe` báo `BACKEND_GPU_FAILED` / `GPU_UUID_COLLISION`), Git LFS hỏng (`git lfs pull` không kéo được data 2 năm), thiếu package, hết VRAM/dung lượng. Sự cố tài nguyên GPU là tình huống DUY NHẤT được dừng và hỏi user (§10) — bạn chuẩn bị phương án kỹ thuật cho user chọn, KHÔNG tự chuyển CPU và KHÔNG tự đổi hyperparameter.\n\nBootstrap bình thường **đã tự động**: `scripts/vast_bootstrap.sh` (apt OpenCL/boost → pip → build LightGBM GPU → preflight GPU → unit test) và `docs/VAST_SESSION_PROMPT.md` (lệnh từng bước, output mong đợi). Chỉ gọi agent này khi script/preflight **fail** hoặc môi trường hỏng — không lặp lại việc script đã làm, không điều phối bước, không chạy training.
 
 Kiến trúc: `LOCAL (Windows) → SSH → VAST.AI GPU → tmux → experiment processes`. Local: code, review, test nhẹ, git. Vast: mọi training (sau unlock). Training không được phụ thuộc SSH sống: tmux pane riêng, log persistent, config lưu trước khi chạy. tmux + script là đủ — không Kubernetes/Slurm.
 

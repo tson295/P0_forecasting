@@ -1,20 +1,22 @@
-# Prompt cho session Claude Code trên Vast — vòng EXPANDED-DATA (2026-09-03, cập nhật 2026-09-04c: 2 GPU)
+# Prompt cho session Claude Code trên Vast — vòng EXPANDED-DATA (2026-09-03; cập nhật 2026-09-04d: 2 GPU, data trong repo, pha vận hành)
 
 > Chỉ dùng khi user đã **cho phép rõ ràng** chạy experiment vòng expanded-data (MEMORY hiện ghi `TRAINING: LOCKED`).
-> Copy nguyên khối dưới đây vào một session Claude Code mới trên máy Vast sau khi: instance đã tạo, repo đã clone vào
-> `~/P0_forecasting` (kèm `git lfs install`), và `data/BTC_1m_2y.csv` (sha256 559ce040…f097) đã scp lên; `data/BTC_5m_2y.csv` scp cùng
-> hoặc dẫn xuất lại bằng `derive-lf` (phải ra sha256 0e5fb9ad…f2fef). CSV không nằm trong git; anchor `data/data_checksums_2y.json` đã commit.
+> Copy nguyên khối dưới đây vào một session Claude Code mới trên máy Vast sau khi: instance đã tạo và repo đã clone vào
+> `~/P0_forecasting` bằng `git clone … && cd P0_forecasting && git lfs install && git lfs pull`.
+> **Data 2 năm nằm TRONG repo qua Git LFS** — `data/BTC_1m_2y.csv` (sha256 559ce040…f097, 1.051.201 dòng) và
+> `data/BTC_5m_2y.csv` (sha256 0e5fb9ad…f2fef, 210.239 dòng) có sẵn sau `git lfs pull`. KHÔNG scp, KHÔNG cần `derive-lf`
+> (lệnh đó ở lại làm công cụ kiểm chứng). Nếu quên `git lfs pull`, hai file chỉ là pointer ~130 byte → `check-data` báo checksum lệch.
 
 ---
 
 Bạn là session Claude Code chạy trên máy Vast.ai GPU cho project P0_forecasting (BTC 1-phút point forecasting), vòng
-EXPANDED-DATA trên DATA 2 NĂM. Repo ở ~/P0_forecasting; data/BTC_1m_2y.csv đã được scp lên (LF 5' = data/BTC_5m_2y.csv, dẫn xuất tất định).
+EXPANDED-DATA trên DATA 2 NĂM. Repo ở ~/P0_forecasting; CẢ HAI file data (1m + 5m) đã có sẵn trong repo qua Git LFS.
 
 PROMPT NÀY LÀ AUTHORIZATION CỦA USER ĐỂ CHẠY TOÀN BỘ EXPERIMENT END-TO-END (user đã unlock bằng cách gửi prompt này):
 sau khi mọi preflight PASS, bạn TỰ chuyển TRAINING: UNLOCKED và chạy LIÊN TỤC theo thứ tự plan §8 tới hết `final` + `visualize`.
 KHÔNG hỏi user để duyệt giữa các bước/model. Chỉ DỪNG và hỏi user trong các blocker liệt kê ở cuối prompt.
 
-ĐỌC TRƯỚC (theo thứ tự): .claude/CLAUDE.md → .claude/MEMORY.md → docs/RESEARCH_PLAN.md (rev 10.3) → README.md → .claude/AGENT.md
+ĐỌC TRƯỚC (theo thứ tự): .claude/CLAUDE.md → .claude/MEMORY.md → docs/RESEARCH_PLAN.md (rev 10.4) → README.md → .claude/AGENT.md
 → docs/reference/audit_timesfm_lora.md. docs/archive/ là lịch sử; experiments/15d/ là vòng 15 ngày đã xong (không sửa).
 
 =========================== LUẬT BẤT BIẾN (không tương tác) ===========================
@@ -35,7 +37,8 @@ KHÔNG hỏi user để duyệt giữa các bước/model. Chỉ DỪNG và hỏ
    loss MSE trên ŷ_h; không torch.compile; inject sau load_checkpoint; giữ mean head, 1 origin/lời gọi, dịch 1 bar, cộng dồn one-step.
    Artifact: wins/tfm_lora_baseline.json, wins/tfm_lora_xreg.json → tfm-final → wins/tfm.json (chỉ TFM-final vào champion).
    AutoTS: probe = 2 class cố định từ S0 của nhánh; framework chỉ với initial_template GPU + max_generations=0 trên FIT+ES.
-6. data/ read-only (không sửa data/BTC_1m_2y.csv; LF chỉ sinh bằng derive-lf). KHÔNG ghi đè data/data_checksums_2y.json (đã commit). Không secret vào repo/MEMORY/git.
+6. data/ read-only: KHÔNG sửa data/BTC_1m_2y.csv hay data/BTC_5m_2y.csv (đã commit qua Git LFS), KHÔNG ghi đè
+   data/data_checksums_2y.json và data/BTC_5m_2y.derivation.json. Không secret vào repo/MEMORY/git.
    experiments/** KHÔNG được ignore: commit + push (LFS cho .npz/.pt) sau mỗi model; adapter LoRA trong experiments/full/lora/.
 7. KHÔNG vẽ figure trong bất kỳ bước training nào; figure chỉ sinh bằng `python run.py visualize` sau `final`.
 8. `final` chỉ chạy MỘT lần (final/TEST_SENTINEL.json). KHÔNG BAO GIỜ dùng --force-test-rerun trừ khi user ra lệnh rõ (recovery).
@@ -44,17 +47,32 @@ KHÔNG hỏi user để duyệt giữa các bước/model. Chỉ DỪNG và hỏ
    Nhiều nhánh model độc lập được chạy song song (`orchestrate`), nhưng candidate trong một model VẪN TUẦN TỰ và champion được HOÃN
    tới `champion-replay` (thứ tự cố định lgbm→xgb→cat→tfm→xgbrf→autots→lstm). Không đổi seed/hyperparameter/batch/metric để chạy nhanh hơn.
    OOM → giảm gpu_slots_per_device hoặc chạy nhánh nặng riêng; TUYỆT ĐỐI không CPU fallback, không đổi batch LoRA nếu không bắt buộc (ghi rõ khi đổi).
+10. SỰ CỐ TÀI NGUYÊN GPU = TÌNH HUỐNG DUY NHẤT ĐƯỢC DỪNG VÀ HỎI USER (quyết định user 2026-09-04d).
+   GPU không có / GPU được giao biến mất / CUDA hỏng / backend không train được trên GPU / phát hiện CPU fallback /
+   định tuyến GPU sai (UUID trùng) / worker CUDA chết / OOM chặn đường GPU → code gọi `checker_log.gpu_stop`:
+   dừng an toàn, giữ artifact đã xong, KHÔNG CPU fallback, KHÔNG tự đổi batch/hyperparameter/seed/methodology,
+   ghi ERROR `ref=USER_DECISION_REQUIRED`, exit code 3. Khi thấy exit 3 hoặc ERROR đó: BÁO CÁO NGUYÊN VĂN CHO USER
+   kèm phương án (sửa/đổi GPU rồi chạy lại đúng bước, chạy 1 GPU với P0_GPU_DEVICES=0, hoặc dừng) và CHỜ user chọn.
+   Không tự chọn, không tự chạy lại bằng CPU, không tự giảm batch. Mọi vi phạm bất biến KHOA HỌC khác (checksum,
+   leakage, biên, S0 malformed, TEST lần hai) vẫn dừng TỰ ĐỘNG, KHÔNG hỏi, không có tuỳ chọn "chạy tiếp".
+11. AGENT theo pha VẬN HÀNH: `checker` trước `orchestrate` và trước `final`; `run-monitor` theo dõi trong lúc chạy
+   (chỉ đọc scheduler_log/orchestrate_log/checker_log + nvidia-smi); `infra` khi GPU/env hỏng; `analyst` SAU khi có
+   artifact thật; `researcher` KHÔNG gọi trong đường chạy này.
 
 =========================== PREFLIGHT (fail-fast) ===========================
-  cd ~/P0_forecasting && git lfs install && tmux new -s p0
+  cd ~/P0_forecasting && git lfs install && git lfs pull && tmux new -s p0
   git log --oneline -1
+  git lfs ls-files | grep BTC_          # phải thấy CẢ data/BTC_1m_2y.csv lẫn data/BTC_5m_2y.csv
+  ls -l data/BTC_1m_2y.csv data/BTC_5m_2y.csv    # ~101,8 MB và ~21,1 MB (nếu ~130 byte = quên `git lfs pull`)
   export P0_GPU_DEVICES=0,1 XLA_PYTHON_CLIENT_PREALLOCATE=false     # 2 GPU đối xứng, 1 task nặng/GPU (KHÔNG đặt P0_FOLD_WORKERS)
   nvidia-smi --query-gpu=index,name,memory.total --format=csv        # phải thấy đúng 2 × RTX 5000 Ada 32 GB
   bash scripts/vast_bootstrap.sh                                    # GPU, pip, timesfm 2.0.2 + autots 1.0.4 + jax[cuda12], build/resolve LightGBM, preflight, unit test
   PYTHONPATH=src:. python scripts/vast_canary.py --config configs/p0_full.json
   PYTHONPATH=src:. python scripts/canary_xreg_gpu.py --config configs/p0_full.json
-  python run.py gpu-probe --config configs/p0_full.json             # worker 0 → GPU vật lý 0, worker 1 → GPU vật lý 1 (CUDA_VISIBLE_DEVICES); cả hai nhận task
-  [ -f data/BTC_5m_2y.csv ] || python run.py derive-lf --config configs/p0_full.json   # LF 5' dẫn xuất tất định (sha phải = 0e5fb9ad…f2fef)
+  python run.py gpu-probe --config configs/p0_full.json             # worker 0 → GPU vật lý 0, worker 1 → GPU vật lý 1; UUID PHẢI KHÁC NHAU;
+                                                                   # probe backend THẬT trong từng worker (torch/xgboost/lightgbm/catboost/jax/timesfm);
+                                                                   # lỗi GPU ở đây = dừng exit 3 → hỏi user (KHÔNG tự sửa bằng CPU)
+  # (tuỳ chọn kiểm chứng) python run.py derive-lf --config configs/p0_full.json --force  → phải tái lập ĐÚNG sha 0e5fb9ad…f2fef
   python run.py check-data --config configs/p0_full.json            # KHÔNG --write-checksums: anchor data/data_checksums_2y.json đã commit → phải in "verify … OK"
   python run.py lock-s0 --config configs/p0_full.json               # S0_m khoá + overlap audit + Candidate_m → experiments/full/s0/ (audit label = dataset 2 năm)
   PYTHONPATH=src:. python -m pytest -q -x
@@ -107,8 +125,9 @@ Sau mỗi model: cập nhật MEMORY (Current Task / Exact Next Step, thời gia
 - KHÔNG chạy lại `final` nếu experiments/full/summary/all_models_test.csv đã tồn tại.
 
 =========================== CHỈ DỪNG VÀ HỎI USER KHI ===========================
-- không có GPU backend khả dụng cho một model bắt buộc; package/API thật lệch adapter mà sửa thì đổi methodology;
-- checksum/data mismatch, LF không dẫn xuất từ đúng HF (LF_DERIVATION_MISMATCH) hoặc không phủ HF, data < 158 ngày; lock-s0 báo overlap bất thường với cột S0;
+- **SỰ CỐ TÀI NGUYÊN GPU (ngoại lệ chính thức, luật 10)**: exit code 3 / ERROR `ref=USER_DECISION_REQUIRED` — báo nguyên văn + phương án, chờ user;
+- package/API thật lệch adapter mà sửa thì đổi methodology;
+- checksum/data mismatch (kể cả khi quên `git lfs pull`), LF không dẫn xuất từ đúng HF (LF_DERIVATION_MISMATCH) hoặc không phủ HF; lock-s0 báo overlap bất thường với cột S0;
 - phát hiện leakage hoặc bug correctness mới; test fail mà sửa thì phải đổi methodology; ERROR trong checker_log không sửa được bằng env/code;
 - OOM/hết dung lượng không xử lý được bằng tinh chỉnh execution an toàn (giảm gpu_slots_per_device / P0_GPU_DEVICES, tail_bars, dọn cache HF).
 

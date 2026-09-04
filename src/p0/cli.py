@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 
 from . import fold_parallel, gpu, scheduler
-from .checker_log import hard_fail
+from .checker_log import gpu_stop, hard_fail
 from .checker_log import record as ck_record
 from .config import HORIZONS, RunConfig
 from .data import check_ohlcv, derive_lf_5min, file_sha256, read_ohlcv_csv, verify_checksums, write_checksums, write_lf_csv
@@ -84,13 +84,15 @@ def gate(cfg: RunConfig, args, model_names: list[str]) -> None:
     if st != "UNLOCKED":
         hard_fail(cfg.exp_dir, "gate", "TRAINING_LOCKED", f"TRAINING_LOCKED (MEMORY.md: {st}) — cần user unlock rõ ràng trước khi chạy training.")
     if cfg.require_gpu and not allow_cpu:
-        for m in model_names:  # GPU không có / backend không phải CUDA → dừng NGAY, không hỏi, không CPU fallback
+        # §10 (2026-09-04d): GPU không có / backend không thực sự CUDA = SỰ CỐ TÀI NGUYÊN → dừng an toàn và HỎI USER.
+        # KHÔNG bao giờ CPU fallback, không tự đổi batch/hyperparameter. (Bất biến khoa học vẫn hard-fail không hỏi.)
+        for m in model_names:
             try:
                 gpu_preflight(m, cfg)
             except SystemExit as e:
-                hard_fail(cfg.exp_dir, "gpu_preflight", "GPU_UNAVAILABLE", str(e), model=m)
+                gpu_stop(cfg.exp_dir, "gpu_preflight", "GPU_UNAVAILABLE", str(e), model=m)
             except Exception as e:  # ImportError / lỗi thư viện khi thử fit GPU
-                hard_fail(cfg.exp_dir, "gpu_preflight", "GPU_UNAVAILABLE", f"{type(e).__name__}: {e}", model=m)
+                gpu_stop(cfg.exp_dir, "gpu_preflight", "GPU_UNAVAILABLE", f"{type(e).__name__}: {e}", model=m)
         if model_names:
             ck_record(cfg.exp_dir, "gpu_preflight", "PASS", "GPU_PREFLIGHT", f"GPU preflight OK: {list(model_names)}")
 
@@ -551,6 +553,12 @@ def _resume_loop_state(cfg: RunConfig, mname: str, base: ColSet, cands: list, ca
     return {"S": S, "S_rmse": S_rmse, "rows": rows, "kept": kept, "dropped": dropped, "start": n_done + 1}, n_done
 
 
+def _system_label(mname: str, tag: str) -> str:
+    """Tên HỆ THỐNG HOÀN CHỈNH được chấm ở một cấu hình feature. Với TimesFM, mọi cấu hình đều là
+    `TimesFM-LoRA + XReg(<feature set>)` trên CÙNG adapter đã freeze — XReg KHÔNG phải model đứng riêng."""
+    return f"TimesFM-LoRA + XReg({tag})" if mname == "tfm" else f"{mname}(S0_{mname} ∪ {tag})"
+
+
 def _adapter_identity(conf) -> list[dict] | None:
     """Danh tính adapter LoRA ĐÃ FREEZE thực sự dùng trong confirmation (TimesFM). Hệ thống A và B phải trùng danh sách này."""
     items: dict[str, dict] = {}
@@ -713,9 +721,19 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     _log_confirm(cfg, mname, "unprune", unp, eps, model)
     if prn is not unp:
         _log_confirm(cfg, mname, "prune", prn, eps, model)
+    # Confirmation so HAI HỆ THỐNG HOÀN CHỈNH cùng loại (KHÔNG phải "XReg vs XReg"): với TimesFM là
+    # {TimesFM-LoRA + XReg(F_raw)} vs {TimesFM-LoRA + XReg(F_pruned)} trên CÙNG adapter LoRA đã freeze.
+    systems = [_system_label(mname, "F_raw"), _system_label(mname, "F_pruned")]
+    if mname == "tfm":
+        a_raw, a_prn = _adapter_identity(unp), _adapter_identity(prn)
+        if a_raw and a_prn and a_raw != a_prn:
+            hard_fail(exp, "confirm", "TFM_ADAPTER_IDENTITY", "confirmation F_raw vs F_pruned phải chạy trên CÙNG adapter LoRA đã freeze "
+                      f"— raw={[a['key'] for a in a_raw]} vs pruned={[a['key'] for a in a_prn]}", model="tfm")
     pd.DataFrame([
-        {"configuration": "unprune", "n_ext": len(lr.final.ext), "n_new": len(lr.final.new_ext), "rmse_mean": json.dumps(np.round(unp.rmse_mean, 4).tolist())},
-        {"configuration": "prune", "n_ext": len(pruned.ext), "n_new": len(pruned.new_ext), "rmse_mean": json.dumps(np.round(prn.rmse_mean, 4).tolist()),
+        {"configuration": "unprune", "system": systems[0], "n_ext": len(lr.final.ext), "n_new": len(lr.final.new_ext),
+         "rmse_mean": json.dumps(np.round(unp.rmse_mean, 4).tolist())},
+        {"configuration": "prune", "system": systems[1], "n_ext": len(pruned.ext), "n_new": len(pruned.new_ext),
+         "rmse_mean": json.dumps(np.round(prn.rmse_mean, 4).tolist()),
          "MedianGain_prune_vs_unprune": s["MedianGain"], "WinRate": s["WinRate"], "P10Gain": s["P10Gain"], "WorstGain": s["WorstGain"],
          "eps": eps, "win": which},
     ]).to_csv(exp / f"prune_{mname}.csv", index=False)
@@ -723,11 +741,15 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         f"→ {len(win.colset.new_ext)} cột mới")
     # F_win = bộ ĐÃ THẮNG confirmation raw-vs-pruned ở TRÊN. Mọi bước sau (kể cả so với baseline TimesFM-LoRA) dùng ĐÚNG bộ này.
     confirmation_meta = {"stage": "confirmation F_raw vs F_pruned (3 eval seed, ES bật)", "which": which,
+                         "compared_systems": systems,  # HAI HỆ THỐNG HOÀN CHỈNH, không phải hai XReg đứng một mình
+                         "same_frozen_lora_adapter": (mname == "tfm") or None,
                          "MedianGain_pruned_vs_raw": round(float(s["MedianGain"]), 6), "eps": eps,
                          "n_new_raw": len(lr.final.new_ext), "n_new_pruned": len(pruned.new_ext), "n_new_win": len(win.colset.new_ext)}
     win_name = TFM_XREG_WIN if mname == "tfm" else mname
     meta = ({"role": "hệ thống B = TimesFM-LoRA (adapter freeze) + XReg(F_win)", "configuration": TFM_XREG_WIN, "system": "B",
              "feature_set": "F_win", "feature_set_source": confirmation_meta,
+             "scored_system_per_candidate": "TimesFM-LoRA + XReg(S_hiện tại ∪ candidate) — mọi cấu hình feature đều được chấm "
+                                            "dưới dạng HỆ THỐNG HOÀN CHỈNH trên cùng adapter LoRA đã freeze",
              **model.artifact_meta(win.colset.ext, native=not win.colset.ext)} if mname == "tfm"
             else {"confirmation": confirmation_meta})
     payload = _save_win(exp, win_name, win, eps, which, folds, meta)
@@ -1095,7 +1117,6 @@ def cmd_tfm_final(cfg: RunConfig, args) -> None:
                "compare_systems": {"A": base_name, "B": TFM_XREG_WIN, "MedianGain_B_vs_A": sc["MedianGain"], "WinRate": sc["WinRate"],
                                    "P10Gain": sc["P10Gain"], "WorstGain": sc["WorstGain"], "eps": eps, "decision": best_cfg},
                "champion_extra": {"win": f"tfm_final={best_cfg}", "system": best_sys}}
-    payload["compare_xreg_vs_native"] = payload["compare_systems"]  # tên cũ (tương thích công cụ đọc artifact 2026-09-04)
     _write_json(exp / "wins" / "tfm.json", payload)
     for k in range(len(w.get("eval_seeds", cfg.eval_seeds))):
         src = exp / "wins" / f"{best_cfg}_seed{k}.npz"
@@ -1169,40 +1190,111 @@ def cmd_champion_replay(cfg: RunConfig, args) -> None:
 
 
 def cmd_gpu_probe(cfg: RunConfig, args) -> None:
-    """Kiểm tra scheduler + định tuyến GPU THẬT trước khi chạy (không training, không đọc data).
+    """Preflight thiết bị (§11) — KHÔNG training, KHÔNG đọc data, KHÔNG tải checkpoint.
 
-    Mỗi worker báo GPU vật lý mình được giao (CUDA_VISIBLE_DEVICES → torch device name/uuid); chạy vài task giả
-    có thời lượng khác nhau để chứng minh cả hai GPU đều nhận việc và không GPU nào bị bỏ trống."""
+    Mỗi worker (đã mask `CUDA_VISIBLE_DEVICES`) tự báo: GPU vật lý được giao, tên + UUID device, rồi chạy một phép
+    tính GPU nhỏ THẬT cho từng backend (torch, XGBoost + kiểm booster device, LightGBM theo `device_type` đã resolve,
+    CatBoost, jax, import timesfm). AutoTS dùng lại LightGBM/XGBoost nên thừa hưởng kết quả đó.
+
+    Hai điều kiện DỪNG-VÀ-HỎI-USER (§10, sự cố tài nguyên GPU):
+      (1) hai worker báo CÙNG một UUID → định tuyến GPU sai (mask không có tác dụng);
+      (2) một backend ĐÃ CÀI nhưng không chạy được trên GPU được giao.
+    Backend chưa cài = WARN môi trường (bootstrap lo), không phải sự cố GPU.
+    Kết quả lưu `experiments/<run>/gpu_probe.json`.
+    """
     from .scheduler import GpuScheduler, Task
 
     devices, slots, n = gpu.worker_slots(cfg)
-    say(f"gpu-probe: devices={devices} slots/device={slots} → {n} worker đối xứng (không có affinity theo model family)")
-    sch = GpuScheduler(cfg, allow_cpu=bool(getattr(args, "allow_cpu", False)), exp_dir=cfg.exp_dir, light=True).start()
+    allow_cpu = bool(getattr(args, "allow_cpu", False))
+    want = tuple(b.strip() for b in str(args.backends).split(",") if b.strip()) if getattr(args, "backends", None) else gpu.BACKENDS
+    lgbm_dev = str(_params_for(cfg, "lgbm").get("device_type", "cuda"))
+    say(f"gpu-probe: devices={devices} slots/device={slots} → {n} worker đối xứng (không affinity theo model family); "
+        f"backend kiểm: {list(want)} (LightGBM device_type={lgbm_dev})")
+    sch = GpuScheduler(cfg, allow_cpu=allow_cpu, exp_dir=cfg.exp_dir, light=True).start()
+    payload = {"checked_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "devices": devices, "slots_per_device": slots,
+               "n_workers": n, "lgbm_device_type": lgbm_dev, "workers": {}, "tasks": []}
     try:
-        reports = sch.reports()
-        for wid, rep in sorted(reports.items()):
+        # 1) mỗi worker báo danh tính GPU + probe backend NGAY TRONG process đã mask (một task / worker)
+        by_worker: dict[int, dict] = {}
+        for _attempt in range(3):  # phải phủ ĐỦ mọi worker/GPU: gửi thêm lượt nếu có worker chưa được probe
+            probes = sch.submit([Task(kind="backend_probe", stage="gpu_probe",
+                                      payload={"backends": list(want), "lgbm_device_type": lgbm_dev})
+                                 for _ in range(n - len(by_worker))])
+            for res in probes:
+                by_worker[int(res["report"].get("worker_id", -1))] = res
+            if len(by_worker) >= n:
+                break
+        probed_gpus = {int(r["report"].get("gpu_physical_id", -1)) for r in by_worker.values()}
+        if len(by_worker) < n or probed_gpus != set(devices):
+            _write_json(cfg.exp_dir / "gpu_probe.json", {**payload, "verdict": "GPU_PROBE_COVERAGE"})
+            gpu_stop(cfg.exp_dir, "gpu-probe", "GPU_PROBE_COVERAGE",
+                     f"chỉ probe được {len(by_worker)}/{n} worker (GPU {sorted(probed_gpus)} / cấu hình {devices}) — "
+                     "không chứng minh được TỪNG GPU vật lý dùng được",
+                     detail=f"worker đã probe: {sorted(by_worker)}",
+                     options=["chạy lại `gpu-probe` (worker có thể chưa sẵn sàng)",
+                              "kiểm `nvidia-smi -L` xem đủ GPU chưa; chạy 1 GPU: export P0_GPU_DEVICES=0",
+                              "dừng và báo lại"])
+        for wid in sorted(by_worker):
+            res = by_worker[wid]
+            rep, backs = res["report"], res["backends"]
             say(f"  worker {wid} → GPU vật lý {rep.get('gpu_physical_id')} | CUDA_VISIBLE_DEVICES={rep.get('cuda_visible_devices')} | "
                 f"{rep.get('device_name')} | uuid={rep.get('device_uuid') or '?'} | torch device_count={rep.get('torch_device_count')}")
-        uuids = [str(r.get("device_uuid") or "") for r in reports.values() if r.get("device_uuid")]
-        if len(devices) > 1 and uuids:  # bằng chứng THẬT là uuid khác nhau, không chỉ CUDA_VISIBLE_DEVICES khác nhau
-            if len(set(uuids)) < len(uuids):
-                hard_fail(cfg.exp_dir, "gpu-probe", "GPU_UUID_COLLISION",
-                          f"nhiều worker báo CÙNG một GPU (uuid {uuids}) — backend không tôn trọng CUDA_VISIBLE_DEVICES; "
-                          "không được training trên cấu hình này (chạy 1 GPU: P0_GPU_DEVICES=0).")
-            ck_record(cfg.exp_dir, "gpu-probe", "PASS", "GPU_UUID_DISTINCT", f"{len(set(uuids))} GPU vật lý phân biệt theo uuid: {sorted(set(uuids))}")
-        elif len(devices) > 1:
-            ck_record(cfg.exp_dir, "gpu-probe", "WARN", "GPU_UUID_UNKNOWN",
-                      "không đọc được device uuid (torch thiếu hoặc không có CUDA trong worker) — không xác nhận được hai worker "
-                      "nằm trên hai GPU vật lý khác nhau; kiểm bằng nvidia-smi lúc chạy thật.")
+            for b in want:
+                r = backs.get(b, {"status": "missing", "detail": "không probe"})
+                say(f"      {b:<10} {r['status']:<8} {r['detail'][:110]}")
+            payload["workers"][str(wid)] = {"report": rep, "backends": backs}
+        # 2) UUID phải PHÂN BIỆT giữa các worker → bằng chứng thật là hai GPU vật lý khác nhau
+        uu = {wid: str(r["report"].get("device_uuid") or "") for wid, r in by_worker.items()}
+        known = {w: u for w, u in uu.items() if u}
+        payload["uuids"] = uu
+        if len(devices) > 1:
+            if len(known) < len(by_worker):
+                ck_record(cfg.exp_dir, "gpu-probe", "WARN", "GPU_UUID_UNKNOWN",
+                          f"không đọc được UUID của worker {sorted(set(uu) - set(known))} (torch/CUDA thiếu trong worker) — "
+                          "chưa chứng minh được các worker nằm trên GPU vật lý khác nhau; kiểm bằng nvidia-smi khi chạy thật.")
+            elif len(set(known.values())) < len(known):
+                _write_json(cfg.exp_dir / "gpu_probe.json", {**payload, "verdict": "GPU_UUID_COLLISION"})
+                gpu_stop(cfg.exp_dir, "gpu-probe", "GPU_UUID_COLLISION",
+                         f"{len(known)} worker nhưng chỉ {len(set(known.values()))} GPU vật lý phân biệt — định tuyến GPU SAI "
+                         "(CUDA_VISIBLE_DEVICES không có tác dụng với backend này)",
+                         detail=f"uuid theo worker: {known}",
+                         options=["kiểm driver/`nvidia-smi -L` rồi chạy lại gpu-probe",
+                                  "chạy MỘT GPU: export P0_GPU_DEVICES=0 (khoa học không đổi, chậm hơn)",
+                                  "dừng và báo lại"])
+            else:
+                ck_record(cfg.exp_dir, "gpu-probe", "PASS", "GPU_UUID_DISTINCT",
+                          f"{len(set(known.values()))} GPU vật lý phân biệt theo UUID: {known}")
+        # 3) backend ĐÃ CÀI mà không chạy được GPU = sự cố tài nguyên → hỏi user; chưa cài = WARN môi trường
+        failed = {f"worker{w}/{b}": r["backends"][b]["detail"] for w, r in by_worker.items()
+                  for b in want if r["backends"].get(b, {}).get("status") == "fail"}
+        missing = sorted({b for r in by_worker.values() for b in want if r["backends"].get(b, {}).get("status") == "missing"})
+        payload["failed"], payload["missing"] = failed, missing
+        if missing:
+            ck_record(cfg.exp_dir, "gpu-probe", "WARN", "BACKEND_MISSING",
+                      f"backend chưa cài trong worker: {missing} — vấn đề môi trường/bootstrap, không phải sự cố GPU "
+                      "(trên máy thí nghiệm phải cài đủ trước khi training).")
+        if failed:
+            _write_json(cfg.exp_dir / "gpu_probe.json", {**payload, "verdict": "BACKEND_GPU_FAILED"})
+            gpu_stop(cfg.exp_dir, "gpu-probe", "BACKEND_GPU_FAILED",
+                     f"{len(failed)} backend đã cài nhưng KHÔNG dùng được GPU được giao: {sorted(failed)}",
+                     detail="; ".join(f"{k}: {v[:120]}" for k, v in sorted(failed.items())),
+                     options=["sửa driver/thư viện (xem `scripts/vast_bootstrap.sh`, agent `infra`) rồi chạy lại gpu-probe",
+                              "chạy MỘT GPU nếu chỉ một GPU hỏng: export P0_GPU_DEVICES=<id còn tốt>",
+                              "dừng và báo lại"])
+        # 4) cả hai GPU phải NHẬN VIỆC (task dài ngắn khác nhau) — chứng minh scheduler dùng đủ thiết bị
         ms = [400, 150, 150, 400, 150, 150]
         t0 = time.time()
         out = sch.submit([Task(kind="probe", stage="gpu_probe", payload={"sleep_ms": m, "tag": f"p{i}"}) for i, m in enumerate(ms)])
         used = sorted({int(r["gpu_physical_id"]) for r in out})
+        payload["tasks"] = [{"gpu_physical_id": r["gpu_physical_id"], "tag": r.get("tag")} for r in out]
         say(f"  {len(ms)} task giả ({sum(ms)} ms tuần tự) xong sau {time.time() - t0:.2f}s trên GPU {used}")
         if len(devices) > 1 and len(used) < len(devices):
             ck_record(cfg.exp_dir, "gpu-probe", "WARN", "GPU_IDLE", f"chỉ GPU {used} nhận task trong probe (cấu hình {devices})")
         else:
-            ck_record(cfg.exp_dir, "gpu-probe", "PASS", "GPU_SYMMETRIC", f"{n} worker, GPU {used} đều nhận task; định tuyến qua CUDA_VISIBLE_DEVICES")
+            ck_record(cfg.exp_dir, "gpu-probe", "PASS", "GPU_SYMMETRIC",
+                      f"{n} worker, GPU {used} đều nhận task; định tuyến qua CUDA_VISIBLE_DEVICES; backend probe trong worker: OK")
+        _write_json(cfg.exp_dir / "gpu_probe.json", {**payload, "verdict": "OK"})
+        say(f"gpu-probe OK → {cfg.exp_dir / 'gpu_probe.json'}")
     finally:
         sch.shutdown()
 
@@ -1455,7 +1547,8 @@ def main(argv=None) -> None:
     s.add_argument("--max-branches", type=int, default=None, help="số branch chạy đồng thời (mặc định = số worker GPU)")
     s.add_argument("--skip-ensemble", action="store_true"); s.add_argument("--allow-partial", action="store_true")
     s.add_argument("--force-replay", action="store_true"); s.add_argument("--dry-run", action="store_true", help="chỉ in DAG rồi thoát")
-    sub.add_parser("gpu-probe", parents=[common(False)])
+    s = sub.add_parser("gpu-probe", parents=[common(False)])
+    s.add_argument("--backends", default=None, help="giới hạn backend kiểm (mặc định: torch,xgboost,lightgbm,catboost,jax,timesfm)")
     sub.add_parser("ensemble", parents=[common(False)])
     s = sub.add_parser("final", parents=[common(False)]); s.add_argument("--latency-origins", type=int, default=None)
     s.add_argument("--force-test-rerun", action="store_true",
@@ -1469,10 +1562,18 @@ def main(argv=None) -> None:
     cfg = RunConfig.load(args.config)
     from .orchestrate import cmd_orchestrate
 
-    {"check-data": cmd_check_data, "derive-lf": cmd_derive_lf, "lock-s0": cmd_lock_s0, "calibrate": cmd_calibrate, "filter-b0": cmd_filter_b0,
-     "loop": cmd_loop, "tfm-final": cmd_tfm_final, "autots-search": cmd_autots_search, "champion-replay": cmd_champion_replay,
-     "orchestrate": cmd_orchestrate, "gpu-probe": cmd_gpu_probe, "ensemble": cmd_ensemble,
-     "final": cmd_final, "visualize": cmd_visualize}[args.cmd](cfg, args)
+    cmds = {"check-data": cmd_check_data, "derive-lf": cmd_derive_lf, "lock-s0": cmd_lock_s0, "calibrate": cmd_calibrate,
+            "filter-b0": cmd_filter_b0, "loop": cmd_loop, "tfm-final": cmd_tfm_final, "autots-search": cmd_autots_search,
+            "champion-replay": cmd_champion_replay, "orchestrate": cmd_orchestrate, "gpu-probe": cmd_gpu_probe,
+            "ensemble": cmd_ensemble, "final": cmd_final, "visualize": cmd_visualize}
+    try:
+        cmds[args.cmd](cfg, args)
+    except gpu.GpuResourceError as e:
+        # §10 (2026-09-04d): NGOẠI LỆ DUY NHẤT được hỏi user — sự cố TÀI NGUYÊN GPU. Dừng an toàn, giữ artifact đã xong,
+        # KHÔNG CPU fallback, KHÔNG đổi batch/hyperparameter/methodology. Mọi vi phạm khoa học khác vẫn hard-fail im lặng.
+        fold_parallel.shutdown()
+        gpu_stop(cfg.exp_dir, args.cmd, "GPU_RESOURCE_FAILURE", str(e),
+                 detail=f"model/branch: {getattr(args, 'model', '') or getattr(args, 'models', '') or '-'}")
 
 
 if __name__ == "__main__":

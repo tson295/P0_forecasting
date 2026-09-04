@@ -1,13 +1,14 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: **DATA 2 NĂM + SPLIT ROLLING_SPREAD + S0/Candidate_m TRÊN DATA THẬT + SCHEDULER 2 GPU ĐỐI XỨNG / ORCHESTRATE / CHAMPION REPLAY —
-chờ preflight Vast + user unlock**, 2026-09-04c
+PHASE: **PHA VẬN HÀNH — data 2 năm ĐÃ TRONG REPO (Git LFS), scheduler 2 GPU đối xứng + orchestrate + champion replay,
+agent chuyển sang checker/run-monitor/infra (analyst hậu-run, researcher dormant) — chờ preflight Vast + user unlock**, 2026-09-04d
 TRAINING: LOCKED
 
 ## Current Task
 
 Vòng **expanded-data** trên **data 2 năm thật** (quyết định user 2026-09-04b): `data/BTC_1m_2y.csv` (1.051.201 bar 60 s, 2024-09-03 16:29 →
 2026-09-03 16:29 UTC, sha256 `559ce040…f097`) + LF 5' dẫn xuất tất định `data/BTC_5m_2y.csv` (210.239 bar, sha256 `0e5fb9ad…f2fef`).
+**Từ 2026-09-04d cả hai file NẰM TRONG REPO qua Git LFS** → `git clone` + `git lfs pull` là đủ để `check-data`, không scp, không cần `derive-lf`.
 Split `rolling_spread`: 5 VAL 3 ngày rải đều 2025-01-07 → 2026-08-01, FIT 120 ngày rolling + ES 5 ngày, TEST 30 ngày cuối (08-04 16:30 → 09-03 16:30).
 `lock-s0` đã chạy trên data thật: Candidate_m = 163 cho mọi model (0 overlap với S0_m). **Chưa chạy training nào, chưa chạm TEST.**
 Pass 2026-09-04c là **THỰC THI/SCHEDULING** cho máy **2 × RTX 5000 Ada 32 GB**: scheduler GPU đối xứng (`src/p0/gpu.py` + `scheduler.py`,
@@ -18,14 +19,16 @@ confirmation, seed, ε, hyperparameter, split, TEST, metric, luật champion/ens
 
 ## Exact Next Step
 
-1. Trên Vast: clone (git lfs install), scp `data/BTC_1m_2y.csv` (hoặc scp cả `data/BTC_5m_2y.csv` + `.derivation.json` — nếu không thì
-   `python run.py derive-lf --config configs/p0_full.json` dẫn xuất lại, phải ra đúng sha `0e5fb9ad…`), rồi:
+1. Trên Vast: `git clone` → `git lfs install && git lfs pull` (đã có CẢ hai CSV; `git lfs ls-files | grep BTC_` phải thấy đủ,
+   file ~101,8 MB + ~21,1 MB — nếu ~130 byte là quên `lfs pull`), rồi:
    `bash scripts/vast_bootstrap.sh` → `scripts/vast_canary.py` + `scripts/canary_xreg_gpu.py` →
    `python run.py check-data --config configs/p0_full.json` (verify anchor `data/data_checksums_2y.json`, in 5 fold + final như dưới) →
    `python run.py lock-s0 --config configs/p0_full.json` (phải ra 163/model, 0 overlap; audit label = `btc_1min_2y_2024-09-03_2026-09-03`) →
    `pytest -q -x` → `python scripts/checker_record.py --exp experiments/full --blocking` sạch ERROR → agent `checker` (không tương tác).
    Trên máy 2 GPU: `export P0_GPU_DEVICES=0,1 XLA_PYTHON_CLIENT_PREALLOCATE=false` (KHÔNG đặt `P0_FOLD_WORKERS`), rồi
-   `python run.py gpu-probe --config configs/p0_full.json` — worker 0 → GPU vật lý 0, worker 1 → GPU vật lý 1, cả hai nhận task.
+   `python run.py gpu-probe --config configs/p0_full.json` — worker 0 → GPU vật lý 0, worker 1 → GPU vật lý 1, **UUID phải khác nhau**,
+   mọi backend đã cài phải chạy được GPU trong worker (kết quả → `experiments/full/gpu_probe.json`). Lỗi GPU ở bất kỳ đâu = exit 3 +
+   ERROR `ref=USER_DECISION_REQUIRED` → **hỏi user**, không CPU fallback.
 2. **User unlock rõ ràng** → `scripts/canary_lora.py` (1 fold × 1 epoch × 64 origin, đo thời gian/VRAM; FIT 172.7k cửa sổ/fold) →
    `python run.py orchestrate --config configs/p0_full.json` (DAG nhánh song song → champion-replay → ensemble; KHÔNG chạm TEST)
    hoặc từng bước như `docs/VAST_SESSION_PROMPT.md` → `python run.py final` (TEST một lần) → `visualize`.
@@ -45,6 +48,21 @@ Lý do rải đều (EDA user): năm 1 +94 %, năm 2 −27,9 %, max drawdown −
 → giá trị của 2 năm là ĐA DẠNG REGIME, 5 ô VAL phải lấy mẫu regime khác nhau. FIT 120 ngày (≈ 172,8k bar) thay 40 ngày; KHÔNG expanding.
 
 ## Decisions (mới nhất trước)
+
+- 2026-09-04d (user, pass VẬN HÀNH — không đổi khoa học): (a) **hai CSV canonical vào REPO qua Git LFS**
+  (`.gitignore`: `data/*.csv` + `!data/BTC_1m_2y.csv` + `!data/BTC_5m_2y.csv`; `.gitattributes` LFS ĐÚNG hai file đó) → quy trình
+  chuẩn `git clone` → `git lfs pull` → `check-data`; `derive-lf` ở lại làm công cụ tái lập/kiểm chứng. (b) Audit
+  `git check-ignore`: KHÔNG artifact nào dưới `experiments/**` bị ignore (có test). (c) **TimesFM khoá cách gọi**: mọi cấu hình
+  feature được chấm dưới dạng HỆ THỐNG HOÀN CHỈNH `TimesFM-LoRA + XReg(F)`; confirmation = {LoRA+XReg(F_raw)} vs
+  {LoRA+XReg(F_pruned)} trên CÙNG adapter (code assert danh tính adapter) → F_win; rồi A (LoRA feature-free) vs B (LoRA+XReg(F_win))
+  → TFM-final; cấm gọi "XReg vs XReg"/"XReg vs LoRA" (có test quét code + doc). (d) **TFM-final và AutoTS-final LƯU rồi CHỜ**
+  champion replay (defer_champion). (e) `max_branches: 4` nhưng `gpu_slots_per_device: 1` → vẫn tối đa 2 task nặng.
+  (f) **Sự cố TÀI NGUYÊN GPU = ngoại lệ tương tác DUY NHẤT**: `checker_log.gpu_stop` (ERROR `ref=USER_DECISION_REQUIRED`, exit 3,
+  giữ artifact, không CPU fallback, không đổi tham số) — dùng cho GPU preflight, worker chết/không khởi động, task lỗi mang dấu hiệu
+  GPU/OOM, `gpu-probe` UUID trùng hoặc backend đã cài mà không chạy được GPU; vi phạm bất biến khoa học vẫn `hard_fail` im lặng.
+  (g) `gpu-probe` mạnh hơn: UUID phân biệt + `backend_probe` (torch/xgboost + booster device/lightgbm/catboost/jax/timesfm) chạy
+  TRONG worker đã mask, lưu `experiments/<run>/gpu_probe.json`. (h) **Agent pha vận hành**: thêm `run-monitor` (chỉ đọc),
+  `checker` chỉ hai điểm (trước orchestrate, trước final), `analyst` hậu-run, `researcher` dormant, `infra` on-demand.
 
 - 2026-09-04c (user, pass THỰC THI — không đổi khoa học): (a) **TimesFM ngữ nghĩa**: candidate XReg → F_raw → prune PI → F_pruned →
   **confirmation raw vs pruned → F_win** → RỒI MỚI so **hai hệ thống hoàn chỉnh** A = `wins/tfm_lora_baseline.json` (LoRA đã fine-tune,
@@ -106,7 +124,7 @@ Lý do rải đều (EDA user): năm 1 +94 %, năm 2 −27,9 %, max drawdown −
 - `experiments/full/`: `s0/` (data thật), `checker_log.jsonl`; chưa có wins/lora/runs/final/scheduler_log (sinh khi chạy thật).
 - Scheduler CHƯA chạy trên 2 GPU thật: mọi kiểm tra 2 worker mới ở mức test (CPU, data tổng hợp) + `gpu-probe` local 1 GPU (RTX 3050 Ti). Phải chạy `gpu-probe` trên máy 2 × RTX 5000 Ada trước khi training.
 - Snapshot 15 ngày vẫn ở `data/BTC_hf_1min.csv` + `data/BTC_lf_5min.csv` (config `configs/p0_15d.json`, anchor `data/data_checksums.json`) — lịch sử.
-- Local: timesfm/autots/jax/peft KHÔNG cài; test TimesFM-LoRA dùng stub + canary local trên sdist random-init. torch 2.11+cu128, RTX 3050 Ti.
+- Local: timesfm/autots/jax/peft KHÔNG cài; wheel LightGBM local KHÔNG build CUDA → `gpu-probe` đầy đủ trên laptop sẽ dừng ở `BACKEND_GPU_FAILED` (đúng luật §10); dùng `--backends torch,xgboost` khi chỉ muốn kiểm cơ chế. torch 2.11+cu128, RTX 3050 Ti.
 - Windows: `PYTHONPATH` tách bằng `;`; console cp1252 → `PYTHONUTF8=1` cho script ad-hoc.
 
 ## Pitfalls
@@ -122,7 +140,7 @@ Lý do rải đều (EDA user): năm 1 +94 %, năm 2 −27,9 %, max drawdown −
 
 ## Important Files
 
-- Repo GitHub (private): https://github.com/tson295/P0_forecasting — branch `main`; raw CSV không push; experiments/** tracked (LFS nhị phân).
+- Repo GitHub (private): https://github.com/tson295/P0_forecasting — branch `main`; **data 2 năm (1m + 5m) ĐÃ push qua Git LFS**; experiments/** tracked (LFS nhị phân); CSV data khác vẫn không push.
 - `configs/p0_full.json` (data 2 năm, `rolling_spread`, `experiments/full`, `prev_run_dir: experiments/15d`) · `configs/p0_15d.json` (lịch sử).
 - `data/data_checksums_2y.json` (anchor), `data/BTC_5m_2y.derivation.json` (sidecar LF), `data/data_checksums.json` (15 ngày).
 - `src/p0/`: `data.py` (`read_ohlcv_csv` alias ts, `derive_lf_5min`, `write_lf_csv`), `split.py` (`RollingSpec`, `make_rolling_spread`),
@@ -131,7 +149,8 @@ Lý do rải đều (EDA user): năm 1 +94 %, năm 2 −27,9 %, max drawdown −
   **`scheduler.py`** (worker/queue/dispatch + `scheduler_log.jsonl`), `fold_parallel.py` (adapter), **`orchestrate.py`** (DAG nhánh + replay),
   `lora.py`, `models_tfm.py`, `visualize.py`.
 - `scripts/`: `checker_record.py`, `canary_lora.py`, `vast_canary.py`, `canary_xreg_gpu.py`, `vast_bootstrap.sh`.
-- `docs/RESEARCH_PLAN.md` rev 10.2 · `docs/reference/audit_timesfm_lora.md`, `audit_timesfm.md`, `audit_autots.md`. `experiments/15d/` — vòng 15 ngày.
+- `.claude/agents/`: `checker.md`, `run-monitor.md` (mới 2026-09-04d), `infra.md`, `analyst.md` (hậu-run), `researcher.md` (dormant).
+- `docs/RESEARCH_PLAN.md` rev 10.4 · `docs/reference/audit_timesfm_lora.md`, `audit_timesfm.md`, `audit_autots.md`. `experiments/15d/` — vòng 15 ngày.
 
 ## Open Questions
 

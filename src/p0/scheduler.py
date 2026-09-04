@@ -165,6 +165,10 @@ def execute(kind: str, p: dict, W: dict):
     if kind == "probe":  # chỉ dùng cho `gpu-probe` và test scheduler — không phải training
         time.sleep(float(p.get("sleep_ms", 0)) / 1000.0)
         return {**gpu.device_report(require_gpu=False), "tag": p.get("tag")}
+    if kind == "backend_probe":  # §11: phép tính GPU nhỏ THẬT cho từng backend, NGAY TRONG worker đã mask
+        rep = gpu.device_report(require_gpu=False)
+        res = gpu.backend_probe(tuple(p.get("backends") or gpu.BACKENDS), str(p.get("lgbm_device_type", "cuda")))
+        return {"report": rep, "backends": res}
     if kind == "run_fold":
         from .harness import run_config
 
@@ -297,7 +301,8 @@ class GpuScheduler:
             if self._dead:
                 bad = "; ".join(f"worker {w}: {e}" for w, e in self._dead.items())
                 self.shutdown()
-                raise RuntimeError(f"scheduler: worker GPU không khởi động được (không có CPU fallback) — {bad}")
+                # §10: sự cố TÀI NGUYÊN GPU → dừng an toàn và HỎI USER (CLI biến thành `checker_log.gpu_stop`)
+                raise gpu.GpuResourceError(f"worker GPU không khởi động được (không có CPU fallback) — {bad}")
 
     def shutdown(self) -> None:
         with self._cv:
@@ -340,7 +345,10 @@ class GpuScheduler:
         g.done.wait()
         errs = [e for e in g.errors if e]
         if errs:
-            raise RuntimeError(f"scheduler: {len(errs)} task lỗi trên GPU (không có CPU fallback):\n" + "\n".join(errs[:3]))
+            msg = f"{len(errs)} task lỗi trên GPU (không có CPU fallback):\n" + "\n".join(errs[:3])
+            if any(gpu.is_gpu_failure(e) for e in errs):  # §10: lỗi TÀI NGUYÊN GPU → dừng an toàn + hỏi user
+                raise gpu.GpuResourceError(msg)
+            raise RuntimeError("scheduler: " + msg)  # lỗi khác (bug/khoa học) → dừng tự động như cũ
         return g.results
 
     # ---------------------------------------------------------------- vòng điều phối
@@ -417,7 +425,8 @@ class GpuScheduler:
             for wid, p in list(self._procs.items()):
                 if p.is_alive() or wid in self._dead:
                     continue
-                self._dead[wid] = f"worker process chết (exitcode={p.exitcode}) — nghi hết VRAM/OOM; giảm gpu_slots_per_device, KHÔNG có CPU fallback"
+                self._dead[wid] = (f"worker process trên GPU vật lý {gpu.device_for_worker(wid, self.devices)} chết "
+                                   f"(exitcode={p.exitcode}) — nghi hết VRAM/OOM hoặc driver; KHÔNG có CPU fallback")
                 if wid in self._idle:
                     self._idle.remove(wid)
                 tid = self._busy.pop(wid, None)
