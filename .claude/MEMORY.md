@@ -1,6 +1,7 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: **DATA 2 NĂM ĐÃ WIRE + SPLIT ROLLING_SPREAD + S0/Candidate_m TRÊN DATA THẬT — chờ preflight Vast + user unlock**, 2026-09-04
+PHASE: **DATA 2 NĂM + SPLIT ROLLING_SPREAD + S0/Candidate_m TRÊN DATA THẬT + SCHEDULER 2 GPU ĐỐI XỨNG / ORCHESTRATE / CHAMPION REPLAY —
+chờ preflight Vast + user unlock**, 2026-09-04c
 TRAINING: LOCKED
 
 ## Current Task
@@ -9,7 +10,11 @@ Vòng **expanded-data** trên **data 2 năm thật** (quyết định user 2026-
 2026-09-03 16:29 UTC, sha256 `559ce040…f097`) + LF 5' dẫn xuất tất định `data/BTC_5m_2y.csv` (210.239 bar, sha256 `0e5fb9ad…f2fef`).
 Split `rolling_spread`: 5 VAL 3 ngày rải đều 2025-01-07 → 2026-08-01, FIT 120 ngày rolling + ES 5 ngày, TEST 30 ngày cuối (08-04 16:30 → 09-03 16:30).
 `lock-s0` đã chạy trên data thật: Candidate_m = 163 cho mọi model (0 overlap với S0_m). **Chưa chạy training nào, chưa chạm TEST.**
-Methodology không đổi so với commit hiệu chỉnh `afca1c8` (S0 khoá toàn bộ, C_short 163, TimesFM-LoRA native → XReg, AutoTS WR/MR, checker không tương tác…).
+Pass 2026-09-04c là **THỰC THI/SCHEDULING** cho máy **2 × RTX 5000 Ada 32 GB**: scheduler GPU đối xứng (`src/p0/gpu.py` + `scheduler.py`,
+`fold_parallel.py` thành adapter), `orchestrate` chạy DAG nhánh model song song, champion HOÃN → `champion-replay` thứ tự cố định,
+TimesFM đổi tên hai HỆ THỐNG HOÀN CHỈNH (A = `tfm_lora_baseline` feature-free vs B = `tfm_lora_xreg` = LoRA + XReg(F_win)).
+**Methodology không đổi một dòng** so với `afca1c8`/`83b004e`: target, feature, S0/Candidate_m, thứ tự candidate, KEEP/DROP, PI,
+confirmation, seed, ε, hyperparameter, split, TEST, metric, luật champion/ensemble. `config_hash` của `p0_full.json` vẫn `7169b3d4ea38`.
 
 ## Exact Next Step
 
@@ -19,8 +24,11 @@ Methodology không đổi so với commit hiệu chỉnh `afca1c8` (S0 khoá to�
    `python run.py check-data --config configs/p0_full.json` (verify anchor `data/data_checksums_2y.json`, in 5 fold + final như dưới) →
    `python run.py lock-s0 --config configs/p0_full.json` (phải ra 163/model, 0 overlap; audit label = `btc_1min_2y_2024-09-03_2026-09-03`) →
    `pytest -q -x` → `python scripts/checker_record.py --exp experiments/full --blocking` sạch ERROR → agent `checker` (không tương tác).
+   Trên máy 2 GPU: `export P0_GPU_DEVICES=0,1 XLA_PYTHON_CLIENT_PREALLOCATE=false` (KHÔNG đặt `P0_FOLD_WORKERS`), rồi
+   `python run.py gpu-probe --config configs/p0_full.json` — worker 0 → GPU vật lý 0, worker 1 → GPU vật lý 1, cả hai nhận task.
 2. **User unlock rõ ràng** → `scripts/canary_lora.py` (1 fold × 1 epoch × 64 origin, đo thời gian/VRAM; FIT 172.7k cửa sổ/fold) →
-   `docs/VAST_SESSION_PROMPT.md` (loop lgbm → xgb → cat → tfm → tfm-final → xgbrf → autots_wr → autots_mr → autots-search → lstm → ensemble → final → visualize).
+   `python run.py orchestrate --config configs/p0_full.json` (DAG nhánh song song → champion-replay → ensemble; KHÔNG chạm TEST)
+   hoặc từng bước như `docs/VAST_SESSION_PROMPT.md` → `python run.py final` (TEST một lần) → `visualize`.
 
 ## Split đã resolve trên data thật (check-data 2026-09-04; origin = eligible B0, first 2024-09-04 03:00 UTC)
 
@@ -37,6 +45,22 @@ Lý do rải đều (EDA user): năm 1 +94 %, năm 2 −27,9 %, max drawdown −
 → giá trị của 2 năm là ĐA DẠNG REGIME, 5 ô VAL phải lấy mẫu regime khác nhau. FIT 120 ngày (≈ 172,8k bar) thay 40 ngày; KHÔNG expanding.
 
 ## Decisions (mới nhất trước)
+
+- 2026-09-04c (user, pass THỰC THI — không đổi khoa học): (a) **TimesFM ngữ nghĩa**: candidate XReg → F_raw → prune PI → F_pruned →
+  **confirmation raw vs pruned → F_win** → RỒI MỚI so **hai hệ thống hoàn chỉnh** A = `wins/tfm_lora_baseline.json` (LoRA đã fine-tune,
+  0 feature/0 B0*/0 covariate) vs B = `wins/tfm_lora_xreg.json` (CÙNG adapter freeze + XReg(F_win)) → `tfm-final` → `wins/tfm.json`;
+  cấm gọi "XReg vs LoRA"; artifact ghi `system` A/B, `feature_set_source`, `lora_adapters` (A và B phải trùng); tên cũ
+  `tfm_lora_native.json` vẫn ĐỌC được. `champion_step` chặn cứng `tfm_lora_*`/`autots_wr`/`autots_mr` (CHAMPION_INELIGIBLE).
+  (b) **Scheduler 2 GPU đối xứng**: worker = `len(gpu_devices) × gpu_slots_per_device` (config `[0,1] × 1`), mỗi worker là process khoá
+  vào MỘT GPU vật lý bằng `CUDA_VISIBLE_DEVICES` đặt trước import CUDA (cơ chế duy nhất mọi backend đều tôn trọng); KHÔNG vai trò ML/DL,
+  KHÔNG pin family; task sẵn sàng → GPU rảnh (round-robin giữa nhánh, FIFO trong nhánh); 5 fold rải động, candidate vẫn tuần tự;
+  prune PI trọn trong 1 worker (giữ một dòng RNG); parent không chạy CUDA khi scheduler bật (autots bake-off/score cũng thành task);
+  không CPU fallback; log `scheduler_log.jsonl`. (c) **`orchestrate`**: DAG nhánh (loop độc lập ‖; tfm-final ← loop tfm;
+  autots-search ← autots_wr + autots_mr), `max_branches` mặc định = số worker; `orchestrate_log.jsonl`. (d) **Champion HOÃN**
+  (`defer_champion: true`) → `champion-replay` so theo THỨ TỰ CỐ ĐỊNH lgbm→xgb→cat→tfm→xgbrf→autots→lstm, CHỈ đọc artifact
+  (`champion_extra` trong wins), không train/inference; `champion_replay.csv/json`. (e) `final` (TEST) vẫn tuần tự, lệnh riêng,
+  orchestrate không bao giờ chạm TEST. (f) `gpu-probe` kiểm định tuyến GPU thật. (g) `gpu_devices`/`gpu_slots_per_device`/`max_branches`/
+  `defer_champion` KHÔNG vào `config_hash` (chỉ thực thi).
 
 - 2026-09-04b (user, data 2 năm): (a) nguồn canonical `data/BTC_1m_2y.csv` (cột `ts` → alias `timestamp` trong bộ nhớ; có cả hai phải trùng;
   `datetime` kiểm khớp epoch UTC rồi dựng lại); KHÔNG dùng `data/BTC_hf_1min_full.csv`. (b) LF 5' dẫn xuất từ HF bằng `derive-lf`
@@ -79,7 +103,8 @@ Lý do rải đều (EDA user): năm 1 +94 %, năm 2 −27,9 %, max drawdown −
 - Chi phí vòng mới CHƯA đo: FIT 172,7k origin/fold (×3 so với 40 ngày), 163 candidate × 7 model; TimesFM XReg 163 pass × 5 fold × ~4.317 origin
   (~3,5 M lời gọi covariate 1 origin — rất nặng); LoRA 7 adapter/fold × 5 fold trên 172,7k cửa sổ. `scripts/canary_lora.py` đo trước khi cam kết ETA;
   `short_candidates` trong config cho phép giới hạn pool (ghi rõ khi dùng; không phải mặc định). VRAM 5 worker LoRA chỉ đủ batch ≤ ~35 (audit §7).
-- `experiments/full/`: `s0/` (data thật), `checker_log.jsonl`; chưa có wins/lora/runs/final.
+- `experiments/full/`: `s0/` (data thật), `checker_log.jsonl`; chưa có wins/lora/runs/final/scheduler_log (sinh khi chạy thật).
+- Scheduler CHƯA chạy trên 2 GPU thật: mọi kiểm tra 2 worker mới ở mức test (CPU, data tổng hợp) + `gpu-probe` local 1 GPU (RTX 3050 Ti). Phải chạy `gpu-probe` trên máy 2 × RTX 5000 Ada trước khi training.
 - Snapshot 15 ngày vẫn ở `data/BTC_hf_1min.csv` + `data/BTC_lf_5min.csv` (config `configs/p0_15d.json`, anchor `data/data_checksums.json`) — lịch sử.
 - Local: timesfm/autots/jax/peft KHÔNG cài; test TimesFM-LoRA dùng stub + canary local trên sdist random-init. torch 2.11+cu128, RTX 3050 Ti.
 - Windows: `PYTHONPATH` tách bằng `;`; console cp1252 → `PYTHONUTF8=1` cho script ad-hoc.
@@ -101,12 +126,15 @@ Lý do rải đều (EDA user): năm 1 +94 %, năm 2 −27,9 %, max drawdown −
 - `configs/p0_full.json` (data 2 năm, `rolling_spread`, `experiments/full`, `prev_run_dir: experiments/15d`) · `configs/p0_15d.json` (lịch sử).
 - `data/data_checksums_2y.json` (anchor), `data/BTC_5m_2y.derivation.json` (sidecar LF), `data/data_checksums.json` (15 ngày).
 - `src/p0/`: `data.py` (`read_ohlcv_csv` alias ts, `derive_lf_5min`, `write_lf_csv`), `split.py` (`RollingSpec`, `make_rolling_spread`),
-  `cli.py` (check-data / derive-lf / lock-s0 / loop / tfm-final / autots-search / ensemble / final / visualize), `features_short.py`, `s0.py`,
-  `checker_log.py`, `fold_parallel.py`, `lora.py`, `models_tfm.py`, `visualize.py`.
+  `cli.py` (check-data / derive-lf / lock-s0 / loop / tfm-final / autots-search / champion-replay / orchestrate / gpu-probe / ensemble /
+  final / visualize), `features_short.py`, `s0.py`, `checker_log.py`, **`gpu.py`** (chính sách thiết bị + bind CUDA_VISIBLE_DEVICES),
+  **`scheduler.py`** (worker/queue/dispatch + `scheduler_log.jsonl`), `fold_parallel.py` (adapter), **`orchestrate.py`** (DAG nhánh + replay),
+  `lora.py`, `models_tfm.py`, `visualize.py`.
 - `scripts/`: `checker_record.py`, `canary_lora.py`, `vast_canary.py`, `canary_xreg_gpu.py`, `vast_bootstrap.sh`.
 - `docs/RESEARCH_PLAN.md` rev 10.2 · `docs/reference/audit_timesfm_lora.md`, `audit_timesfm.md`, `audit_autots.md`. `experiments/15d/` — vòng 15 ngày.
 
 ## Open Questions
 
-- Thời gian/VRAM thật của LoRA (172,7k cửa sổ/fold) và XReg 163 candidate trên RTX 3090 — canary sau unlock; có giới hạn `short_candidates` — user quyết.
+- Thời gian/VRAM thật của LoRA (172,7k cửa sổ/fold) và XReg 163 candidate trên RTX 5000 Ada — canary sau unlock; có giới hạn `short_candidates` — user quyết.
+- Với 2 GPU × 1 slot: hai task nặng cùng lúc có đủ VRAM cho nhánh tfm (LoRA batch 64) không — đo bằng `canary_lora.py`; nếu OOM thì chạy nhánh tfm với `P0_GPU_DEVICES=0` (1 task nặng), KHÔNG đổi batch nếu không bắt buộc.
 - Có mở cross-asset (ETH/SOL/XRP) làm feature ở vòng sau hay không — user quyết.

@@ -11,11 +11,13 @@ from __future__ import annotations
 
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import NoReturn
 
 LOG_NAME = "checker_log.jsonl"
+_WRITE_LOCK = threading.Lock()  # orchestrate: nhiều nhánh ghi finding song song
 SEVERITIES = ("PASS", "INFO", "WARN", "ERROR")
 
 
@@ -33,7 +35,7 @@ def record(exp_dir: Path | str | None, stage: str, severity: str, check_id: str,
     if exp_dir is not None:
         p = log_path(exp_dir)
         p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "a", encoding="utf-8") as f:
+        with _WRITE_LOCK, open(p, "a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
     return row
 

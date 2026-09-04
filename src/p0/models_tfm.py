@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import functools
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -182,6 +183,7 @@ class TimesFMLoRAModel(TimesFMModel):
         self.lora["targets"] = tuple(self.lora["targets"])
         self.adapter_dir = Path(adapter_dir) if adapter_dir else None
         self.train_calls = 0  # số lần train thật (test: candidate không được làm tăng)
+        self.last_adapter: dict | None = None  # (key, sha256, epoch) của adapter ĐÃ FREEZE dùng ở fit_predict gần nhất
 
     # ------------------------------------------------------------------ module dùng chung + LoRA
     def _cache_key(self) -> str:
@@ -362,10 +364,14 @@ class TimesFMLoRAModel(TimesFMModel):
                 "es_range": [_stamp(X_es.ts[X_es.idx[0]]), _stamp(X_es.ts[X_es.idx[-1]])] if X_es is not None and len(X_es.idx) else None,
                 "repo_id": self.repo_id, "revision": self.revision, "lora": {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.lora.items()},
                 "replaced_modules": w["replaced"], "context": self.context, "torch": torch.__version__}
-        if path is not None:
+        if path is not None:  # ghi ATOMIC: worker khác đọc lại adapter này không bao giờ thấy file dở (§19)
             path.parent.mkdir(parents=True, exist_ok=True)
-            torch.save(sd, path)
-            path.with_suffix(".json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
+            tmp = path.with_suffix(".pt.tmp")
+            torch.save(sd, tmp)
+            os.replace(tmp, path)
+            jtmp = path.with_suffix(".json.tmp")
+            jtmp.write_text(json.dumps(meta, indent=1), encoding="utf-8")
+            os.replace(jtmp, path.with_suffix(".json"))
         _ADAPTER_STATES[key], _ADAPTER_META[key] = sd, meta
         w["adapter"] = key
         return meta
@@ -391,6 +397,8 @@ class TimesFMLoRAModel(TimesFMModel):
         epochs = int(rounds[0]) if rounds is not None else None
         key = self.adapter_key(X_fit, X_es, seed, epochs)
         meta = self._ensure_adapter(key, X_fit, X_es, seed, epochs)
+        # danh tính adapter đã freeze: baseline feature-free và {LoRA + XReg(F_win)} PHẢI dùng đúng adapter này
+        self.last_adapter = {"key": key, "sha256": meta["sha256"], "best_epoch": int(meta["best_epoch"]), "mode": meta.get("mode")}
         yhat = self._predict_with(key, X_pred)
         e = int(meta["best_epoch"])
         return FitResult(yhat, (e, e, e), [functools.partial(self._predict_with, key)], is_logret=True)

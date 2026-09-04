@@ -2,7 +2,7 @@
 
 Bước (plan §8, vòng expanded-data 2026-09-03/04): check-data → lock-s0 (S0_m khoá toàn bộ + overlap audit per model + Candidate_m) →
 loop --model m (calibrate riêng trên S0_m, ε_m mới, add-one Candidate_m, prune PI chỉ cột mới, confirmation 3 seed → win_m,
-champion) → tfm-final (TimesFM-LoRA + XReg(win) vs native LoRA) → autots-search (framework AutoTS trên F_WR_best / F_MR_best)
+champion) → tfm-final (so HAI HỆ THỐNG HOÀN CHỈNH: A = TimesFM-LoRA baseline feature-free vs B = cùng adapter + XReg(F_win)) → autots-search (framework AutoTS trên F_WR_best / F_MR_best)
 → ensemble → final (TEST một lần) → visualize (hậu kỳ, không train). `calibrate`/`filter-b0` giữ cho lọc B0 §1.4 (đã xong ở
 vòng 15 ngày; smoke synthetic vẫn dùng). `smoke-e2e` chạy toàn bộ trên data tổng hợp CPU (chỉ debug).
 KHÔNG vẽ figure trong bất kỳ bước training/search nào — mọi artifact cần cho figure được lưu, `visualize` dựng lại sau.
@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -25,7 +26,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import fold_parallel
+from . import fold_parallel, gpu, scheduler
 from .checker_log import hard_fail
 from .checker_log import record as ck_record
 from .config import HORIZONS, RunConfig
@@ -44,8 +45,17 @@ from .split import Fold, RollingSpec, check_fold, make_final, make_folds, make_r
 
 
 # ----------------------------------------------------------------------------- helpers
+_SAY_PREFIX = ""
+
+
+def set_say_prefix(prefix: str) -> None:
+    """Worker GPU đặt tiền tố (`gpu0`/`gpu1`) để log của các process không lẫn nhau."""
+    global _SAY_PREFIX
+    _SAY_PREFIX = f" {prefix}" if prefix else ""
+
+
 def say(msg: str) -> None:
-    print(f"[p0 {time.strftime('%H:%M:%S')}] {msg}", flush=True)
+    print(f"[p0 {time.strftime('%H:%M:%S')}{_SAY_PREFIX}] {msg}", flush=True)
 
 
 def training_state(root: Path) -> str:
@@ -202,14 +212,40 @@ def model_for(cfg: RunConfig, name: str, allow_cpu: bool):
         params["regression_model"] = {"model": key, "model_params": reg[key]}
     if name == "tfm" and "adapter_dir" not in params:
         params["adapter_dir"] = str(cfg.exp_dir / "lora")  # adapter LoRA đã freeze: artifact versioned (LFS)
-    return make_model(name, params, allow_cpu=allow_cpu)
+    m = make_model(name, params, allow_cpu=allow_cpu)
+    # đánh dấu: model này dựng lại được Y HỆT trong worker GPU từ (cfg, name, allow_cpu) → được phép đi qua scheduler.
+    # Model mang state riêng (AutoTS frozen template, stub trong test) KHÔNG có dấu này và luôn chạy trong process gọi.
+    setattr(m, fold_parallel.POOL_MARK, name)
+    return m
 
 
 PROBE_MODELS = ("autots_wr", "autots_mr", "tfm")  # chạy đủ §2.1 (add-one → prune PI → confirmation) nhưng KHÔNG so champion
 # ở `loop`; bước "final" tương ứng gộp kết quả thành model đại diện rồi mới so champion / ensemble / Final:
 FINAL_STEP = {"autots_wr": "autots-search", "autots_mr": "autots-search", "tfm": "tfm-final"}
-# artifact wins/ KHÔNG phải thành viên ensemble / cấu hình Final: probe AutoTS và hai cấu hình TimesFM trước khi `tfm-final` chọn
-NON_MEMBER_WINS = ("autots_wr", "autots_mr", "tfm_lora_native", "tfm_lora_xreg")
+
+# --------------------------------------------------------------------- TimesFM: hai HỆ THỐNG HOÀN CHỈNH (2026-09-04c)
+# A = TimesFM-LoRA baseline: LoRA fine-tune xong, KHÔNG feature, KHÔNG B0*, KHÔNG covariate XReg.
+# B = CÙNG adapter LoRA đã freeze + XReg(F_win) — F_win là bộ ĐÃ thắng confirmation F_raw vs F_pruned.
+# `tfm-final` so A với B (không phải "XReg vs LoRA": XReg không phải model độc lập) → TimesFM-final = wins/tfm.json.
+TFM_BASELINE_WIN = "tfm_lora_baseline"      # hệ thống A
+TFM_XREG_WIN = "tfm_lora_xreg"              # hệ thống B
+TFM_BASELINE_LEGACY = "tfm_lora_native"     # tên cũ (2026-09-03/04) — vẫn ĐỌC được, không ghi mới
+# artifact wins/ KHÔNG phải thành viên ensemble / cấu hình Final: probe AutoTS và hai cấu hình nội bộ của TimesFM
+NON_MEMBER_WINS = ("autots_wr", "autots_mr", TFM_BASELINE_WIN, TFM_BASELINE_LEGACY, TFM_XREG_WIN)
+# Không bao giờ được so champion: probe/cấu hình nội bộ. Chỉ ĐẠI DIỆN (tfm = TFM-final, autots = AutoTS-final) mới đủ tư cách.
+CHAMPION_INELIGIBLE = NON_MEMBER_WINS
+# §3: thứ tự so champion là METHODOLOGY, cố định — KHÔNG phải thứ tự chạy xong (2026-09-04c: replay sau khi mọi đại diện có đủ)
+CHAMPION_ORDER = ("lgbm", "xgb", "cat", "tfm", "xgbrf", "autots", "lstm")
+REPRESENTATIVE_OF = {"lgbm": "loop lgbm", "xgb": "loop xgb", "cat": "loop cat", "tfm": "tfm-final", "xgbrf": "loop xgbrf",
+                     "autots": "autots-search", "lstm": "loop lstm"}
+
+
+def champion_deferred(cfg: RunConfig) -> bool:
+    """Hoãn so champion (§14): mỗi branch chỉ SINH artifact đại diện; `champion-replay` so lại theo THỨ TỰ CỐ ĐỊNH."""
+    env = os.environ.get("P0_DEFER_CHAMPION")
+    if env is not None:
+        return env.strip() not in ("", "0", "false", "False")
+    return bool(getattr(cfg, "defer_champion", False))
 
 
 def colset_from_arg(store: Store, cfg: RunConfig, arg: str) -> ColSet:
@@ -515,16 +551,43 @@ def _resume_loop_state(cfg: RunConfig, mname: str, base: ColSet, cands: list, ca
     return {"S": S, "S_rmse": S_rmse, "rows": rows, "kept": kept, "dropped": dropped, "start": n_done + 1}, n_done
 
 
+def _adapter_identity(conf) -> list[dict] | None:
+    """Danh tính adapter LoRA ĐÃ FREEZE thực sự dùng trong confirmation (TimesFM). Hệ thống A và B phải trùng danh sách này."""
+    items: dict[str, dict] = {}
+    for r in conf.runs:
+        for a in (r.aux or []):
+            if a:
+                items[str(a["key"])] = {k: a.get(k) for k in ("key", "sha256", "best_epoch", "mode")}
+    return [items[k] for k in sorted(items)] or None
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    """Ghi JSON atomic (tmp + replace): nhiều branch chạy song song không bao giờ đọc phải file dở (§19)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def _update_win(exp: Path, name: str, patch: dict) -> dict:
+    p = exp / "wins" / f"{name}.json"
+    payload = {**json.loads(p.read_text(encoding="utf-8")), **patch}
+    _write_json(p, payload)
+    return payload
+
+
 def _save_win(exp: Path, name: str, conf, eps: float, which: str, folds: list[Fold], extra: dict | None = None) -> dict:
     """Artifact win: wins/<name>.json (colset, RMSE̅, E0, ε, best_iters, seed thật) + wins/<name>_seed<k>.npz (idx origin, ŷ)."""
     win_dir = exp / "wins"
     win_dir.mkdir(parents=True, exist_ok=True)
+    adapters = _adapter_identity(conf)
     payload = {"model": name, "colset": conf.colset.to_dict(), "rmse_mean": conf.rmse_mean.tolist(), "e0": conf.e0.tolist(), "eps": eps,
                "best_iters_by_seed": [b.tolist() for b in conf.best_iters],
                "eval_seeds": [int(r.seed) for r in conf.runs], "which": which, "folds": [f.name for f in folds],
                "seed_rmse": [r.rmse.tolist() for r in conf.runs],
-               "median_gain_vs_e0": float(np.median(gain_pp(conf.rmse_mean, conf.e0))), **(extra or {})}
-    (win_dir / f"{name}.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
+               "median_gain_vs_e0": float(np.median(gain_pp(conf.rmse_mean, conf.e0))),
+               **({"lora_adapters": adapters} if adapters else {}), **(extra or {})}
+    _write_json(win_dir / f"{name}.json", payload)
     for k, r in enumerate(conf.runs):
         np.savez_compressed(win_dir / f"{name}_seed{k}.npz", **{f"idx_{i}": p[0] for i, p in enumerate(r.preds())},
                             **{f"yhat_{i}": p[1] for i, p in enumerate(r.preds())})
@@ -557,10 +620,15 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     model = model_for(cfg, args.model, args.allow_cpu)
     nw = fold_parallel.configure(cfg, model, mname, args.allow_cpu)
     if nw > 1:
-        say(f"[{mname}] fold-parallel: {nw} worker — ngữ nghĩa không đổi, ghép theo đúng thứ tự fold; candidate vẫn tuần tự")
-    if load_champion(exp / "champion.json") is None and mname != "lgbm":
+        devs, slots, _ = gpu.worker_slots(cfg)
+        say(f"[{mname}] scheduler GPU: {nw} worker đối xứng trên GPU {devs} ({slots} task nặng/GPU) — fold rải ĐỘNG, "
+            "ghép theo đúng thứ tự fold; candidate vẫn TUẦN TỰ")
+    deferred = champion_deferred(cfg)
+    if not deferred and load_champion(exp / "champion.json") is None and mname != "lgbm":
         sys.exit("§3: champion ban đầu phải là LightGBM code gốc — chạy `loop --model lgbm` trước.")
-    base_label = ("∅ — baseline = TimesFM-LoRA native (LoRA fine-tune trên r1, không covariate, KHÔNG B0*)" if mname == "tfm"
+    if deferred:  # §14: branch chỉ SINH đại diện; so champion để dành cho `champion-replay` theo thứ tự cố định
+        say(f"[{mname}] champion HOÃN (defer_champion): branch chỉ ghi artifact đại diện; so champion ở `champion-replay`")
+    base_label = ("∅ — hệ thống A = TimesFM-LoRA baseline (LoRA fine-tune trên r1, 0 covariate, KHÔNG B0*)" if mname == "tfm"
                   else f"S0_{mname} = {len(base.locked_b0)} B0* khoá + {len(base.locked_ext)} ext khoá")
     say(f"[{mname}] calibrate trên {base_label} — ES với calib_seed {cfg.calib_seed}; {len(cands)} candidate (Candidate_{mname})")
     if mname == "tfm":
@@ -603,7 +671,7 @@ def cmd_loop(cfg: RunConfig, args) -> None:
              rounds=json.dumps(rounds), **_summ_row(base_run, base_run.e0, "E0"), decision=f"eps={eps:.4f}",
              train_device=getattr(model, "train_device", ""),
              note=(f"S0: locked_b0={len(base.locked_b0)} locked_ext={len(base.locked_ext)}" if mname != "tfm"
-                   else "TimesFM-LoRA native: calibrate = LoRA FIT + ES chọn epoch; S0 = ∅"))
+                   else "TimesFM-LoRA baseline: calibrate = LoRA FIT + ES chọn epoch; S0 = ∅"))
     kd_path = exp / f"keepdrop_{mname}.csv"
 
     def on_row(row, run):
@@ -651,10 +719,17 @@ def cmd_loop(cfg: RunConfig, args) -> None:
          "MedianGain_prune_vs_unprune": s["MedianGain"], "WinRate": s["WinRate"], "P10Gain": s["P10Gain"], "WorstGain": s["WorstGain"],
          "eps": eps, "win": which},
     ]).to_csv(exp / f"prune_{mname}.csv", index=False)
-    say(f"[{mname}] win_m = {which} (MedianGain prune vs unprune {s['MedianGain']:+.4f}, ε={eps:.4f})")
-    win_name = "tfm_lora_xreg" if mname == "tfm" else mname
-    meta = ({"role": "TimesFM-LoRA + XReg(F_best_XReg)", "configuration": "tfm_lora_xreg",
-             **model.artifact_meta(win.colset.ext, native=not win.colset.ext)} if mname == "tfm" else None)  # native=True chỉ khi F_best rỗng
+    say(f"[{mname}] F_win = {which} (confirmation F_raw vs F_pruned: MedianGain {s['MedianGain']:+.4f}, ε={eps:.4f}) "
+        f"→ {len(win.colset.new_ext)} cột mới")
+    # F_win = bộ ĐÃ THẮNG confirmation raw-vs-pruned ở TRÊN. Mọi bước sau (kể cả so với baseline TimesFM-LoRA) dùng ĐÚNG bộ này.
+    confirmation_meta = {"stage": "confirmation F_raw vs F_pruned (3 eval seed, ES bật)", "which": which,
+                         "MedianGain_pruned_vs_raw": round(float(s["MedianGain"]), 6), "eps": eps,
+                         "n_new_raw": len(lr.final.new_ext), "n_new_pruned": len(pruned.new_ext), "n_new_win": len(win.colset.new_ext)}
+    win_name = TFM_XREG_WIN if mname == "tfm" else mname
+    meta = ({"role": "hệ thống B = TimesFM-LoRA (adapter freeze) + XReg(F_win)", "configuration": TFM_XREG_WIN, "system": "B",
+             "feature_set": "F_win", "feature_set_source": confirmation_meta,
+             **model.artifact_meta(win.colset.ext, native=not win.colset.ext)} if mname == "tfm"
+            else {"confirmation": confirmation_meta})
     payload = _save_win(exp, win_name, win, eps, which, folds, meta)
     if payload["median_gain_vs_e0"] > 1.0:
         ck_record(exp, "confirm", "WARN", "UNUSUAL_GAIN", f"win_{mname}: MedianGain vs E0 = {payload['median_gain_vs_e0']:+.3f} pp > 1 pp — kiểm tra leakage", model=mname)
@@ -665,20 +740,28 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         log_latency(exp, lat, split="VAL")
         say(f"[{mname}] latency p95 (ms) per h: {lat['p95_ms'].round(3).tolist()} (predict device {lat['predict_device'].iloc[0]})")
     if mname == "tfm":
-        # TimesFM-LoRA native (0 covariate) — CÙNG adapter đã freeze — confirmation 3 seed → wins/tfm_lora_native.json;
-        # `tfm-final` so {LoRA + XReg(F_best_XReg)} với native bằng luật project
-        native = unp if not lr.final.ext else confirm(store, model, ColSet((), ()), folds, cfg.eval_seeds, keep_states=True,
-                                                     latency_origins=args.latency_origins, measure_latency=True)
-        if native is not unp:
-            _log_confirm(cfg, mname, "native", native, eps, model)
-        _save_win(exp, "tfm_lora_native", native, eps, "native", folds,
-                  {"role": "TimesFM-LoRA native (LoRA fine-tune, 0 covariate, không B0*)", "configuration": "tfm_lora_native",
-                   **model.artifact_meta((), native=True)})
-        if native.latency:
-            pd.DataFrame(native.latency).to_csv(exp / "latency_tfm_lora_native.csv", index=False)
-            log_latency(exp, pd.DataFrame(native.latency), split="VAL")
-        say(f"[tfm] TimesFM-LoRA native MedianGain vs E0 = {np.median(gain_pp(native.rmse_mean, native.e0)):+.4f} pp; "
-            f"TimesFM-LoRA + XReg({len(win.colset.ext)} cột) = {payload['median_gain_vs_e0']:+.4f} pp → chạy `tfm-final`")
+        # HỆ THỐNG A — TimesFM-LoRA baseline: LoRA fine-tune xong, 0 feature, 0 B0*, 0 covariate XReg.
+        # CÙNG adapter đã freeze như hệ thống B; chỉ được dựng SAU khi F_win đã có (raw-vs-pruned xong ở trên).
+        with scheduler.stage("confirmation", configuration=TFM_BASELINE_WIN):
+            baseline = unp if not lr.final.ext else confirm(store, model, ColSet((), ()), folds, cfg.eval_seeds, keep_states=True,
+                                                            latency_origins=args.latency_origins, measure_latency=True)
+        if baseline is not unp:
+            _log_confirm(cfg, mname, "baseline", baseline, eps, model)
+        base_payload = _save_win(exp, TFM_BASELINE_WIN, baseline, eps, "baseline", folds,
+                                 {"role": "hệ thống A = TimesFM-LoRA baseline (LoRA fine-tune, 0 feature, 0 B0*, 0 XReg)",
+                                  "configuration": TFM_BASELINE_WIN, "system": "A", "feature_set": "∅",
+                                  "built_after": "confirmation F_raw vs F_pruned → F_win", **model.artifact_meta((), native=True)})
+        if baseline.latency:
+            pd.DataFrame(baseline.latency).to_csv(exp / f"latency_{TFM_BASELINE_WIN}.csv", index=False)
+            log_latency(exp, pd.DataFrame(baseline.latency), split="VAL")
+        if base_payload.get("lora_adapters") and payload.get("lora_adapters") and base_payload["lora_adapters"] != payload["lora_adapters"]:
+            hard_fail(exp, "loop", "TFM_ADAPTER_IDENTITY", "TimesFM: hệ thống A (baseline) và B (+XReg) KHÔNG dùng cùng adapter LoRA đã freeze "
+                      f"— A={[a['key'] for a in base_payload['lora_adapters']]} vs B={[a['key'] for a in payload['lora_adapters']]}", model="tfm")
+        ck_record(exp, "loop", "PASS", "TFM_FLOW_ORDER", "TimesFM: add-one → F_raw → prune PI → F_pruned → confirmation → F_win → "
+                  f"hệ thống B = LoRA + XReg(F_win) ({len(win.colset.ext)} cột); hệ thống A = LoRA baseline (0 covariate) — "
+                  "so hai hệ thống ở `tfm-final`", model="tfm")
+        say(f"[tfm] A = TimesFM-LoRA baseline (feature-free): MedianGain vs E0 = {np.median(gain_pp(baseline.rmse_mean, baseline.e0)):+.4f} pp; "
+            f"B = TimesFM-LoRA + XReg(F_win, {len(win.colset.ext)} cột) = {payload['median_gain_vs_e0']:+.4f} pp → chạy `tfm-final` (so A vs B)")
     if is_probe:
         log_champion(exp, {"exp_id": new_exp_id("probe", mname), "model": mname, "win": which, "n_ext": len(win.colset.ext),
                            "ext_cols": "|".join(win.colset.ext), "MedianGain_vs_E0": round(payload["median_gain_vs_e0"], 4),
@@ -688,10 +771,17 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         say(f"[{mname}] feature-search xong (F_best: {len(win.colset.new_ext)} cột mới + {len(win.colset.locked_ext)} ext khoá) — không so champion; "
             f"chạy `{FINAL_STEP[mname]}` để có model đại diện")
         return
-    champion_step(cfg, mname, win.colset, win.rmse_mean, win.e0, eps,
-                  {"win": which, **{f"mae_h{h}": round(float(np.mean([r.mae for r in win.runs], axis=0)[:, h - 1].mean()), 4) for h in HORIZONS},
+    champ_extra = {"win": which, **{f"mae_h{h}": round(float(np.mean([r.mae for r in win.runs], axis=0)[:, h - 1].mean()), 4) for h in HORIZONS},
                    **({f"latency_{k}_ms": json.dumps(lat[f"{k}_ms"].round(3).tolist()) for k in ("p95", "p99", "max")} if lat is not None else {}),
-                   "train_device": getattr(model, "train_device", ""), "predict_device": getattr(model, "predict_device", "")})
+                   "train_device": getattr(model, "train_device", ""), "predict_device": getattr(model, "predict_device", "")}
+    # đại diện của model đã sẵn sàng (artifact đóng băng) — champion đọc lại từ đây, không cần model sống
+    _update_win(exp, win_name, {"champion_extra": champ_extra, "representative": mname})
+    if deferred:
+        ck_record(exp, "loop", "INFO", "CHAMPION_DEFERRED", f"đại diện {mname} sẵn sàng (wins/{win_name}.json); so champion ở `champion-replay` "
+                  f"theo thứ tự cố định {list(CHAMPION_ORDER)}", model=mname)
+        say(f"[{mname}] xong — đại diện wins/{win_name}.json; champion sẽ so ở `champion-replay` (thứ tự cố định, không theo thứ tự chạy xong)")
+        return
+    champion_step(cfg, mname, win.colset, win.rmse_mean, win.e0, eps, champ_extra)
 
 
 DEFAULT_AUTOTS_TEMPLATES = [  # bake-off phương án A: mọi dòng GPU; nhóm theo shift regressor (wr:<window> / mr)
@@ -757,6 +847,37 @@ def autots_bakeoff_fold(cfg: RunConfig, store: Store, fold, colset: ColSet, grou
     return name, params, all_t
 
 
+def _autots_bakeoff_all(cfg: RunConfig, store: Store, folds, colset: ColSet, group: str, gspecs: list[dict], nv: int,
+                        allow_cpu: bool, cov_all=None) -> list[tuple]:
+    """Bake-off template cho TỪNG fold. Scheduler bật → mỗi fold là một task GPU (rải động lên GPU rảnh);
+    tắt → tuần tự y như cũ. Kết quả luôn trả theo ĐÚNG thứ tự fold (tất định)."""
+    if fold_parallel.active():
+        tasks = [scheduler.Task(kind="autots_bakeoff", model="autots", fold=f.name, stage="autots_bakeoff",
+                                payload={"colset": colset.to_dict(), "fold": f.name, "group": group, "specs": gspecs, "nv": int(nv)})
+                 for f in folds]
+        out = fold_parallel.submit(tasks)
+        return [(r["model"], r["params"], pd.DataFrame(r["table"]) if r["table"] is not None else pd.DataFrame()) for r in out]
+    return [autots_bakeoff_fold(cfg, store, f, colset, group, gspecs, nv, allow_cpu, cov_all) for f in folds]
+
+
+def _autots_score_all(cfg: RunConfig, store: Store, folds, colset: ColSet, group: str, frozen_by_fold: dict, seed: int,
+                      allow_cpu: bool, want_preds: bool = False) -> list[tuple]:
+    """Chấm AutoTS đã freeze template trên từng fold (song song trên GPU khi scheduler bật). Thứ tự = thứ tự fold."""
+    if fold_parallel.active():
+        tasks = [scheduler.Task(kind="autots_score", model="autots", fold=f.name, seed=int(seed), stage="autots_score",
+                                payload={"colset": colset.to_dict(), "fold": f.name, "group": group, "seed": int(seed),
+                                         "frozen": list(frozen_by_fold[f.name]), "want_preds": bool(want_preds)})
+                 for f in folds]
+        out = fold_parallel.submit(tasks)
+        return [(np.asarray(r["rmse"]), np.asarray(r["e0"]), r["preds"]) for r in out]
+    res = []
+    for f in folds:
+        m = _autots_probe_model(cfg, group, allow_cpu, frozen=frozen_by_fold[f.name])
+        r = run_config(store, m, colset, [f], rounds=None, seed=seed, keep_states=want_preds)
+        res.append((r.rmse[0], r.e0[0], (r.preds()[0] if want_preds else None)))
+    return res
+
+
 def autots_search_cfg(cfg: RunConfig) -> tuple[dict, int]:
     c = cfg.model_params("autots_search")
     specs = c.get("templates") or DEFAULT_AUTOTS_TEMPLATES
@@ -770,6 +891,9 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
     """§2.2 #6 (iii) — framework AutoTS trên HAI feature set đã freeze (F_WR_best, F_MR_best) → AutoTS-final. Không vẽ figure."""
     gate(cfg, args, ["autots_wr", "autots_mr"])
     exp = cfg.exp_dir
+    nw = fold_parallel.configure(cfg, None, "autots", args.allow_cpu)
+    if nw > 1:
+        say(f"[autots-search] scheduler GPU: {nw} worker đối xứng — bake-off/chấm điểm từng fold rải động, kết quả ghép theo thứ tự fold")
     frozen_sets = {}
     for m in ("autots_wr", "autots_mr"):
         p = exp / "wins" / f"{m}.json"
@@ -789,11 +913,11 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
     tmpl_dir.mkdir(parents=True, exist_ok=True)
     rows, cands = [], {}
     for set_name, colset in frozen_sets.items():
-        cov_all = store.grid_matrix(colset)
+        cov_all = None if fold_parallel.active() else store.grid_matrix(colset)  # scheduler bật: worker tự dựng regressor
         for group, gspecs in groups.items():
             frozen_by_fold = {}
-            for f in folds:
-                name, params, all_t = autots_bakeoff_fold(cfg, store, f, colset, group, gspecs, nv, args.allow_cpu, cov_all)
+            for f, (name, params, all_t) in zip(folds, _autots_bakeoff_all(cfg, store, folds, colset, group, gspecs, nv,
+                                                                           args.allow_cpu, cov_all)):
                 frozen_by_fold[f.name] = (name, params)
                 tag = f"{set_name}_{group.replace(':', '')}_{f.name}".replace("=", "_")
                 (tmpl_dir / f"best_{tag}.json").write_text(json.dumps({"set": set_name, "group": group, "fold": f.name,
@@ -804,11 +928,10 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
                     pass
                 say(f"[{set_name}|{group}|{f.name}] template thắng: {name}")
             fold_rmse, e0_rows = [], []
-            for f in folds:  # CHỌN candidate: chấm outer VAL ở ĐÚNG selection_seed
-                m = _autots_probe_model(cfg, group, args.allow_cpu, frozen=frozen_by_fold[f.name])
-                r = run_config(store, m, colset, [f], rounds=None, seed=cfg.sel_seed, keep_states=False)
-                fold_rmse.append(r.rmse[0])
-                e0_rows.append(r.e0[0])
+            for rmse_f, e0_f, _ in _autots_score_all(cfg, store, folds, colset, group, frozen_by_fold, cfg.sel_seed,
+                                                     args.allow_cpu):  # CHỌN candidate: outer VAL ở ĐÚNG selection_seed
+                fold_rmse.append(rmse_f)
+                e0_rows.append(e0_f)
             rmse_sel, e0_tab = np.array(fold_rmse), np.array(e0_rows)
             key = f"{set_name}|{group}"
             cands[key] = {"set": set_name, "group": group, "colset": colset, "rmse_sel": rmse_sel, "e0": e0_tab, "templates": frozen_by_fold}
@@ -823,11 +946,10 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
     tables, preds_by_seed = [], []
     for sd in cfg.eval_seeds:  # CONFIRMATION: winner đã FREEZE → 3 evaluation seed
         fold_rmse, preds = [], []
-        for f in folds:
-            m = _autots_probe_model(cfg, fin["group"], args.allow_cpu, frozen=fin["templates"][f.name])
-            r = run_config(store, m, fin["colset"], [f], rounds=None, seed=sd, keep_states=True)
-            fold_rmse.append(r.rmse[0])
-            preds.append(r.preds()[0])
+        for rmse_f, _e0, pr in _autots_score_all(cfg, store, folds, fin["colset"], fin["group"], fin["templates"], sd,
+                                                 args.allow_cpu, want_preds=True):
+            fold_rmse.append(rmse_f)
+            preds.append(pr)
         tables.append(np.array(fold_rmse))
         preds_by_seed.append(preds)
     rmse_mean = mean_rmse_over_seeds(tables)
@@ -847,7 +969,9 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
                "rmse_selection_seed": fin["rmse_sel"].tolist(), "selection_seed": cfg.sel_seed,
                "eval_seeds": [int(sd) for sd in cfg.eval_seeds], "folds": [f.name for f in folds],
                "templates_per_fold": {k: v[0] for k, v in fin["templates"].items()}, "median_gain_vs_e0": g_fin}
-    (win_dir / "autots.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
+    payload["representative"] = "autots"
+    payload["champion_extra"] = {"win": "autots_final", "source": final_key, "group": fin["group"]}
+    _write_json(win_dir / "autots.json", payload)
     for k, preds in enumerate(preds_by_seed):
         np.savez_compressed(win_dir / f"autots_seed{k}.npz", **{f"idx_{i}": p[0] for i, p in enumerate(preds)},
                             **{f"yhat_{i}": p[1] for i, p in enumerate(preds)})
@@ -855,6 +979,11 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
          colset="|".join(fin["colset"].ext), n_cols=len(fin["colset"].names), rounds="bake-off template",
          base="E0", MedianGain=round(g_fin, 4), rmse_cells=_cells(rmse_mean), e0_cells=_cells(fin["e0"]),
          decision=f"AutoTS-final={final_key}", note=f"chọn @seed {cfg.sel_seed}; confirmation {list(cfg.eval_seeds)}; ε={eps:.4f}")
+    if champion_deferred(cfg):
+        ck_record(exp, "autots-search", "INFO", "CHAMPION_DEFERRED", "đại diện AutoTS (AutoTS-final) sẵn sàng — so champion ở `champion-replay`",
+                  model="autots")
+        say("AutoTS-final đã lưu (wins/autots.json) — champion so ở `champion-replay` theo thứ tự cố định")
+        return
     champion_step(cfg, "autots", fin["colset"], rmse_mean, fin["e0"], eps, {"win": "autots_final"})
 
 
@@ -863,6 +992,10 @@ def champion_step(cfg: RunConfig, mname: str, colset: ColSet, rmse_mean: np.ndar
     """§3: so bảng RMSE̅ của win_m với champion → đổi/giữ, ghi champion_log.csv. Trả tên champion sau. Không vẽ."""
     exp = cfg.exp_dir
     champ_path = exp / "champion.json"
+    if mname in CHAMPION_INELIGIBLE:  # §3 + yêu cầu 2026-09-04c: probe/cấu hình nội bộ KHÔNG BAO GIỜ đụng champion
+        hard_fail(exp, "champion", "CHAMPION_INELIGIBLE",
+                  f"'{mname}' là probe/cấu hình nội bộ, không phải model đại diện — chỉ {list(CHAMPION_ORDER)} mới được so champion "
+                  f"(TimesFM: chỉ TFM-final; AutoTS: chỉ AutoTS-final).", model=mname)
     champ = load_champion(champ_path)
     if champ is None and mname != "lgbm":  # §3: champion ban đầu phải là LightGBM code gốc
         sys.exit(f"§3: chưa có champion — chạy `loop --model lgbm` trước khi để '{mname}' so champion.")
@@ -888,56 +1021,190 @@ def champion_step(cfg: RunConfig, mname: str, colset: ColSet, rmse_mean: np.ndar
     return str(row["champion_after"])
 
 
-def cmd_tfm_final(cfg: RunConfig, args) -> None:
-    """§2.2 #4 (2026-09-03) — TimesFM-final = {TFM-LoRA + XReg(win)} nếu thắng native LoRA theo luật project
-    (MedianGain vs native > +ε_TFM, ε đo trên native lúc calibrate), ngược lại = native LoRA. XReg không phải model độc lập.
-    Không chạy lại model: dùng bảng RMSE̅ 3 seed của hai cấu hình (cùng adapter đã freeze) đã lưu ở `loop --model tfm`."""
-    exp = cfg.exp_dir
-    wins = {}
-    for m in ("tfm_lora_native", "tfm_lora_xreg"):
-        p = exp / "wins" / f"{m}.json"
-        if not p.exists():
-            hard_fail(exp, "tfm-final", "S0_ARTIFACT", f"Thiếu {p} — phải chạy `loop --model tfm` (LoRA → freeze → XReg add-one → prune → confirmation) trước.", model="tfm")
-        wins[m] = json.loads(p.read_text(encoding="utf-8"))
-    gate(cfg, args, [])
-    nat, xr = wins["tfm_lora_native"], wins["tfm_lora_xreg"]
-    for tag, w in (("tfm_lora_native", nat), ("tfm_lora_xreg", xr)):
+def _load_tfm_systems(exp: Path) -> tuple[dict, dict, str]:
+    """Đọc HAI HỆ THỐNG HOÀN CHỈNH của TimesFM và kiểm tra vai trò của từng cái (2026-09-04c).
+
+    A = `wins/tfm_lora_baseline.json` (tên cũ `tfm_lora_native.json` vẫn đọc được): TimesFM-LoRA đã fine-tune,
+        0 feature / 0 B0* / 0 covariate XReg.
+    B = `wins/tfm_lora_xreg.json`: CÙNG adapter LoRA đã freeze + XReg(F_win), với F_win là bộ ĐÃ THẮNG
+        confirmation F_raw vs F_pruned (artifact phải chứng minh bằng `feature_set_source`/`which`).
+    """
+    xreg_path = exp / "wins" / f"{TFM_XREG_WIN}.json"
+    if not xreg_path.exists():
+        hard_fail(exp, "tfm-final", "S0_ARTIFACT", f"Thiếu {xreg_path} — phải chạy `loop --model tfm` (LoRA → freeze → XReg add-one → "
+                  "prune PI → confirmation raw vs pruned → F_win) trước.", model="tfm")
+    base_name = TFM_BASELINE_WIN if (exp / "wins" / f"{TFM_BASELINE_WIN}.json").exists() else TFM_BASELINE_LEGACY
+    base_path = exp / "wins" / f"{base_name}.json"
+    if not base_path.exists():
+        hard_fail(exp, "tfm-final", "S0_ARTIFACT", f"Thiếu {exp / 'wins' / (TFM_BASELINE_WIN + '.json')} (hệ thống A = TimesFM-LoRA baseline "
+                  "feature-free) — phải chạy `loop --model tfm` trước.", model="tfm")
+    A = json.loads(base_path.read_text(encoding="utf-8"))
+    B = json.loads(xreg_path.read_text(encoding="utf-8"))
+    if base_name == TFM_BASELINE_LEGACY:
+        ck_record(exp, "tfm-final", "INFO", "TFM_BASELINE_LEGACY_NAME",
+                  f"đọc baseline từ tên cũ wins/{TFM_BASELINE_LEGACY}.json (= {TFM_BASELINE_WIN}); ngữ nghĩa không đổi", model="tfm")
+    for tag, w in ((base_name, A), (TFM_XREG_WIN, B)):
         if w.get("finetune_method") != "LoRA" or "native" not in w or w["colset"]["b0"]:
             hard_fail(exp, "tfm-final", "S0_ARTIFACT", f"artifact {tag} thiếu metadata LoRA/native hoặc chứa B0* — không đúng vai trò", model="tfm")
-    if not nat.get("native") or nat["colset"]["ext"]:
-        hard_fail(exp, "tfm-final", "S0_ARTIFACT", "tfm_lora_native phải là TimesFM-LoRA native (không covariate)", model="tfm")
-    eps = float(nat["eps"])
-    change, gc, sc = compare(np.asarray(xr["rmse_mean"]), np.asarray(nat["rmse_mean"]), eps)
+    if not A.get("native") or A["colset"]["ext"]:
+        hard_fail(exp, "tfm-final", "S0_ARTIFACT", f"{base_name} phải là TimesFM-LoRA baseline feature-free (0 covariate, 0 B0*)", model="tfm")
+    src = B.get("feature_set_source") or {}
+    if str(src.get("which", B.get("which", ""))) not in ("prune", "unprune"):
+        hard_fail(exp, "tfm-final", "TFM_FLOW_ORDER", f"{TFM_XREG_WIN} không ghi kết quả confirmation F_raw vs F_pruned → không chứng minh được "
+                  "feature set là F_win; `tfm-final` chỉ so hai hệ thống SAU khi raw-vs-pruned đã xong.", model="tfm")
+    if A.get("lora_adapters") and B.get("lora_adapters") and A["lora_adapters"] != B["lora_adapters"]:
+        hard_fail(exp, "tfm-final", "TFM_ADAPTER_IDENTITY", "hệ thống A và B không dùng cùng adapter LoRA đã freeze "
+                  f"(A={[a['key'] for a in A['lora_adapters']]} vs B={[a['key'] for a in B['lora_adapters']]})", model="tfm")
+    return A, B, base_name
+
+
+def cmd_tfm_final(cfg: RunConfig, args) -> None:
+    """§2.2 #4 — TFM-final: so HAI HỆ THỐNG HOÀN CHỈNH (KHÔNG phải "XReg vs LoRA": XReg không phải model độc lập):
+
+        A: TimesFM-LoRA baseline      — LoRA fine-tune, KHÔNG feature, KHÔNG B0*, KHÔNG covariate XReg
+        B: TimesFM-LoRA + XReg(F_win) — CÙNG adapter LoRA đã freeze, cộng XReg trên F_win
+
+    F_win đã thắng confirmation F_raw vs F_pruned ở `loop --model tfm` TRƯỚC bước này. Luật project: B thay A khi
+    MedianGain(B vs A) > +ε_TFM (ε đo trên chính baseline lúc calibrate), ngược lại TFM-final = A.
+    Không train/inference lại: dùng bảng RMSE̅ 3 seed của hai hệ thống đã lưu. Chỉ TFM-final mới đủ tư cách champion."""
+    exp = cfg.exp_dir
+    A, B, base_name = _load_tfm_systems(exp)
+    gate(cfg, args, [])
+    eps = float(A["eps"])
+    change, gc, sc = compare(np.asarray(B["rmse_mean"]), np.asarray(A["rmse_mean"]), eps)
     rows = []
-    for m, w in wins.items():
-        rows.append({"configuration": m, "n_ext": len(w["colset"]["ext"]), "ext_cols": "|".join(w["colset"]["ext"]),
+    for cfg_name, w, sysname, role in ((base_name, A, "A", "TimesFM-LoRA baseline (feature-free)"),
+                                       (TFM_XREG_WIN, B, "B", "TimesFM-LoRA + XReg(F_win)")):
+        rows.append({"configuration": cfg_name, "system": sysname, "role": role, "n_ext": len(w["colset"]["ext"]),
+                     "ext_cols": "|".join(w["colset"]["ext"]),
                      "MedianGain_vs_E0": round(float(np.median(gain_pp(np.asarray(w["rmse_mean"]), np.asarray(w["e0"])))), 4),
                      "rmse_mean": _cells(np.asarray(w["rmse_mean"]))})
-    rows[1].update({"MedianGain_vs_native": round(sc["MedianGain"], 4), "WinRate": round(sc["WinRate"], 4), "P10Gain": round(sc["P10Gain"], 4),
-                    "WorstGain": round(sc["WorstGain"], 4), "eps_tfm": eps, "gain_cells": _cells(gc)})
-    best = "tfm_lora_xreg" if change else "tfm_lora_native"
+    rows[1].update({"MedianGain_vs_baseline": round(sc["MedianGain"], 4), "WinRate": round(sc["WinRate"], 4),
+                    "P10Gain": round(sc["P10Gain"], 4), "WorstGain": round(sc["WorstGain"], 4), "eps_tfm": eps, "gain_cells": _cells(gc)})
+    best_cfg, best_sys = (TFM_XREG_WIN, "B") if change else (base_name, "A")
     for r in rows:
-        r["is_final"] = r["configuration"] == best
+        r["is_final"] = r["configuration"] == best_cfg
     pd.DataFrame(rows).to_csv(exp / "tfm_final.csv", index=False)
-    w = wins[best]
-    say(f"TimesFM-final = {best}: {{TimesFM-LoRA + XReg(F_best)}} vs {{TimesFM-LoRA native}} MedianGain {sc['MedianGain']:+.4f} pp (ε_TFM {eps:.4f}) → "
-        f"{'XReg(F_best) cải thiện đủ' if change else 'không đủ → TimesFM-LoRA native'}")
-    ck_record(exp, "tfm-final", "PASS", "TFM_FINAL", f"TimesFM-final = {best} (MedianGain +XReg vs native {sc['MedianGain']:+.4f}, ε {eps:.4f})", model="tfm")
-    payload = {**w, "model": "tfm", "role": "TimesFM-final", "configuration": best, "covariate_scope": "ext",
-               "compare_xreg_vs_native": {"MedianGain": sc["MedianGain"], "WinRate": sc["WinRate"], "P10Gain": sc["P10Gain"],
-                                          "WorstGain": sc["WorstGain"], "eps": eps, "decision": best}}
-    (exp / "wins" / "tfm.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
+    w = B if change else A
+    say(f"TimesFM-final = hệ thống {best_sys} ({best_cfg}): B {{TimesFM-LoRA + XReg(F_win)}} vs A {{TimesFM-LoRA baseline, feature-free}} "
+        f"MedianGain {sc['MedianGain']:+.4f} pp (ε_TFM {eps:.4f}) → {'B thắng' if change else 'không đủ → giữ A'}")
+    ck_record(exp, "tfm-final", "PASS", "TFM_FINAL", f"TimesFM-final = {best_cfg} (hệ thống {best_sys}); B vs A MedianGain {sc['MedianGain']:+.4f}, "
+              f"ε {eps:.4f}; F_win từ confirmation {(B.get('feature_set_source') or {}).get('which', B.get('which'))}", model="tfm")
+    payload = {**w, "model": "tfm", "role": "TimesFM-final", "representative": "tfm", "configuration": best_cfg, "system": best_sys,
+               "covariate_scope": "ext", "baseline_artifact": base_name, "xreg_artifact": TFM_XREG_WIN,
+               "compare_systems": {"A": base_name, "B": TFM_XREG_WIN, "MedianGain_B_vs_A": sc["MedianGain"], "WinRate": sc["WinRate"],
+                                   "P10Gain": sc["P10Gain"], "WorstGain": sc["WorstGain"], "eps": eps, "decision": best_cfg},
+               "champion_extra": {"win": f"tfm_final={best_cfg}", "system": best_sys}}
+    payload["compare_xreg_vs_native"] = payload["compare_systems"]  # tên cũ (tương thích công cụ đọc artifact 2026-09-04)
+    _write_json(exp / "wins" / "tfm.json", payload)
     for k in range(len(w.get("eval_seeds", cfg.eval_seeds))):
-        src = exp / "wins" / f"{best}_seed{k}.npz"
+        src = exp / "wins" / f"{best_cfg}_seed{k}.npz"
         if src.exists():
             (exp / "wins" / f"tfm_seed{k}.npz").write_bytes(src.read_bytes())
     _log(cfg, exp_id=new_exp_id("tfm_final", "tfm"), step="tfm_final", model="tfm", seed=cfg.sel_seed,
          colset="|".join(w["colset"]["ext"]), n_cols=len(w["colset"]["b0"]) + len(w["colset"]["ext"]), rounds="LoRA",
-         base="tfm_lora_native", MedianGain=round(sc["MedianGain"], 4), WinRate=round(sc["WinRate"], 4), P10Gain=round(sc["P10Gain"], 4),
+         base=base_name, MedianGain=round(sc["MedianGain"], 4), WinRate=round(sc["WinRate"], 4), P10Gain=round(sc["P10Gain"], 4),
          WorstGain=round(sc["WorstGain"], 4), rmse_cells=_cells(np.asarray(w["rmse_mean"])), e0_cells=_cells(np.asarray(w["e0"])),
-         gain_cells=_cells(gc), decision=f"TimesFM-final={best}", note="TimesFM-LoRA + XReg(F_best) vs TimesFM-LoRA native, cùng adapter freeze")
+         gain_cells=_cells(gc), decision=f"TimesFM-final={best_cfg}",
+         note="hệ thống B {TimesFM-LoRA + XReg(F_win)} vs hệ thống A {TimesFM-LoRA baseline feature-free}, cùng adapter LoRA đã freeze")
+    if champion_deferred(cfg):
+        ck_record(exp, "tfm-final", "INFO", "CHAMPION_DEFERRED", "đại diện TimesFM (TFM-final) sẵn sàng — so champion ở `champion-replay`", model="tfm")
+        say("TimesFM-final đã lưu (wins/tfm.json) — champion so ở `champion-replay` theo thứ tự cố định")
+        return
     champion_step(cfg, "tfm", ColSet.from_dict(w["colset"]), np.asarray(w["rmse_mean"]), np.asarray(w["e0"]), float(w["eps"]),
-                  {"win": f"tfm_final={best}"})
+                  {"win": f"tfm_final={best_cfg}"})
+
+
+def representatives_expected(cfg: RunConfig) -> list[str]:
+    """Các model ĐẠI DIỆN cần có trước khi replay champion, theo THỨ TỰ CỐ ĐỊNH của §3 (không phải thứ tự chạy xong)."""
+    want = set()
+    for m in (cfg.model_order or list(CHAMPION_ORDER)):
+        want.add("autots" if str(m).startswith("autots") else str(m))
+    return [m for m in CHAMPION_ORDER if m in want]
+
+
+def cmd_champion_replay(cfg: RunConfig, args) -> None:
+    """§3 + §14 (2026-09-04c): so champion trên các ARTIFACT ĐẠI DIỆN đã đóng băng, theo THỨ TỰ CỐ ĐỊNH
+    lgbm → xgb → cat → tfm(TFM-final) → xgbrf → autots(AutoTS-final) → lstm.
+
+    Vì các branch model có thể chạy xong theo thứ tự bất kỳ trên 2 GPU, thứ tự HOÀN THÀNH không được phép quyết định
+    champion: replay đọc `wins/<m>.json` (RMSE̅ từng ô, ε, metadata, champion_extra) và áp đúng luật so sánh cũ
+    (`compare`, MedianGain > +ε_champion). KHÔNG train, KHÔNG inference, không cần data/GPU."""
+    exp = cfg.exp_dir
+    order = representatives_expected(cfg)
+    have = [m for m in order if (exp / "wins" / f"{m}.json").exists()]
+    missing = [m for m in order if m not in have]
+    if missing and not getattr(args, "allow_partial", False):
+        hard_fail(exp, "champion-replay", "REPRESENTATIVE_MISSING",
+                  f"thiếu đại diện {missing} (cần: {[REPRESENTATIVE_OF.get(m, m) for m in missing]}) — champion replay chỉ chạy khi mọi "
+                  f"đại diện đã có; dùng --allow-partial nếu cố ý replay một phần.")
+    if missing:
+        ck_record(exp, "champion-replay", "WARN", "REPRESENTATIVE_MISSING", f"replay MỘT PHẦN: thiếu {missing} (--allow-partial)")
+    if not have or have[0] != "lgbm":
+        hard_fail(exp, "champion-replay", "CHAMPION_ORDER", f"§3: champion ban đầu phải là LightGBM — đại diện có: {have}")
+    champ_path = exp / "champion.json"
+    if champ_path.exists():
+        if not getattr(args, "force_replay", False):
+            hard_fail(exp, "champion-replay", "CHAMPION_EXISTS", f"{champ_path} đã tồn tại — replay là bước DUY NHẤT ghi champion state. "
+                      "Dùng --force-replay để dựng lại (bản cũ được archive).")
+        arch = exp / f"champion_prereplay_{time.strftime('%Y%m%d_%H%M%S')}.json"
+        champ_path.replace(arch)
+        ck_record(exp, "champion-replay", "WARN", "CHAMPION_REPLAY_FORCED", f"champion.json cũ → {arch.name}, dựng lại từ artifact đại diện")
+    say(f"champion replay (không train): thứ tự cố định {have}")
+    rows, champion = [], ""
+    for m in have:
+        w = json.loads((exp / "wins" / f"{m}.json").read_text(encoding="utf-8"))
+        before = (load_champion(champ_path) or {}).get("model", "")
+        champion = champion_step(cfg, m, ColSet.from_dict(w["colset"]), np.asarray(w["rmse_mean"]), np.asarray(w["e0"]),
+                                 float(w["eps"]), {**(w.get("champion_extra") or {}), "replay": True})
+        rows.append({"order": len(rows) + 1, "model": m, "artifact": f"wins/{m}.json", "champion_before": before,
+                     "champion_after": champion, "MedianGain_vs_E0": round(float(w.get("median_gain_vs_e0", np.nan)), 4)})
+    pd.DataFrame(rows).to_csv(exp / "champion_replay.csv", index=False)
+    _write_json(exp / "champion_replay.json", {"order": have, "missing": missing, "champion": champion, "rows": rows,
+                                               "rule": "MedianGain > +eps_champion (§3), thứ tự cố định — KHÔNG theo thứ tự chạy xong",
+                                               "config_hash": cfg.hash(), "replayed_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+    ck_record(exp, "champion-replay", "PASS", "CHAMPION_REPLAY", f"replay {len(have)} đại diện theo thứ tự {have} → champion = {champion}; "
+              "không train/inference")
+    say(f"champion sau replay = {champion} → champion_replay.csv")
+
+
+def cmd_gpu_probe(cfg: RunConfig, args) -> None:
+    """Kiểm tra scheduler + định tuyến GPU THẬT trước khi chạy (không training, không đọc data).
+
+    Mỗi worker báo GPU vật lý mình được giao (CUDA_VISIBLE_DEVICES → torch device name/uuid); chạy vài task giả
+    có thời lượng khác nhau để chứng minh cả hai GPU đều nhận việc và không GPU nào bị bỏ trống."""
+    from .scheduler import GpuScheduler, Task
+
+    devices, slots, n = gpu.worker_slots(cfg)
+    say(f"gpu-probe: devices={devices} slots/device={slots} → {n} worker đối xứng (không có affinity theo model family)")
+    sch = GpuScheduler(cfg, allow_cpu=bool(getattr(args, "allow_cpu", False)), exp_dir=cfg.exp_dir, light=True).start()
+    try:
+        reports = sch.reports()
+        for wid, rep in sorted(reports.items()):
+            say(f"  worker {wid} → GPU vật lý {rep.get('gpu_physical_id')} | CUDA_VISIBLE_DEVICES={rep.get('cuda_visible_devices')} | "
+                f"{rep.get('device_name')} | uuid={rep.get('device_uuid') or '?'} | torch device_count={rep.get('torch_device_count')}")
+        uuids = [str(r.get("device_uuid") or "") for r in reports.values() if r.get("device_uuid")]
+        if len(devices) > 1 and uuids:  # bằng chứng THẬT là uuid khác nhau, không chỉ CUDA_VISIBLE_DEVICES khác nhau
+            if len(set(uuids)) < len(uuids):
+                hard_fail(cfg.exp_dir, "gpu-probe", "GPU_UUID_COLLISION",
+                          f"nhiều worker báo CÙNG một GPU (uuid {uuids}) — backend không tôn trọng CUDA_VISIBLE_DEVICES; "
+                          "không được training trên cấu hình này (chạy 1 GPU: P0_GPU_DEVICES=0).")
+            ck_record(cfg.exp_dir, "gpu-probe", "PASS", "GPU_UUID_DISTINCT", f"{len(set(uuids))} GPU vật lý phân biệt theo uuid: {sorted(set(uuids))}")
+        elif len(devices) > 1:
+            ck_record(cfg.exp_dir, "gpu-probe", "WARN", "GPU_UUID_UNKNOWN",
+                      "không đọc được device uuid (torch thiếu hoặc không có CUDA trong worker) — không xác nhận được hai worker "
+                      "nằm trên hai GPU vật lý khác nhau; kiểm bằng nvidia-smi lúc chạy thật.")
+        ms = [400, 150, 150, 400, 150, 150]
+        t0 = time.time()
+        out = sch.submit([Task(kind="probe", stage="gpu_probe", payload={"sleep_ms": m, "tag": f"p{i}"}) for i, m in enumerate(ms)])
+        used = sorted({int(r["gpu_physical_id"]) for r in out})
+        say(f"  {len(ms)} task giả ({sum(ms)} ms tuần tự) xong sau {time.time() - t0:.2f}s trên GPU {used}")
+        if len(devices) > 1 and len(used) < len(devices):
+            ck_record(cfg.exp_dir, "gpu-probe", "WARN", "GPU_IDLE", f"chỉ GPU {used} nhận task trong probe (cấu hình {devices})")
+        else:
+            ck_record(cfg.exp_dir, "gpu-probe", "PASS", "GPU_SYMMETRIC", f"{n} worker, GPU {used} đều nhận task; định tuyến qua CUDA_VISIBLE_DEVICES")
+    finally:
+        sch.shutdown()
 
 
 def cmd_ensemble(cfg: RunConfig, args) -> None:
@@ -992,6 +1259,11 @@ def cmd_final(cfg: RunConfig, args) -> None:
                       f"§4 TEST đúng MỘT lần; sentinel {sentinel}. Chạy lại chỉ với --force-test-rerun (recovery, ghi lý do vào checker_log).")
         ck_record(exp, "final", "WARN", "TEST_RERUN_FORCED", f"--force-test-rerun: chạy lại TEST (lần trước {prev.get('started_at')}, {prev.get('status')})")
     gate(cfg, args, [p.stem for p in (exp / "wins").glob("*.json") if p.stem not in NON_MEMBER_WINS] or ["lgbm"])
+    if champion_deferred(cfg) and not (exp / "champion.json").exists():
+        # chế độ hoãn champion (§14): champion CHỈ được quyết ở `champion-replay`. Chạm TEST khi chưa replay thì
+        # cấu hình champion/ensemble chưa tồn tại → dừng ngay (TEST chỉ có một lần, không được phí).
+        hard_fail(exp, "final", "CHAMPION_MISSING", "defer_champion đang bật nhưng chưa có champion.json — chạy "
+                  "`python run.py champion-replay` (thứ tự cố định) và `ensemble` TRƯỚC khi chạm TEST.")
     store, folds, final, _ = load_store(cfg)
     (exp / "final").mkdir(parents=True, exist_ok=True)
     ck_path = checksum_path(cfg)
@@ -1173,6 +1445,17 @@ def main(argv=None) -> None:
     s.add_argument("--no-standalone", action="store_true"); s.add_argument("--latency-origins", type=int, default=None)
     sub.add_parser("tfm-final", parents=[common(False)])
     sub.add_parser("autots-search", parents=[common(False)])
+    s = sub.add_parser("champion-replay", parents=[common(False)])
+    s.add_argument("--allow-partial", action="store_true", help="replay khi CHƯA đủ đại diện (ghi WARN) — mặc định phải đủ")
+    s.add_argument("--force-replay", action="store_true", help="dựng lại champion.json đã có (archive bản cũ)")
+    s = sub.add_parser("orchestrate", parents=[common(False)])
+    s.add_argument("--models", default=None, help="danh sách branch, mặc định model_order của config (vd: lgbm,xgb,cat,tfm,xgbrf,autots_wr,autots_mr,lstm)")
+    s.add_argument("--max-candidates", type=int, default=None); s.add_argument("--no-standalone", action="store_true")
+    s.add_argument("--latency-origins", type=int, default=None); s.add_argument("--resume", action="store_true")
+    s.add_argument("--max-branches", type=int, default=None, help="số branch chạy đồng thời (mặc định = số worker GPU)")
+    s.add_argument("--skip-ensemble", action="store_true"); s.add_argument("--allow-partial", action="store_true")
+    s.add_argument("--force-replay", action="store_true"); s.add_argument("--dry-run", action="store_true", help="chỉ in DAG rồi thoát")
+    sub.add_parser("gpu-probe", parents=[common(False)])
     sub.add_parser("ensemble", parents=[common(False)])
     s = sub.add_parser("final", parents=[common(False)]); s.add_argument("--latency-origins", type=int, default=None)
     s.add_argument("--force-test-rerun", action="store_true",
@@ -1184,8 +1467,11 @@ def main(argv=None) -> None:
         cmd_smoke_e2e(None, args)
         return
     cfg = RunConfig.load(args.config)
-    {"check-data": cmd_check_data, "derive-lf": cmd_derive_lf, "lock-s0": cmd_lock_s0, "calibrate": cmd_calibrate, "filter-b0": cmd_filter_b0, "loop": cmd_loop,
-     "tfm-final": cmd_tfm_final, "autots-search": cmd_autots_search, "ensemble": cmd_ensemble,
+    from .orchestrate import cmd_orchestrate
+
+    {"check-data": cmd_check_data, "derive-lf": cmd_derive_lf, "lock-s0": cmd_lock_s0, "calibrate": cmd_calibrate, "filter-b0": cmd_filter_b0,
+     "loop": cmd_loop, "tfm-final": cmd_tfm_final, "autots-search": cmd_autots_search, "champion-replay": cmd_champion_replay,
+     "orchestrate": cmd_orchestrate, "gpu-probe": cmd_gpu_probe, "ensemble": cmd_ensemble,
      "final": cmd_final, "visualize": cmd_visualize}[args.cmd](cfg, args)
 
 

@@ -229,6 +229,7 @@ class RunResult:
     fold_names: list[str]
     states: list[FoldState] = field(default_factory=list)
     latency: list[dict] | None = None  # §7.4 đo trong worker khi chạy fold-parallel (fold đầu), None nếu chưa đo
+    aux: list[dict | None] | None = None  # metadata phụ theo fold (TimesFM-LoRA: adapter key + sha đã dùng) — không vào metric
 
     def gain_vs(self, base_rmse: np.ndarray) -> np.ndarray:
         return gain_pp(self.rmse, base_rmse)
@@ -264,10 +265,12 @@ def run_config(store: Store, model: TabularModel, colset: ColSet, folds: list[Fo
                keep_states: bool = True, parallel_ok: bool = False, latency_origins: int | None = None) -> RunResult:
     """Một configuration (model, colset) trên các fold. rounds: None (ES) | tuple(3) | dict[fold.name → tuple(3)].
 
-    Fold-parallel (§9 quyết định 2026-09-03, `fold_parallel`): 5 fold độc lập chạy ở các process riêng khi
-    `fold_parallel.active(model)`; dùng khi không cần states (calibrate, ε, add-one) hoặc khi caller chỉ cần
-    prediction/best_iters (`parallel_ok=True`, confirmation). Run cần predictor sống (prune PI) giữ tuần tự.
-    Worker gọi lại ĐÚNG hàm này với [một fold] nên nhánh tuần tự dưới đây là định nghĩa duy nhất của phép tính.
+    Fold-parallel (§9 quyết định 2026-09-03, mở rộng 2 GPU 2026-09-04c — `fold_parallel` → `scheduler`): 5 fold độc lập
+    chạy ở các worker process riêng, mỗi worker khoá vào MỘT GPU vật lý, khi `fold_parallel.active(model)`; dùng khi không
+    cần states (calibrate, ε, add-one) hoặc khi caller chỉ cần prediction/best_iters (`parallel_ok=True`, confirmation).
+    Run cần predictor sống (prune PI) chạy trọn trong MỘT process (worker hoặc chính process này) — không tách theo fold.
+    Worker gọi lại ĐÚNG hàm này với [một fold] nên nhánh tuần tự dưới đây là định nghĩa duy nhất của phép tính;
+    task chạy trên GPU nào không ảnh hưởng kết quả (mỗi fold là hàm tất định của dữ liệu/seed, ghép theo thứ tự fold).
     """
     if len(folds) > 1 and (not keep_states or parallel_ok):
         from . import fold_parallel
@@ -278,7 +281,7 @@ def run_config(store: Store, model: TabularModel, colset: ColSet, folds: list[Fo
     F = len(folds)
     rmse = np.zeros((F, 3)); mae = np.zeros((F, 3)); rr = np.zeros((F, 3)); dacc = np.zeros((F, 3)); e0 = np.zeros((F, 3))
     best = np.zeros((F, 3), dtype=int)
-    used, states = [], []
+    used, states, aux = [], [], []
     kind = getattr(model, "input_kind", "tabular")
     feats_all = names = None
     if kind == "sequence":
@@ -320,9 +323,11 @@ def run_config(store: Store, model: TabularModel, colset: ColSet, folds: list[Fo
         e0[i] = e0_rmse(c_t, c_future)
         best[i] = res.best_iters
         used.append(tuple(int(x) for x in res.best_iters))
+        aux.append(getattr(model, "last_adapter", None))  # TimesFM-LoRA: (key, sha) của adapter ĐÃ FREEZE vừa dùng
         if keep_states:
             states.append(FoldState(fold, idx_fit, idx_es, idx_val, transform, res, X_val, yhat))
-    return RunResult(getattr(model, "name", "?"), colset, seed, used, rmse, mae, rr, dacc, e0, best, [f.name for f in folds], states)
+    return RunResult(getattr(model, "name", "?"), colset, seed, used, rmse, mae, rr, dacc, e0, best, [f.name for f in folds], states,
+                     None, aux if any(a is not None for a in aux) else None)
 
 
 def calibrate(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], seed: int = 8586, keep_states: bool = True) -> RunResult:

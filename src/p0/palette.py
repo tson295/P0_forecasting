@@ -21,12 +21,15 @@ STYLE = {
     "tfm": (PALETTE[6], "P", "-"),
     "ensemble": (PALETTE[7], "h", "-"),
     "autots_mr": (PALETTE[1], ">", ":"),
+    "tfm_lora_baseline": (PALETTE[6], "P", ":"),   # hệ thống A (cấu hình nội bộ TimesFM, không vào Final)
+    "tfm_lora_native": (PALETTE[6], "P", ":"),     # tên cũ của hệ thống A
+    "tfm_lora_xreg": (PALETTE[6], "p", "--"),      # hệ thống B
 }
 GROUP_A = ["lgbm", "xgb", "cat", "xgbrf", "ensemble"]
 GROUP_B = ["tfm", "autots", "lstm", "b0_306", "b0_star"]  # probe autots_wr/autots_mr không vẽ ở Final
 LABEL = {
     "b0_306": "B0-306", "b0_star": "B0*", "lgbm": "LightGBM", "xgb": "XGBoost", "cat": "CatBoost", "xgbrf": "XGB-RF",
-    "autots": "AutoTS", "autots_wr": "AutoTS-WR(probe)", "autots_mr": "AutoTS-MR(probe)", "lstm": "LSTM", "tfm": "TimesFM-LoRA", "tfm_lora_native": "TimesFM-LoRA native", "tfm_lora_xreg": "TimesFM-LoRA+XReg",
+    "autots": "AutoTS", "autots_wr": "AutoTS-WR(probe)", "autots_mr": "AutoTS-MR(probe)", "lstm": "LSTM", "tfm": "TimesFM-LoRA", "tfm_lora_native": "TimesFM-LoRA baseline", "tfm_lora_baseline": "TimesFM-LoRA baseline", "tfm_lora_xreg": "TimesFM-LoRA+XReg",
     "ensemble": "Ensemble", "e0": "E0",
 }
 

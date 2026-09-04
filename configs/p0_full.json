@@ -23,7 +23,14 @@
   "eps_floor_pp": 0.005,
   "experiments_dir": "experiments/full",
   "prev_run_dir": "experiments/15d",
-  "fold_workers": 5,
+  "fold_workers": 2,
+  "gpu_devices": [
+    0,
+    1
+  ],
+  "gpu_slots_per_device": 1,
+  "max_branches": 2,
+  "defer_champion": true,
   "short_candidates": null,
   "require_gpu": true,
   "models": {
@@ -50,7 +57,7 @@
         "r": 8,
         "alpha": 16,
         "dropout": 0.0,
-        "lr": 1e-4,
+        "lr": 0.0001,
         "batch_size": 64,
         "max_epochs": 20,
         "patience": 5,

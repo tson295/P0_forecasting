@@ -28,6 +28,10 @@ class RunConfig:
     checksums: str = "data/data_checksums.json"  # anchor §6.1 của snapshot mà config này dùng
     prev_run_dir: str | None = None  # vòng trước (wins/, b0_star.json, keepdrop_*) → S0_m khoá (2026-09-03); None = từ B0*
     fold_workers: int = 1  # §9: số process chạy song song 5 fold (env P0_FOLD_WORKERS ưu tiên); 1 = tuần tự
+    gpu_devices: list[int] | None = None  # §9 (2026-09-04c): GPU vật lý làm worker, vd [0, 1] — ĐỐI XỨNG, không gán vai trò ML/DL
+    gpu_slots_per_device: int = 1  # số task nặng đồng thời trên MỖI GPU (mặc định 1 — không oversubscribe VRAM)
+    max_branches: int | None = None  # số nhánh model chạy đồng thời trong `orchestrate` (None = số worker GPU)
+    defer_champion: bool = False  # §14: nhánh chỉ sinh artifact đại diện; champion so lại ở `champion-replay` (thứ tự cố định)
     short_candidates: list[str] | None = None  # giới hạn pool C_short (None = toàn bộ `features_short.SHORT_COLUMNS`)
     es_hours: int = 23
     purge_minutes: int = 60
@@ -66,7 +70,9 @@ class RunConfig:
     def hash(self) -> str:
         """Hash cấu hình KHÔNG gồm đường dẫn máy (root, experiments_dir) → cùng config cho cùng hash ở local và Vast."""
         d = self.to_dict()
-        for k in ("root", "experiments_dir", "fold_workers"):  # fold_workers chỉ là thực thi (env P0_FOLD_WORKERS ghi đè), không đổi kết quả
+        # Chỉ-thực-thi (không đổi một con số nào của kết quả): số worker/GPU, số nhánh song song, hoãn champion (replay
+        # cho ra đúng chuỗi so sánh của luật §3). Loại khỏi hash để cùng một thí nghiệm có cùng config_hash trên mọi máy.
+        for k in ("root", "experiments_dir", "fold_workers", "gpu_devices", "gpu_slots_per_device", "max_branches", "defer_champion"):
             d.pop(k, None)
         return config_hash(d)
 

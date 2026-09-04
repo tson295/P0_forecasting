@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import json
+import threading
 import time
 from pathlib import Path
 
@@ -24,11 +25,16 @@ def new_exp_id(step: str, model: str, extra: str = "") -> str:
     return f"{time.strftime('%Y%m%d_%H%M%S')}_{step}_{model}{('_' + extra) if extra else ''}"
 
 
+_APPEND_LOCK = threading.Lock()  # nhiều nhánh model chạy song song (orchestrate) cùng ghi log.csv / champion_log.csv
+
+
 def append_csv(path: Path, fields: list[str], row: dict) -> None:
-    """Append một dòng với schema CỐ ĐỊNH (cột thiếu → rỗng, cột thừa → bỏ) → file luôn đọc được bằng pd.read_csv."""
+    """Append một dòng với schema CỐ ĐỊNH (cột thiếu → rỗng, cột thừa → bỏ) → file luôn đọc được bằng pd.read_csv.
+
+    Có lock: các nhánh song song không bao giờ ghi xen giữa dòng của nhau (§19 race-safe)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     new = not path.exists()
-    with open(path, "a", newline="", encoding="utf-8") as f:
+    with _APPEND_LOCK, open(path, "a", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         if new:
             w.writeheader()

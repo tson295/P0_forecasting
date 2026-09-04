@@ -2,7 +2,8 @@
 
 11. LoRA: FIT chỉ để học, ES chỉ để chọn epoch, VAL không bao giờ vào training, adapter freeze trước candidate search;
 12. thêm candidate KHÔNG train lại / KHÔNG đổi trọng số LoRA;   13. XReg search dùng CÙNG adapter đã freeze;
-14. tfm-final: TFM-LoRA + XReg(win) vs TFM-LoRA native theo luật project (> +ε) — không phải "XReg vs TFM";
+14. tfm-final: so HAI HỆ THỐNG HOÀN CHỈNH — A = TimesFM-LoRA baseline (feature-free) vs B = CÙNG adapter + XReg(F_win),
+    theo luật project (> +ε_TFM) — KHÔNG phải "XReg vs LoRA" (XReg không phải model độc lập);
 + adapter tải lại từ đĩa tất định, predictor của từng fold nạp đúng adapter của fold đó, `loop --model tfm` end-to-end với stub.
 Toán LoRA (`p0.lora`) và `train_forward` trên module TimesFM thật đã được canary local kiểm (audit_timesfm_lora.md §11).
 """
@@ -161,18 +162,26 @@ def test_predictor_reloads_its_own_fold_adapter(tmp_path, store, folds):
     assert np.allclose(again, st0.yhat, atol=1e-7)
 
 
-# ----------------------------------------------------------------------------- (14) tfm-final: +XReg vs native
+# ------------------------------------- (14) tfm-final: hệ thống B {LoRA + XReg(F_win)} vs hệ thống A {LoRA baseline}
 def _cfg(tmp_path):
     return RunConfig(dataset_label="synthetic_tfm", hf_csv="data/hf.csv", lf_csv=None, val_days=["2026-01-03"], test_start="2026-01-04",
                      root=str(tmp_path), eval_seeds=(1, 2), selection_seed=1, models={"tfm": {"device": "cpu"}})
 
 
-def _win(exp, name, ext, rmse, eps=0.02):
+ADAPTERS = [{"key": "tfm_lora_fitA-fitB_esC-esD_seed1_es", "sha256": "abc123", "best_epoch": 2, "mode": "es"}]
+
+
+def _win(exp, name, ext, rmse, eps=0.02, adapters=ADAPTERS, confirmation=True):
     (exp / "wins").mkdir(parents=True, exist_ok=True)
     m = TimesFMLoRAModel(device="cpu", allow_cpu=True, context=512, batch_size=64, model=StubLoRATFM(), lora=LORA)
-    (exp / "wins" / name).with_suffix(".json").write_text(json.dumps(
-        {"model": name, "colset": {"b0": [], "ext": list(ext)}, "rmse_mean": [list(r) for r in rmse], "e0": [[100.0, 140.0, 170.0]],
-         "eps": eps, "eval_seeds": [1, 2], "which": "prune", "median_gain_vs_e0": 0.1, **m.artifact_meta(ext, native=not ext)}), encoding="utf-8")
+    payload = {"model": name, "colset": {"b0": [], "ext": list(ext)}, "rmse_mean": [list(r) for r in rmse],
+               "e0": [[100.0, 140.0, 170.0]], "eps": eps, "eval_seeds": [1, 2], "which": "prune", "median_gain_vs_e0": 0.1,
+               "lora_adapters": adapters, **m.artifact_meta(ext, native=not ext)}
+    if name == cli.TFM_XREG_WIN and confirmation:  # B: F_win đã thắng confirmation F_raw vs F_pruned
+        payload["feature_set"] = "F_win"
+        payload["feature_set_source"] = {"stage": "confirmation F_raw vs F_pruned (3 eval seed, ES bật)", "which": "prune",
+                                         "n_new_raw": len(ext) + 1, "n_new_pruned": len(ext), "n_new_win": len(ext)}
+    (exp / "wins" / name).with_suffix(".json").write_text(json.dumps(payload), encoding="utf-8")
     np.savez_compressed(exp / "wins" / f"{name}_seed0.npz", idx_0=np.arange(3), yhat_0=np.zeros((3, 3), np.float32))
 
 
@@ -181,27 +190,69 @@ def _champion(exp):
                                                    "eps": 0.02, "e0": [[100.0, 140.0, 170.0]]}), encoding="utf-8")
 
 
-@pytest.mark.parametrize("xreg_rmse,expect", [((80.0, 120.0, 150.0), "tfm_lora_xreg"), ((89.99, 129.99, 159.99), "tfm_lora_native"), ((91.0, 131.0, 161.0), "tfm_lora_native")])
-def test_tfm_final_compares_full_system_against_native_lora(tmp_path, monkeypatch, xreg_rmse, expect):
+@pytest.mark.parametrize("xreg_rmse,expect", [((80.0, 120.0, 150.0), "tfm_lora_xreg"), ((89.99, 129.99, 159.99), "tfm_lora_baseline"),
+                                             ((91.0, 131.0, 161.0), "tfm_lora_baseline")])
+def test_tfm_final_compares_two_complete_systems(tmp_path, monkeypatch, xreg_rmse, expect):
+    """(6) tfm-final chọn giữa HAI HỆ THỐNG HOÀN CHỈNH: A = LoRA baseline feature-free, B = CÙNG LoRA + XReg(F_win)."""
     cfg = _cfg(tmp_path)
     exp = cfg.exp_dir
     exp.mkdir(parents=True)
     _champion(exp)
-    _win(exp, "tfm_lora_native", [], [(90.0, 130.0, 160.0)], eps=0.02)
-    _win(exp, "tfm_lora_xreg", ["ret_2", "rsi3_centered"], [xreg_rmse])
+    _win(exp, cli.TFM_BASELINE_WIN, [], [(90.0, 130.0, 160.0)], eps=0.02)
+    _win(exp, cli.TFM_XREG_WIN, ["ret_2", "rsi3_centered"], [xreg_rmse])
     monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
     cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
     fin = json.loads((exp / "wins" / "tfm.json").read_text(encoding="utf-8"))
     assert fin["model"] == "tfm" and fin["role"] == "TimesFM-final" and fin["configuration"] == expect
-    assert fin["compare_xreg_vs_native"]["eps"] == 0.02 and (exp / "wins" / "tfm_seed0.npz").exists()
-    # (30) metadata tường minh: LoRA, native hay +XReg, covariates, chuỗi vào/ra
+    assert fin["compare_systems"]["A"] == cli.TFM_BASELINE_WIN and fin["compare_systems"]["B"] == cli.TFM_XREG_WIN
+    assert fin["compare_systems"]["eps"] == 0.02 and (exp / "wins" / "tfm_seed0.npz").exists()
+    # (30) metadata tường minh: LoRA, baseline hay +XReg, covariates, chuỗi vào/ra
     assert fin["finetune_method"] == "LoRA" and fin["backbone"] == "timesfm-2.5-200m" and fin["input_series"] == "btc_1m_log_return"
-    assert fin["native"] == (expect == "tfm_lora_native") and fin["covariates"] == ([] if expect == "tfm_lora_native" else ["ret_2", "rsi3_centered"])
+    assert fin["native"] == (expect == cli.TFM_BASELINE_WIN)
+    assert fin["covariates"] == ([] if expect == cli.TFM_BASELINE_WIN else ["ret_2", "rsi3_centered"])
     assert fin["target"] == "cumulative_log_return_y1_y2_y3" and fin["context"] == 512 and fin["forecast_horizon"] == 3 and fin["colset"]["b0"] == []
     df = pd.read_csv(exp / "tfm_final.csv")
-    assert set(df["configuration"]) == {"tfm_lora_native", "tfm_lora_xreg"} and df.loc[df["is_final"], "configuration"].iloc[0] == expect
+    assert set(df["configuration"]) == {cli.TFM_BASELINE_WIN, cli.TFM_XREG_WIN} and set(df["system"]) == {"A", "B"}
+    assert df.loc[df["is_final"], "configuration"].iloc[0] == expect
     ch = pd.read_csv(exp / "champion_log.csv")
-    assert (ch["model"] == "tfm").any() and not (ch["model"].isin(["tfm_lora_xreg", "tfm_lora_native"])).any()  # XReg không phải model độc lập
+    # (7)(8) chỉ TFM-final vào champion; cấu hình nội bộ không bao giờ
+    assert (ch["model"] == "tfm").any() and not ch["model"].isin(list(cli.CHAMPION_INELIGIBLE)).any()
+
+
+def test_tfm_final_reads_legacy_baseline_name(tmp_path, monkeypatch):
+    """Artifact tên cũ `tfm_lora_native.json` vẫn đọc được (ngữ nghĩa không đổi: hệ thống A)."""
+    cfg = _cfg(tmp_path)
+    exp = cfg.exp_dir
+    exp.mkdir(parents=True)
+    _champion(exp)
+    _win(exp, cli.TFM_BASELINE_LEGACY, [], [(90.0, 130.0, 160.0)], eps=0.02)
+    _win(exp, cli.TFM_XREG_WIN, ["ret_2"], [(80.0, 120.0, 150.0)])
+    monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
+    cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
+    fin = json.loads((exp / "wins" / "tfm.json").read_text(encoding="utf-8"))
+    assert fin["baseline_artifact"] == cli.TFM_BASELINE_LEGACY and fin["configuration"] == cli.TFM_XREG_WIN
+
+
+def test_tfm_final_refuses_when_f_win_not_confirmed_or_adapter_differs(tmp_path, monkeypatch):
+    """(1) F_win phải đến TỪ confirmation raw-vs-pruned; (5) hai hệ thống phải cùng adapter LoRA đã freeze."""
+    cfg = _cfg(tmp_path)
+    exp = cfg.exp_dir
+    exp.mkdir(parents=True)
+    _champion(exp)
+    monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
+    _win(exp, cli.TFM_BASELINE_WIN, [], [(90.0, 130.0, 160.0)])
+    _win(exp, cli.TFM_XREG_WIN, ["ret_2"], [(80.0, 120.0, 150.0)], confirmation=False)
+    w = json.loads((exp / "wins" / f"{cli.TFM_XREG_WIN}.json").read_text(encoding="utf-8"))
+    w.pop("which")  # không còn bằng chứng nào của confirmation
+    (exp / "wins" / f"{cli.TFM_XREG_WIN}.json").write_text(json.dumps(w), encoding="utf-8")
+    with pytest.raises(SystemExit) as e:
+        cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
+    assert "TFM_FLOW_ORDER" in str(e.value)
+    _win(exp, cli.TFM_XREG_WIN, ["ret_2"], [(80.0, 120.0, 150.0)],
+         adapters=[{"key": "khac", "sha256": "zzz", "best_epoch": 1, "mode": "es"}])
+    with pytest.raises(SystemExit) as e:
+        cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
+    assert "TFM_ADAPTER_IDENTITY" in str(e.value)
 
 
 def test_tfm_final_requires_both_configs_and_a_champion(tmp_path, monkeypatch):
@@ -209,11 +260,11 @@ def test_tfm_final_requires_both_configs_and_a_champion(tmp_path, monkeypatch):
     exp = cfg.exp_dir
     exp.mkdir(parents=True)
     monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
-    _win(exp, "tfm_lora_native", [], [(90.0, 130.0, 160.0)])
+    _win(exp, cli.TFM_BASELINE_WIN, [], [(90.0, 130.0, 160.0)])
     with pytest.raises(SystemExit) as e:
         cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
     assert "tfm_lora_xreg" in str(e.value)
-    _win(exp, "tfm_lora_xreg", ["ret_2"], [(80.0, 120.0, 150.0)])
+    _win(exp, cli.TFM_XREG_WIN, ["ret_2"], [(80.0, 120.0, 150.0)])
     with pytest.raises(SystemExit) as e:  # §3: champion ban đầu phải là LightGBM
         cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
     assert "loop --model lgbm" in str(e.value)
@@ -240,21 +291,30 @@ def test_loop_tfm_end_to_end_with_stub(tmp_path, store, folds, monkeypatch):
     monkeypatch.setattr(cli, "load_store", lambda c, **k: (store, use, None, None))
     monkeypatch.setattr(cli, "model_for", lambda c, name, allow_cpu: model)
     cli.cmd_loop(cfg, Namespace(model="tfm", smoke=True, allow_cpu=True, max_candidates=None, no_standalone=True, latency_origins=10, resume=False))
-    for name in ("tfm_lora_xreg", "tfm_lora_native"):
-        w = json.loads((exp / "wins" / f"{name}.json").read_text(encoding="utf-8"))
+    wins = {}
+    for name in (cli.TFM_XREG_WIN, cli.TFM_BASELINE_WIN):
+        w = wins[name] = json.loads((exp / "wins" / f"{name}.json").read_text(encoding="utf-8"))
         assert w["eval_seeds"] == [1, 2] and (exp / "wins" / f"{name}_seed1.npz").exists()
         assert w["finetune_method"] == "LoRA" and w["colset"]["b0"] == [] and w["configuration"] == name  # (22)(23)(30)
-        assert w["native"] == (len(w["covariates"]) == 0) and (name != "tfm_lora_native" or w["native"])  # native = không covariate
+        assert w["native"] == (len(w["covariates"]) == 0)
+    # (3) hệ thống A: 0 B0, 0 covariate;  (2)(4) hệ thống B: CÙNG LoRA + XReg đúng F_win đã thắng confirmation
+    A, B = wins[cli.TFM_BASELINE_WIN], wins[cli.TFM_XREG_WIN]
+    assert A["system"] == "A" and A["native"] and A["colset"]["ext"] == [] and A["colset"]["b0"] == []
+    assert B["system"] == "B" and B["feature_set"] == "F_win" and B["feature_set_source"]["which"] in ("prune", "unprune")
+    assert B["colset"]["ext"] == B["covariates"] and B["feature_set_source"]["n_new_win"] == len(B["colset"]["ext"])
+    # (5) hai hệ thống dùng ĐÚNG một bộ adapter LoRA đã freeze
+    assert A["lora_adapters"] and A["lora_adapters"] == B["lora_adapters"]
     log = pd.read_csv(exp / "log.csv")
     conf_rows = log[log["step"] == "confirm"].reset_index()
-    i_native = conf_rows.index[conf_rows["colset"] == "native"]
+    i_base = conf_rows.index[conf_rows["colset"] == "baseline"]
     i_raw = conf_rows.index[conf_rows["colset"].isin(["unprune", "prune"])]
-    assert len(i_raw) and (not len(i_native) or i_native.min() > i_raw.max())  # (28) raw vs pruned trước native-vs-XReg
+    assert len(i_raw) and (not len(i_base) or i_base.min() > i_raw.max())  # (1) raw vs pruned XONG rồi mới dựng baseline
     assert (log.loc[log["step"] == "calibrate", "note"].str.contains("LoRA FIT \+ ES")).any()  # (24) calibrate = LoRA FIT + ES
     assert len(pd.read_csv(exp / f"keepdrop_tfm.csv")) == 2 and (exp / "calib" / "tfm_base.json").exists()
     assert not list((exp / "summary").glob("*.png")) if (exp / "summary").exists() else True  # không vẽ trong training
     ch = pd.read_csv(exp / "champion_log.csv")
     assert ch.loc[ch["model"] == "tfm", "decision"].str.startswith("probe").all()  # loop tfm chỉ ghi dòng probe, không so champion
+    assert not ch["model"].isin(list(cli.CHAMPION_INELIGIBLE)).any()  # (8) artifact nội bộ không bao giờ đụng champion
     # số lần train = 1 calib(ES) + 2 eval seed (fixed epoch, seed1 = selection seed) + 2 confirmation (ES) = 5 — không phụ thuộc số candidate
     assert model.train_calls == 5
     cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))

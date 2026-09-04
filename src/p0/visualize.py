@@ -3,7 +3,8 @@
 `python run.py visualize --config <cfg>` dựng lại MỌI figure từ artifact đã lưu, không train, không inference:
 - mỗi dòng so champion trong `champion_log.csv` (model m vs champion trước) → Fig P / Fig T_h / Fig HM từ
   `wins/<m>_seed0.npz` + `wins/<champion>_seed0.npz` + bảng RMSE̅/E0 trong `wins/*.json`;
-- cặp cấu hình: TimesFM-LoRA native vs TimesFM-LoRA + XReg (`wins/tfm_lora_native.json` / `wins/tfm_lora_xreg.json`), AutoTS WR vs MR probe;
+- cặp hệ thống TimesFM: A = LoRA baseline feature-free (`wins/tfm_lora_baseline.json`, tên cũ `tfm_lora_native.json`) vs
+  B = LoRA + XReg(F_win) (`wins/tfm_lora_xreg.json`); AutoTS WR vs MR probe;
 - Final (TEST): heatmap khối 6h × h, Fig P và Fig T_h mọi model từ `final/index.json` + `final/<key>.npz`.
 Chỉ cần data (để dựng lại actual/giá) + artifact. Định nghĩa figure giữ nguyên `plots.py`.
 """
@@ -85,11 +86,13 @@ def champion_figs(store: Store, folds: list[Fold], exp: Path, out: Path) -> list
 
 def branch_figs(store: Store, folds: list[Fold], exp: Path, out: Path) -> list[Path]:
     made = []
-    a, b = _win(exp, "tfm_lora_native"), _win(exp, "tfm_lora_xreg")
+    base_name = "tfm_lora_baseline" if _win(exp, "tfm_lora_baseline") else "tfm_lora_native"  # tên cũ vẫn đọc được
+    a, b = _win(exp, base_name), _win(exp, "tfm_lora_xreg")
     if a and b:
-        made += pair_figs(store, folds, out, ("tfm_lora_xreg", _preds(exp, "tfm_lora_xreg"), _tab_e0(b)), ("tfm_lora_native", _preds(exp, "tfm_lora_native"), _tab_e0(a)),
-                          "tfm_lora_xreg_vs_native", "TimesFM-LoRA + XReg(F_best) vs TimesFM-LoRA native",
-                          "cùng adapter LoRA đã freeze — TFM-final chọn bằng MedianGain > +ε_TFM", prefixes=("+XReg", "native"))
+        # hai HỆ THỐNG HOÀN CHỈNH: A = TimesFM-LoRA baseline (feature-free), B = CÙNG adapter + XReg(F_win)
+        made += pair_figs(store, folds, out, ("tfm_lora_xreg", _preds(exp, "tfm_lora_xreg"), _tab_e0(b)), (base_name, _preds(exp, base_name), _tab_e0(a)),
+                          "tfm_lora_xreg_vs_baseline", "hệ thống B {TimesFM-LoRA + XReg(F_win)} vs hệ thống A {TimesFM-LoRA baseline, feature-free}",
+                          "cùng adapter LoRA đã freeze — TFM-final chọn bằng MedianGain > +ε_TFM", prefixes=("B +XReg", "A baseline"))
     a, b = _win(exp, "autots_wr"), _win(exp, "autots_mr")
     if a and b:
         made += pair_figs(store, folds, out, ("autots_wr", _preds(exp, "autots_wr"), _tab_e0(a)), ("autots_mr", _preds(exp, "autots_mr"), _tab_e0(b)),

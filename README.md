@@ -1,8 +1,8 @@
 # P0_forecasting — BTC 1-phút point forecasting
 
-Dự báo điểm `y_h(t) = log(C[t+h]/C[t])`, h = 1, 2, 3 phút, BTC 1-phút (Binance OHLCV + amount). Model dự báo log-return, **metric tính trên giá** (`P̂ = C_t·exp(ŷ)`, RMSE/MAE USD, Gain = 1 − RMSE_cand/RMSE_base trên 15 ô = 5 fold × 3 horizon). Chi tiết: [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) (plan rev 10.2, 2026-09-04).
+Dự báo điểm `y_h(t) = log(C[t+h]/C[t])`, h = 1, 2, 3 phút, BTC 1-phút (Binance OHLCV + amount). Model dự báo log-return, **metric tính trên giá** (`P̂ = C_t·exp(ŷ)`, RMSE/MAE USD, Gain = 1 − RMSE_cand/RMSE_base trên 15 ô = 5 fold × 3 horizon). Chi tiết: [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) (plan rev 10.3, 2026-09-04).
 
-Trạng thái: **vòng 15 ngày đã chạy xong (2026-09-01, artifact `experiments/15d/`, champion xgbrf, tín hiệu ≈ 0 — xem `.claude/MEMORY.md`)**. **Vòng expanded-data trên data 2 NĂM thật (`data/BTC_1m_2y.csv`, 2024-09-03 → 2026-09-03; LF 5' dẫn xuất; split rolling_spread 5 VAL rải đều, FIT 120): code/config/doc xong (2026-09-04), S0/Candidate_m đã lock trên data thật (163/model), 150 unit test + smoke PASS, `TRAINING: LOCKED`** — chạy trên Vast khi user unlock. Raw CSV không nằm trong repo (sha256 ở `data/data_checksums*.json`).
+Trạng thái: **vòng 15 ngày đã chạy xong (2026-09-01, artifact `experiments/15d/`, champion xgbrf, tín hiệu ≈ 0 — xem `.claude/MEMORY.md`)**. **Vòng expanded-data trên data 2 NĂM thật (`data/BTC_1m_2y.csv`, 2024-09-03 → 2026-09-03; LF 5' dẫn xuất; split rolling_spread 5 VAL rải đều, FIT 120): code/config/doc xong (2026-09-04), S0/Candidate_m đã lock trên data thật (163/model), scheduler 2 GPU đối xứng + orchestrate + champion replay (2026-09-04c), 170 unit test + smoke PASS, `TRAINING: LOCKED`** — chạy trên Vast khi user unlock. Raw CSV không nằm trong repo (sha256 ở `data/data_checksums*.json`).
 
 ## Chạy
 
@@ -12,8 +12,11 @@ python run.py smoke-e2e --out tmp_smoke --days 6           # toàn bộ pipeline
 python run.py derive-lf --config configs/p0_full.json      # LF 5' đã đóng dẫn xuất tất định từ data/BTC_1m_2y.csv → data/BTC_5m_2y.csv (+ sidecar sha nguồn)
 python run.py check-data --config configs/p0_full.json     # data 2 năm: kiểm tra §1.1 + split rolling_spread §1.5 + verify anchor data/data_checksums_2y.json
 python run.py lock-s0   --config configs/p0_full.json      # S0_m khoá toàn bộ + overlap audit per model + Candidate_m → experiments/full/s0/ (không training)
-python run.py loop --config configs/p0_full.json --model lgbm   # sau khi user unlock; GPU only; rồi xgb → cat → tfm → tfm-final → xgbrf
-                                                                 # → autots_wr → autots_mr → autots-search → lstm → ensemble → final
+python run.py gpu-probe --config configs/p0_full.json      # kiểm định tuyến GPU thật: mỗi worker khoá vào 1 GPU vật lý (không training, không đọc data)
+python run.py orchestrate --config configs/p0_full.json    # sau khi user unlock: DAG nhánh model chạy song song trên 2 GPU → champion-replay → ensemble (KHÔNG chạm TEST)
+python run.py loop --config configs/p0_full.json --model lgbm   # hoặc từng bước: xgb → cat → tfm → tfm-final → xgbrf
+                                                                 # → autots_wr → autots_mr → autots-search → lstm → champion-replay → ensemble
+python run.py final --config configs/p0_full.json          # TEST đúng MỘT lần (lệnh riêng, tuần tự, không qua scheduler)
 python run.py visualize --config configs/p0_full.json      # hậu kỳ: mọi figure từ artifact, không train/inference
 ```
 Bootstrap Vast: `scripts/vast_bootstrap.sh`; prompt cho session Vast: `docs/VAST_SESSION_PROMPT.md`. CLI từ chối training khi `.claude/MEMORY.md` còn `TRAINING: LOCKED`, khi CSV không khớp checksum, khi LF 5' không phủ HF, và từ chối `--smoke`/`--allow-cpu` trên data thật. `TargetTransform` trong `Baseline_LGBM.py` có bug nhân in-place nên harness dùng bản tái hiện `src/p0/transform.py` (công thức giữ nguyên, file B0 không sửa).
@@ -30,8 +33,9 @@ Data 2 năm (BTC_1m_2y.csv + LF 5' dẫn xuất) → split rolling_spread: 5 VAL
 → Ensemble → Final (TEST một lần, lưu final/*.npz) → visualize hậu kỳ                                        (§3, §4, §7.5)
 ```
 
-- **TimesFM-LoRA** (§2.2 #4): pretrained 2.5 → calibrate = LoRA fine-tune trên FIT + ES chọn epoch → freeze adapter → baseline **TimesFM-LoRA native** (không B0*) → XReg add-one trên CÙNG adapter (thêm candidate = fit lại xreg, không động trọng số) → `tfm-final`: {TimesFM-LoRA + XReg(F_best)} vs {TimesFM-LoRA native} theo luật project. Artifact `wins/tfm_lora_native.json`, `wins/tfm_lora_xreg.json`, `wins/tfm.json` (metadata LoRA/native/covariates). Audit: `docs/reference/audit_timesfm_lora.md`.
-- **Fold-parallel** (§0b.6): `P0_FOLD_WORKERS=5` / `fold_workers` — 5 fold chạy song song, kết quả y hệt tuần tự, không CPU fallback.
+- **TimesFM-LoRA** (§2.2 #4): pretrained 2.5 → calibrate = LoRA fine-tune trên FIT + ES chọn epoch → freeze adapter → XReg add-one trên CÙNG adapter (thêm candidate = fit lại xreg, không động trọng số) → F_raw → prune PI → F_pruned → **confirmation → F_win** → rồi mới so **hai HỆ THỐNG HOÀN CHỈNH**: A = TimesFM-LoRA baseline (0 feature, 0 B0*, 0 covariate) vs B = CÙNG adapter + XReg(F_win) → `tfm-final`. Artifact `wins/tfm_lora_baseline.json` (tên cũ `tfm_lora_native.json` vẫn đọc được), `wins/tfm_lora_xreg.json`, `wins/tfm.json`. XReg không phải model độc lập; chỉ TFM-final mới vào champion. Audit: `docs/reference/audit_timesfm_lora.md`.
+- **Scheduler 2 GPU đối xứng** (§0b.6, 2026-09-04c): `gpu_devices: [0, 1]` × `gpu_slots_per_device: 1` (env `P0_GPU_DEVICES`) — mỗi worker là process khoá vào ĐÚNG một GPU vật lý bằng `CUDA_VISIBLE_DEVICES`; **không GPU nào có vai trò ML/DL, không pin model family**; task sẵn sàng → GPU rảnh; 5 fold rải động, candidate vẫn tuần tự; kết quả y hệt tuần tự; không CPU fallback. `orchestrate` chạy nhiều nhánh model độc lập cùng lúc; **champion HOÃN** → `champion-replay` so theo thứ tự cố định lgbm → xgb → cat → tfm → xgbrf → autots → lstm (chỉ đọc artifact). Log: `experiments/<run>/scheduler_log.jsonl`, `orchestrate_log.jsonl`.
+- **Bất biến**: lịch chạy/GPU chỉ đổi WALL-CLOCK; toàn bộ logic chọn model (target, feature, S0, candidate order, KEEP/DROP, PI, confirmation, seed, ε, hyperparameter, split, TEST, metric, champion/ensemble) là ĐÓNG BĂNG.
 - **Bất biến cứng, không tương tác**: GPU-only (preflight thật, không CPU fallback), TEST đúng một lần (`final/TEST_SENTINEL.json`), checksum/biên/S0 — vi phạm → `checker_log.hard_fail` (ERROR + dừng). Checker không tương tác: finding vào `experiments/<run>/checker_log.jsonl` (`scripts/checker_record.py`); ERROR chặn run, WARN/INFO ghi rồi tiếp tục.
 - **Artifact**: `experiments/**` không bao giờ bị gitignore; `.npz/.pt/.png` đi Git LFS; không commit checkpoint TimesFM gốc.
 
@@ -58,6 +62,6 @@ Bốn agent: `checker` (verify độc lập checklist §6 + review code, KHÔNG 
 ## Cấu trúc repo
 
 - `Baseline_LGBM.py` — B0 frozen (306 feature, LightGBM GPU), không sửa.
-- `src/p0/` — harness theo plan §8 (`features_short`, `s0`, `fold_parallel`, `lora`, `models_tfm`, `visualize`, `cli`, …); `run.py` CLI; `configs/`; `tests/`; `scripts/`.
+- `src/p0/` — harness theo plan §8 (`features_short`, `s0`, `gpu`, `scheduler`, `fold_parallel`, `orchestrate`, `lora`, `models_tfm`, `visualize`, `cli`, …); `run.py` CLI; `configs/`; `tests/`; `scripts/`.
 - `experiments/15d/` (vòng 15 ngày) · `experiments/full/` (vòng expanded-data: `s0/`, `checker_log.jsonl` đã có; còn lại sinh khi chạy).
 - `docs/` — plan chính thức + `reference/` (audit) + `archive/`. `reports/` — smoke visualize (số giả). `.claude/` — hiến pháp, trạng thái, agents, hooks. `data/` — manifest + checksum; CSV raw không push.

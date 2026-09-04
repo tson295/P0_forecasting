@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from . import scheduler
 from .features_ext import Candidate
 from .filter_b0 import flag_2of3, median_over_folds, permutation_importance
 from .harness import ColSet, RunResult, Store, run_config
@@ -43,7 +44,9 @@ def add_one_loop(store: Store, model: TabularModel, base: ColSet, base_rmse: np.
         start = 1
     for i, cand in enumerate(candidates, start=start):
         cs = S.with_ext(cand.columns)
-        run = run_config(store, model, cs, folds, rounds=rounds, seed=seed, keep_states=False)
+        # candidate TUẦN TỰ (S đổi sau KEEP) — chỉ CÁC FOLD của candidate này được rải lên các GPU (§9)
+        with scheduler.stage("add_one", candidate=cand.name):
+            run = run_config(store, model, cs, folds, rounds=rounds, seed=seed, keep_states=False)
         g = run.gain_vs(S_rmse)
         s = summarize(g)
         decision = decide(s["MedianGain"], eps)
@@ -69,10 +72,18 @@ def add_one_loop(store: Store, model: TabularModel, base: ColSet, base_rmse: np.
 def prune_pi(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold], rounds, seed: int, repeats: int = 3) -> tuple[ColSet, pd.DataFrame]:
     """Prune PI (§2.1a): PI trên VAL cho các cột ext MỚI (`colset.new_ext`); bỏ cột không có cờ PI+ (PI ≤ 0 ở ≥ 2/3 horizon).
 
-    Cột ext KHOÁ (S0_m, quyết định 2026-09-03) không được xét và không bao giờ bị bỏ; nếu không có cột mới → trả nguyên."""
+    Cột ext KHOÁ (S0_m, quyết định 2026-09-03) không được xét và không bao giờ bị bỏ; nếu không có cột mới → trả nguyên.
+
+    PI cần predictor SỐNG nên cả job (5 fold + vòng xáo) chạy trong MỘT process: khi scheduler GPU bật, job này được
+    giao cho MỘT worker (chiếm 1 GPU, GPU còn lại vẫn phục vụ branch khác) — cùng một dòng RNG, số PI không đổi."""
     new = colset.new_ext
     if not new:
         return colset, pd.DataFrame(columns=["col", "PI_h1", "PI_h2", "PI_h3", "keep"])
+    from . import fold_parallel
+
+    if len(folds) > 1 and fold_parallel.active(model):
+        with scheduler.stage("prune_pi"):
+            return fold_parallel.run_prune_pi(store, model, colset, folds, rounds, seed, repeats)
     run = run_config(store, model, colset, folds, rounds=rounds, seed=seed, keep_states=True)
     kind = getattr(model, "input_kind", "tabular")
     if kind == "sequence":  # LSTM: input là kênh của fine_matrix, không phải cột của ma trận B0 + ext
@@ -116,8 +127,9 @@ def confirm(store: Store, model: TabularModel, colset: ColSet, folds: list[Fold]
     runs = []
     for k, s in enumerate(used):
         want_lat = measure_latency and k == 0
-        runs.append(run_config(store, model, colset, folds, rounds=None, seed=s, keep_states=keep_states, parallel_ok=True,
-                               latency_origins=latency_origins if want_lat else None))
+        with scheduler.stage("confirmation", seed=int(s)):
+            runs.append(run_config(store, model, colset, folds, rounds=None, seed=s, keep_states=keep_states, parallel_ok=True,
+                                   latency_origins=latency_origins if want_lat else None))
     lat = runs[0].latency
     if measure_latency and lat is None and runs[0].states and runs[0].states[0].result is not None:
         from .latency import measure_tabular

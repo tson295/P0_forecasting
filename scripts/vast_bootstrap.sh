@@ -21,8 +21,12 @@ die() { echo "BOOTSTRAP FAIL: $*" | tee -a "$ENV_FILE" >&2; exit 1; }
 
 log "== GPU =="
 command -v nvidia-smi >/dev/null 2>&1 || die "không có nvidia-smi → không có GPU (cấm training CPU)"
-nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader | tee -a "$ENV_FILE" \
+nvidia-smi --query-gpu=index,name,driver_version,memory.total --format=csv,noheader | tee -a "$ENV_FILE" \
   || die "nvidia-smi lỗi"
+# Scheduler 2026-09-04c: worker ĐỐI XỨNG, mỗi worker khoá vào MỘT GPU vật lý bằng CUDA_VISIBLE_DEVICES (không vai trò ML/DL).
+N_GPU=$(nvidia-smi --query-gpu=index --format=csv,noheader | wc -l | tr -d " ")
+GPU_LIST=$(nvidia-smi --query-gpu=index --format=csv,noheader | paste -sd, -)
+log "GPU khả dụng: $N_GPU ($GPU_LIST) → export P0_GPU_DEVICES=$GPU_LIST (mặc định 1 task nặng/GPU); kiểm định tuyến: python run.py gpu-probe --config $CFG"
 
 log "== apt: OpenCL + boost (cho LightGBM build GPU) =="
 if command -v apt-get >/dev/null 2>&1 && [ "$(id -u)" = "0" ]; then
@@ -147,4 +151,4 @@ log "== unit test (CPU, không training) =="
 PYTHONPATH=src:. python -m pytest -q -x || die "unit test FAIL — không được training"
 
 log "bootstrap OK — backend đã resolve và ghi vào $CFG; xem $ENV_FILE"
-log "bước tiếp: PYTHONPATH=src:. python scripts/vast_canary.py --config $CFG"
+log "bước tiếp: PYTHONPATH=src:. python scripts/vast_canary.py --config $CFG → python run.py gpu-probe --config $CFG (mỗi worker phải báo đúng GPU vật lý của nó)"
