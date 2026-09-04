@@ -101,21 +101,22 @@ def _precompute_ext(cfg) -> dict:
     (không phải một lần mỗi worker) rồi truyền dict kết quả cho MỌI worker qua `_worker_main` — mỗi worker CHỈ nạp
     lại (`store._ext.update(...)`), không tự gọi `compute_short`/`compute_ext` nữa (§ run ML+LSTM).
 
-    CHỈ là tối ưu thực thi — không phải cổng kiểm bất biến: nếu `load_store`/`ensure_ext` lỗi ở đây (checksum/data
-    hỏng, chưa lock-s0, ...) thì BỎ QUA LẶNG LẼ (trả `{}`); mỗi worker vẫn tự `load_store` như cũ ngay sau đó nên
-    bất biến thật (checksum, GPU resource, ...) vẫn được phát hiện và phân loại ĐÚNG chỗ như trước (§10), không đổi."""
+    KHÔNG bỏ qua lỗi: `load_store`/`union_ext_columns`/`ensure_ext` lỗi ở đây (checksum/data hỏng, cột không có
+    định nghĩa, ...) PHẢI nổi lên rõ ràng và dừng NGAY — TRƯỚC KHI bất kỳ worker nào được spawn. Không có nhánh
+    "trả {} rồi để worker/candidate search tự tính lại on-demand" — nếu cần precompute mà tính không ra, đó là lỗi
+    của run, không phải sự cố tài nguyên GPU để hoãn cho worker xử lý."""
     from .cli import load_store
     from .s0 import union_ext_columns
 
-    try:
-        store, _, _, _ = load_store(cfg)
-        cols = union_ext_columns(cfg.exp_dir, getattr(cfg, "model_order", None) or (), str(cfg.dataset_label))
-        if not cols:
-            return {}
-        store.ensure_ext(cols)
-        return {c: store._ext[c] for c in cols}
-    except BaseException:
+    store, _, _, _ = load_store(cfg)
+    cols = union_ext_columns(cfg.exp_dir, getattr(cfg, "model_order", None) or (), str(cfg.dataset_label))
+    if not cols:
         return {}
+    store.ensure_ext(cols)
+    missing = [c for c in cols if c not in store._ext]
+    if missing:
+        raise RuntimeError(f"precompute ext: thiếu cột sau khi ensure_ext (không thể xảy ra nếu ensure_ext đúng): {missing}")
+    return {c: store._ext[c] for c in cols}
 
 
 def _worker_store(cfg, precomputed_ext: dict | None):
@@ -302,7 +303,8 @@ class GpuScheduler:
         # Precompute ext của S0_m + Candidate_m ĐÚNG MỘT LẦN, TRONG PROCESS CHA, TRƯỚC KHI spawn worker nào (§ run
         # ML+LSTM): trước đây mỗi worker tự `load_store` + tự tính lại → cùng cột bị compute_short/compute_ext
         # NHIỀU LẦN (một lần mỗi worker). Giờ chỉ tính một lần ở đây rồi truyền dict kết quả cho MỌI worker; mỗi
-        # worker chỉ nạp lại (`_worker_store`), không tự gọi compute_short/compute_ext nữa.
+        # worker chỉ nạp lại (`_worker_store`), không tự gọi compute_short/compute_ext nữa. Lỗi ở đây (nếu có) nổi
+        # lên NGAY tại đây — chưa worker nào được spawn (vòng for dưới chưa chạy) — không fallback on-demand.
         precomputed_ext = {} if self.light else _precompute_ext(self.cfg)
         for wid in range(self.n_workers):
             dev = gpu.device_for_worker(wid, self.devices)

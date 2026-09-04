@@ -367,12 +367,14 @@ def test_no_cpu_fallback_anywhere(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="không có CPU fallback"):
         gpu.device_report(require_gpu=True)
     assert gpu.device_report(require_gpu=False)["gpu_physical_id"] == 1
-    # worker init hỏng (data/checksum sai) → scheduler báo lỗi và dừng, không có nhánh "chạy CPU cho xong"
+    # data/checksum sai → scheduler báo lỗi và dừng, không có nhánh "chạy CPU cho xong". Từ khi precompute ext
+    # chạy TRONG PROCESS CHA trước khi spawn worker nào (§ run ML+LSTM), checksum mismatch nổi lên NGAY ở đó
+    # (hard_fail SystemExit, KHÔNG bị nuốt) thay vì phải đợi một worker khởi động hỏng mới báo GpuResourceError.
     monkeypatch.delitem(sys.modules, "torch")
     bad = _cfg(tmp_path)
     (Path(bad.root) / "data" / "hf.csv").write_text("datetime,timestamp,open,high,low,close,volume,amount\n", encoding="utf-8")
     monkeypatch.setenv(gpu.ENV_DEVICES, "0,1")
-    with pytest.raises(RuntimeError, match="worker GPU không khởi động được"):
+    with pytest.raises(SystemExit, match="CHECKSUM_MISMATCH"):
         GpuScheduler(bad, allow_cpu=True, exp_dir=bad.exp_dir).start()
 
 

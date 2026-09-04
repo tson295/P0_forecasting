@@ -113,6 +113,44 @@ def test_two_workers_reuse_precomputed_ext_without_recomputing(tmp_path, monkeyp
     assert calls == [], f"không worker nào được tự gọi compute_short sau khi đã nhận precomputed_ext — thấy {calls}"
 
 
+# ============================================================================= (1f) precompute lỗi → dừng TRƯỚC spawn, KHÔNG fallback
+def test_precompute_failure_stops_scheduler_before_spawning_any_worker(tmp_path, monkeypatch):
+    """Lỗi trong `_precompute_ext` (ở đây: union_ext_columns hỏng) phải nổi lên rõ ràng NGAY, TRƯỚC khi bất kỳ
+    worker nào được spawn — không có nhánh "trả {} rồi để worker/candidate search tự compute_short on-demand"."""
+    import p0.s0 as s0mod
+
+    cfg = _small_lgbm_cfg(tmp_path)
+
+    def boom(*a, **k):
+        raise RuntimeError("simulated precompute failure")
+
+    monkeypatch.setattr(s0mod, "union_ext_columns", boom)
+    calls = _counting_compute_short(monkeypatch)
+    sch = scheduler.GpuScheduler(cfg, allow_cpu=True, exp_dir=cfg.exp_dir, light=False)
+    with pytest.raises(RuntimeError, match="simulated precompute failure"):
+        sch.start()
+    # KHÔNG worker nào được spawn (lỗi nổi lên trước vòng for spawn trong start()) — không phải "chạy tiếp rồi lỗi ở worker"
+    assert not sch._started and not sch._procs and not sch._queues
+    assert calls == []  # không có nhánh nào quay lại compute_short on-demand để "cứu" precompute lỗi
+
+
+def test_precompute_missing_column_after_ensure_ext_is_a_hard_failure(tmp_path, monkeypatch):
+    """Yêu cầu: nếu cột cần precompute tồn tại nhưng kết quả sau `ensure_ext` bị thiếu thì cũng phải fail — không
+    âm thầm bỏ qua cột đó rồi để candidate search tự tính khi cần."""
+    cfg = _small_lgbm_cfg(tmp_path)
+    from p0.harness import Store
+
+    orig_ensure_ext = Store.ensure_ext
+
+    def drop_one(self, cols):
+        orig_ensure_ext(self, cols)
+        self._ext.pop(next(iter(cols)), None)  # mô phỏng ensure_ext "thành công" nhưng thiếu 1 cột
+
+    monkeypatch.setattr(Store, "ensure_ext", drop_one)
+    with pytest.raises(RuntimeError, match="thiếu cột"):
+        scheduler._precompute_ext(cfg)
+
+
 # ============================================================================= (1c) cmd_loop: precompute trước add-one thật
 def test_cmd_loop_precomputes_all_candidate_ext_columns_once_before_search(tmp_path, monkeypatch):
     cfg = _small_lgbm_cfg(tmp_path)
