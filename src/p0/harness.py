@@ -24,17 +24,21 @@ from .split import Fold
 
 @dataclass(frozen=True)
 class ColSet:
-    """Feature set = cột B0 (`b0`) + cột ext (`ext`). `locked` ⊆ `ext` là các cột ext KHOÁ (S0_m của vòng expanded-data,
-    quyết định 2026-09-03): không phải candidate, không bị prune PI bỏ, không thể `without_ext`."""
+    """Feature set = cột B0 (`b0`) + cột ext (`ext`).
+
+    Khoá (S0_m vòng expanded-data, 2026-09-03/04): **mọi cột B0 luôn khoá** (`locked_b0 == b0`, không phép toán nào bỏ được);
+    `locked_ext` ⊆ `ext` là các cột ext khoá (F_old_m): không phải candidate, không bị prune PI, không `without_ext`.
+    Cột ext KHÔNG khoá (`new_ext`) = feature do vòng tìm kiếm mới thêm (F_raw / F_pruned / F_best). Schema persisted:
+    {"b0", "ext", "locked_b0", "locked_ext"}; đọc được artifact cũ ({"b0", "ext"} hoặc {"locked"})."""
 
     b0: tuple[str, ...]
     ext: tuple[str, ...] = ()
-    locked: tuple[str, ...] = ()
+    locked_ext: tuple[str, ...] = ()
 
     def __post_init__(self):
-        bad = [c for c in self.locked if c not in self.ext]
+        bad = [c for c in self.locked_ext if c not in self.ext]
         if bad:
-            raise ValueError(f"locked phải là tập con của ext: {bad}")
+            raise ValueError(f"locked_ext phải là tập con của ext: {bad}")
         if len(set(self.names)) != len(self.names):
             dup = sorted({c for c in self.names if list(self.names).count(c) > 1})
             raise ValueError(f"cột trùng tên trong ColSet: {dup}")
@@ -44,29 +48,46 @@ class ColSet:
         return self.b0 + self.ext
 
     @property
+    def locked_b0(self) -> tuple[str, ...]:
+        """Toàn bộ cột B0 là khoá."""
+        return self.b0
+
+    @property
+    def locked(self) -> tuple[str, ...]:
+        """Tương thích tên cũ = `locked_ext`."""
+        return self.locked_ext
+
+    @property
     def new_ext(self) -> tuple[str, ...]:
         """Cột ext KHÔNG khoá = phần được prune PI xét (feature vừa KEEP trong vòng add-one hiện tại)."""
-        return tuple(c for c in self.ext if c not in self.locked)
+        return tuple(c for c in self.ext if c not in self.locked_ext)
+
+    def is_locked(self, col: str) -> bool:
+        return col in self.b0 or col in self.locked_ext
 
     def with_ext(self, cols) -> "ColSet":
-        return ColSet(self.b0, self.ext + tuple(c for c in cols if c not in self.ext), self.locked)
+        return ColSet(self.b0, self.ext + tuple(c for c in cols if c not in self.ext), self.locked_ext)
 
     def without_ext(self, cols) -> "ColSet":
         drop = set(cols)
-        hit = [c for c in drop if c in self.locked]
+        hit = [c for c in drop if c in self.locked_ext]
         if hit:
             raise ValueError(f"không được bỏ cột ext đã KHOÁ (S0_m): {hit}")
-        return ColSet(self.b0, tuple(c for c in self.ext if c not in drop), self.locked)
+        return ColSet(self.b0, tuple(c for c in self.ext if c not in drop), self.locked_ext)
+
+    def without_b0(self, cols) -> "ColSet":
+        raise ValueError(f"không được bỏ cột B0 (toàn bộ B0 là khoá): {list(cols)[:5]}")
 
     def to_dict(self) -> dict:
-        d = {"b0": list(self.b0), "ext": list(self.ext)}
-        if self.locked:
-            d["locked"] = list(self.locked)
-        return d
+        return {"b0": list(self.b0), "ext": list(self.ext), "locked_b0": list(self.b0), "locked_ext": list(self.locked_ext)}
 
     @classmethod
     def from_dict(cls, d: dict) -> "ColSet":
-        return cls(tuple(d["b0"]), tuple(d.get("ext", ())), tuple(d.get("locked", ())))
+        b0 = tuple(d["b0"])
+        if "locked_b0" in d and tuple(d["locked_b0"]) != b0:
+            raise ValueError("ColSet artifact malformed: locked_b0 phải == b0 (toàn bộ B0 là khoá)")
+        locked = d.get("locked_ext", d.get("locked", ()))  # "locked" = schema cũ (2026-09-03), chỉ ext
+        return cls(b0, tuple(d.get("ext", ())), tuple(locked))
 
     def save(self, path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -125,7 +146,7 @@ class Store:
             for c in old:
                 self._ext[c] = df[c].to_numpy(np.float32)
         if short:
-            df = compute_short(self.grid, columns=short)
+            df = compute_short(self.grid, self.raw_lf, columns=short)
             for c in short:
                 self._ext[c] = df[c].to_numpy(np.float32)
 

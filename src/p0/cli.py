@@ -1,6 +1,6 @@
 """CLI: python run.py <step> --config configs/p0_full.json [--model lgbm] [--smoke] [--allow-cpu]
 
-Bước (plan §8, vòng expanded-data 2026-09-03): check-data → lock-s0 (S0_m khoá + collision audit + Candidate_m) →
+Bước (plan §8, vòng expanded-data 2026-09-03/04): check-data → lock-s0 (S0_m khoá toàn bộ + overlap audit per model + Candidate_m) →
 loop --model m (calibrate riêng trên S0_m, ε_m mới, add-one Candidate_m, prune PI chỉ cột mới, confirmation 3 seed → win_m,
 champion) → tfm-final (TimesFM-LoRA + XReg(win) vs native LoRA) → autots-search (framework AutoTS trên F_WR_best / F_MR_best)
 → ensemble → final (TEST một lần) → visualize (hậu kỳ, không train). `calibrate`/`filter-b0` giữ cho lọc B0 §1.4 (đã xong ở
@@ -16,6 +16,7 @@ Data thật phải khớp file checksum của config (§6.1) ở mọi bước s
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -25,6 +26,8 @@ import numpy as np
 import pandas as pd
 
 from . import fold_parallel
+from .checker_log import hard_fail
+from .checker_log import record as ck_record
 from .config import HORIZONS, RunConfig
 from .data import check_ohlcv, read_ohlcv_csv, verify_checksums, write_checksums
 from .features_ext import ALL_EXT_COLUMNS, CANDIDATE_BY_NAME, CANDIDATES
@@ -63,16 +66,23 @@ def gate(cfg: RunConfig, args, model_names: list[str]) -> None:
     """Khóa training (MEMORY) + GPU preflight. --smoke / --allow-cpu CHỈ hợp lệ với dataset tổng hợp (dataset_label 'synthetic*')."""
     smoke, allow_cpu = bool(getattr(args, "smoke", False)), bool(getattr(args, "allow_cpu", False))
     if (smoke or allow_cpu) and not _is_synthetic(cfg):
-        sys.exit(f"--smoke/--allow-cpu bị từ chối với dataset '{cfg.dataset_label}': chỉ cho data tổng hợp "
-                 "(plan §0: cấm training CPU; không bỏ khóa training/GPU gate trên data thật).")
+        hard_fail(cfg.exp_dir, "gate", "CPU_ON_REAL_DATA", f"--smoke/--allow-cpu bị từ chối với dataset '{cfg.dataset_label}': chỉ cho data "
+                  "tổng hợp (plan §0: cấm training CPU; không bỏ khóa training/GPU gate trên data thật).")
     if smoke:
         return
     st = training_state(Path(cfg.root))
     if st != "UNLOCKED":
-        sys.exit(f"TRAINING_LOCKED (MEMORY.md: {st}) — cần user unlock rõ ràng trước khi chạy training.")
+        hard_fail(cfg.exp_dir, "gate", "TRAINING_LOCKED", f"TRAINING_LOCKED (MEMORY.md: {st}) — cần user unlock rõ ràng trước khi chạy training.")
     if cfg.require_gpu and not allow_cpu:
-        for m in model_names:
-            gpu_preflight(m, cfg)
+        for m in model_names:  # GPU không có / backend không phải CUDA → dừng NGAY, không hỏi, không CPU fallback
+            try:
+                gpu_preflight(m, cfg)
+            except SystemExit as e:
+                hard_fail(cfg.exp_dir, "gpu_preflight", "GPU_UNAVAILABLE", str(e), model=m)
+            except Exception as e:  # ImportError / lỗi thư viện khi thử fit GPU
+                hard_fail(cfg.exp_dir, "gpu_preflight", "GPU_UNAVAILABLE", f"{type(e).__name__}: {e}", model=m)
+        if model_names:
+            ck_record(cfg.exp_dir, "gpu_preflight", "PASS", "GPU_PREFLIGHT", f"GPU preflight OK: {list(model_names)}")
 
 
 def gpu_preflight(model: str, cfg: RunConfig) -> None:
@@ -84,9 +94,24 @@ def gpu_preflight(model: str, cfg: RunConfig) -> None:
     elif model in ("xgb", "xgbrf"):
         import xgboost as xgb
 
+        info = xgb.build_info()
+        if not bool(info.get("USE_CUDA", False)):
+            sys.exit(f"GPU preflight XGBoost: wheel không build CUDA (USE_CUDA={info.get('USE_CUDA')}) — cấm CPU fallback.")
+        try:
+            import torch
+
+            if not torch.cuda.is_available():
+                sys.exit("GPU preflight XGBoost: không có CUDA device trên máy (torch.cuda.is_available() = False).")
+        except ImportError:
+            pass
         x = np.random.default_rng(0).normal(size=(256, 4)).astype(np.float32)
-        xgb.XGBRegressor(n_estimators=3, device="cuda", tree_method="hist").fit(x, x[:, 0])
-        say("GPU preflight XGBoost: OK")
+        m = xgb.XGBRegressor(n_estimators=3, device="cuda", tree_method="hist")
+        m.fit(x, x[:, 0])
+        conf = json.loads(m.get_booster().save_config())
+        dev = str(conf.get("learner", {}).get("generic_param", {}).get("device", ""))
+        if not dev.startswith("cuda"):  # không chỉ YÊU CẦU device=cuda: booster phải THỰC SỰ ở cuda
+            sys.exit(f"GPU preflight XGBoost: booster báo device={dev!r} ≠ cuda — CPU fallback bị cấm.")
+        say(f"GPU preflight XGBoost: OK (build CUDA, booster device {dev})")
     elif model == "cat":
         from catboost import CatBoostRegressor
 
@@ -127,26 +152,29 @@ def load_store(cfg: RunConfig, need_lf: bool = True, verify: bool = True):
     if verify:
         ck = checksum_path(cfg)
         if not ck.exists():
-            sys.exit(f"Thiếu {ck} — chạy `python run.py check-data --config <cfg> --write-checksums` (§6.1) trước.")
+            hard_fail(cfg.exp_dir, "load_store", "CHECKSUM_MISSING", f"Thiếu {ck} — chạy `python run.py check-data --config <cfg> --write-checksums` (§6.1) trước.")
         ok, problems = verify_checksums(ck, Path(cfg.root), label=cfg.dataset_label)
         if not ok:
-            sys.exit("Checksum data không khớp §6.1 — dừng: " + "; ".join(problems))
+            hard_fail(cfg.exp_dir, "load_store", "CHECKSUM_MISMATCH", "Checksum data không khớp §6.1 — dừng: " + "; ".join(problems))
     hf_path = cfg.path(cfg.hf_csv)
     raw_hf = read_ohlcv_csv(hf_path)
     rep = check_ohlcv(raw_hf)
     if not rep["ok"]:
-        sys.exit(f"Data HF không đạt §1.1: {rep}")
+        hard_fail(cfg.exp_dir, "load_store", "DATA_QUALITY", f"Data HF không đạt §1.1: {rep}")
     raw_lf = None
     lf_path = cfg.path(cfg.lf_csv) if cfg.lf_csv else None
+    if need_lf and lf_path and not lf_path.exists() and not _is_synthetic(cfg):  # data thật: LF khai báo mà thiếu → cột 5' của S0 sẽ NaN âm thầm → cấm
+        hard_fail(cfg.exp_dir, "load_store", "LF_MISSING", f"Thiếu file LF 5' {lf_path} (config khai báo lf_csv) — cung cấp LF phủ toàn bộ HF.")
     if need_lf and lf_path and lf_path.exists():
         raw_lf = read_ohlcv_csv(lf_path)
         # LF phải PHỦ toàn bộ HF: cột r5_* / log_c5_* trong S0 của nhiều model là as-of join; thiếu LF → NaN âm thầm → cấm
         lf_ts = raw_lf["timestamp"].to_numpy(np.int64)
         hf_ts = raw_hf["timestamp"].to_numpy(np.int64)
         if lf_ts.min() > hf_ts.min() + 5 * 60 * 288 or lf_ts.max() < hf_ts.max() - 5 * 60:
-            sys.exit(f"LF {lf_path} không phủ HF: LF {pd.Timestamp(lf_ts.min(), unit='s', tz='UTC')} → "
-                     f"{pd.Timestamp(lf_ts.max(), unit='s', tz='UTC')} vs HF {pd.Timestamp(hf_ts.min(), unit='s', tz='UTC')} → "
-                     f"{pd.Timestamp(hf_ts.max(), unit='s', tz='UTC')} — cung cấp LF 5' đủ phủ (feature 5' của S0 cần).")
+            hard_fail(cfg.exp_dir, "load_store", "LF_COVERAGE",
+                      f"LF {lf_path} không phủ HF: LF {pd.Timestamp(lf_ts.min(), unit='s', tz='UTC')} → "
+                      f"{pd.Timestamp(lf_ts.max(), unit='s', tz='UTC')} vs HF {pd.Timestamp(hf_ts.min(), unit='s', tz='UTC')} → "
+                      f"{pd.Timestamp(hf_ts.max(), unit='s', tz='UTC')} — cung cấp LF 5' đủ phủ (feature 5' của S0 cần).")
     store = Store(raw_hf, raw_lf)
     folds, final = make_partitions(store, cfg)
     return store, folds, final, rep
@@ -178,7 +206,7 @@ PROBE_MODELS = ("autots_wr", "autots_mr", "tfm")  # chạy đủ §2.1 (add-one 
 # ở `loop`; bước "final" tương ứng gộp kết quả thành model đại diện rồi mới so champion / ensemble / Final:
 FINAL_STEP = {"autots_wr": "autots-search", "autots_mr": "autots-search", "tfm": "tfm-final"}
 # artifact wins/ KHÔNG phải thành viên ensemble / cấu hình Final: probe AutoTS và hai cấu hình TimesFM trước khi `tfm-final` chọn
-NON_MEMBER_WINS = ("autots_wr", "autots_mr", "tfm_native", "tfm_xreg")
+NON_MEMBER_WINS = ("autots_wr", "autots_mr", "tfm_lora_native", "tfm_lora_xreg")
 
 
 def colset_from_arg(store: Store, cfg: RunConfig, arg: str) -> ColSet:
@@ -236,7 +264,7 @@ def cmd_check_data(cfg: RunConfig, args) -> None:
         say(f"{f.name}: FIT {f.fit.label()} n={chk['n_fit']} | ES {f.es.label()} n={chk['n_es']} | VAL {f.val.label()} n={chk['n_val']} "
             f"| cuối=T_end−4' {chk['last_val_origin_is_Tend_minus_4min']} | {'OK' if chk['ok'] else chk['problems']}")
         if not chk["ok"]:
-            sys.exit("Fold không đạt — dừng.")
+            hard_fail(cfg.exp_dir, "check-data", "LEAKAGE_BOUNDARY", f"{f.name}: fold không đạt biên/purge: {chk['problems']}")
     out = checksum_path(cfg)
     if args.write_checksums:
         write_checksums(cfg.dataset_label, files, reports, out, root=Path(cfg.root))
@@ -245,7 +273,7 @@ def cmd_check_data(cfg: RunConfig, args) -> None:
         ok, problems = verify_checksums(out, Path(cfg.root), label=cfg.dataset_label)
         say(f"verify {out}: {'OK — khớp snapshot đã ghi' if ok else 'KHÔNG KHỚP: ' + '; '.join(problems)}")
         if not ok:
-            sys.exit("Data khác snapshot đã ghi (§6.1) — dừng.")
+            hard_fail(cfg.exp_dir, "check-data", "CHECKSUM_MISMATCH", "Data khác snapshot đã ghi (§6.1) — dừng: " + "; ".join(problems))
     else:
         say(f"chưa có {out} — chạy lại với --write-checksums để ghi anchor §6.1 (bắt buộc trước mọi bước training)")
 
@@ -268,28 +296,39 @@ def cmd_lock_s0(cfg: RunConfig, args) -> None:
     models = [m for m in cfg.model_order if m in S0_MODELS]
     s0 = {m: s0_for(m, prev, star) for m in models}
     for m, cs in s0.items():
-        say(f"S0_{m}: {len(cs.b0)} cột B0 + {len(cs.locked)} cột ext KHOÁ" + (" (TimesFM: native, không kế thừa covariate)" if m == "tfm" else ""))
-    pool = tuple(cfg.short_candidates) if cfg.short_candidates else SHORT_COLUMNS
-    bad = [c for c in pool if c not in SHORT_COLUMNS]
+        say(f"S0_{m}: locked_b0 = {len(cs.locked_b0)} cột B0* + locked_ext = {len(cs.locked_ext)} cột ext thắng cũ (toàn bộ S0 khoá)"
+            + (" — TimesFM: S0 = ∅ (baseline = TimesFM-LoRA native, không B0*)" if m == "tfm" else ""))
+    c_short = tuple(cfg.short_candidates) if cfg.short_candidates else SHORT_COLUMNS
+    bad = [c for c in c_short if c not in SHORT_COLUMNS]
     if bad:
-        sys.exit(f"short_candidates ngoài C_short: {bad}")
-    assert not set(pool) & set(ALL_EXT_COLUMNS), "C_short không được chứa candidate cũ §2.3"
+        hard_fail(exp, "lock-s0", "S0_ARTIFACT", f"short_candidates ngoài C_short: {bad}")
+    if set(c_short) & set(ALL_EXT_COLUMNS):  # C_short = định nghĩa MỚI; candidate cũ §2.3 (KEEP/DROP) không quay lại (§6)
+        hard_fail(exp, "lock-s0", "S0_ARTIFACT", f"C_short chứa định nghĩa candidate cũ §2.3: {sorted(set(c_short) & set(ALL_EXT_COLUMNS))[:5]}")
     if prev is not None:
         for m in models:
             if m == "tfm":
                 continue
             drop = set(prev_dropped(prev, m))
-            assert not drop & set(pool), f"{m}: cột DROP cũ xuất hiện trong pool: {sorted(drop & set(pool))[:5]}"
+            if drop & set(c_short):
+                hard_fail(exp, "lock-s0", "S0_ARTIFACT", f"{m}: cột DROP cũ xuất hiện trong C_short: {sorted(drop & set(c_short))[:5]}")
     data_cfg = RunConfig.load(args.data_config) if getattr(args, "data_config", None) else cfg
     store, _, _, _ = load_store(data_cfg)
-    say(f"collision audit bằng số trên data '{data_cfg.dataset_label}' (C_short {len(pool)} cột vs B0-306 ∪ 39 candidate cũ ∪ C_short)")
-    rep = collision_audit(store, s0, pool, max_rows=int(getattr(args, "max_rows", 60_000) or 60_000), dataset_label=data_cfg.dataset_label)
+    say(f"overlap audit bằng số trên data '{data_cfg.dataset_label}': Candidate_m = C_short ({len(c_short)} cột) \\ overlap(C_short, S0_m) — "
+        "chỉ trừ cột đã có trong S0 của CHÍNH model (trùng tên / giá trị giống hệt cùng timestamp); tương quan cao chỉ báo cáo")
+    rep = collision_audit(store, s0, c_short, max_rows=int(getattr(args, "max_rows", 60_000) or 60_000), dataset_label=data_cfg.dataset_label)
     save_lock(exp, s0, rep)
-    say(f"identical (bị loại khỏi pool): {len(rep['identical'])} | near |corr| ≥ {rep['corr_threshold']} (chỉ báo): {len(rep['near'])} | pool: {len(rep['pool'])}")
+    n_intra = len(rep["intra_short_identical"])
+    say(f"C_short {len(rep['c_short'])} cột | trùng giá trị nội bộ C_short (chỉ báo, không bỏ): {n_intra} | near nội bộ |ρ| ≥ {rep['corr_threshold']}: {len(rep['intra_short_near'])}")
+    if n_intra:
+        ck_record(exp, "lock-s0", "WARN", "C_SHORT_INTRA_IDENTICAL", f"{n_intra} cặp C_short trùng giá trị (chỉ báo, không tự bỏ): {rep['intra_short_identical'][:5]}")
     for m in models:
         pm = rep["per_model"][m]
-        say(f"Candidate_{m}: {pm['n_candidates']} (loại do overlap S0: {len(pm['removed_by_overlap'])})")
-    say(f"→ {exp / 's0'}: <model>.json, candidates_<model>.json, collisions.json, short_pool.json")
+        say(f"Candidate_{m}: {pm['n_candidates']} = {len(rep['c_short'])} − {len(pm['removed_by_overlap'])} overlap S0_{m} | near vs S0 (chỉ báo): {len(pm['near_vs_s0'])}")
+        ck_record(exp, "lock-s0", "INFO", "CANDIDATE_M",
+                  f"S0: locked_b0={pm['n_locked_b0']}, locked_ext={pm['n_locked_ext']}; Candidate_m={pm['n_candidates']}; "
+                  f"overlap={[r['col'] for r in pm['removed_by_overlap']]}; near_vs_s0={len(pm['near_vs_s0'])} (diagnostic)", model=m)
+    ck_record(exp, "lock-s0", "PASS", "S0_LOCK", f"S0/Candidate_m ghi cho {models} trên '{data_cfg.dataset_label}'")
+    say(f"→ {exp / 's0'}: <model>.json (locked_b0/locked_ext), candidates_<model>.json, collisions.json, short_pool.json")
 
 
 def cmd_calibrate(cfg: RunConfig, args) -> dict:
@@ -474,7 +513,10 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     mname = args.model
     exp = cfg.exp_dir
     is_probe = mname in PROBE_MODELS
-    base, cands = load_lock(exp, mname, dataset_label=cfg.dataset_label)  # audit trùng phải trên đúng dataset đang chạy
+    try:
+        base, cands = load_lock(exp, mname, dataset_label=cfg.dataset_label)  # overlap audit phải trên đúng dataset đang chạy
+    except (FileNotFoundError, ValueError, KeyError) as e:
+        hard_fail(exp, "loop", "S0_ARTIFACT", str(e), model=mname)
     if args.max_candidates:
         cands = cands[: args.max_candidates]
     model = model_for(cfg, args.model, args.allow_cpu)
@@ -483,8 +525,12 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         say(f"[{mname}] fold-parallel: {nw} worker — ngữ nghĩa không đổi, ghép theo đúng thứ tự fold; candidate vẫn tuần tự")
     if load_champion(exp / "champion.json") is None and mname != "lgbm":
         sys.exit("§3: champion ban đầu phải là LightGBM code gốc — chạy `loop --model lgbm` trước.")
-    base_label = "∅ (TimesFM-LoRA native trên r1)" if not base.names else f"S0_{mname} = {len(base.b0)} B0* + {len(base.locked)} ext khoá"
-    say(f"[{mname}] calibrate trên {base_label} — ES với calib_seed {cfg.calib_seed}; {len(cands)} candidate C_short")
+    base_label = ("∅ — baseline = TimesFM-LoRA native (LoRA fine-tune trên r1, không covariate, KHÔNG B0*)" if mname == "tfm"
+                  else f"S0_{mname} = {len(base.locked_b0)} B0* khoá + {len(base.locked_ext)} ext khoá")
+    say(f"[{mname}] calibrate trên {base_label} — ES với calib_seed {cfg.calib_seed}; {len(cands)} candidate (Candidate_{mname})")
+    if mname == "tfm":
+        say("[tfm] calibrate = LoRA FIT + ES chọn epoch (calib_seed) → fixed_epoch_TFM → adapter cho eval_seeds (ε) → adapter selection_seed "
+            "FREEZE cho toàn bộ add-one/prune (thêm candidate = fit lại XReg, không train lại LoRA)")
     calib_path = exp / "calib" / f"{mname}_base.json"
     standalone_fn = None if args.no_standalone else _standalone_factory(store, folds, args.allow_cpu, cfg)
     resume_state = None
@@ -520,7 +566,9 @@ def cmd_loop(cfg: RunConfig, args) -> None:
              "best_iters_es": cal.best_iters.tolist(), "config_hash": cfg.hash()}, indent=1), encoding="utf-8")
         _log(cfg, exp_id=new_exp_id("calibrate", mname, "base"), step="calibrate", model=mname, seed=cfg.sel_seed, colset="S0",
              rounds=json.dumps(rounds), **_summ_row(base_run, base_run.e0, "E0"), decision=f"eps={eps:.4f}",
-             train_device=getattr(model, "train_device", ""), note=f"S0: {len(base.b0)} B0 + {len(base.locked)} ext khoá")
+             train_device=getattr(model, "train_device", ""),
+             note=(f"S0: locked_b0={len(base.locked_b0)} locked_ext={len(base.locked_ext)}" if mname != "tfm"
+                   else "TimesFM-LoRA native: calibrate = LoRA FIT + ES chọn epoch; S0 = ∅"))
     kd_path = exp / f"keepdrop_{mname}.csv"
 
     def on_row(row, run):
@@ -537,18 +585,22 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     lr = add_one_loop(store, model, base, base_rmse, cands, folds, rounds, eps, cfg.sel_seed, base_e0, standalone_fn,
                       on_row, resume=resume_state)
     lr.table.to_csv(kd_path, index=False)
+    for _, r in lr.table.iterrows():  # tư vấn (WARN, không dừng): Gain > ~1 pp so với S là nghi leakage/bug theo §6.8
+        if float(r["MedianGain_vs_S"]) > 1.0:
+            ck_record(exp, "loop", "WARN", "UNUSUAL_GAIN", f"{r['candidate']}: MedianGain vs S = {float(r['MedianGain_vs_S']):+.3f} pp > 1 pp — kiểm tra leakage", model=mname)
     say(f"[{mname}] F*_raw: {len(lr.kept)} KEEP / {len(lr.dropped)} DROP → {kd_path}")
     g_fin = summarize(gain_pp(lr.final_rmse, base_rmse))
     _log(cfg, exp_id=new_exp_id("loop_final", mname), step="loop_final", model=mname, seed=cfg.sel_seed,
          colset="|".join(lr.final.new_ext), n_cols=len(lr.final.names), rounds=json.dumps(rounds), base="baseline_model",
          MedianGain=round(g_fin["MedianGain"], 4), WinRate=round(g_fin["WinRate"], 4), P10Gain=round(g_fin["P10Gain"], 4),
          WorstGain=round(g_fin["WorstGain"], 4), rmse_cells=_cells(lr.final_rmse), decision=f"F*_{mname}_raw",
-         note=f"{len(lr.kept)} KEEP / {len(lr.dropped)} DROP; {len(lr.final.locked)} ext khoá giữ nguyên", train_device=getattr(model, "train_device", ""))
+         note=f"{len(lr.kept)} KEEP / {len(lr.dropped)} DROP; locked_b0={len(lr.final.locked_b0)} locked_ext={len(lr.final.locked_ext)} giữ nguyên",
+         train_device=getattr(model, "train_device", ""))
     say(f"[{mname}] F*_raw vs baseline S0: MedianGain = {g_fin['MedianGain']:+.4f} pp")
     # prune PI — CHỈ cột ext mới (S0 khoá không bị xét)
     pruned, pi_df = prune_pi(store, model, lr.final, folds, rounds, cfg.sel_seed)
     pi_df.to_csv(exp / f"prune_pi_{mname}.csv", index=False)
-    say(f"[{mname}] prune PI: giữ {len(pruned.new_ext)}/{len(lr.final.new_ext)} cột ext mới (+{len(pruned.locked)} khoá)")
+    say(f"[{mname}] prune PI (chỉ cột mới): giữ {len(pruned.new_ext)}/{len(lr.final.new_ext)} → F_pruned (+{len(pruned.locked_ext)} ext khoá, {len(pruned.locked_b0)} B0 khoá)")
     # confirmation 3 seed (ES bật) → win; latency §7.4 đo cho cả hai cấu hình (predictor sống chỉ tồn tại trong lúc chạy)
     unp = confirm(store, model, lr.final, folds, cfg.eval_seeds, keep_states=True, latency_origins=args.latency_origins, measure_latency=True)
     prn = confirm(store, model, pruned, folds, cfg.eval_seeds, keep_states=True, latency_origins=args.latency_origins, measure_latency=True) \
@@ -565,8 +617,12 @@ def cmd_loop(cfg: RunConfig, args) -> None:
          "eps": eps, "win": which},
     ]).to_csv(exp / f"prune_{mname}.csv", index=False)
     say(f"[{mname}] win_m = {which} (MedianGain prune vs unprune {s['MedianGain']:+.4f}, ε={eps:.4f})")
-    win_name = "tfm_xreg" if mname == "tfm" else mname
-    payload = _save_win(exp, win_name, win, eps, which, folds, {"role": "TimesFM-LoRA + XReg(win)"} if mname == "tfm" else None)
+    win_name = "tfm_lora_xreg" if mname == "tfm" else mname
+    meta = ({"role": "TimesFM-LoRA + XReg(F_best_XReg)", "configuration": "tfm_lora_xreg",
+             **model.artifact_meta(win.colset.ext, native=not win.colset.ext)} if mname == "tfm" else None)  # native=True chỉ khi F_best rỗng
+    payload = _save_win(exp, win_name, win, eps, which, folds, meta)
+    if payload["median_gain_vs_e0"] > 1.0:
+        ck_record(exp, "confirm", "WARN", "UNUSUAL_GAIN", f"win_{mname}: MedianGain vs E0 = {payload['median_gain_vs_e0']:+.3f} pp > 1 pp — kiểm tra leakage", model=mname)
     lat = None
     if win.latency:
         lat = pd.DataFrame(win.latency)
@@ -574,24 +630,27 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         log_latency(exp, lat, split="VAL")
         say(f"[{mname}] latency p95 (ms) per h: {lat['p95_ms'].round(3).tolist()} (predict device {lat['predict_device'].iloc[0]})")
     if mname == "tfm":
-        # native LoRA (0 covariate) — CÙNG adapter đã freeze — confirmation 3 seed → wins/tfm_native.json; `tfm-final` so với +XReg
+        # TimesFM-LoRA native (0 covariate) — CÙNG adapter đã freeze — confirmation 3 seed → wins/tfm_lora_native.json;
+        # `tfm-final` so {LoRA + XReg(F_best_XReg)} với native bằng luật project
         native = unp if not lr.final.ext else confirm(store, model, ColSet((), ()), folds, cfg.eval_seeds, keep_states=True,
                                                      latency_origins=args.latency_origins, measure_latency=True)
         if native is not unp:
             _log_confirm(cfg, mname, "native", native, eps, model)
-        _save_win(exp, "tfm_native", native, eps, "native", folds, {"role": "TimesFM-LoRA native (0 covariate)"})
+        _save_win(exp, "tfm_lora_native", native, eps, "native", folds,
+                  {"role": "TimesFM-LoRA native (LoRA fine-tune, 0 covariate, không B0*)", "configuration": "tfm_lora_native",
+                   **model.artifact_meta((), native=True)})
         if native.latency:
-            pd.DataFrame(native.latency).to_csv(exp / "latency_tfm_native.csv", index=False)
+            pd.DataFrame(native.latency).to_csv(exp / "latency_tfm_lora_native.csv", index=False)
             log_latency(exp, pd.DataFrame(native.latency), split="VAL")
-        say(f"[tfm] native MedianGain vs E0 = {np.median(gain_pp(native.rmse_mean, native.e0)):+.4f} pp; "
-            f"+XReg({len(win.colset.ext)} cột) = {payload['median_gain_vs_e0']:+.4f} pp → chạy `tfm-final`")
+        say(f"[tfm] TimesFM-LoRA native MedianGain vs E0 = {np.median(gain_pp(native.rmse_mean, native.e0)):+.4f} pp; "
+            f"TimesFM-LoRA + XReg({len(win.colset.ext)} cột) = {payload['median_gain_vs_e0']:+.4f} pp → chạy `tfm-final`")
     if is_probe:
         log_champion(exp, {"exp_id": new_exp_id("probe", mname), "model": mname, "win": which, "n_ext": len(win.colset.ext),
                            "ext_cols": "|".join(win.colset.ext), "MedianGain_vs_E0": round(payload["median_gain_vs_e0"], 4),
                            "rmse_mean_win": _cells(win.rmse_mean), "decision": "probe — không so champion",
                            "champion_after": (load_champion(exp / "champion.json") or {}).get("model", ""),
                            "train_device": getattr(model, "train_device", "")})
-        say(f"[{mname}] feature-search xong ({len(win.colset.new_ext)} cột mới + {len(win.colset.locked)} khoá) — không so champion; "
+        say(f"[{mname}] feature-search xong (F_best: {len(win.colset.new_ext)} cột mới + {len(win.colset.locked_ext)} ext khoá) — không so champion; "
             f"chạy `{FINAL_STEP[mname]}` để có model đại diện")
         return
     champion_step(cfg, mname, win.colset, win.rmse_mean, win.e0, eps,
@@ -800,13 +859,18 @@ def cmd_tfm_final(cfg: RunConfig, args) -> None:
     Không chạy lại model: dùng bảng RMSE̅ 3 seed của hai cấu hình (cùng adapter đã freeze) đã lưu ở `loop --model tfm`."""
     exp = cfg.exp_dir
     wins = {}
-    for m in ("tfm_native", "tfm_xreg"):
+    for m in ("tfm_lora_native", "tfm_lora_xreg"):
         p = exp / "wins" / f"{m}.json"
         if not p.exists():
-            sys.exit(f"Thiếu {p} — phải chạy `loop --model tfm` (LoRA → freeze → XReg add-one → prune → confirmation) trước.")
+            hard_fail(exp, "tfm-final", "S0_ARTIFACT", f"Thiếu {p} — phải chạy `loop --model tfm` (LoRA → freeze → XReg add-one → prune → confirmation) trước.", model="tfm")
         wins[m] = json.loads(p.read_text(encoding="utf-8"))
     gate(cfg, args, [])
-    nat, xr = wins["tfm_native"], wins["tfm_xreg"]
+    nat, xr = wins["tfm_lora_native"], wins["tfm_lora_xreg"]
+    for tag, w in (("tfm_lora_native", nat), ("tfm_lora_xreg", xr)):
+        if w.get("finetune_method") != "LoRA" or "native" not in w or w["colset"]["b0"]:
+            hard_fail(exp, "tfm-final", "S0_ARTIFACT", f"artifact {tag} thiếu metadata LoRA/native hoặc chứa B0* — không đúng vai trò", model="tfm")
+    if not nat.get("native") or nat["colset"]["ext"]:
+        hard_fail(exp, "tfm-final", "S0_ARTIFACT", "tfm_lora_native phải là TimesFM-LoRA native (không covariate)", model="tfm")
     eps = float(nat["eps"])
     change, gc, sc = compare(np.asarray(xr["rmse_mean"]), np.asarray(nat["rmse_mean"]), eps)
     rows = []
@@ -816,13 +880,14 @@ def cmd_tfm_final(cfg: RunConfig, args) -> None:
                      "rmse_mean": _cells(np.asarray(w["rmse_mean"]))})
     rows[1].update({"MedianGain_vs_native": round(sc["MedianGain"], 4), "WinRate": round(sc["WinRate"], 4), "P10Gain": round(sc["P10Gain"], 4),
                     "WorstGain": round(sc["WorstGain"], 4), "eps_tfm": eps, "gain_cells": _cells(gc)})
-    best = "tfm_xreg" if change else "tfm_native"
+    best = "tfm_lora_xreg" if change else "tfm_lora_native"
     for r in rows:
         r["is_final"] = r["configuration"] == best
     pd.DataFrame(rows).to_csv(exp / "tfm_final.csv", index=False)
     w = wins[best]
-    say(f"TimesFM-final = {best}: +XReg vs native MedianGain {sc['MedianGain']:+.4f} pp (ε_TFM {eps:.4f}) → "
-        f"{'XReg(win) cải thiện đủ' if change else 'không đủ → native LoRA'}")
+    say(f"TimesFM-final = {best}: {{TimesFM-LoRA + XReg(F_best)}} vs {{TimesFM-LoRA native}} MedianGain {sc['MedianGain']:+.4f} pp (ε_TFM {eps:.4f}) → "
+        f"{'XReg(F_best) cải thiện đủ' if change else 'không đủ → TimesFM-LoRA native'}")
+    ck_record(exp, "tfm-final", "PASS", "TFM_FINAL", f"TimesFM-final = {best} (MedianGain +XReg vs native {sc['MedianGain']:+.4f}, ε {eps:.4f})", model="tfm")
     payload = {**w, "model": "tfm", "role": "TimesFM-final", "configuration": best, "covariate_scope": "ext",
                "compare_xreg_vs_native": {"MedianGain": sc["MedianGain"], "WinRate": sc["WinRate"], "P10Gain": sc["P10Gain"],
                                           "WorstGain": sc["WorstGain"], "eps": eps, "decision": best}}
@@ -833,9 +898,9 @@ def cmd_tfm_final(cfg: RunConfig, args) -> None:
             (exp / "wins" / f"tfm_seed{k}.npz").write_bytes(src.read_bytes())
     _log(cfg, exp_id=new_exp_id("tfm_final", "tfm"), step="tfm_final", model="tfm", seed=cfg.sel_seed,
          colset="|".join(w["colset"]["ext"]), n_cols=len(w["colset"]["b0"]) + len(w["colset"]["ext"]), rounds="LoRA",
-         base="tfm_native", MedianGain=round(sc["MedianGain"], 4), WinRate=round(sc["WinRate"], 4), P10Gain=round(sc["P10Gain"], 4),
+         base="tfm_lora_native", MedianGain=round(sc["MedianGain"], 4), WinRate=round(sc["WinRate"], 4), P10Gain=round(sc["P10Gain"], 4),
          WorstGain=round(sc["WorstGain"], 4), rmse_cells=_cells(np.asarray(w["rmse_mean"])), e0_cells=_cells(np.asarray(w["e0"])),
-         gain_cells=_cells(gc), decision=f"TimesFM-final={best}", note="TFM-LoRA + XReg(win) vs TFM-LoRA native, cùng adapter freeze")
+         gain_cells=_cells(gc), decision=f"TimesFM-final={best}", note="TimesFM-LoRA + XReg(F_best) vs TimesFM-LoRA native, cùng adapter freeze")
     champion_step(cfg, "tfm", ColSet.from_dict(w["colset"]), np.asarray(w["rmse_mean"]), np.asarray(w["e0"]), float(w["eps"]),
                   {"win": f"tfm_final={best}"})
 
@@ -882,9 +947,25 @@ def cmd_ensemble(cfg: RunConfig, args) -> None:
 def cmd_final(cfg: RunConfig, args) -> None:
     """§4 Final một lần: refit B0-306, B0*, mọi win_m (+ ensemble) trên fold final → TEST; all_models_test.csv; lưu prediction
     TEST (final/<key>.npz + final/index.json) cho `visualize` — KHÔNG vẽ ở đây."""
-    gate(cfg, args, [p.stem for p in (cfg.exp_dir / "wins").glob("*.json") if p.stem not in NON_MEMBER_WINS] or ["lgbm"])
-    store, folds, final, _ = load_store(cfg)
     exp = cfg.exp_dir
+    sentinel = exp / "final" / "TEST_SENTINEL.json"
+    if sentinel.exists():  # §4/§15: TEST đúng MỘT lần — lần hai dừng ngay, không hỏi; chỉ --force-test-rerun (recovery) mới vượt
+        prev = json.loads(sentinel.read_text(encoding="utf-8"))
+        if not getattr(args, "force_test_rerun", False):
+            hard_fail(exp, "final", "TEST_ALREADY_RUN",
+                      f"TEST đã được chạm lúc {prev.get('started_at')} (status={prev.get('status')}, config_hash={prev.get('config_hash')}) — "
+                      f"§4 TEST đúng MỘT lần; sentinel {sentinel}. Chạy lại chỉ với --force-test-rerun (recovery, ghi lý do vào checker_log).")
+        ck_record(exp, "final", "WARN", "TEST_RERUN_FORCED", f"--force-test-rerun: chạy lại TEST (lần trước {prev.get('started_at')}, {prev.get('status')})")
+    gate(cfg, args, [p.stem for p in (exp / "wins").glob("*.json") if p.stem not in NON_MEMBER_WINS] or ["lgbm"])
+    store, folds, final, _ = load_store(cfg)
+    (exp / "final").mkdir(parents=True, exist_ok=True)
+    ck_path = checksum_path(cfg)
+    sentinel_payload = {"status": "started", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "dataset_label": cfg.dataset_label,
+                        "config_hash": cfg.hash(), "data_checksums": json.loads(ck_path.read_text(encoding="utf-8")) if ck_path.exists() else None,
+                        "champion": (load_champion(exp / "champion.json") or {}).get("model"),
+                        "wins_sha256": {p.stem: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((exp / "wins").glob("*.json"))},
+                        "test_partition": {"start": int(final.val.start), "end": int(final.val.end)}}
+    sentinel.write_text(json.dumps(sentinel_payload, indent=1, ensure_ascii=False), encoding="utf-8")  # ghi TRƯỚC khi chạm TEST
     configs: dict[str, tuple[str, ColSet]] = {"b0_306": ("lgbm", store.all_b0())}
     star_path = exp / "b0_star.json"
     if not star_path.exists() and cfg.prev_run_dir and (cfg.path(cfg.prev_run_dir) / "b0_star.json").exists():
@@ -976,6 +1057,9 @@ def cmd_final(cfg: RunConfig, args) -> None:
     index["champion"] = champ_key
     pd.DataFrame(rows).to_csv(exp / "summary" / "all_models_test.csv", index=False)
     (exp / "final" / "index.json").write_text(json.dumps(index, indent=1, ensure_ascii=False), encoding="utf-8")
+    sentinel_payload.update({"status": "completed", "completed_at": time.strftime("%Y-%m-%dT%H:%M:%S"), "keys": index["keys"]})
+    sentinel.write_text(json.dumps(sentinel_payload, indent=1, ensure_ascii=False), encoding="utf-8")
+    ck_record(exp, "final", "PASS", "TEST_ONCE", f"TEST chạm một lần: {len(index['keys'])} cấu hình, champion {champ_key}")
     say(f"final → {exp / 'summary' / 'all_models_test.csv'}; prediction TEST → {exp / 'final'} (figure: `python run.py visualize`)")
 
 
@@ -1013,7 +1097,8 @@ def cmd_smoke_e2e(cfg_unused, args) -> None:
     (out / ".claude").mkdir(exist_ok=True)
     (out / ".claude" / "MEMORY.md").write_text("TRAINING: UNLOCKED\n", encoding="utf-8")
     ns = argparse.Namespace(smoke=True, allow_cpu=True, write_checksums=True, model="lgbm", colset="b0306", max_cols=6, max_candidates=3,
-                            no_standalone=False, latency_origins=100, data_config=None, max_rows=None, out=None, resume=False)
+                            no_standalone=False, latency_origins=100, data_config=None, max_rows=None, out=None, resume=False,
+                            force_test_rerun=False)
     cmd_check_data(cfg, ns)
     cmd_calibrate(cfg, ns)
     cmd_filter_b0(cfg, ns)
@@ -1024,7 +1109,7 @@ def cmd_smoke_e2e(cfg_unused, args) -> None:
     cmd_ensemble(cfg, ns)
     cmd_final(cfg, ns)
     cmd_visualize(cfg, ns)
-    say(f"smoke-e2e OK → {out / 'experiments'}")
+    say(f"smoke-e2e OK → {out / 'experiments'} (checker_log: {out / 'experiments' / 'checker_log.jsonl'})")
 
 
 # ----------------------------------------------------------------------------- main
@@ -1054,6 +1139,8 @@ def main(argv=None) -> None:
     sub.add_parser("autots-search", parents=[common(False)])
     sub.add_parser("ensemble", parents=[common(False)])
     s = sub.add_parser("final", parents=[common(False)]); s.add_argument("--latency-origins", type=int, default=None)
+    s.add_argument("--force-test-rerun", action="store_true",
+                   help="RECOVERY ONLY: vượt sentinel TEST-một-lần (final/TEST_SENTINEL.json); không bao giờ dùng tự động, phải ghi lý do")
     s = sub.add_parser("visualize", parents=[common(False)]); s.add_argument("--out", default=None)
     s = sub.add_parser("smoke-e2e", parents=[common(False)]); s.add_argument("--out", default="tmp_smoke"); s.add_argument("--days", type=float, default=6)
     args = p.parse_args(argv)

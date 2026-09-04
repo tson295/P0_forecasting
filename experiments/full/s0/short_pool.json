@@ -9,7 +9,8 @@
   10,
   15
  ],
- "n_candidates": 97,
+ "n_candidates": 163,
+ "rule": "Candidate_m = C_short \\ overlap(C_short, S0_m) per model; tương quan cao chỉ báo cáo, không tự bỏ",
  "families": {
   "A_vwap_amt_gap": {
    "use": [
@@ -21,36 +22,35 @@
     10
    ],
    "skip": {
-    "1": "candidate cũ vwap_amt_gap_1",
-    "15": "candidate cũ vwap_amt_gap_15"
+    "1": "chính là candidate cũ §2.3 (vwap_amt_gap_1) — không quay lại (§6)",
+    "15": "chính là candidate cũ §2.3 (vwap_amt_gap_15) — không quay lại (§6)"
    }
   },
   "B_ret": {
    "use": [
+    1,
     2,
     3,
     4,
+    5,
+    8,
     10,
     15
    ],
-   "skip": {
-    "1": "= B0 fine:t:return1",
-    "5": "= B0 fine:t:return5",
-    "8": "= B0 coarse:t:return8"
-   }
+   "skip": {}
   },
   "C_log_rv_rv60": {
    "use": [
     2,
     3,
     4,
+    5,
     8,
     10,
     15
    ],
    "skip": {
-    "1": "rv_1 = |r1| → log(0) khi r1 = 0",
-    "5": "= B0 fine:t:log_rv5_rv60"
+    "1": "rv_1 = |r1| → log(0) = −∞ khi r1 = 0 (không xác định)"
    }
   },
   "D_log_c_ema": {
@@ -64,17 +64,25 @@
     15
    ],
    "skip": {
-    "1": "EMA_1 = log C → gap ≡ 0"
+    "1": "log C − EMA_1(log C) ≡ 0"
    }
   },
   "D_log_ema_ema": {
    "use": [
     [
      2,
+     5
+    ],
+    [
+     2,
      8
     ],
     [
      3,
+     10
+    ],
+    [
+     4,
      10
     ],
     [
@@ -86,20 +94,20 @@
   },
   "E_rsi": {
    "use": [
+    1,
     2,
     3,
     4,
     5,
     8,
-    10
+    10,
+    15
    ],
-   "skip": {
-    "1": "RSI_1 = dấu(r1) suy biến",
-    "15": "= B0 fine:t:rsi15_centered"
-   }
+   "skip": {}
   },
   "F_bb_pctb": {
    "use": [
+    2,
     3,
     4,
     5,
@@ -108,8 +116,7 @@
     15
    ],
    "skip": {
-    "1": "σ_1 = 0",
-    "2": "%B_2 = ±0.5 suy biến"
+    "1": "σ_1 = 0 → chia 0 (không xác định)"
    }
   },
   "F_bb_logbw": {
@@ -122,23 +129,22 @@
     15
    ],
    "skip": {
-    "1": "σ_1 = 0",
-    "2": "σ_2 = |Δlog C|/2 = |r1|/2 (bản affine của |r1|)"
+    "1": "σ_1 = 0 → log 0",
+    "2": "σ_2 = |Δlog C|/2 → log 0 khi r1 = 0 (không xác định)"
    }
   },
   "G_log_atr_c": {
    "use": [
+    1,
     2,
     3,
     4,
     5,
     8,
-    10
+    10,
+    15
    ],
-   "skip": {
-    "1": "ATR_1 = TR ≈ H−L → ≈ B0 log_range",
-    "15": "≈ ATR14 (candidate cũ log_atr14_c)"
-   }
+   "skip": {}
   },
   "G_log_atr_rv": {
    "use": [
@@ -147,42 +153,43 @@
     4,
     5,
     8,
-    10
+    10,
+    15
    ],
    "skip": {
-    "1": "rv_1 = |r1| → log(0)",
-    "15": "≈ ATR14/rv14 (candidate cũ log_atr14_rv14)"
+    "1": "rv_1 = |r1| → log(0) = −∞ khi r1 = 0 (không xác định)"
    }
   },
   "H_kcw": {
-   "use": [],
+   "use": [
+    2,
+    3,
+    4,
+    5,
+    8,
+    10,
+    15
+   ],
    "skip": {
-    "1": "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến",
-    "2": "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến",
-    "3": "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến",
-    "4": "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến",
-    "5": "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến",
-    "8": "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến",
-    "10": "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến",
-    "15": "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến"
+    "1": "kcw_1 = log(2·TR/C) = log 2 + log_atr1_c (đồng nhất thức, chỉ lệch hằng số)"
    }
   },
   "I_mfi": {
    "use": [
+    1,
     2,
     3,
     4,
     5,
     8,
-    10
+    10,
+    15
    ],
-   "skip": {
-    "1": "MFI_1 ∈ {−0.5, +0.5, NaN} = dấu(ΔTP)",
-    "15": "≈ MFI14 (candidate cũ mfi14_centered)"
-   }
+   "skip": {}
   },
   "J_ad_vwclv": {
    "use": [
+    1,
     2,
     3,
     4,
@@ -190,13 +197,13 @@
     10
    ],
    "skip": {
-    "1": "= CLV_t = 2·close_position_t của B0 (affine)",
-    "5": "candidate cũ",
-    "15": "candidate cũ"
+    "5": "chính là candidate cũ §2.3 (ad_vwclv_5) — không quay lại (§6)",
+    "15": "chính là candidate cũ §2.3 (ad_vwclv_15) — không quay lại (§6)"
    }
   },
   "K_dd": {
    "use": [
+    2,
     3,
     4,
     5,
@@ -205,25 +212,10 @@
     15
    ],
    "skip": {
-    "1": "dd_1 ≡ 0",
-    "2": "dd_2 = min(0, r1) (r1 chỉnh lưu)"
+    "1": "dd_1 = log(C / max_1 C) ≡ 0"
    }
   },
   "K_ru": {
-   "use": [
-    3,
-    4,
-    5,
-    8,
-    10,
-    15
-   ],
-   "skip": {
-    "1": "ru_1 ≡ 0",
-    "2": "ru_2 = max(0, r1) (r1 chỉnh lưu)"
-   }
-  },
-  "L_log_range": {
    "use": [
     2,
     3,
@@ -234,39 +226,56 @@
     15
    ],
    "skip": {
-    "1": "log((H−L)/C) ≈ B0 fine:t:log_range = log(H/L)"
+    "1": "ru_1 = log(C / min_1 C) ≡ 0"
    }
+  },
+  "L_log_range": {
+   "use": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    8,
+    10,
+    15
+   ],
+   "skip": {}
   },
   "M_ret_skew": {
    "use": [
+    3,
+    4,
+    5,
     8,
     10,
     15
    ],
    "skip": {
-    "1": "skew cần ≥ 8 điểm để có nghĩa thống kê",
-    "2": "skew cần ≥ 8 điểm để có nghĩa thống kê",
-    "3": "skew cần ≥ 8 điểm để có nghĩa thống kê",
-    "4": "skew cần ≥ 8 điểm để có nghĩa thống kê",
-    "5": "skew cần ≥ 8 điểm để có nghĩa thống kê"
+    "1": "skew cần ≥ 3 quan sát (không xác định)",
+    "2": "skew cần ≥ 3 quan sát (không xác định)"
    }
   },
   "N_hma_slope": {
    "use": [
+    1,
+    2,
+    3,
     4,
     5,
     8,
-    10
+    10,
+    15
    ],
-   "skip": {
-    "1": "HMA cần k ≥ 4",
-    "2": "HMA cần k ≥ 4",
-    "3": "HMA cần k ≥ 4",
-    "15": "≈ B0 hma_slope16_volnorm"
-   }
+   "skip": {}
   },
   "O_macd_hist": {
    "use": [
+    [
+     2,
+     5,
+     2
+    ],
     [
      2,
      8,
@@ -278,12 +287,99 @@
      3
     ],
     [
+     4,
+     10,
+     4
+    ],
+    [
      5,
      15,
      5
     ]
    ],
    "skip": {}
+  },
+  "P_psar_dir": {
+   "use": [
+    2,
+    3,
+    4,
+    5,
+    8,
+    10,
+    15
+   ],
+   "skip": {
+    "1": "PSAR cần ≥ 2 bar để khởi tạo hướng/EP (n < 2 → trạng thái không xác định)"
+   }
+  },
+  "P_psar_logdist": {
+   "use": [
+    2,
+    3,
+    4,
+    5,
+    8,
+    10,
+    15
+   ],
+   "skip": {
+    "1": "PSAR cần ≥ 2 bar để khởi tạo hướng/EP (n < 2 → trạng thái không xác định)"
+   }
+  },
+  "P_psar_age_log": {
+   "use": [
+    2,
+    3,
+    4,
+    5,
+    8,
+    10,
+    15
+   ],
+   "skip": {
+    "1": "PSAR cần ≥ 2 bar để khởi tạo hướng/EP (n < 2 → trạng thái không xác định)"
+   }
+  },
+  "Q_log_rv_med2d": {
+   "use": [
+    2,
+    3,
+    4,
+    5,
+    8,
+    10,
+    15
+   ],
+   "skip": {
+    "1": "rv_1 = |r1| → log(0) = −∞ khi r1 = 0 (không xác định)"
+   }
+  },
+  "R_r5": {
+   "use": [
+    2,
+    3
+   ],
+   "skip": {
+    "1": "chính là candidate cũ §2.3 (r5_1) — không quay lại (§6)",
+    "12": "chính là candidate cũ §2.3 (r5_12) — không quay lại (§6)"
+   }
+  },
+  "S_log_c5_ema5": {
+   "use": [
+    2,
+    3
+   ],
+   "skip": {
+    "1": "log C5 − EMA_1(log C5) ≡ 0",
+    "12": "chính là candidate cũ §2.3 (log_c5_ema5_12) — không quay lại (§6)"
+   }
+  },
+  "T_dow": {
+   "use": [],
+   "skip": {
+    "*": "ngoại lệ: weekday không có horizon cuộn tự nhiên; dow_sin/dow_cos là candidate cũ §2.3 (§5C)"
+   }
   }
  },
  "columns": [
@@ -293,14 +389,18 @@
   "vwap_amt_gap_5",
   "vwap_amt_gap_8",
   "vwap_amt_gap_10",
+  "ret_1",
   "ret_2",
   "ret_3",
   "ret_4",
+  "ret_5",
+  "ret_8",
   "ret_10",
   "ret_15",
   "log_rv2_rv60",
   "log_rv3_rv60",
   "log_rv4_rv60",
+  "log_rv5_rv60",
   "log_rv8_rv60",
   "log_rv10_rv60",
   "log_rv15_rv60",
@@ -311,15 +411,20 @@
   "log_c_ema8",
   "log_c_ema10",
   "log_c_ema15",
+  "log_ema2_ema5",
   "log_ema2_ema8",
   "log_ema3_ema10",
+  "log_ema4_ema10",
   "log_ema5_ema15",
+  "rsi1_centered",
   "rsi2_centered",
   "rsi3_centered",
   "rsi4_centered",
   "rsi5_centered",
   "rsi8_centered",
   "rsi10_centered",
+  "rsi15_centered",
+  "bb_pctb_2",
   "bb_pctb_3",
   "bb_pctb_4",
   "bb_pctb_5",
@@ -332,41 +437,57 @@
   "bb_logbw_8",
   "bb_logbw_10",
   "bb_logbw_15",
+  "log_atr1_c",
   "log_atr2_c",
   "log_atr3_c",
   "log_atr4_c",
   "log_atr5_c",
   "log_atr8_c",
   "log_atr10_c",
+  "log_atr15_c",
   "log_atr2_rv2",
   "log_atr3_rv3",
   "log_atr4_rv4",
   "log_atr5_rv5",
   "log_atr8_rv8",
   "log_atr10_rv10",
+  "log_atr15_rv15",
+  "kcw_2",
+  "kcw_3",
+  "kcw_4",
+  "kcw_5",
+  "kcw_8",
+  "kcw_10",
+  "kcw_15",
+  "mfi1_centered",
   "mfi2_centered",
   "mfi3_centered",
   "mfi4_centered",
   "mfi5_centered",
   "mfi8_centered",
   "mfi10_centered",
+  "mfi15_centered",
+  "ad_vwclv_1",
   "ad_vwclv_2",
   "ad_vwclv_3",
   "ad_vwclv_4",
   "ad_vwclv_8",
   "ad_vwclv_10",
+  "dd_2",
   "dd_3",
   "dd_4",
   "dd_5",
   "dd_8",
   "dd_10",
   "dd_15",
+  "ru_2",
   "ru_3",
   "ru_4",
   "ru_5",
   "ru_8",
   "ru_10",
   "ru_15",
+  "log_range_1",
   "log_range_2",
   "log_range_3",
   "log_range_4",
@@ -374,115 +495,57 @@
   "log_range_8",
   "log_range_10",
   "log_range_15",
+  "ret_skew_3",
+  "ret_skew_4",
+  "ret_skew_5",
   "ret_skew_8",
   "ret_skew_10",
   "ret_skew_15",
+  "hma_slope1_volnorm",
+  "hma_slope2_volnorm",
+  "hma_slope3_volnorm",
   "hma_slope4_volnorm",
   "hma_slope5_volnorm",
   "hma_slope8_volnorm",
   "hma_slope10_volnorm",
+  "hma_slope15_volnorm",
+  "macd_hist_2_5_2_volnorm",
   "macd_hist_2_8_3_volnorm",
   "macd_hist_3_10_3_volnorm",
-  "macd_hist_5_15_5_volnorm"
+  "macd_hist_4_10_4_volnorm",
+  "macd_hist_5_15_5_volnorm",
+  "psar_dir_2",
+  "psar_dir_3",
+  "psar_dir_4",
+  "psar_dir_5",
+  "psar_dir_8",
+  "psar_dir_10",
+  "psar_dir_15",
+  "psar_logdist_2",
+  "psar_logdist_3",
+  "psar_logdist_4",
+  "psar_logdist_5",
+  "psar_logdist_8",
+  "psar_logdist_10",
+  "psar_logdist_15",
+  "psar_age_log_2",
+  "psar_age_log_3",
+  "psar_age_log_4",
+  "psar_age_log_5",
+  "psar_age_log_8",
+  "psar_age_log_10",
+  "psar_age_log_15",
+  "log_rv2_med2d",
+  "log_rv3_med2d",
+  "log_rv4_med2d",
+  "log_rv5_med2d",
+  "log_rv8_med2d",
+  "log_rv10_med2d",
+  "log_rv15_med2d",
+  "r5_2",
+  "r5_3",
+  "log_c5_ema5_2",
+  "log_c5_ema5_3"
  ],
- "pool_after_exclusion": [
-  "vwap_amt_gap_2",
-  "vwap_amt_gap_3",
-  "vwap_amt_gap_4",
-  "vwap_amt_gap_5",
-  "vwap_amt_gap_8",
-  "vwap_amt_gap_10",
-  "ret_2",
-  "ret_3",
-  "ret_4",
-  "ret_10",
-  "ret_15",
-  "log_rv2_rv60",
-  "log_rv3_rv60",
-  "log_rv4_rv60",
-  "log_rv8_rv60",
-  "log_rv10_rv60",
-  "log_rv15_rv60",
-  "log_c_ema2",
-  "log_c_ema3",
-  "log_c_ema4",
-  "log_c_ema5",
-  "log_c_ema8",
-  "log_c_ema10",
-  "log_c_ema15",
-  "log_ema2_ema8",
-  "log_ema3_ema10",
-  "log_ema5_ema15",
-  "rsi2_centered",
-  "rsi3_centered",
-  "rsi4_centered",
-  "rsi5_centered",
-  "rsi8_centered",
-  "rsi10_centered",
-  "bb_pctb_3",
-  "bb_pctb_4",
-  "bb_pctb_5",
-  "bb_pctb_8",
-  "bb_pctb_10",
-  "bb_pctb_15",
-  "bb_logbw_3",
-  "bb_logbw_4",
-  "bb_logbw_5",
-  "bb_logbw_8",
-  "bb_logbw_10",
-  "bb_logbw_15",
-  "log_atr2_c",
-  "log_atr3_c",
-  "log_atr4_c",
-  "log_atr5_c",
-  "log_atr8_c",
-  "log_atr10_c",
-  "log_atr2_rv2",
-  "log_atr3_rv3",
-  "log_atr4_rv4",
-  "log_atr5_rv5",
-  "log_atr8_rv8",
-  "log_atr10_rv10",
-  "mfi2_centered",
-  "mfi3_centered",
-  "mfi4_centered",
-  "mfi5_centered",
-  "mfi8_centered",
-  "mfi10_centered",
-  "ad_vwclv_2",
-  "ad_vwclv_3",
-  "ad_vwclv_4",
-  "ad_vwclv_8",
-  "ad_vwclv_10",
-  "dd_3",
-  "dd_4",
-  "dd_5",
-  "dd_8",
-  "dd_10",
-  "dd_15",
-  "ru_3",
-  "ru_4",
-  "ru_5",
-  "ru_8",
-  "ru_10",
-  "ru_15",
-  "log_range_2",
-  "log_range_3",
-  "log_range_4",
-  "log_range_5",
-  "log_range_8",
-  "log_range_10",
-  "log_range_15",
-  "ret_skew_8",
-  "ret_skew_10",
-  "ret_skew_15",
-  "hma_slope4_volnorm",
-  "hma_slope5_volnorm",
-  "hma_slope8_volnorm",
-  "hma_slope10_volnorm",
-  "macd_hist_2_8_3_volnorm",
-  "macd_hist_3_10_3_volnorm",
-  "macd_hist_5_15_5_volnorm"
- ],
- "excluded": {}
+ "intra_short_identical_diagnostic": []
 }

@@ -105,7 +105,7 @@ def main() -> int:
     r1 = store.r1
 
     print("\n== 2. TimesFM covariate với xreg GPU ==")
-    tfm = make_model("tfm_ext", cfg.model_params("tfm"))
+    tfm = make_model("tfm_zero_shot", cfg.model_params("tfm"))
 
     def _flag():
         assert tfm.xreg_force_on_cpu is False, f"xreg_force_on_cpu = {tfm.xreg_force_on_cpu} (phải False)"
@@ -154,14 +154,14 @@ def main() -> int:
 
     def _causal():
         idx = val_idx[:6]
-        a = make_model("tfm_ext", cfg.model_params("tfm")).predict_series(SeriesBatch(store.ts, r1, idx, cov, ext2))
+        a = make_model("tfm_zero_shot", cfg.model_params("tfm")).predict_series(SeriesBatch(store.ts, r1, idx, cov, ext2))
         r1b, covb = r1.copy(), cov.copy()
         cut = int(idx[-1]) + 1
         r1b[cut:] = 0.0
         covb[cut:] = 0.0
-        b = make_model("tfm_ext", cfg.model_params("tfm")).predict_series(SeriesBatch(store.ts, r1b, idx, covb, ext2))
+        b = make_model("tfm_zero_shot", cfg.model_params("tfm")).predict_series(SeriesBatch(store.ts, r1b, idx, covb, ext2))
         assert np.allclose(a, b, atol=1e-6), f"prediction đổi khi cắt dữ liệu sau t (max Δ={np.abs(a - b).max():.2e})"
-        w = make_model("tfm_ext", cfg.model_params("tfm")).covariate_window(
+        w = make_model("tfm_zero_shot", cfg.model_params("tfm")).covariate_window(
             SeriesBatch(store.ts, r1, idx, cov, ext2), int(idx[0]), 0)
         L = tfm.context
         assert len(w) == L + len(HORIZONS)

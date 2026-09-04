@@ -1,4 +1,6 @@
-"""TimesFM (§2.2 #4) — TFM-POINT zero-shot + covariate loop. Theo `docs/reference/audit_timesfm.md` (timesfm 2.0.2).
+"""TimesFM (§2.2 #4). `TimesFMLoRAModel` (cuối file) là model ĐANG DÙNG (vòng expanded-data 2026-09-03/04: LoRA per fold → freeze → XReg);
+`TimesFMModel` (zero-shot, `make_model("tfm_zero_shot")`) chỉ còn là lớp tham chiếu/canary — đường forecast/covariate/xreg được kế thừa
+nguyên vẹn. Ghi chú dưới đây mô tả đường suy luận chung (audit `docs/reference/audit_timesfm.md`, timesfm 2.0.2).
 
 - Input = chuỗi `r1` kết thúc tại origin t (context 512, chỉ τ ≤ t); `forecast(horizon=3)` → `r̂_{t+1..t+3}` → **cộng dồn** → `y_h`.
 - Không train, không dùng FIT/ES (`best_iters = 0`); model trả thẳng log-return (`FitResult.is_logret = True`)
@@ -22,10 +24,8 @@ from .config import HORIZONS
 from .models import FitResult, SeriesBatch, _cpu_guard
 
 CONTEXT = 512
-# HAI nhánh feature selection của TimesFM (§2.2 #4b) — mỗi nhánh chạy đủ add-one → prune → confirmation,
-# rồi so với nhau bằng metric project để ra TimesFM-final:
-#   b0star : điểm xuất phát S = B0*  (covariate = B0* + candidate ext đang KEEP)  → model `tfm_b0`
-#   ext    : điểm xuất phát S = ∅    (TimesFM native trên r1; covariate = chỉ candidate ext) → model `tfm_ext`
+# Scope covariate: model ĐANG DÙNG (`tfm` = TimesFMLoRAModel) luôn là "ext" — S0_TFM = ∅, B0* KHÔNG bao giờ vào XReg (2026-09-03/04).
+# "b0star" chỉ còn là tham chiếu lịch sử của nhánh zero-shot `tfm_b0` vòng 15 ngày (không còn model nào dùng).
 COVARIATE_SCOPES = {"b0star": "all", "ext": "ext"}  # scope → cột nào của colset thành covariate trong run_config
 REPO_ID = "google/timesfm-2.5-200m-pytorch"
 REVISION = "1d952420fba87f3c6dee4f240de0f1a0fbc790e3"  # pin theo audit
@@ -369,6 +369,17 @@ class TimesFMLoRAModel(TimesFMModel):
         _ADAPTER_STATES[key], _ADAPTER_META[key] = sd, meta
         w["adapter"] = key
         return meta
+
+    def artifact_meta(self, covariates=(), native: bool = True) -> dict:
+        """Metadata tường minh cho artifact (wins/*.json): backbone, LoRA, native hay +XReg, chuỗi vào/ra (§10 hiệu chỉnh 2026-09-04)."""
+        cov = list(covariates)
+        return {"backbone": "timesfm-2.5-200m", "repo_id": self.repo_id, "revision": self.revision, "finetuned": True,
+                "finetune_method": "LoRA", "lora": {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.lora.items()},
+                "native": bool(native and not cov), "covariates": cov, "input_series": "btc_1m_log_return", "context": int(self.context),
+                "forecast_horizon": len(HORIZONS), "target": "cumulative_log_return_y1_y2_y3",
+                "xreg": None if (native and not cov) else {"mode": self.xreg_mode, "one_origin_per_call": True, "covariate_shift_bars": 1,
+                                                          "force_on_cpu": bool(self.xreg_force_on_cpu)},
+                "calibration": "LoRA FIT + ES chọn epoch (= calibrate của model có epoch); adapter freeze trước candidate search"}
 
     def _predict_with(self, key: str, seq: SeriesBatch) -> np.ndarray:
         self._load_adapter(key)

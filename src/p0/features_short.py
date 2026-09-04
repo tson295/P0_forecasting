@@ -1,55 +1,68 @@
-"""C_short — candidate NGẮN HẠN (≤ 15 phút) cho vòng expanded-data (quyết định user 2026-09-03).
+"""C_short — candidate NGẮN HẠN (≤ 15 phút) cho vòng expanded-data (quyết định user 2026-09-03, hiệu chỉnh 2026-09-04).
 
-Đây là danh sách candidate DUY NHẤT của vòng mới: candidate cũ (39 cột §2.3, dù KEEP hay DROP) KHÔNG quay lại pool;
-feature đã chọn của vòng 15 ngày nằm trong S0_m (khoá, xem `s0.py`). Không có "master feature pool" như một stage
-nghiên cứu — file này chỉ là nơi định nghĩa công thức một lần cho mọi model; Candidate_m = C_short \\ overlap(C_short, S0_m).
+C_short là tập ĐỊNH NGHĨA candidate mới, sinh MỘT LẦN cho mọi model (tiện thực thi, KHÔNG phải stage nghiên cứu).
+Việc lọc duy nhất diễn ra theo từng model: `Candidate_m = C_short \\ overlap(C_short, S0_m)` (xem `s0.py`) — chỉ bỏ cột
+đã có trong S0_m của CHÍNH model đó (trùng tên, hoặc khác tên nhưng giá trị giống hệt tại cùng timestamp). KHÔNG lọc toàn cục
+theo B0-306, KHÔNG lọc theo tương quan cao (tương quan chỉ là chẩn đoán, báo cáo), KHÔNG bỏ vì "xấp xỉ" một cột khác.
 
-Lưới cửa sổ W = {1, 2, 3, 4, 5, 8, 10, 15}. Mỗi họ A–O của §2.3 được làm dày NHẤT QUÁN trên lưới đó; một cửa sổ chỉ bị bỏ khi:
-  (i)   suy biến về toán: EMA1-gap ≡ 0; dd_1/ru_1 ≡ 0; dd_2/ru_2 = min/max(0, r1) (r1 chỉnh lưu); σ_1 = 0; %B_2 = ±0.5;
-        RSI_1 = dấu(r1); MFI_1 = dấu(ΔTP); skew cần ≥ 8 điểm; HMA cần cửa sổ ≥ 4 (WMA(k/2), WMA(√k)); rv_1 = |r1| → log(0);
-  (ii)  trùng ĐỊNH NGHĨA với một cột B0-306 tại t: ret_1/ret_5/ret_8 = return1/return5/return8 của B0, log_rv5_rv60,
-        rsi15_centered; hoặc là bản affine/xấp xỉ của cột B0 (log_range_1 ≈ log(H/L), ad_vwclv_1 = 2·close_position_t,
-        ATR15 ≈ ATR14 cũ, HMA15 ≈ HMA16 của B0) — kiểm tra bằng số trong `s0.collision_audit`, không chỉ bằng suy luận;
-  (iii) cửa sổ đó đã là candidate của vòng 15 ngày (vwap 1/15, ret 60+, bb 20/60, atr 14, kcw 20, mfi 14/60, ad 5/15/60,
-        dd/ru 240, range 240, skew 60, hma 64, rsi 240, macd 60/240/60).
-Mọi công thức causal: cửa sổ kết thúc tại t, chỉ dùng bar ≤ t. Ký hiệu như `features_ext` (A = amount, TP = (H+L+C)/3,
-r1 = Δlog C, rv_k = sqrt(mean_k r1²), EMA_k = ewm(span k, min_periods k) trên log C — helper của B0, reset sau gap).
+Lưới cửa sổ W = {1, 2, 3, 4, 5, 8, 10, 15}: mọi họ được làm DÀY trên lưới đó; một cửa sổ chỉ bị bỏ khi
+  (i)  suy biến/không xác định về TOÁN (ví dụ log C − EMA_1 ≡ 0, dd_1 ≡ 0, σ_1 = 0 → chia 0, rv_1 = |r1| → log 0 khi r1 = 0,
+       skew cần ≥ 3 quan sát, PSAR cần ≥ 2 bar, kcw_1 = log 2 + log_atr1_c là đồng nhất thức);
+  (ii) cửa sổ đó CHÍNH LÀ một candidate cũ §2.3 (vòng 15 ngày — KEEP hay DROP đều không quay lại, §6 quyết định; ví dụ
+       vwap_amt_gap_1/15, ad_vwclv_5/15, r5_1, log_c5_ema5_12).
+Mọi lý do bỏ đều ghi máy đọc được trong `SHORT_FAMILIES[...]["skip"]` → `s0/short_pool.json`.
+Ngoại lệ có tài liệu: `dow` (thứ trong tuần) KHÔNG có cửa sổ tự nhiên → không sinh biến thể (họ T).
+Mọi công thức causal: cửa sổ kết thúc tại t, chỉ dùng bar ≤ t; feature 5 phút dùng bar 5' ĐÃ ĐÓNG (as-of T ≤ t).
+Ký hiệu như `features_ext` (A = amount, TP = (H+L+C)/3, r1 = Δlog C, rv_k = sqrt(mean_k r1²), EMA_k = ewm(span k) — helper của B0).
 """
 from __future__ import annotations
 
+import re
+
 import numpy as np
 import pandas as pd
+from numpy.lib.stride_tricks import sliding_window_view
 
 from Baseline_LGBM import _ema, _hma, _rsi
 
+from .data import asof_index
 from .features_ext import Candidate, _atr, _rsum, _rv, _safe_log
 
 SHORT_GRID = (1, 2, 3, 4, 5, 8, 10, 15)
+_RV1 = "rv_1 = |r1| → log(0) = −∞ khi r1 = 0 (không xác định)"
+_OLD = "chính là candidate cũ §2.3 ({}) — không quay lại (§6)"
 
-# Họ → (cửa sổ dùng, {cửa sổ bỏ: lý do}) — bảng này là nguồn sự thật cho báo cáo `s0/short_pool.json`.
+# Họ → (cửa sổ dùng, {cửa sổ bỏ: lý do CHÍNH XÁC}) — nguồn sự thật cho `s0/short_pool.json`.
 SHORT_FAMILIES: dict[str, dict] = {
-    "A_vwap_amt_gap": {"use": (2, 3, 4, 5, 8, 10), "skip": {1: "candidate cũ vwap_amt_gap_1", 15: "candidate cũ vwap_amt_gap_15"}},
-    "B_ret": {"use": (2, 3, 4, 10, 15), "skip": {1: "= B0 fine:t:return1", 5: "= B0 fine:t:return5", 8: "= B0 coarse:t:return8"}},
-    "C_log_rv_rv60": {"use": (2, 3, 4, 8, 10, 15), "skip": {1: "rv_1 = |r1| → log(0) khi r1 = 0", 5: "= B0 fine:t:log_rv5_rv60"}},
-    "D_log_c_ema": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "EMA_1 = log C → gap ≡ 0"}},
-    "D_log_ema_ema": {"use": ((2, 8), (3, 10), (5, 15)), "skip": {}},
-    "E_rsi": {"use": (2, 3, 4, 5, 8, 10), "skip": {1: "RSI_1 = dấu(r1) suy biến", 15: "= B0 fine:t:rsi15_centered"}},
-    "F_bb_pctb": {"use": (3, 4, 5, 8, 10, 15), "skip": {1: "σ_1 = 0", 2: "%B_2 = ±0.5 suy biến"}},
-    "F_bb_logbw": {"use": (3, 4, 5, 8, 10, 15), "skip": {1: "σ_1 = 0", 2: "σ_2 = |Δlog C|/2 = |r1|/2 (bản affine của |r1|)"}},
-    "G_log_atr_c": {"use": (2, 3, 4, 5, 8, 10), "skip": {1: "ATR_1 = TR ≈ H−L → ≈ B0 log_range", 15: "≈ ATR14 (candidate cũ log_atr14_c)"}},
-    "G_log_atr_rv": {"use": (2, 3, 4, 5, 8, 10), "skip": {1: "rv_1 = |r1| → log(0)", 15: "≈ ATR14/rv14 (candidate cũ log_atr14_rv14)"}},
-    # Keltner width ngắn: kcw_k = log 2 + log(ATR_k/C) + log(C/EMA_k(C)); số hạng cuối ≈ 0 ở k ≤ 10 → trùng số học với
-    # log_atr{k}_c (collision audit trên data 15 ngày thật 2026-09-03: corr = 1.000000 ở k = 2–5, 0.999999 ở k = 8, 10)
-    # → suy biến, KHÔNG sinh (kcw_20 cũ vẫn nằm trong S0 của model đã KEEP nó).
-    "H_kcw": {"use": (), "skip": {k: "≡ log_atr{k}_c + const (corr ≥ 0.999999 trên data thật) → suy biến" for k in SHORT_GRID}},
-    "I_mfi": {"use": (2, 3, 4, 5, 8, 10), "skip": {1: "MFI_1 ∈ {−0.5, +0.5, NaN} = dấu(ΔTP)", 15: "≈ MFI14 (candidate cũ mfi14_centered)"}},
-    "J_ad_vwclv": {"use": (2, 3, 4, 8, 10), "skip": {1: "= CLV_t = 2·close_position_t của B0 (affine)", 5: "candidate cũ", 15: "candidate cũ"}},
-    "K_dd": {"use": (3, 4, 5, 8, 10, 15), "skip": {1: "dd_1 ≡ 0", 2: "dd_2 = min(0, r1) (r1 chỉnh lưu)"}},
-    "K_ru": {"use": (3, 4, 5, 8, 10, 15), "skip": {1: "ru_1 ≡ 0", 2: "ru_2 = max(0, r1) (r1 chỉnh lưu)"}},
-    "L_log_range": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "log((H−L)/C) ≈ B0 fine:t:log_range = log(H/L)"}},
-    "M_ret_skew": {"use": (8, 10, 15), "skip": {k: "skew cần ≥ 8 điểm để có nghĩa thống kê" for k in (1, 2, 3, 4, 5)}},
-    "N_hma_slope": {"use": (4, 5, 8, 10), "skip": {1: "HMA cần k ≥ 4", 2: "HMA cần k ≥ 4", 3: "HMA cần k ≥ 4", 15: "≈ B0 hma_slope16_volnorm"}},
-    "O_macd_hist": {"use": ((2, 8, 3), (3, 10, 3), (5, 15, 5)), "skip": {}},
+    "A_vwap_amt_gap": {"use": (2, 3, 4, 5, 8, 10), "skip": {1: _OLD.format("vwap_amt_gap_1"), 15: _OLD.format("vwap_amt_gap_15")}},
+    "B_ret": {"use": SHORT_GRID, "skip": {}},
+    "C_log_rv_rv60": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: _RV1}},
+    "D_log_c_ema": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "log C − EMA_1(log C) ≡ 0"}},
+    "D_log_ema_ema": {"use": ((2, 5), (2, 8), (3, 10), (4, 10), (5, 15)), "skip": {}},
+    "E_rsi": {"use": SHORT_GRID, "skip": {}},
+    "F_bb_pctb": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "σ_1 = 0 → chia 0 (không xác định)"}},
+    "F_bb_logbw": {"use": (3, 4, 5, 8, 10, 15), "skip": {1: "σ_1 = 0 → log 0", 2: "σ_2 = |Δlog C|/2 → log 0 khi r1 = 0 (không xác định)"}},
+    "G_log_atr_c": {"use": SHORT_GRID, "skip": {}},
+    "G_log_atr_rv": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: _RV1}},
+    "H_kcw": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "kcw_1 = log(2·TR/C) = log 2 + log_atr1_c (đồng nhất thức, chỉ lệch hằng số)"}},
+    "I_mfi": {"use": SHORT_GRID, "skip": {}},
+    "J_ad_vwclv": {"use": (1, 2, 3, 4, 8, 10), "skip": {5: _OLD.format("ad_vwclv_5"), 15: _OLD.format("ad_vwclv_15")}},
+    "K_dd": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "dd_1 = log(C / max_1 C) ≡ 0"}},
+    "K_ru": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "ru_1 = log(C / min_1 C) ≡ 0"}},
+    "L_log_range": {"use": SHORT_GRID, "skip": {}},
+    "M_ret_skew": {"use": (3, 4, 5, 8, 10, 15), "skip": {1: "skew cần ≥ 3 quan sát (không xác định)", 2: "skew cần ≥ 3 quan sát (không xác định)"}},
+    "N_hma_slope": {"use": SHORT_GRID, "skip": {}},
+    "O_macd_hist": {"use": ((2, 5, 2), (2, 8, 3), (3, 10, 3), (4, 10, 4), (5, 15, 5)), "skip": {}},
+    # PSAR cửa sổ reset: khởi tạo lại trạng thái Wilder PSAR tại đầu W bar cuối [t−W+1 … t], chạy causal, lấy trạng thái tại t.
+    "P_psar_dir": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "PSAR cần ≥ 2 bar để khởi tạo hướng/EP (n < 2 → trạng thái không xác định)"}},
+    "P_psar_logdist": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "PSAR cần ≥ 2 bar để khởi tạo hướng/EP (n < 2 → trạng thái không xác định)"}},
+    "P_psar_age_log": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: "PSAR cần ≥ 2 bar để khởi tạo hướng/EP (n < 2 → trạng thái không xác định)"}},
+    "Q_log_rv_med2d": {"use": (2, 3, 4, 5, 8, 10, 15), "skip": {1: _RV1}},
+    # Họ 5 phút: cửa sổ tính bằng bar 5' đã đóng (k bar = 5k phút ≤ 15 → k ∈ {1, 2, 3}); k = 1 và 12 là candidate cũ.
+    "R_r5": {"use": (2, 3), "skip": {1: _OLD.format("r5_1"), 12: _OLD.format("r5_12")}},
+    "S_log_c5_ema5": {"use": (2, 3), "skip": {1: "log C5 − EMA_1(log C5) ≡ 0", 12: _OLD.format("log_c5_ema5_12")}},
+    # DOW: NGOẠI LỆ có tài liệu — thứ trong tuần không có cửa sổ cuộn tự nhiên 2'/5'/15'; không sinh biến thể nào.
+    "T_dow": {"use": (), "skip": {"*": "ngoại lệ: weekday không có horizon cuộn tự nhiên; dow_sin/dow_cos là candidate cũ §2.3 (§5C)"}},
 }
 
 
@@ -59,44 +72,57 @@ def _build() -> list[Candidate]:
     def add(name: str, group: str) -> None:
         out.append(Candidate(name, (name,), group))
 
-    for k in SHORT_FAMILIES["A_vwap_amt_gap"]["use"]:
+    F = SHORT_FAMILIES
+    for k in F["A_vwap_amt_gap"]["use"]:
         add(f"vwap_amt_gap_{k}", "A")
-    for k in SHORT_FAMILIES["B_ret"]["use"]:
+    for k in F["B_ret"]["use"]:
         add(f"ret_{k}", "B")
-    for k in SHORT_FAMILIES["C_log_rv_rv60"]["use"]:
+    for k in F["C_log_rv_rv60"]["use"]:
         add(f"log_rv{k}_rv60", "C")
-    for k in SHORT_FAMILIES["D_log_c_ema"]["use"]:
+    for k in F["D_log_c_ema"]["use"]:
         add(f"log_c_ema{k}", "D")
-    for a, b in SHORT_FAMILIES["D_log_ema_ema"]["use"]:
+    for a, b in F["D_log_ema_ema"]["use"]:
         add(f"log_ema{a}_ema{b}", "D")
-    for k in SHORT_FAMILIES["E_rsi"]["use"]:
+    for k in F["E_rsi"]["use"]:
         add(f"rsi{k}_centered", "E")
-    for k in SHORT_FAMILIES["F_bb_pctb"]["use"]:
+    for k in F["F_bb_pctb"]["use"]:
         add(f"bb_pctb_{k}", "F")
-    for k in SHORT_FAMILIES["F_bb_logbw"]["use"]:
+    for k in F["F_bb_logbw"]["use"]:
         add(f"bb_logbw_{k}", "F")
-    for k in SHORT_FAMILIES["G_log_atr_c"]["use"]:
+    for k in F["G_log_atr_c"]["use"]:
         add(f"log_atr{k}_c", "G")
-    for k in SHORT_FAMILIES["G_log_atr_rv"]["use"]:
+    for k in F["G_log_atr_rv"]["use"]:
         add(f"log_atr{k}_rv{k}", "G")
-    for k in SHORT_FAMILIES["H_kcw"]["use"]:
+    for k in F["H_kcw"]["use"]:
         add(f"kcw_{k}", "H")
-    for k in SHORT_FAMILIES["I_mfi"]["use"]:
+    for k in F["I_mfi"]["use"]:
         add(f"mfi{k}_centered", "I")
-    for k in SHORT_FAMILIES["J_ad_vwclv"]["use"]:
+    for k in F["J_ad_vwclv"]["use"]:
         add(f"ad_vwclv_{k}", "J")
-    for k in SHORT_FAMILIES["K_dd"]["use"]:
+    for k in F["K_dd"]["use"]:
         add(f"dd_{k}", "K")
-    for k in SHORT_FAMILIES["K_ru"]["use"]:
+    for k in F["K_ru"]["use"]:
         add(f"ru_{k}", "K")
-    for k in SHORT_FAMILIES["L_log_range"]["use"]:
+    for k in F["L_log_range"]["use"]:
         add(f"log_range_{k}", "L")
-    for k in SHORT_FAMILIES["M_ret_skew"]["use"]:
+    for k in F["M_ret_skew"]["use"]:
         add(f"ret_skew_{k}", "M")
-    for k in SHORT_FAMILIES["N_hma_slope"]["use"]:
+    for k in F["N_hma_slope"]["use"]:
         add(f"hma_slope{k}_volnorm", "N")
-    for f, s, sig in SHORT_FAMILIES["O_macd_hist"]["use"]:
+    for f, s, sig in F["O_macd_hist"]["use"]:
         add(f"macd_hist_{f}_{s}_{sig}_volnorm", "O")
+    for k in F["P_psar_dir"]["use"]:
+        add(f"psar_dir_{k}", "P")
+    for k in F["P_psar_logdist"]["use"]:
+        add(f"psar_logdist_{k}", "P")
+    for k in F["P_psar_age_log"]["use"]:
+        add(f"psar_age_log_{k}", "P")
+    for k in F["Q_log_rv_med2d"]["use"]:
+        add(f"log_rv{k}_med2d", "Q")
+    for k in F["R_r5"]["use"]:
+        add(f"r5_{k}", "R")
+    for k in F["S_log_c5_ema5"]["use"]:
+        add(f"log_c5_ema5_{k}", "S")
     return out
 
 
@@ -104,28 +130,70 @@ SHORT_CANDIDATES: list[Candidate] = _build()
 SHORT_BY_NAME = {c.name: c for c in SHORT_CANDIDATES}
 SHORT_COLUMNS = tuple(c.name for c in SHORT_CANDIDATES)
 
+_PATTERNS = (
+    (r"^vwap_amt_gap_(\d+)$", "A"), (r"^ret_(\d+)$", "B"), (r"^log_rv(\d+)_rv60$", "C"), (r"^log_c_ema(\d+)$", "D"),
+    (r"^log_ema(\d+)_ema(\d+)$", "D2"), (r"^rsi(\d+)_centered$", "E"), (r"^bb_pctb_(\d+)$", "F"), (r"^bb_logbw_(\d+)$", "F2"),
+    (r"^log_atr(\d+)_c$", "G"), (r"^log_atr(\d+)_rv(\d+)$", "G2"), (r"^kcw_(\d+)$", "H"), (r"^mfi(\d+)_centered$", "I"),
+    (r"^ad_vwclv_(\d+)$", "J"), (r"^dd_(\d+)$", "K"), (r"^ru_(\d+)$", "K2"), (r"^log_range_(\d+)$", "L"),
+    (r"^ret_skew_(\d+)$", "M"), (r"^hma_slope(\d+)_volnorm$", "N"), (r"^macd_hist_(\d+)_(\d+)_(\d+)_volnorm$", "O"),
+    (r"^psar_dir_(\d+)$", "P1"), (r"^psar_logdist_(\d+)$", "P2"), (r"^psar_age_log_(\d+)$", "P3"),
+    (r"^log_rv(\d+)_med2d$", "Q"), (r"^r5_(\d+)$", "R"), (r"^log_c5_ema5_(\d+)$", "S"),
+)
+
 
 def _parse(name: str) -> tuple[str, tuple[int, ...]]:
     """Tên cột → (họ, tham số cửa sổ)."""
-    import re
-
-    for pat, fam in (
-        (r"^vwap_amt_gap_(\d+)$", "A"), (r"^ret_(\d+)$", "B"), (r"^log_rv(\d+)_rv60$", "C"), (r"^log_c_ema(\d+)$", "D"),
-        (r"^log_ema(\d+)_ema(\d+)$", "D2"), (r"^rsi(\d+)_centered$", "E"), (r"^bb_pctb_(\d+)$", "F"), (r"^bb_logbw_(\d+)$", "F2"),
-        (r"^log_atr(\d+)_c$", "G"), (r"^log_atr(\d+)_rv(\d+)$", "G2"), (r"^kcw_(\d+)$", "H"), (r"^mfi(\d+)_centered$", "I"),
-        (r"^ad_vwclv_(\d+)$", "J"), (r"^dd_(\d+)$", "K"), (r"^ru_(\d+)$", "K2"), (r"^log_range_(\d+)$", "L"),
-        (r"^ret_skew_(\d+)$", "M"), (r"^hma_slope(\d+)_volnorm$", "N"), (r"^macd_hist_(\d+)_(\d+)_(\d+)_volnorm$", "O"),
-    ):
+    for pat, fam in _PATTERNS:
         m = re.match(pat, name)
         if m:
             return fam, tuple(int(x) for x in m.groups())
     raise KeyError(f"không phải cột C_short: {name}")
 
 
-def compute_short(g: pd.DataFrame, columns: tuple[str, ...] | None = None) -> pd.DataFrame:
+# ----------------------------------------------------------------------------- PSAR cửa sổ reset (vector hoá)
+def psar_window(high: np.ndarray, low: np.ndarray, close: np.ndarray, W: int, af0: float = 0.02, af_step: float = 0.02,
+                af_max: float = 0.2) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """PSAR Wilder khởi tạo lại tại đầu cửa sổ W bar [t−W+1 … t], chạy causal, trả trạng thái tại t: (dir, sar, age).
+
+    Cùng quy tắc với `features_ext._psar_segment` (khởi tạo hướng từ 2 bar đầu, flip, EP/AF, clamp theo 2 bar gần nhất) nhưng
+    tính đồng thời cho mọi t bằng cửa sổ trượt; cửa sổ chứa NaN (gap) → NaN. W < 2 → không có trạng thái (NaN)."""
+    n = len(close)
+    d_out, s_out, a_out = (np.full(n, np.nan) for _ in range(3))
+    if W < 2 or n < W:
+        return d_out, s_out, a_out
+    H, L, C = (sliding_window_view(np.asarray(x, float), W) for x in (high, low, close))
+    valid = np.isfinite(H).all(axis=1) & np.isfinite(L).all(axis=1) & np.isfinite(C).all(axis=1)
+    with np.errstate(invalid="ignore"):
+        up = C[:, 1] >= C[:, 0]
+        sar = np.where(up, L[:, 0], H[:, 0])
+        ep = np.where(up, H[:, 0], L[:, 0])
+        af = np.full(len(up), af0)
+        since = np.zeros(len(up))
+        for i in range(1, W):
+            hi, lo = H[:, i], L[:, i]
+            flip = np.where(up, lo < sar, hi > sar)
+            better = np.where(up, hi > ep, lo < ep)
+            ep_nf = np.where(better, np.where(up, hi, lo), ep)
+            af_nf = np.where(better, np.minimum(af + af_step, af_max), af)
+            new_up = np.where(flip, ~up, up)
+            sar = np.where(flip, ep, sar)
+            ep = np.where(flip, np.where(up, lo, hi), ep_nf)
+            af = np.where(flip, af0, af_nf)
+            since = np.where(flip, 0.0, since + 1.0)
+            up = new_up
+            nxt = sar + af * (ep - sar)
+            sar = np.where(up, np.minimum(nxt, np.minimum(lo, L[:, i - 1])), np.maximum(nxt, np.maximum(hi, H[:, i - 1])))
+    end = np.arange(W - 1, n)
+    d_out[end] = np.where(valid, np.where(up, 1.0, -1.0), np.nan)
+    s_out[end] = np.where(valid, sar, np.nan)
+    a_out[end] = np.where(valid, since, np.nan)
+    return d_out, s_out, a_out
+
+
+def compute_short(g: pd.DataFrame, lf: pd.DataFrame | None = None, columns: tuple[str, ...] | None = None) -> pd.DataFrame:
     """Tính các cột C_short trên lưới g (index UTC, cột lowercase open/high/low/close/volume/amount; NaN tại gap).
 
-    Mọi cửa sổ kết thúc tại t; không dùng bar > t. Cùng quy ước NaN ở warmup như `features_ext.compute_ext`."""
+    `lf` = bar 5 phút (họ R/S; thiếu → NaN như `features_ext`). Mọi cửa sổ kết thúc tại t; không dùng bar > t."""
     want = tuple(columns) if columns is not None else SHORT_COLUMNS
     c, o, h, l, v, a = (g[k].astype(float) for k in ("close", "open", "high", "low", "volume", "amount"))
     logc = _safe_log(c)
@@ -145,6 +213,29 @@ def compute_short(g: pd.DataFrame, columns: tuple[str, ...] | None = None) -> pd
         if ("atr", k) not in cache:
             cache[("atr", k)] = _atr(h, l, c, k)
         return cache[("atr", k)]
+
+    def psar(W: int):
+        if ("psar", W) not in cache:
+            cache[("psar", W)] = psar_window(h.to_numpy(float), l.to_numpy(float), c.to_numpy(float), W)
+        return cache[("psar", W)]
+
+    def lf5():
+        if "lf5" not in cache:
+            if lf is None:
+                cache["lf5"] = None
+            else:
+                lfs = lf.sort_values("timestamp").reset_index(drop=True)
+                logc5 = _safe_log(lfs["close"].astype(float))
+                idx = asof_index(lfs["timestamp"].to_numpy(np.int64), g["timestamp"].to_numpy(np.int64))
+                cache["lf5"] = (logc5, idx)
+        return cache["lf5"]
+
+    def from_lf(series5: pd.Series) -> pd.Series:
+        logc5, idx = lf5()
+        vals = np.full(len(g), np.nan)
+        ok = idx >= 0
+        vals[ok] = series5.to_numpy(float)[idx[ok]]
+        return pd.Series(vals, index=g.index)
 
     for name in want:
         fam, p = _parse(name)
@@ -199,13 +290,32 @@ def compute_short(g: pd.DataFrame, columns: tuple[str, ...] | None = None) -> pd
             f, s, sig = p
             macd = ema(f) - ema(s)
             out[name] = (macd - _ema(macd, sig)) / rv60p
+        elif fam in ("P1", "P2", "P3"):
+            d, s_, ag = psar(k)
+            if fam == "P1":
+                out[name] = pd.Series(d, index=g.index)
+            elif fam == "P2":
+                out[name] = _safe_log(c / pd.Series(s_, index=g.index).where(lambda x: x > 0))
+            else:
+                out[name] = np.log1p(pd.Series(ag, index=g.index))
+        elif fam == "Q":
+            rvk = _rv(r1, k)
+            med = rvk.rolling(2880, min_periods=2880).median()
+            out[name] = _safe_log(rvk / med.where(med > 0))
+        elif fam in ("R", "S"):
+            if lf5() is None:
+                out[name] = pd.Series(np.nan, index=g.index)
+            else:
+                logc5, _ = lf5()
+                out[name] = from_lf(logc5.diff(k) if fam == "R" else logc5 - _ema(logc5, k))
     df = pd.DataFrame(out, index=g.index).replace([np.inf, -np.inf], np.nan)
     return df[list(want)].astype(np.float32)
 
 
 def short_pool_report() -> dict:
-    """Bảng máy đọc được: họ → cửa sổ dùng / cửa sổ bỏ + lý do; tổng số cột."""
+    """Bảng máy đọc được: họ → cửa sổ dùng / cửa sổ bỏ + lý do chính xác; tổng số cột; ngoại lệ DOW."""
     return {"grid": list(SHORT_GRID), "n_candidates": len(SHORT_CANDIDATES),
+            "rule": "Candidate_m = C_short \\ overlap(C_short, S0_m) per model; tương quan cao chỉ báo cáo, không tự bỏ",
             "families": {fam: {"use": [list(u) if isinstance(u, tuple) else u for u in spec["use"]],
                                "skip": {str(k): v for k, v in spec["skip"].items()}} for fam, spec in SHORT_FAMILIES.items()},
             "columns": list(SHORT_COLUMNS)}

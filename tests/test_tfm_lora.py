@@ -169,9 +169,10 @@ def _cfg(tmp_path):
 
 def _win(exp, name, ext, rmse, eps=0.02):
     (exp / "wins").mkdir(parents=True, exist_ok=True)
+    m = TimesFMLoRAModel(device="cpu", allow_cpu=True, context=512, batch_size=64, model=StubLoRATFM(), lora=LORA)
     (exp / "wins" / name).with_suffix(".json").write_text(json.dumps(
         {"model": name, "colset": {"b0": [], "ext": list(ext)}, "rmse_mean": [list(r) for r in rmse], "e0": [[100.0, 140.0, 170.0]],
-         "eps": eps, "eval_seeds": [1, 2], "which": "prune", "median_gain_vs_e0": 0.1}), encoding="utf-8")
+         "eps": eps, "eval_seeds": [1, 2], "which": "prune", "median_gain_vs_e0": 0.1, **m.artifact_meta(ext, native=not ext)}), encoding="utf-8")
     np.savez_compressed(exp / "wins" / f"{name}_seed0.npz", idx_0=np.arange(3), yhat_0=np.zeros((3, 3), np.float32))
 
 
@@ -180,23 +181,27 @@ def _champion(exp):
                                                    "eps": 0.02, "e0": [[100.0, 140.0, 170.0]]}), encoding="utf-8")
 
 
-@pytest.mark.parametrize("xreg_rmse,expect", [((80.0, 120.0, 150.0), "tfm_xreg"), ((89.99, 129.99, 159.99), "tfm_native"), ((91.0, 131.0, 161.0), "tfm_native")])
+@pytest.mark.parametrize("xreg_rmse,expect", [((80.0, 120.0, 150.0), "tfm_lora_xreg"), ((89.99, 129.99, 159.99), "tfm_lora_native"), ((91.0, 131.0, 161.0), "tfm_lora_native")])
 def test_tfm_final_compares_full_system_against_native_lora(tmp_path, monkeypatch, xreg_rmse, expect):
     cfg = _cfg(tmp_path)
     exp = cfg.exp_dir
     exp.mkdir(parents=True)
     _champion(exp)
-    _win(exp, "tfm_native", [], [(90.0, 130.0, 160.0)], eps=0.02)
-    _win(exp, "tfm_xreg", ["ret_2", "rsi3_centered"], [xreg_rmse])
+    _win(exp, "tfm_lora_native", [], [(90.0, 130.0, 160.0)], eps=0.02)
+    _win(exp, "tfm_lora_xreg", ["ret_2", "rsi3_centered"], [xreg_rmse])
     monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
     cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
     fin = json.loads((exp / "wins" / "tfm.json").read_text(encoding="utf-8"))
     assert fin["model"] == "tfm" and fin["role"] == "TimesFM-final" and fin["configuration"] == expect
     assert fin["compare_xreg_vs_native"]["eps"] == 0.02 and (exp / "wins" / "tfm_seed0.npz").exists()
+    # (30) metadata tường minh: LoRA, native hay +XReg, covariates, chuỗi vào/ra
+    assert fin["finetune_method"] == "LoRA" and fin["backbone"] == "timesfm-2.5-200m" and fin["input_series"] == "btc_1m_log_return"
+    assert fin["native"] == (expect == "tfm_lora_native") and fin["covariates"] == ([] if expect == "tfm_lora_native" else ["ret_2", "rsi3_centered"])
+    assert fin["target"] == "cumulative_log_return_y1_y2_y3" and fin["context"] == 512 and fin["forecast_horizon"] == 3 and fin["colset"]["b0"] == []
     df = pd.read_csv(exp / "tfm_final.csv")
-    assert set(df["configuration"]) == {"tfm_native", "tfm_xreg"} and df.loc[df["is_final"], "configuration"].iloc[0] == expect
+    assert set(df["configuration"]) == {"tfm_lora_native", "tfm_lora_xreg"} and df.loc[df["is_final"], "configuration"].iloc[0] == expect
     ch = pd.read_csv(exp / "champion_log.csv")
-    assert (ch["model"] == "tfm").any() and not (ch["model"].isin(["tfm_xreg", "tfm_native"])).any()  # XReg không phải model độc lập
+    assert (ch["model"] == "tfm").any() and not (ch["model"].isin(["tfm_lora_xreg", "tfm_lora_native"])).any()  # XReg không phải model độc lập
 
 
 def test_tfm_final_requires_both_configs_and_a_champion(tmp_path, monkeypatch):
@@ -204,11 +209,11 @@ def test_tfm_final_requires_both_configs_and_a_champion(tmp_path, monkeypatch):
     exp = cfg.exp_dir
     exp.mkdir(parents=True)
     monkeypatch.setattr(cli, "gate", lambda *a, **k: None)
-    _win(exp, "tfm_native", [], [(90.0, 130.0, 160.0)])
+    _win(exp, "tfm_lora_native", [], [(90.0, 130.0, 160.0)])
     with pytest.raises(SystemExit) as e:
         cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
-    assert "tfm_xreg" in str(e.value)
-    _win(exp, "tfm_xreg", ["ret_2"], [(80.0, 120.0, 150.0)])
+    assert "tfm_lora_xreg" in str(e.value)
+    _win(exp, "tfm_lora_xreg", ["ret_2"], [(80.0, 120.0, 150.0)])
     with pytest.raises(SystemExit) as e:  # §3: champion ban đầu phải là LightGBM
         cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
     assert "loop --model lgbm" in str(e.value)
@@ -235,9 +240,17 @@ def test_loop_tfm_end_to_end_with_stub(tmp_path, store, folds, monkeypatch):
     monkeypatch.setattr(cli, "load_store", lambda c, **k: (store, use, None, None))
     monkeypatch.setattr(cli, "model_for", lambda c, name, allow_cpu: model)
     cli.cmd_loop(cfg, Namespace(model="tfm", smoke=True, allow_cpu=True, max_candidates=None, no_standalone=True, latency_origins=10, resume=False))
-    for name in ("tfm_xreg", "tfm_native"):
+    for name in ("tfm_lora_xreg", "tfm_lora_native"):
         w = json.loads((exp / "wins" / f"{name}.json").read_text(encoding="utf-8"))
         assert w["eval_seeds"] == [1, 2] and (exp / "wins" / f"{name}_seed1.npz").exists()
+        assert w["finetune_method"] == "LoRA" and w["colset"]["b0"] == [] and w["configuration"] == name  # (22)(23)(30)
+        assert w["native"] == (len(w["covariates"]) == 0) and (name != "tfm_lora_native" or w["native"])  # native = không covariate
+    log = pd.read_csv(exp / "log.csv")
+    conf_rows = log[log["step"] == "confirm"].reset_index()
+    i_native = conf_rows.index[conf_rows["colset"] == "native"]
+    i_raw = conf_rows.index[conf_rows["colset"].isin(["unprune", "prune"])]
+    assert len(i_raw) and (not len(i_native) or i_native.min() > i_raw.max())  # (28) raw vs pruned trước native-vs-XReg
+    assert (log.loc[log["step"] == "calibrate", "note"].str.contains("LoRA FIT \+ ES")).any()  # (24) calibrate = LoRA FIT + ES
     assert len(pd.read_csv(exp / f"keepdrop_tfm.csv")) == 2 and (exp / "calib" / "tfm_base.json").exists()
     assert not list((exp / "summary").glob("*.png")) if (exp / "summary").exists() else True  # không vẽ trong training
     ch = pd.read_csv(exp / "champion_log.csv")
@@ -246,3 +259,17 @@ def test_loop_tfm_end_to_end_with_stub(tmp_path, store, folds, monkeypatch):
     assert model.train_calls == 5
     cli.cmd_tfm_final(cfg, Namespace(smoke=True, allow_cpu=True))
     assert (exp / "wins" / "tfm.json").exists() and (pd.read_csv(exp / "champion_log.csv")["model"] == "tfm").any()
+
+
+def test_new_tfm_baseline_is_lora_native_and_b0_never_enters_xreg(tmp_path, store, folds):
+    """(21)(22)(23): `tfm` = TimesFMLoRAModel (không zero-shot), S0 = ∅, cột B0 trong colset không bao giờ thành covariate."""
+    from p0.s0 import s0_for
+
+    m = cli.make_model("tfm", {"device": "cpu"}, allow_cpu=True)
+    assert isinstance(m, TimesFMLoRAModel) and m.series_covariates == "ext" and m.supports_rounds and m.seed_dependent
+    assert s0_for("tfm", None) == ColSet((), ())
+    stub = _model(tmp_path)
+    st = run_config(store, stub, ColSet(store.b0_names[:5], ("ret_2",)), folds[:1], rounds=(1, 1, 1), seed=1, keep_states=True).states[0]
+    assert st.X_val.cov_names == ("ret_2",) and st.X_val.cov.shape[1] == 1  # B0* KHÔNG được đưa vào XReg
+    st0 = run_config(store, stub, ColSet(store.b0_names[:5]), folds[:1], rounds=(1, 1, 1), seed=1, keep_states=True).states[0]
+    assert st0.X_val.cov is None  # chỉ B0 → native (không covariate)

@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT))
 
 from p0.config import HORIZONS, RunConfig  # noqa: E402
 from p0.harness import ColSet, Store, _standardize_fit, run_config  # noqa: E402
+# Canary dùng `tfm_zero_shot` (lớp tham chiếu): cùng đường forecast/covariate/xreg GPU với TimesFMLoRAModel, không cần train LoRA.
 from p0.models import SeriesBatch, make_model  # noqa: E402
 from p0.split import make_folds  # noqa: E402
 from p0.synthetic import make_hf, make_lf  # noqa: E402
@@ -94,7 +95,7 @@ def main() -> int:
     import timesfm  # noqa: F401
 
     check("timesfm import + version", lambda: f"timesfm {timesfm.__version__ if hasattr(timesfm, '__version__') else '2.0.2'}")
-    tfm_native = make_model("tfm_ext", cfg.model_params("tfm"))
+    tfm_native = make_model("tfm_zero_shot", cfg.model_params("tfm"))
     r1 = store.r1
     cov = _standardize_fit(np.column_stack([store.ext_column(c) for c in ext2]).astype(np.float32),
                            folds[0].fit.origins(store.ts, store.eligible))
@@ -136,7 +137,7 @@ def main() -> int:
 
     def _tfm_cov():
         assert tfm_native.forecast_config_kwargs(True)["per_core_batch_size"] == 1
-        m_cov = make_model("tfm_ext", cfg.model_params("tfm"))
+        m_cov = make_model("tfm_zero_shot", cfg.model_params("tfm"))
         seq = SeriesBatch(store.ts, r1, val_idx[:8], cov, ext2)
         t0 = time.perf_counter()
         yhat = m_cov.predict_series(seq)
@@ -149,14 +150,14 @@ def main() -> int:
     def _tfm_causal():
         """Cắt chuỗi sau origin cuối → prediction phải GIỐNG HỆT (chỉ dùng τ ≤ t)."""
         idx = val_idx[:6]
-        a = make_model("tfm_ext", cfg.model_params("tfm")).predict_series(SeriesBatch(store.ts, r1, idx, cov, ext2))
+        a = make_model("tfm_zero_shot", cfg.model_params("tfm")).predict_series(SeriesBatch(store.ts, r1, idx, cov, ext2))
         r1b, covb = r1.copy(), cov.copy()
         cut = int(idx[-1]) + 1
         r1b[cut:] = 0.0
         covb[cut:] = 0.0
-        b = make_model("tfm_ext", cfg.model_params("tfm")).predict_series(SeriesBatch(store.ts, r1b, idx, covb, ext2))
+        b = make_model("tfm_zero_shot", cfg.model_params("tfm")).predict_series(SeriesBatch(store.ts, r1b, idx, covb, ext2))
         assert np.allclose(a, b, atol=1e-6), f"prediction đổi khi cắt dữ liệu sau t (max Δ={np.abs(a - b).max():.2e})"
-        w = make_model("tfm_ext", cfg.model_params("tfm")).covariate_window(
+        w = make_model("tfm_zero_shot", cfg.model_params("tfm")).covariate_window(
             SeriesBatch(store.ts, r1, idx, cov, ext2), int(idx[0]), 0)
         L = 512
         assert len(w) == L + len(HORIZONS)
@@ -235,13 +236,12 @@ def main() -> int:
 
     # ---------------------------------------------------------------- 4. ETA
     print("\n== 4. ETA (từ thời gian đo được, 5 fold × 1.437 origin = 7.185 origin/run) ==")
-    N_ORIGIN, N_CAND = 7185, 40  # base + 39 candidate
+    N_ORIGIN, N_CAND = 7185, 164  # base + 163 candidate C_short (vòng expanded-data; VAL 3 ngày × 5 fold = 21.600 origin/run trên data thật)
     eta = {}
     if "native_ms" in state:
-        eta["tfm_ext (40 run)"] = N_CAND * N_ORIGIN * state["native_ms"] / 3.6e6
+        eta["tfm native (1 run)"] = N_ORIGIN * state["native_ms"] / 3.6e6
     if "cov_ms" in state:
-        eta["tfm_ext covariate (40 run)"] = N_CAND * N_ORIGIN * state["cov_ms"] / 3.6e6
-        eta["tfm_b0 (40 run, covariate)"] = N_CAND * N_ORIGIN * state["cov_ms"] / 3.6e6
+        eta["tfm XReg add-one (164 run)"] = N_CAND * N_ORIGIN * state["cov_ms"] / 3.6e6
     for k, lab in (("wr_ms", "autots_wr probe (40 run)"), ("mr_ms", "autots_mr probe (40 run)")):
         if k in state:
             eta[lab] = N_CAND * N_ORIGIN * state[k] / 3.6e6

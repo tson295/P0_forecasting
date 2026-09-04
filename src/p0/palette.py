@@ -26,7 +26,8 @@ GROUP_A = ["lgbm", "xgb", "cat", "xgbrf", "ensemble"]
 GROUP_B = ["tfm", "autots", "lstm", "b0_306", "b0_star"]  # probe autots_wr/autots_mr không vẽ ở Final
 LABEL = {
     "b0_306": "B0-306", "b0_star": "B0*", "lgbm": "LightGBM", "xgb": "XGBoost", "cat": "CatBoost", "xgbrf": "XGB-RF",
-    "autots": "AutoTS", "autots_wr": "AutoTS-WR(probe)", "autots_mr": "AutoTS-MR(probe)", "lstm": "LSTM", "tfm": "TFM-POINT", "ensemble": "Ensemble", "e0": "E0",
+    "autots": "AutoTS", "autots_wr": "AutoTS-WR(probe)", "autots_mr": "AutoTS-MR(probe)", "lstm": "LSTM", "tfm": "TimesFM-LoRA", "tfm_lora_native": "TimesFM-LoRA native", "tfm_lora_xreg": "TimesFM-LoRA+XReg",
+    "ensemble": "Ensemble", "e0": "E0",
 }
 
 

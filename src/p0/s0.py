@@ -1,15 +1,15 @@
-"""S0_m KHOÁ + kiểm tra trùng (collision audit) + Candidate_m — vòng expanded-data (quyết định user 2026-09-03).
+"""S0_m KHOÁ + overlap audit + Candidate_m — vòng expanded-data (quyết định user 2026-09-03, hiệu chỉnh 2026-09-04).
 
-- S0_m = B0* ∪ F_old_m, dựng từ ARTIFACT thắng của vòng 15 ngày (`<prev_run_dir>/wins/<m>.json`, `b0_star.json`),
-  không gõ tay. `locked` = toàn bộ F_old_m: không phải candidate, không bị prune PI bỏ, không thể `without_ext`.
-  AutoTS: mỗi nhánh probe (autots_wr / autots_mr) kế thừa ĐÚNG bộ thắng của nhánh đó (không dùng AutoTS-final).
-  TimesFM: TimesFM-final cũ = native (0 covariate) → S0_TFM = ∅, không bịa covariate kế thừa (§7 quyết định).
-- Collision = trùng tên CHÍNH XÁC, hoặc khác tên nhưng giá trị GIỐNG HỆT tại cùng timestamp (kiểm bằng số trên data thật,
-  `ident_rtol` so với std cột). Cùng họ chỉ báo, tương quan cao chỉ báo (`near`, KHÔNG tự xoá); cùng indicator khác lag
-  KHÔNG phải trùng (khác timestamp) — ví dụ `fine:t-4m:rsi15_centered` ≠ rsi15 tại t.
-- Candidate_m = C_short \\ overlap(C_short, S0_m): overlap gồm trùng tên và trùng giá trị. C_short đã loại sẵn mọi cột
-  §2.3 cũ (KEEP lẫn DROP) theo cách xây lưới (`features_short`), nên không có gì để "trừ DROP cũ"; ngoài ra cột C_short
-  trùng giá trị với BẤT KỲ cột B0-306 hoặc candidate cũ nào bị loại khỏi pool (không phải feature mới) và được ghi lý do.
+- S0_m = B0* ∪ F_old_m, dựng từ ARTIFACT thắng vòng 15 ngày (`<prev_run_dir>/wins/<m>.json` + `b0_star.json`), không gõ tay.
+  **TOÀN BỘ S0_m là khoá**: `locked_b0 == S0.b0` (mọi cột B0*), `locked_ext == F_old_m` (mọi cột ext thắng cũ). Không phép toán
+  nào của pipeline bỏ được cột khoá (B0 không bao giờ bị xoá; ext khoá không bị prune PI, không `without_ext`). Prune PI chỉ xét
+  cột ext MỚI. AutoTS: mỗi nhánh probe (autots_wr / autots_mr) kế thừa ĐÚNG bộ thắng của nhánh đó. TimesFM: S0 = ∅.
+  Phân biệt tên: S0_m = tập xuất phát khoá; F_raw_m / F_pruned_m / F_best_m = tập do vòng tìm kiếm mới sinh ra.
+- Candidate_m = C_short \\ overlap(C_short, S0_m), tính RIÊNG cho từng model và lưu riêng (`s0/candidates_<m>.json`).
+  overlap = cột C_short đã có trong S0_m của CHÍNH model đó: trùng tên, hoặc khác tên nhưng giá trị giống hệt tại cùng timestamp
+  (kiểm bằng số: `max|a−b| ≤ ident_rtol·std`). KHÔNG bỏ vì: tương quan cao, xấp xỉ, cửa sổ gần nhau, cùng họ, có trong B0-306
+  nhưng KHÔNG trong B0* của model, hay từng là candidate cũ nhưng không trong S0. Cùng indicator khác lag KHÔNG phải trùng
+  (khác timestamp). Tương quan cao / trùng giá trị giữa các cột C_short với nhau chỉ là chẩn đoán (báo cáo, không bỏ).
 """
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .features_ext import ALL_EXT_COLUMNS, Candidate
-from .features_short import SHORT_BY_NAME, SHORT_CANDIDATES, SHORT_COLUMNS, short_pool_report
+from .features_ext import Candidate
+from .features_short import SHORT_BY_NAME, SHORT_COLUMNS, short_pool_report
 from .harness import ColSet, Store
 
 # model → file thắng của vòng trước; TimesFM không kế thừa
@@ -37,7 +37,7 @@ def prev_winner(prev_dir: Path, model: str) -> dict:
 
 
 def prev_dropped(prev_dir: Path, model: str) -> list[str]:
-    """Cột DROP của vòng trước (keepdrop_<m>.csv) — chỉ để kiểm tra chúng KHÔNG quay lại pool."""
+    """Cột DROP của vòng trước (keepdrop_<m>.csv) — chỉ để kiểm tra C_short không chứa định nghĩa cũ."""
     p = Path(prev_dir) / f"keepdrop_{model}.csv"
     if not p.exists():
         return []
@@ -46,7 +46,7 @@ def prev_dropped(prev_dir: Path, model: str) -> list[str]:
 
 
 def s0_for(model: str, prev_dir: Path | None, b0_star: ColSet | None = None) -> ColSet:
-    """S0_m: từ winner vòng trước (locked = F_old_m); TimesFM = ∅; không có vòng trước (smoke) → B0*."""
+    """S0_m: từ winner vòng trước (locked_b0 = B0*, locked_ext = F_old_m); TimesFM = ∅; không có vòng trước (smoke) → B0*."""
     if model == "tfm":
         return ColSet((), ())
     if prev_dir is None:
@@ -64,10 +64,18 @@ def s0_for(model: str, prev_dir: Path | None, b0_star: ColSet | None = None) -> 
     return ColSet(cs.b0, cs.ext, cs.ext)
 
 
-# ----------------------------------------------------------------------------- collision audit (bằng số, trên data thật)
+def assert_s0_schema(cs: ColSet, d: dict, model: str) -> None:
+    """Artifact S0 phải khoá TOÀN BỘ: locked_b0 == b0 và locked_ext == ext (hard invariant — artifact lệch = malformed)."""
+    if list(d.get("locked_b0", [])) != list(cs.b0) or list(d.get("locked_ext", [])) != list(cs.ext):
+        raise ValueError(f"S0_{model} malformed: locked_b0 phải == b0 và locked_ext phải == ext (toàn bộ S0 là khoá)")
+    if tuple(cs.locked_ext) != tuple(cs.ext):
+        raise ValueError(f"S0_{model} malformed: ext chưa khoá hết")
+
+
+# ----------------------------------------------------------------------------- overlap audit (bằng số, trên data thật)
 def _audit_rows(store: Store, max_rows: int = 60_000, warmup: int = 2880) -> np.ndarray:
     idx = np.flatnonzero(store.eligible)
-    idx = idx[idx >= warmup]  # mọi cột §2.3 cũ (lookback ≤ 2880) và C_short đều hữu hạn từ đây
+    idx = idx[idx >= warmup]  # mọi cột (lookback ≤ 2880) hữu hạn từ đây
     if len(idx) > max_rows:
         idx = idx[:: int(np.ceil(len(idx) / max_rows))]
     return idx
@@ -82,83 +90,89 @@ def _identical(a: np.ndarray, b: np.ndarray, rtol: float) -> tuple[bool, float]:
     return d <= rtol * scale, d / scale
 
 
+def _sig(v: np.ndarray) -> tuple[float, float]:
+    m = np.isfinite(v)
+    return (round(float(np.mean(v[m])), 6), round(float(np.std(v[m])), 6)) if m.any() else (np.nan, np.nan)
+
+
+def _sig_close(a: tuple, b: tuple) -> bool:
+    return abs(a[0] - b[0]) <= 1e-3 * max(1.0, abs(b[0])) and abs(a[1] - b[1]) <= 1e-3 * max(1e-6, b[1])
+
+
 def collision_audit(store: Store, s0_by_model: dict[str, ColSet], short_cols: tuple[str, ...] = SHORT_COLUMNS,
                     ident_rtol: float = 1e-4, corr_threshold: float = 0.995, max_rows: int = 60_000,
                     dataset_label: str = "") -> dict:
-    """Kiểm tra trùng giữa C_short và (B0-306 ∪ candidate cũ §2.3 ∪ chính C_short), rồi suy ra Candidate_m cho từng S0_m.
+    """Candidate_m = C_short \\ overlap(C_short, S0_m) cho TỪNG model; tương quan cao và trùng nội bộ C_short chỉ báo cáo.
 
-    Trả dict máy đọc được: `identical` (bị loại), `near` (chỉ báo), `pool` (C_short sau loại), `per_model` (S0 + Candidate_m).
-    """
+    Trả dict máy đọc được: `c_short`, `per_model[m]` = {locked_b0/locked_ext, removed_by_overlap, candidates, near (chỉ báo)},
+    `intra_short_identical` / `intra_short_near` (chỉ báo, không bỏ)."""
     idx = _audit_rows(store, max_rows)
-    b0 = store.all_b0()
-    X = {}
-    Xb = store.matrix(idx, b0)
-    for i, n in enumerate(b0.names):
-        X[n] = Xb[:, i].astype(np.float64)
-    Xo = store.matrix(idx, ColSet((), ALL_EXT_COLUMNS))
-    for i, n in enumerate(ALL_EXT_COLUMNS):
-        X[n] = Xo[:, i].astype(np.float64)
+    b0_union, ext_union = [], []
+    for cs in s0_by_model.values():
+        b0_union += [c for c in cs.b0 if c not in b0_union]
+        ext_union += [c for c in cs.ext if c not in ext_union]
+    X: dict[str, np.ndarray] = {}
+    if b0_union:
+        Xb = store.matrix(idx, ColSet(tuple(b0_union)))
+        for i, n in enumerate(b0_union):
+            X[n] = Xb[:, i].astype(np.float64)
+    if ext_union:
+        Xe = store.matrix(idx, ColSet((), tuple(ext_union)))
+        for i, n in enumerate(ext_union):
+            X[n] = Xe[:, i].astype(np.float64)
     Xs = store.matrix(idx, ColSet((), tuple(short_cols)))
     for i, n in enumerate(short_cols):
         X[n] = Xs[:, i].astype(np.float64)
-    reference = list(b0.names) + list(ALL_EXT_COLUMNS)
-    # prefilter theo chữ ký (mean, std) làm tròn để không so 100 × 350 cặp đầy đủ
-    def sig(v):
-        m = np.isfinite(v)
-        return (round(float(np.mean(v[m])), 6), round(float(np.std(v[m])), 6)) if m.any() else (np.nan, np.nan)
-
-    sigs = {n: sig(v) for n, v in X.items()}
-    identical, excluded, pool = [], {}, []
-    for j, s in enumerate(short_cols):
-        hit = None
-        for other in reference + list(pool):
-            if other == s:
-                continue
-            ms, mo = sigs[s], sigs[other]
-            if not (abs(ms[0] - mo[0]) <= 1e-3 * max(1.0, abs(mo[0])) and abs(ms[1] - mo[1]) <= 1e-3 * max(1e-6, mo[1])):
-                continue
-            same, rel = _identical(X[s], X[other], ident_rtol)
-            if same:
-                hit = (other, rel)
-                break
-        if hit is not None:
-            kind = "B0-306" if hit[0] in b0.names else ("candidate cũ §2.3" if hit[0] in ALL_EXT_COLUMNS else "C_short (trước nó)")
-            identical.append({"short": s, "match": hit[0], "kind": kind, "max_abs_diff_over_std": hit[1]})
-            excluded[s] = f"trùng giá trị với {kind}: {hit[0]}"
-        else:
-            pool.append(s)
-    # near-duplicate (chỉ báo): |corr| ≥ ngưỡng trên hàng mọi cột hữu hạn
-    names = list(pool) + reference
+    sigs = {n: _sig(v) for n, v in X.items()}
+    names = list(X)
     M = np.column_stack([X[n] for n in names])
     ok = np.isfinite(M).all(axis=1)
-    near = []
-    if ok.sum() >= 100:
-        C = np.corrcoef(M[ok].T)
-        for a in range(len(pool)):
-            for b in range(a + 1, len(names)):
-                c = C[a, b]
+    C = np.corrcoef(M[ok].T) if ok.sum() >= 100 else np.full((len(names), len(names)), np.nan)
+    pos = {n: i for i, n in enumerate(names)}
+
+    def near_pairs(left: list[str], right: list[str], same_set: bool) -> list[dict]:
+        out = []
+        for a in left:
+            for b in right:
+                if a == b or (same_set and pos[a] >= pos[b]):
+                    continue
+                c = C[pos[a], pos[b]]
                 if np.isfinite(c) and abs(c) >= corr_threshold:
-                    near.append({"a": names[a], "b": names[b], "corr": round(float(c), 6),
-                                 "kind": "B0-306" if names[b] in b0.names else ("candidate cũ §2.3" if names[b] in ALL_EXT_COLUMNS else "C_short")})
-    # per model: Candidate_m = pool \ overlap(pool, S0_m) — trùng tên hoặc trùng giá trị với cột của S0_m
+                    out.append({"a": a, "b": b, "corr": round(float(c), 6)})
+        return out
+
     per_model = {}
     for m, cs in s0_by_model.items():
-        s0_names = set(cs.names)
+        s0_names = list(cs.names)
         removed, cands = [], []
-        for s in pool:
+        for s in short_cols:
             if s in s0_names:
-                removed.append({"col": s, "reason": "trùng tên với cột S0"})
+                removed.append({"col": s, "reason": "trùng tên với cột S0_m", "match": s})
                 continue
-            dup = next((r for r in identical if r["short"] == s and r["match"] in s0_names), None)
-            if dup is not None:
-                removed.append({"col": s, "reason": f"trùng giá trị với {dup['match']}"})
-                continue
-            cands.append(s)
-        per_model[m] = {"n_b0": len(cs.b0), "n_locked_ext": len(cs.locked), "locked_ext": list(cs.locked),
-                        "removed_by_overlap": removed, "candidates": cands, "n_candidates": len(cands)}
+            hit = None
+            for c in s0_names:
+                if _sig_close(sigs[s], sigs[c]):
+                    same, rel = _identical(X[s], X[c], ident_rtol)
+                    if same:
+                        hit = (c, rel)
+                        break
+            if hit is not None:
+                removed.append({"col": s, "reason": "giá trị giống hệt một cột S0_m tại cùng timestamp", "match": hit[0],
+                                "max_abs_diff_over_std": hit[1]})
+            else:
+                cands.append(s)
+        per_model[m] = {"n_locked_b0": len(cs.b0), "n_locked_ext": len(cs.locked_ext), "locked_b0": list(cs.b0),
+                        "locked_ext": list(cs.locked_ext), "removed_by_overlap": removed, "candidates": cands,
+                        "n_candidates": len(cands), "near_vs_s0": near_pairs(cands, s0_names, False)}
+    intra_ident = []
+    for i, s in enumerate(short_cols):
+        for t in short_cols[i + 1:]:
+            if _sig_close(sigs[s], sigs[t]) and _identical(X[s], X[t], ident_rtol)[0]:
+                intra_ident.append({"a": s, "b": t})
     return {"audit_dataset_label": dataset_label, "n_rows": int(len(idx)), "ident_rtol_vs_std": ident_rtol,
-            "corr_threshold": corr_threshold, "short_pool_spec": short_pool_report(),
-            "identical": identical, "excluded_from_pool": excluded, "near": near, "pool": pool,
+            "corr_threshold": corr_threshold, "rule": "Candidate_m = C_short \\ overlap(C_short, S0_m) per model; near/intra chỉ báo cáo",
+            "short_pool_spec": short_pool_report(), "c_short": list(short_cols),
+            "intra_short_identical": intra_ident, "intra_short_near": near_pairs(list(short_cols), list(short_cols), True),
             "per_model": per_model}
 
 
@@ -180,28 +194,33 @@ def save_lock(exp_dir: Path, s0_by_model: dict[str, ColSet], report: dict) -> No
     d = s0_dir(exp_dir)
     d.mkdir(parents=True, exist_ok=True)
     for m, cs in s0_by_model.items():
-        cs.save(d / f"{m}.json")
+        payload = {**cs.to_dict(), "model": m, "role": "S0_m — tập xuất phát KHOÁ toàn bộ (locked_b0 = B0*, locked_ext = F_old_m)"}
+        (d / f"{m}.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False), encoding="utf-8")
         pm = report["per_model"][m]
         (d / f"candidates_{m}.json").write_text(json.dumps(
-            {"model": m, "s0": cs.to_dict(), "candidates": pm["candidates"], "removed_by_overlap": pm["removed_by_overlap"],
+            {"model": m, "rule": "Candidate_m = C_short \\ overlap(C_short, S0_m)", "s0": cs.to_dict(),
+             "n_c_short": len(report["c_short"]), "candidates": pm["candidates"], "n_candidates": pm["n_candidates"],
+             "removed_by_overlap": pm["removed_by_overlap"], "near_vs_s0_diagnostic_only": pm["near_vs_s0"],
              "audit_dataset_label": report["audit_dataset_label"]}, indent=1, ensure_ascii=False), encoding="utf-8")
     (d / "collisions.json").write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding="utf-8")
-    (d / "short_pool.json").write_text(json.dumps({**report["short_pool_spec"], "pool_after_exclusion": report["pool"],
-                                                    "excluded": report["excluded_from_pool"]}, indent=1, ensure_ascii=False),
-                                       encoding="utf-8")
+    (d / "short_pool.json").write_text(json.dumps({**report["short_pool_spec"], "intra_short_identical_diagnostic": report["intra_short_identical"]},
+                                                  indent=1, ensure_ascii=False), encoding="utf-8")
 
 
 def load_lock(exp_dir: Path, model: str, dataset_label: str | None = None) -> tuple[ColSet, list[Candidate]]:
-    """Đọc S0_m + Candidate_m đã khoá. `dataset_label` ≠ None → collision audit phải được chạy trên ĐÚNG dataset đó
-    (audit trên data khác chỉ để xem trước; trước khi `loop` trên data thật phải chạy lại `lock-s0` không có --data-config)."""
+    """Đọc S0_m + Candidate_m đã khoá; kiểm schema (toàn bộ S0 khoá) và dataset của audit (hard invariant)."""
     d = s0_dir(exp_dir)
     p, q = d / f"{model}.json", d / f"candidates_{model}.json"
     if not p.exists() or not q.exists():
         raise FileNotFoundError(f"thiếu {p} / {q} — chạy `python run.py lock-s0` trước")
-    cs = ColSet.load(p)
+    raw = json.loads(p.read_text(encoding="utf-8"))
+    cs = ColSet.from_dict(raw)
+    assert_s0_schema(cs, raw, model)
     payload = json.loads(q.read_text(encoding="utf-8"))
     if dataset_label is not None and payload.get("audit_dataset_label") != dataset_label:
-        raise ValueError(f"{q}: collision audit chạy trên '{payload.get('audit_dataset_label')}' ≠ dataset của config "
+        raise ValueError(f"{q}: overlap audit chạy trên '{payload.get('audit_dataset_label')}' ≠ dataset của config "
                          f"'{dataset_label}' — chạy lại `python run.py lock-s0` trên data thật trước khi loop")
     cands = candidates_from_names(payload["candidates"])
+    if set(c.name for c in cands) & set(cs.names):
+        raise ValueError(f"candidates_{model}.json malformed: candidate trùng cột S0_m")
     return cs, cands

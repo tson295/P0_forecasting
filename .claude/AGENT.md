@@ -10,7 +10,7 @@ Giữ lại đúng bốn vai trò làm việc mà code không làm thay được
 
 | Agent | Vai trò | Khi nào gọi | Model | Tools |
 |---|---|---|---|---|
-| `checker` | **Verify độc lập, có quyền phủ quyết**: checklist §6 (leakage, biên, target, alignment, metric trên giá, decode, seed/ε), review code, chạy unit/smoke CPU, schema log, reproducibility. Không sửa code. | trước khi nhận code mới, trước mỗi run thật, khi kết quả bất thường | inherit | Read/Grep/Glob/Bash |
+| `checker` | **Verify độc lập KHÔNG TƯƠNG TÁC**: checklist §6 (leakage, biên, target, alignment, metric trên giá, decode, seed/ε, S0/candidate, LoRA), review code, chạy unit/smoke CPU, schema log, reproducibility. Không sửa code. Mọi finding ghi `experiments/<run>/checker_log.jsonl` qua `scripts/checker_record.py` (PASS/INFO/WARN/ERROR); ERROR = chặn run tới khi sửa, WARN/INFO = ghi rồi tiếp tục; **không bao giờ hỏi user "tiếp hay dừng"**. | trước khi nhận code mới, trước mỗi run thật, khi kết quả bất thường | inherit | Read/Grep/Glob/Bash |
 | `researcher` | **Audit API/version trước khi code** (ghi `docs/reference/audit_<lib>.md`) + trọng tài methodology theo luật plan. | trước khi code một thư viện mới hoặc đổi version; khi cần verdict đúng/sai theo plan | inherit | Read/Grep/Glob/Bash/WebFetch/WebSearch |
 | `analyst` | **Sau một full run**: đọc kết quả thật (vòng 15 ngày ở `experiments/15d/`, vòng expanded-data ở `experiments/full/`), phát hiện anomaly / failure / phụ thuộc regime, đánh giá theo luật plan, đề xuất experiment/feature kế tiếp có căn cứ. | sau `loop`/`ensemble`/`final` có log thật | inherit | all |
 | `infra` | **GPU/env troubleshooting trên Vast**: build LightGBM GPU, CUDA/driver, jax[cuda12] chung GPU với torch (PREALLOCATE=false), Git LFS, tmux/persistence khi bootstrap fail. | khi `scripts/vast_bootstrap.sh` hoặc preflight fail | sonnet | all |
@@ -26,7 +26,7 @@ user ⇄ session chính (đọc plan §8 + MEMORY để biết bước kế ti�
 ```
 
 - Việc code: session chính viết → `checker` review → sửa → cập nhật MEMORY.
-- Một run: kiểm tra bước theo plan §8 → `checker` pre-run → chạy `python run.py <step>` trong tmux → `analyst` đọc kết quả.
+- Một run: kiểm tra bước theo plan §8 → `checker` pre-run (ghi checker_log; `scripts/checker_record.py --blocking` phải sạch ERROR) → chạy `python run.py <step>` trong tmux → `analyst` đọc kết quả. Bất biến cứng (checksum, biên, target, S0 malformed, GPU/CPU fallback, TEST lần hai, LOCKED) do code tự ép và dừng — không có prompt hỏi user.
 - Subagent không tự gọi subagent khác. Không agent nào được tự unlock training: `TRAINING: UNLOCKED` chỉ do user ra lệnh rõ ràng, và `cli.gate()` là chốt chặn thật.
 
 Tài liệu: chính thức = `README.md`, `docs/RESEARCH_PLAN.md`, `.claude/CLAUDE.md`, `.claude/MEMORY.md`, file này; lưu trữ (hết hiệu lực) = `docs/archive/`; tham khảo = `docs/reference/`; layout mẫu số giả = `reports/smoke_visualize.md`. Hooks/statusline: `.claude/settings.json` + `.claude/hooks/`.
