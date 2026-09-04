@@ -94,30 +94,57 @@ class _Group:
 
 
 # ----------------------------------------------------------------------------- worker
-def _worker_main(worker_id: int, device: int, task_q, result_q, cfg, allow_cpu: bool, require_gpu: bool, light: bool = False) -> None:
+def _precompute_ext(cfg) -> dict:
+    """Tính TRƯỚC, ĐÚNG MỘT LẦN, TRONG PROCESS CHA — trước khi bất kỳ GPU worker nào được spawn: hợp cột ext của
+    S0_m + Candidate_m cho các model trong `cfg.model_order` (chỉ model đã lock-s0 — xem `s0.union_ext_columns`),
+    gọi `Store.ensure_ext` MỘT LẦN rồi trả lại đúng các mảng đã tính. `GpuScheduler.start()` gọi hàm này một lần
+    (không phải một lần mỗi worker) rồi truyền dict kết quả cho MỌI worker qua `_worker_main` — mỗi worker CHỈ nạp
+    lại (`store._ext.update(...)`), không tự gọi `compute_short`/`compute_ext` nữa (§ run ML+LSTM).
+
+    CHỈ là tối ưu thực thi — không phải cổng kiểm bất biến: nếu `load_store`/`ensure_ext` lỗi ở đây (checksum/data
+    hỏng, chưa lock-s0, ...) thì BỎ QUA LẶNG LẼ (trả `{}`); mỗi worker vẫn tự `load_store` như cũ ngay sau đó nên
+    bất biến thật (checksum, GPU resource, ...) vẫn được phát hiện và phân loại ĐÚNG chỗ như trước (§10), không đổi."""
+    from .cli import load_store
+    from .s0 import union_ext_columns
+
+    try:
+        store, _, _, _ = load_store(cfg)
+        cols = union_ext_columns(cfg.exp_dir, getattr(cfg, "model_order", None) or (), str(cfg.dataset_label))
+        if not cols:
+            return {}
+        store.ensure_ext(cols)
+        return {c: store._ext[c] for c in cols}
+    except BaseException:
+        return {}
+
+
+def _worker_store(cfg, precomputed_ext: dict | None):
+    """Dựng Store của MỘT worker (B0/grid không tránh được — mỗi worker một process riêng) rồi NẠP THẲNG
+    `precomputed_ext` (đã tính một lần trong process cha, xem `_precompute_ext`) vào cache ext — worker KHÔNG tự
+    gọi `compute_short`/`compute_ext` cho các cột đã có sẵn ở đây."""
+    from .cli import load_store
+
+    store, folds, final, _ = load_store(cfg)
+    if precomputed_ext:
+        store._ext.update(precomputed_ext)
+    return store, folds, final
+
+
+def _worker_main(worker_id: int, device: int, task_q, result_q, cfg, allow_cpu: bool, require_gpu: bool, light: bool = False,
+                 precomputed_ext: dict | None = None) -> None:
     """Process worker gắn CHẶT vào một GPU vật lý. Bind device TRƯỚC mọi import CUDA (§17, §18)."""
     info = gpu.bind_worker_device(worker_id, device)
     import warnings
 
     warnings.filterwarnings("ignore")
     try:
-        from .cli import load_store, model_for, set_say_prefix  # import sau khi đã bind device
+        from .cli import model_for, set_say_prefix  # import sau khi đã bind device
 
         set_say_prefix(f"gpu{device}")
         rep = gpu.device_report(require_gpu=bool(require_gpu and not allow_cpu))
         W = {"cfg": cfg, "allow_cpu": allow_cpu, "models": {}, "model_for": model_for, "grid": {}}
         if not light:  # `gpu-probe` chỉ kiểm thiết bị → không đọc data (nhanh, không cần checksum)
-            store, folds, final, _ = load_store(cfg)
-            # Precompute MỘT LẦN, TRƯỚC khi worker nhận task đầu tiên: hợp cột ext của S0_m + Candidate_m mọi model
-            # trong cfg.model_order (chỉ model đã lock-s0 — xem `s0.union_ext_columns`), rồi gọi `ensure_ext` MỘT LẦN.
-            # Worker này phục vụ MỌI branch trong suốt vòng đời scheduler nên đây là nơi tính thật; nếu không, add-one
-            # loop sẽ kích hoạt `ensure_ext` từng cột một khi task tới, làm mất lợi ích cache nội bộ của
-            # compute_short/compute_ext giữa các cột cùng họ EMA/ATR/PSAR (§ run ML+LSTM, tối ưu thực thi thuần).
-            from .s0 import union_ext_columns
-
-            precompute_cols = union_ext_columns(cfg.exp_dir, getattr(cfg, "model_order", None) or (), str(cfg.dataset_label))
-            if precompute_cols:
-                store.ensure_ext(precompute_cols)
+            store, folds, final = _worker_store(cfg, precomputed_ext)
             # CHỈ nạp fold walk-forward (VAL). Fold `final` (TEST) KHÔNG bao giờ vào worker: TEST chỉ được chạm ở
             # `run.py final` (tuần tự, có TEST_SENTINEL) — scheduler không được là đường vòng qua bất biến TEST-một-lần.
             W.update(store=store, folds={f.name: f for f in folds}, fold_order=[f.name for f in folds],
@@ -272,10 +299,16 @@ class GpuScheduler:
             self._reports, self._dead, self._idle, self._busy, self._dispatched = {}, {}, [], {}, {}
         ctx = get_context("spawn")  # spawn: parent có thể đã init CUDA (gpu preflight) → cấm fork
         self._result_q = ctx.Queue()
+        # Precompute ext của S0_m + Candidate_m ĐÚNG MỘT LẦN, TRONG PROCESS CHA, TRƯỚC KHI spawn worker nào (§ run
+        # ML+LSTM): trước đây mỗi worker tự `load_store` + tự tính lại → cùng cột bị compute_short/compute_ext
+        # NHIỀU LẦN (một lần mỗi worker). Giờ chỉ tính một lần ở đây rồi truyền dict kết quả cho MỌI worker; mỗi
+        # worker chỉ nạp lại (`_worker_store`), không tự gọi compute_short/compute_ext nữa.
+        precomputed_ext = {} if self.light else _precompute_ext(self.cfg)
         for wid in range(self.n_workers):
             dev = gpu.device_for_worker(wid, self.devices)
             q = ctx.Queue()
-            p = ctx.Process(target=_worker_main, args=(wid, dev, q, self._result_q, self.cfg, self.allow_cpu, self.require_gpu, self.light),
+            p = ctx.Process(target=_worker_main,
+                            args=(wid, dev, q, self._result_q, self.cfg, self.allow_cpu, self.require_gpu, self.light, precomputed_ext),
                             daemon=True, name=f"p0-gpu{dev}-w{wid}")
             p.start()
             self._queues[wid], self._procs[wid] = q, p

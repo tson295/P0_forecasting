@@ -1,20 +1,24 @@
 """Nhánh run/ml-lstm-expanded — 2 thay đổi:
 
-(1) Precompute feature ext của S0_m + Candidate_m một lần trước khi candidate search/training bắt đầu
-    (`Store.ensure_ext` gọi MỘT LẦN, batched — thay vì add-one loop kích hoạt lại từng cột một):
-    `s0.union_ext_columns` (hợp cột cần precompute) + `cmd_loop` (gọi trước calibrate/add-one khi scheduler tắt).
+(1) Precompute feature ext của S0_m + Candidate_m ĐÚNG MỘT LẦN, TRONG PROCESS CHA, TRƯỚC KHI bất kỳ GPU worker nào
+    được spawn (`GpuScheduler.start()` → `scheduler._precompute_ext`); mỗi worker chỉ NẠP LẠI dict đã tính
+    (`scheduler._worker_store`), KHÔNG tự gọi `compute_short`/`compute_ext` nữa — trước đây mỗi worker tự
+    `load_store` + tự `union_ext_columns`/`ensure_ext` nên cùng một feature set bị tính LẶP LẠI một lần mỗi worker.
+    Đường `cmd_loop` (scheduler tắt, nw<=1) vẫn precompute cho CHÍNH model đang chạy như cũ — process đó là nơi
+    duy nhất thực sự build ma trận khi không có scheduler.
 (2) Config ML+LSTM-only (`configs/p0_ml_lstm.json`): giống hệt `configs/p0_full.json` trừ phạm vi model,
     thứ tự champion replay cố định lgbm → xgb → cat → xgbrf → lstm.
 
-Không đổi S0/Candidate/PI/selection/hyperparameter — chỉ tối ưu thực thi (khi nào feature được tính).
+Không đổi S0/Candidate/PI/selection/hyperparameter/scheduler policy — chỉ tối ưu thực thi (khi nào feature được tính).
 """
 import json
 from argparse import Namespace
 from pathlib import Path
 
+import numpy as np
 import pytest
 
-from p0 import cli
+from p0 import cli, scheduler
 from p0.config import RunConfig
 from p0.features_short import SHORT_COLUMNS
 from p0.harness import ColSet
@@ -67,7 +71,7 @@ def test_union_ext_columns_merges_across_models_and_skips_missing_or_non_precomp
     assert union_ext_columns(tmp_path, ["lgbm"], "other_dataset") == ()  # audit khác dataset → bỏ qua lặng lẽ (không hard_fail)
 
 
-# ============================================================================= (1c) cmd_loop: precompute trước add-one thật
+# ============================================================================= fixture dùng chung (1c)(1d)(1e)
 def _small_lgbm_cfg(tmp_path) -> RunConfig:
     from p0.synthetic import make_hf, make_lf
 
@@ -86,6 +90,30 @@ def _small_lgbm_cfg(tmp_path) -> RunConfig:
     return cfg
 
 
+# ============================================================================= (1d) precompute MỘT LẦN trong process cha
+def test_scheduler_precompute_ext_calls_compute_short_exactly_once(tmp_path, monkeypatch):
+    cfg = _small_lgbm_cfg(tmp_path)
+    calls = _counting_compute_short(monkeypatch)
+    precomputed = scheduler._precompute_ext(cfg)
+    assert len(calls) == 1, f"compute_short phải chỉ được gọi MỘT LẦN cho toàn bộ precompute, thấy {len(calls)}: {calls}"
+    assert set(calls[0]) == set(SHORT_COLUMNS[:4])
+    assert set(precomputed) == set(SHORT_COLUMNS[:4]) and all(isinstance(v, np.ndarray) for v in precomputed.values())
+
+
+# ============================================================================= (1e) 2 GPU worker chỉ reuse, không tính lại
+def test_two_workers_reuse_precomputed_ext_without_recomputing(tmp_path, monkeypatch):
+    cfg = _small_lgbm_cfg(tmp_path)
+    precomputed = scheduler._precompute_ext(cfg)  # process CHA tính một lần — mô phỏng GpuScheduler.start() TRƯỚC khi spawn worker
+    assert precomputed  # phải có gì đó để mô phỏng việc "worker nhận lại", nếu không test dưới vô nghĩa
+    calls = _counting_compute_short(monkeypatch)  # đếm từ ĐÂY — mô phỏng "sau khi các GPU worker start"
+    for _ in range(2):  # mô phỏng 2 GPU worker CÙNG nhận `precomputed` từ GpuScheduler.start() (như thật)
+        store, _folds, _final = scheduler._worker_store(cfg, precomputed)
+        assert set(precomputed) <= set(store._ext)  # cột đã precompute có sẵn ngay trong cache của worker
+        store.ensure_ext(list(precomputed))  # candidate search sẽ gọi lại ensure_ext cho các cột này — phải là no-op
+    assert calls == [], f"không worker nào được tự gọi compute_short sau khi đã nhận precomputed_ext — thấy {calls}"
+
+
+# ============================================================================= (1c) cmd_loop: precompute trước add-one thật
 def test_cmd_loop_precomputes_all_candidate_ext_columns_once_before_search(tmp_path, monkeypatch):
     cfg = _small_lgbm_cfg(tmp_path)
     calls = _counting_compute_short(monkeypatch)

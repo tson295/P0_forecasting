@@ -635,8 +635,8 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         # Scheduler tắt (nw<=1): store CỦA PROCESS NÀY thực sự chạy candidate search → tính trước TOÀN BỘ cột ext
         # của S0_m + Candidate_m trong MỘT lần `ensure_ext` (thay vì add-one loop kích hoạt lại từng cột một, mất hết
         # lợi ích cache nội bộ của compute_short/compute_ext giữa các cột cùng họ EMA/ATR/PSAR/...). Khi scheduler
-        # BẬT (nw>1), việc này do worker GPU lo (xem `scheduler._worker_main`) — store của process này không được
-        # dùng để build ma trận nữa nên precompute ở đây sẽ vô ích.
+        # BẬT (nw>1), việc này do `scheduler.GpuScheduler.start()` lo — tính MỘT LẦN trong process cha TRƯỚC KHI
+        # spawn worker nào, rồi mọi worker chỉ nạp lại (`scheduler._worker_store`), không tự tính lại nữa.
         precompute_cols = list(dict.fromkeys(list(base.ext) + [c for cand in cands for c in cand.columns]))
         if precompute_cols:
             store.ensure_ext(precompute_cols)
