@@ -33,8 +33,8 @@ def append_csv(path: Path, fields: list[str], row: dict) -> None:
 
     Có lock: các nhánh song song không bao giờ ghi xen giữa dòng của nhau (§19 race-safe)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    new = not path.exists()
     with _APPEND_LOCK, open(path, "a", newline="", encoding="utf-8") as f:
+        new = f.tell() == 0  # kiểm TRONG lock (giữ khoá) — tránh TOCTOU khi nhiều nhánh cùng ghi file chưa tồn tại
         w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         if new:
             w.writeheader()

@@ -1,0 +1,103 @@
+{
+ "checked_at": "2026-09-04T20:09:49",
+ "devices": [
+  0,
+  1
+ ],
+ "slots_per_device": 1,
+ "n_workers": 2,
+ "lgbm_device_type": "cuda",
+ "workers": {
+  "0": {
+   "report": {
+    "gpu_physical_id": 0,
+    "worker_id": 0,
+    "cuda_visible_devices": "0",
+    "torch_device_count": 1,
+    "device_name": "NVIDIA RTX 5000 Ada Generation",
+    "device_uuid": "e5cc410b-9731-601a-b18e-07e425733747",
+    "backend": "torch"
+   },
+   "backends": {
+    "torch": {
+     "status": "ok",
+     "detail": "NVIDIA RTX 5000 Ada Generation | uuid=e5cc410b-9731-601a-b18e-07e425733747 | sum=2048"
+    },
+    "xgboost": {
+     "status": "ok",
+     "detail": "booster device=cuda:0"
+    },
+    "lightgbm": {
+     "status": "ok",
+     "detail": "device_type=cuda fit OK"
+    },
+    "catboost": {
+     "status": "ok",
+     "detail": "task_type=GPU devices=0 fit OK"
+    }
+   }
+  },
+  "1": {
+   "report": {
+    "gpu_physical_id": 1,
+    "worker_id": 1,
+    "cuda_visible_devices": "1",
+    "torch_device_count": 1,
+    "device_name": "NVIDIA RTX 5000 Ada Generation",
+    "device_uuid": "01dd9196-a6a6-8444-cd5a-3b0505b6ef19",
+    "backend": "torch"
+   },
+   "backends": {
+    "torch": {
+     "status": "ok",
+     "detail": "NVIDIA RTX 5000 Ada Generation | uuid=01dd9196-a6a6-8444-cd5a-3b0505b6ef19 | sum=2048"
+    },
+    "xgboost": {
+     "status": "ok",
+     "detail": "booster device=cuda:0"
+    },
+    "lightgbm": {
+     "status": "ok",
+     "detail": "device_type=cuda fit OK"
+    },
+    "catboost": {
+     "status": "ok",
+     "detail": "task_type=GPU devices=0 fit OK"
+    }
+   }
+  }
+ },
+ "tasks": [
+  {
+   "gpu_physical_id": 1,
+   "tag": "p0"
+  },
+  {
+   "gpu_physical_id": 0,
+   "tag": "p1"
+  },
+  {
+   "gpu_physical_id": 0,
+   "tag": "p2"
+  },
+  {
+   "gpu_physical_id": 0,
+   "tag": "p3"
+  },
+  {
+   "gpu_physical_id": 1,
+   "tag": "p4"
+  },
+  {
+   "gpu_physical_id": 1,
+   "tag": "p5"
+  }
+ ],
+ "uuids": {
+  "0": "e5cc410b-9731-601a-b18e-07e425733747",
+  "1": "01dd9196-a6a6-8444-cd5a-3b0505b6ef19"
+ },
+ "failed": {},
+ "missing": [],
+ "verdict": "OK"
+}

@@ -1,8 +1,8 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: **PHA VẬN HÀNH — data 2 năm ĐÃ TRONG REPO (Git LFS), scheduler 2 GPU đối xứng + orchestrate + champion replay,
-agent chuyển sang checker/run-monitor/infra (analyst hậu-run, researcher dormant) — chờ preflight Vast + user unlock**, 2026-09-04d
-TRAINING: LOCKED
+PHASE: **PHA VẬN HÀNH — user unlock training cho vòng ML+LSTM-only (`configs/p0_ml_lstm.json`), bootstrap + gpu-probe +
+orchestrate trên máy 2 × RTX 5000 Ada** (2026-09-04e). TimesFM/AutoTS KHÔNG nằm trong vòng này.
+TRAINING: UNLOCKED
 
 ## Current Task
 
