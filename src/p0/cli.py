@@ -40,7 +40,7 @@ from .loop import (add_one_loop, compare, confirm, decide_win, ensemble_rmse, in
                    save_champion)
 from .metrics import cell_metrics, e0_rmse, gain_pp, mean_rmse_over_seeds, seed_noise_cells, seed_noise_eps, summarize
 from .models import make_model
-from .s0 import S0_MODELS, collision_audit, load_lock, prev_dropped, s0_for, save_lock
+from .s0 import PRECOMPUTE_MODELS, S0_MODELS, collision_audit, load_lock, prev_dropped, s0_for, save_lock, union_ext_columns
 from .split import Fold, RollingSpec, check_fold, make_final, make_folds, make_rolling_from_end, make_rolling_spread, utc_ts
 
 
@@ -631,6 +631,17 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         devs, slots, _ = gpu.worker_slots(cfg)
         say(f"[{mname}] scheduler GPU: {nw} worker đối xứng trên GPU {devs} ({slots} task nặng/GPU) — fold rải ĐỘNG, "
             "ghép theo đúng thứ tự fold; candidate vẫn TUẦN TỰ")
+    if mname in PRECOMPUTE_MODELS and nw <= 1:
+        # Scheduler tắt (nw<=1): store CỦA PROCESS NÀY thực sự chạy candidate search → tính trước TOÀN BỘ cột ext
+        # của S0_m + Candidate_m trong MỘT lần `ensure_ext` (thay vì add-one loop kích hoạt lại từng cột một, mất hết
+        # lợi ích cache nội bộ của compute_short/compute_ext giữa các cột cùng họ EMA/ATR/PSAR/...). Khi scheduler
+        # BẬT (nw>1), việc này do worker GPU lo (xem `scheduler._worker_main`) — store của process này không được
+        # dùng để build ma trận nữa nên precompute ở đây sẽ vô ích.
+        precompute_cols = list(dict.fromkeys(list(base.ext) + [c for cand in cands for c in cand.columns]))
+        if precompute_cols:
+            store.ensure_ext(precompute_cols)
+            say(f"[{mname}] precompute: {len(precompute_cols)} cột ext (S0_{mname} + Candidate_{mname}) tính TRƯỚC "
+                "calibrate/add-one — candidate search chỉ CHỌN cột đã tính, không tính lại")
     deferred = champion_deferred(cfg)
     if not deferred and load_champion(exp / "champion.json") is None and mname != "lgbm":
         sys.exit("§3: champion ban đầu phải là LightGBM code gốc — chạy `loop --model lgbm` trước.")

@@ -108,6 +108,16 @@ def _worker_main(worker_id: int, device: int, task_q, result_q, cfg, allow_cpu: 
         W = {"cfg": cfg, "allow_cpu": allow_cpu, "models": {}, "model_for": model_for, "grid": {}}
         if not light:  # `gpu-probe` chỉ kiểm thiết bị → không đọc data (nhanh, không cần checksum)
             store, folds, final, _ = load_store(cfg)
+            # Precompute MỘT LẦN, TRƯỚC khi worker nhận task đầu tiên: hợp cột ext của S0_m + Candidate_m mọi model
+            # trong cfg.model_order (chỉ model đã lock-s0 — xem `s0.union_ext_columns`), rồi gọi `ensure_ext` MỘT LẦN.
+            # Worker này phục vụ MỌI branch trong suốt vòng đời scheduler nên đây là nơi tính thật; nếu không, add-one
+            # loop sẽ kích hoạt `ensure_ext` từng cột một khi task tới, làm mất lợi ích cache nội bộ của
+            # compute_short/compute_ext giữa các cột cùng họ EMA/ATR/PSAR (§ run ML+LSTM, tối ưu thực thi thuần).
+            from .s0 import union_ext_columns
+
+            precompute_cols = union_ext_columns(cfg.exp_dir, getattr(cfg, "model_order", None) or (), str(cfg.dataset_label))
+            if precompute_cols:
+                store.ensure_ext(precompute_cols)
             # CHỈ nạp fold walk-forward (VAL). Fold `final` (TEST) KHÔNG bao giờ vào worker: TEST chỉ được chạm ở
             # `run.py final` (tuần tự, có TEST_SENTINEL) — scheduler không được là đường vòng qua bất biến TEST-một-lần.
             W.update(store=store, folds={f.name: f for f in folds}, fold_order=[f.name for f in folds],

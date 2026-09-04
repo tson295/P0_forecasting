@@ -28,6 +28,39 @@ PREV_WINNER = {"lgbm": "lgbm.json", "xgb": "xgb.json", "cat": "cat.json", "xgbrf
                "autots_wr": "autots_wr.json", "autots_mr": "autots_mr.json"}
 S0_MODELS = tuple(PREV_WINNER) + ("tfm",)
 
+# Model dùng ColSet + C_short chuẩn qua `Store.ensure_ext` (không gồm tfm/autots_wr/autots_mr: S0_tfm = ∅ và
+# nhánh AutoTS/TimesFM không đổi ở đây) — dùng để precompute ext MỘT LẦN trước khi candidate search bắt đầu (§ run ML+LSTM).
+PRECOMPUTE_MODELS = ("lgbm", "xgb", "cat", "xgbrf", "lstm")
+
+
+def union_ext_columns(exp_dir: Path, models, dataset_label: str) -> tuple[str, ...]:
+    """Hợp cột ext cần cho S0_m + Candidate_m của các model trong `PRECOMPUTE_MODELS` (chỉ những model ĐÃ có lock-s0).
+
+    Dùng để gọi `Store.ensure_ext(...)` MỘT LẦN, TRƯỚC khi model search bắt đầu, thay vì để add-one loop kích hoạt
+    tính lại từng cột một (mỗi lần chỉ 1 cột mới → mất hết lợi ích cache nội bộ của `compute_short`/`compute_ext`
+    giữa các cột cùng họ, ví dụ nhiều cửa sổ EMA/ATR/PSAR). KHÔNG đổi S0/Candidate/PI/selection — chỉ gộp lời gọi
+    tính feature; model chưa lock-s0 hoặc audit khác dataset bị BỎ QUA lặng lẽ ở đây (bất biến S0 thật vẫn được
+    `cmd_loop`/`load_lock` kiểm đúng chỗ, có `hard_fail`)."""
+    seen: list[str] = []
+
+    def add(col: str) -> None:
+        if col not in seen:
+            seen.append(col)
+
+    for m in models:
+        if m not in PRECOMPUTE_MODELS:
+            continue
+        try:
+            cs, cands = load_lock(exp_dir, m, dataset_label=dataset_label)
+        except (FileNotFoundError, ValueError, KeyError):
+            continue
+        for c in cs.ext:
+            add(c)
+        for cand in cands:
+            for c in cand.columns:
+                add(c)
+    return tuple(seen)
+
 
 def prev_winner(prev_dir: Path, model: str) -> dict:
     p = Path(prev_dir) / "wins" / PREV_WINNER[model]

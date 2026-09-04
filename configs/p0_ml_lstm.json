@@ -1,0 +1,60 @@
+{
+  "dataset_label": "btc_1min_2y_2024-09-03_2026-09-03",
+  "hf_csv": "data/BTC_1m_2y.csv",
+  "lf_csv": "data/BTC_5m_2y.csv",
+  "checksums": "data/data_checksums_2y.json",
+  "split": {
+    "mode": "rolling_spread",
+    "n_folds": 5,
+    "val_days": 3,
+    "fit_days": 120,
+    "es_days": 5,
+    "test_days": 30,
+    "purge_minutes": 60
+  },
+  "purge_minutes": 60,
+  "calib_seed": 8586,
+  "eval_seeds": [
+    8587,
+    8588,
+    8589
+  ],
+  "selection_seed": 8587,
+  "eps_floor_pp": 0.005,
+  "experiments_dir": "experiments/ml_lstm",
+  "prev_run_dir": "experiments/15d",
+  "fold_workers": 2,
+  "gpu_devices": [
+    0,
+    1
+  ],
+  "gpu_slots_per_device": 1,
+  "max_branches": 4,
+  "defer_champion": true,
+  "short_candidates": null,
+  "require_gpu": true,
+  "models": {
+    "lgbm": {
+      "device_type": "cuda"
+    },
+    "xgb": {
+      "device": "cuda"
+    },
+    "cat": {
+      "task_type": "GPU"
+    },
+    "xgbrf": {
+      "device": "cuda"
+    },
+    "lstm": {
+      "device": "cuda"
+    }
+  },
+  "model_order": [
+    "lgbm",
+    "xgb",
+    "cat",
+    "xgbrf",
+    "lstm"
+  ]
+}
