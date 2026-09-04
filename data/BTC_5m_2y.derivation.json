@@ -1,0 +1,13 @@
+{
+  "method": "closed 5-minute buckets (T-4..T], label T = last 1m bar ts (multiple of 300 s); open=first, high=max, low=min, close=last, volume=sum, amount=sum; incomplete first/last buckets dropped",
+  "rows_hf": 1051201,
+  "rows_lf": 210239,
+  "dropped_incomplete_buckets": 2,
+  "lf_start": "2024-09-03 16:35:00+00:00",
+  "lf_end": "2026-09-03 16:25:00+00:00",
+  "source": "data/BTC_1m_2y.csv",
+  "source_sha256": "559ce040efd737d38f6d541b26e1533f4afc4682b5af2a94ef5cf842e31f8097",
+  "lf": "data/BTC_5m_2y.csv",
+  "lf_sha256": "0e5fb9ad20478dd4cc8b26c3669453ff35b3ceff1c72b81d20a6337540f52fef",
+  "dataset_label": "btc_1min_2y_2024-09-03_2026-09-03"
+}

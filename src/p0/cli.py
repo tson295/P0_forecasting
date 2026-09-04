@@ -29,7 +29,7 @@ from . import fold_parallel
 from .checker_log import hard_fail
 from .checker_log import record as ck_record
 from .config import HORIZONS, RunConfig
-from .data import check_ohlcv, read_ohlcv_csv, verify_checksums, write_checksums
+from .data import check_ohlcv, derive_lf_5min, file_sha256, read_ohlcv_csv, verify_checksums, write_checksums, write_lf_csv
 from .features_ext import ALL_EXT_COLUMNS, CANDIDATE_BY_NAME, CANDIDATES
 from .features_short import SHORT_COLUMNS
 from .filter_b0 import FilterTable, median_over_folds, mutual_info, permutation_importance, standalone_gain, verify_sets
@@ -40,7 +40,7 @@ from .loop import (add_one_loop, compare, confirm, decide_win, ensemble_rmse, in
 from .metrics import cell_metrics, e0_rmse, gain_pp, mean_rmse_over_seeds, seed_noise_cells, seed_noise_eps, summarize
 from .models import make_model
 from .s0 import S0_MODELS, collision_audit, load_lock, prev_dropped, s0_for, save_lock
-from .split import Fold, RollingSpec, check_fold, make_final, make_folds, make_rolling_from_end, utc_ts
+from .split import Fold, RollingSpec, check_fold, make_final, make_folds, make_rolling_from_end, make_rolling_spread, utc_ts
 
 
 # ----------------------------------------------------------------------------- helpers
@@ -141,7 +141,10 @@ def checksum_path(cfg: RunConfig) -> Path:
 def make_partitions(store: Store, cfg: RunConfig) -> tuple[list[Fold], Fold]:
     """Fold + final: `split` rolling_from_end (data đầy đủ, neo vào cuối data thật) hoặc `val_days`/`test_start` (15 ngày)."""
     if cfg.split:
-        return make_rolling_from_end(store.first_origin_ts, store.last_ts, RollingSpec.from_dict(cfg.split))
+        spec = RollingSpec.from_dict(cfg.split)
+        if spec.mode == "rolling_spread":  # data 2 năm (2026-09-04): 5 VAL rải đều trên lịch sử trước TEST, FIT 120 ngày rolling
+            return make_rolling_spread(store.first_origin_ts, store.last_ts, spec)
+        return make_rolling_from_end(store.first_origin_ts, store.last_ts, spec)
     folds = make_folds(store.first_origin_ts, cfg.val_days, cfg.purge_minutes, cfg.es_hours)
     test_end = utc_ts(cfg.test_end) if cfg.test_end else store.last_ts + 60
     return folds, make_final(store.first_origin_ts, cfg.test_start, test_end, cfg.purge_minutes)
@@ -253,12 +256,23 @@ def cmd_check_data(cfg: RunConfig, args) -> None:
         reports["lf"] = check_ohlcv(lf, step=300)
         files["lf"] = lf_path
         say(f"LF {lf_path}: {json.dumps(reports['lf'], ensure_ascii=False)}")
+    if lf_path and lf_path.exists():  # LF dẫn xuất: sidecar phải trỏ đúng HF hiện tại (không dùng LF của nguồn khác)
+        side = lf_path.with_suffix(".derivation.json")
+        if side.exists():
+            meta = json.loads(side.read_text(encoding="utf-8"))
+            hf_sha = file_sha256(hf_path)
+            if meta.get("source_sha256") != hf_sha:
+                hard_fail(cfg.exp_dir, "check-data", "LF_DERIVATION_MISMATCH",
+                          f"{side}: LF dẫn xuất từ HF sha {meta.get('source_sha256')} ≠ HF hiện tại {hf_sha} — chạy lại `derive-lf`.")
+            say(f"LF dẫn xuất từ đúng HF hiện tại (sha {hf_sha[:12]}…): {meta.get('rows_lf')} bar 5', bỏ {meta.get('dropped_incomplete_buckets')} nhóm thiếu")
     store, folds, final, _ = load_store(cfg, verify=False)
     say(f"B0-eligible origins: {int(store.eligible.sum())} | first {pd.Timestamp(store.first_origin_ts, unit='s', tz='UTC')} | last {pd.Timestamp(store.last_ts, unit='s', tz='UTC')}")
     if cfg.split:
         spec = RollingSpec.from_dict(cfg.split)
-        say(f"split rolling_from_end: {spec.n_folds} fold × VAL {spec.val_days} ngày, train region FIT {spec.fit_days} + ES {spec.es_days} ngày, "
-            f"TEST {spec.test_days} ngày cuối, purge {spec.purge_minutes}' — cần ≥ {spec.days_needed} ngày data (suy ra từ data thật, không hard-code ngày)")
+        say(f"split {spec.mode}: {spec.n_folds} fold × VAL {spec.val_days} ngày"
+            + (" RẢI ĐỀU trên lịch sử trước TEST" if spec.mode == "rolling_spread" else " liên tiếp trước TEST")
+            + f", train region rolling FIT {spec.fit_days} + ES {spec.es_days} ngày, TEST {spec.test_days} ngày cuối, purge {spec.purge_minutes}' "
+            f"— cần ≥ {spec.days_needed} ngày data (suy ra từ data thật, không hard-code ngày)")
     for f in folds + [final]:
         chk = check_fold(f, store.ts, store.eligible, cfg.purge_minutes)
         say(f"{f.name}: FIT {f.fit.label()} n={chk['n_fit']} | ES {f.es.label()} n={chk['n_es']} | VAL {f.val.label()} n={chk['n_val']} "
@@ -276,6 +290,27 @@ def cmd_check_data(cfg: RunConfig, args) -> None:
             hard_fail(cfg.exp_dir, "check-data", "CHECKSUM_MISMATCH", "Data khác snapshot đã ghi (§6.1) — dừng: " + "; ".join(problems))
     else:
         say(f"chưa có {out} — chạy lại với --write-checksums để ghi anchor §6.1 (bắt buộc trước mọi bước training)")
+
+
+def cmd_derive_lf(cfg: RunConfig, args) -> None:
+    """Dẫn xuất LF 5' ĐÃ ĐÓNG từ HF 1' của config (data 2 năm chỉ có 1'): tất định, causal, bỏ nhóm thiếu bar; ghi `lf_csv`
+    + sidecar `<lf>.derivation.json` (sha nguồn, số bar, phương pháp). Không phải training. Data raw không bị sửa."""
+    hf_path, lf_path = cfg.path(cfg.hf_csv), cfg.path(cfg.lf_csv)
+    if lf_path is None:
+        sys.exit("config không khai báo lf_csv")
+    if lf_path.exists() and not getattr(args, "force", False):
+        sys.exit(f"{lf_path} đã tồn tại — dùng --force để dẫn xuất lại (tất định, cùng byte nếu cùng HF)")
+    raw = read_ohlcv_csv(hf_path)
+    rep_hf = check_ohlcv(raw)
+    if not rep_hf["ok"]:
+        hard_fail(cfg.exp_dir, "derive-lf", "DATA_QUALITY", f"HF không đạt §1.1, không dẫn xuất LF: {rep_hf}")
+    lf, meta = derive_lf_5min(raw)
+    sha_lf = write_lf_csv(lf, lf_path)
+    side = {**meta, "source": cfg.hf_csv, "source_sha256": file_sha256(hf_path), "lf": cfg.lf_csv, "lf_sha256": sha_lf,
+            "dataset_label": cfg.dataset_label}
+    lf_path.with_suffix(".derivation.json").write_text(json.dumps(side, indent=2, ensure_ascii=False), encoding="utf-8")
+    say(f"LF 5' → {lf_path}: {meta['rows_lf']} bar ({meta['lf_start']} → {meta['lf_end']}), bỏ {meta['dropped_incomplete_buckets']} nhóm thiếu; "
+        f"sha256 {sha_lf[:12]}… (sidecar {lf_path.with_suffix('.derivation.json').name})")
 
 
 def cmd_lock_s0(cfg: RunConfig, args) -> None:
@@ -1127,6 +1162,7 @@ def main(argv=None) -> None:
     p = argparse.ArgumentParser(prog="p0", description="P0_forecasting harness (docs/RESEARCH_PLAN.md)", parents=[common(True)])
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("check-data", parents=[common(False)]); s.add_argument("--write-checksums", action="store_true")
+    s = sub.add_parser("derive-lf", parents=[common(False)]); s.add_argument("--force", action="store_true", help="ghi đè LF đã có (tất định)")
     s = sub.add_parser("lock-s0", parents=[common(False)])
     s.add_argument("--data-config", default=None, help="config khác để lấy data cho collision audit bằng số (định nghĩa trùng thì trùng trên mọi data)")
     s.add_argument("--max-rows", type=int, default=None)
@@ -1148,7 +1184,7 @@ def main(argv=None) -> None:
         cmd_smoke_e2e(None, args)
         return
     cfg = RunConfig.load(args.config)
-    {"check-data": cmd_check_data, "lock-s0": cmd_lock_s0, "calibrate": cmd_calibrate, "filter-b0": cmd_filter_b0, "loop": cmd_loop,
+    {"check-data": cmd_check_data, "derive-lf": cmd_derive_lf, "lock-s0": cmd_lock_s0, "calibrate": cmd_calibrate, "filter-b0": cmd_filter_b0, "loop": cmd_loop,
      "tfm-final": cmd_tfm_final, "autots-search": cmd_autots_search, "ensemble": cmd_ensemble,
      "final": cmd_final, "visualize": cmd_visualize}[args.cmd](cfg, args)
 

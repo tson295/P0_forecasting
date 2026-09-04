@@ -15,8 +15,20 @@ B0_COLUMNS = ("timestamp", "Open", "High", "Low", "Close", "Volume")
 
 
 def read_ohlcv_csv(path: str | Path) -> pd.DataFrame:
-    """Đọc CSV raw (lowercase). Dòng cuối cụt (file cắt 2 MiB) bị bỏ qua nhờ on_bad_lines + dropna."""
+    """Đọc CSV raw (lowercase). Dòng cuối cụt (file cắt 2 MiB) bị bỏ qua nhờ on_bad_lines + dropna.
+
+    Alias (data 2 năm 2026-09-04): cột `ts` được đổi tên thành `timestamp` TRONG BỘ NHỚ khi file không có `timestamp`;
+    có cả hai thì phải giống hệt nhau (khác → lỗi). Cột `datetime` nếu có phải khớp epoch của `timestamp` (UTC) — sau đó
+    `datetime` luôn được dựng lại từ `timestamp` để mọi đường downstream chỉ dựa vào epoch."""
     df = pd.read_csv(path, on_bad_lines="skip")
+    if "timestamp" not in df.columns and "ts" in df.columns:
+        df = df.rename(columns={"ts": "timestamp"})
+    elif "timestamp" in df.columns and "ts" in df.columns:
+        a = pd.to_numeric(df["ts"], errors="coerce")
+        b = pd.to_numeric(df["timestamp"], errors="coerce")
+        if not a.fillna(-1).eq(b.fillna(-1)).all():
+            raise ValueError(f"{path}: cột `ts` và `timestamp` không giống nhau — không đoán, dừng")
+        df = df.drop(columns=["ts"])
     missing = [c for c in ("timestamp", "open", "high", "low", "close", "volume") if c not in df.columns]
     if missing:
         raise ValueError(f"Thiếu cột {missing} trong {path}")
@@ -37,9 +49,60 @@ def read_ohlcv_csv(path: str | Path) -> pd.DataFrame:
         df["amount"] = np.nan
     n_before = len(df)
     df = df.sort_values("timestamp").drop_duplicates("timestamp", keep="last").reset_index(drop=True)
+    if "datetime" in df.columns:  # verify cột datetime của file khớp epoch (UTC) — không tin cột chữ, chỉ kiểm
+        parsed = pd.to_datetime(df["datetime"], utc=True, errors="coerce")
+        epoch = (parsed - pd.Timestamp("1970-01-01", tz="UTC")).dt.total_seconds()  # độc lập resolution (pandas 3: s/us/ns)
+        bad = parsed.isna() | (epoch != df["timestamp"].to_numpy(np.int64))
+        if bad.any():
+            i = int(np.flatnonzero(bad.to_numpy())[0])
+            raise ValueError(f"{path}: cột datetime không khớp timestamp (UTC) tại dòng {i}: {df['datetime'].iloc[i]!r} vs {int(df['timestamp'].iloc[i])}")
     df["datetime"] = pd.to_datetime(df["timestamp"], unit="s", utc=True)
     df.attrs["duplicates_dropped"] = int(n_before - len(df))  # drop xảy ra trước check → check_ohlcv cộng vào `duplicates`
     return df
+
+
+# ----------------------------------------------------------------------------- LF 5 phút dẫn xuất từ HF (2026-09-04)
+LF_COLUMNS = ("datetime", "timestamp", "open", "high", "low", "close", "volume", "amount")
+
+
+def derive_lf_5min(hf: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Bar 5 phút ĐÃ ĐÓNG từ bar 1 phút, đúng quy ước LF của project: nhãn T = timestamp bar 1' cuối của nhóm (T−4' … T],
+    T là bội của 300 s; open = first, high = max, low = min, close = last, volume = sum, amount = sum.
+
+    Chỉ giữ nhóm ĐỦ 5 bar liên tiếp (60 s); nhóm đầu/cuối thiếu bar bị BỎ (không bịa bar). Bar T chỉ chứa thông tin ≤ T,
+    và chỉ được as-of join vào origin t khi T ≤ t (`asof_index`) → không look-ahead. Trả (lf, meta)."""
+    ts = hf["timestamp"].to_numpy(np.int64)
+    if len(ts) == 0 or ((ts % STEP_SEC) != 0).any():
+        raise ValueError("HF phải nằm trên lưới 60 s để dẫn xuất LF 5'")
+    grp = ((ts // 60) - 1) // 5  # bar (T−4 … T] cùng nhóm, T = bội 300 s (cùng quy ước `synthetic.make_lf` và data LF cũ)
+    g = hf[["timestamp", "open", "high", "low", "close", "volume", "amount"]].copy()
+    g["grp"] = grp
+    size = g.groupby("grp")["timestamp"].transform("size")
+    span = g.groupby("grp")["timestamp"].transform("max") - g.groupby("grp")["timestamp"].transform("min")
+    full = g[(size == 5) & (span == 4 * STEP_SEC)]
+    n_dropped = int(g["grp"].nunique() - full["grp"].nunique())
+    agg = full.groupby("grp", sort=True).agg(timestamp=("timestamp", "last"), open=("open", "first"), high=("high", "max"),
+                                             low=("low", "min"), close=("close", "last"), volume=("volume", "sum"), amount=("amount", "sum"))
+    agg = agg.reset_index(drop=True)
+    if len(agg) and ((agg["timestamp"] % 300) != 0).any():
+        raise AssertionError("nhãn bar 5' phải là bội của 300 s")
+    agg["datetime"] = pd.to_datetime(agg["timestamp"], unit="s", utc=True)
+    lf = agg[list(LF_COLUMNS)]
+    meta = {"method": "closed 5-minute buckets (T-4..T], label T = last 1m bar ts (multiple of 300 s); open=first, high=max, low=min, "
+                      "close=last, volume=sum, amount=sum; incomplete first/last buckets dropped",
+            "rows_hf": int(len(hf)), "rows_lf": int(len(lf)), "dropped_incomplete_buckets": n_dropped,
+            "lf_start": str(lf["datetime"].iloc[0]) if len(lf) else None, "lf_end": str(lf["datetime"].iloc[-1]) if len(lf) else None}
+    return lf, meta
+
+
+def write_lf_csv(lf: pd.DataFrame, path: str | Path) -> str:
+    """Ghi LF tất định (cùng input → cùng byte): UTF-8, '\\n', không index, datetime ISO UTC. Trả sha256 của file."""
+    out = lf.copy()
+    out["datetime"] = out["datetime"].dt.strftime("%Y-%m-%d %H:%M:%S+00:00")
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        out.to_csv(f, index=False, lineterminator="\n")
+    return file_sha256(path)
 
 
 def check_ohlcv(df: pd.DataFrame, step: int = STEP_SEC) -> dict:

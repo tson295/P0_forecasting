@@ -1,0 +1,43 @@
+{
+  "dataset_label": "btc_1min_2y_2024-09-03_2026-09-03",
+  "files": {
+    "hf": {
+      "path": "data/BTC_1m_2y.csv",
+      "sha256": "559ce040efd737d38f6d541b26e1533f4afc4682b5af2a94ef5cf842e31f8097",
+      "bytes": 101766374,
+      "report": {
+        "rows": 1051201,
+        "start": "2024-09-03 16:29:00+00:00",
+        "end": "2026-09-03 16:29:00+00:00",
+        "aligned": true,
+        "duplicates": 0,
+        "gaps": 0,
+        "max_gap_sec": 60,
+        "ohlc_ok": true,
+        "volume_ok": true,
+        "amount_in_range": true,
+        "amount_available": true,
+        "ok": true
+      }
+    },
+    "lf": {
+      "path": "data/BTC_5m_2y.csv",
+      "sha256": "0e5fb9ad20478dd4cc8b26c3669453ff35b3ceff1c72b81d20a6337540f52fef",
+      "bytes": 21146273,
+      "report": {
+        "rows": 210239,
+        "start": "2024-09-03 16:35:00+00:00",
+        "end": "2026-09-03 16:25:00+00:00",
+        "aligned": true,
+        "duplicates": 0,
+        "gaps": 0,
+        "max_gap_sec": 300,
+        "ohlc_ok": true,
+        "volume_ok": true,
+        "amount_in_range": true,
+        "amount_available": true,
+        "ok": true
+      }
+    }
+  }
+}

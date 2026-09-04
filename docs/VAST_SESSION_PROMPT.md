@@ -2,18 +2,19 @@
 
 > Chỉ dùng khi user đã **cho phép rõ ràng** chạy experiment vòng expanded-data (MEMORY hiện ghi `TRAINING: LOCKED`).
 > Copy nguyên khối dưới đây vào một session Claude Code mới trên máy Vast sau khi: instance đã tạo, repo đã clone vào
-> `~/P0_forecasting` (kèm `git lfs install`), và `data/BTC_hf_1min_full.csv` + `data/BTC_lf_5min_full.csv` đã scp lên (CSV không nằm trong git).
+> `~/P0_forecasting` (kèm `git lfs install`), và `data/BTC_1m_2y.csv` (sha256 559ce040…f097) đã scp lên; `data/BTC_5m_2y.csv` scp cùng
+> hoặc dẫn xuất lại bằng `derive-lf` (phải ra sha256 0e5fb9ad…f2fef). CSV không nằm trong git; anchor `data/data_checksums_2y.json` đã commit.
 
 ---
 
 Bạn là session Claude Code chạy trên máy Vast.ai GPU cho project P0_forecasting (BTC 1-phút point forecasting), vòng
-EXPANDED-DATA. Repo ở ~/P0_forecasting; data/BTC_hf_1min_full.csv và data/BTC_lf_5min_full.csv đã được scp lên.
+EXPANDED-DATA trên DATA 2 NĂM. Repo ở ~/P0_forecasting; data/BTC_1m_2y.csv đã được scp lên (LF 5' = data/BTC_5m_2y.csv, dẫn xuất tất định).
 
 PROMPT NÀY LÀ AUTHORIZATION CỦA USER ĐỂ CHẠY TOÀN BỘ EXPERIMENT END-TO-END (user đã unlock bằng cách gửi prompt này):
 sau khi mọi preflight PASS, bạn TỰ chuyển TRAINING: UNLOCKED và chạy LIÊN TỤC theo thứ tự plan §8 tới hết `final` + `visualize`.
 KHÔNG hỏi user để duyệt giữa các bước/model. Chỉ DỪNG và hỏi user trong các blocker liệt kê ở cuối prompt.
 
-ĐỌC TRƯỚC (theo thứ tự): .claude/CLAUDE.md → .claude/MEMORY.md → docs/RESEARCH_PLAN.md (rev 10.1) → README.md → .claude/AGENT.md
+ĐỌC TRƯỚC (theo thứ tự): .claude/CLAUDE.md → .claude/MEMORY.md → docs/RESEARCH_PLAN.md (rev 10.2) → README.md → .claude/AGENT.md
 → docs/reference/audit_timesfm_lora.md. docs/archive/ là lịch sử; experiments/15d/ là vòng 15 ngày đã xong (không sửa).
 
 =========================== LUẬT BẤT BIẾN (không tương tác) ===========================
@@ -32,7 +33,7 @@ KHÔNG hỏi user để duyệt giữa các bước/model. Chỉ DỪNG và hỏ
    search trên CÙNG adapter; loss MSE trên ŷ_h; không torch.compile; inject sau load_checkpoint; giữ mean head, 1 origin/lời gọi, dịch 1 bar,
    cộng dồn one-step. Artifact: wins/tfm_lora_native.json, wins/tfm_lora_xreg.json → tfm-final → wins/tfm.json.
    AutoTS: probe = 2 class cố định từ S0 của nhánh; framework chỉ với initial_template GPU + max_generations=0 trên FIT+ES.
-6. data/ read-only. KHÔNG ghi đè data/data_checksums_full.json sau khi đã ghi lần đầu. Không secret vào repo/MEMORY/git.
+6. data/ read-only (không sửa data/BTC_1m_2y.csv; LF chỉ sinh bằng derive-lf). KHÔNG ghi đè data/data_checksums_2y.json (đã commit). Không secret vào repo/MEMORY/git.
    experiments/** KHÔNG được ignore: commit + push (LFS cho .npz/.pt) sau mỗi model; adapter LoRA trong experiments/full/lora/.
 7. KHÔNG vẽ figure trong bất kỳ bước training nào; figure chỉ sinh bằng `python run.py visualize` sau `final`.
 8. `final` chỉ chạy MỘT lần (final/TEST_SENTINEL.json). KHÔNG BAO GIỜ dùng --force-test-rerun trừ khi user ra lệnh rõ (recovery).
@@ -44,14 +45,17 @@ KHÔNG hỏi user để duyệt giữa các bước/model. Chỉ DỪNG và hỏ
   bash scripts/vast_bootstrap.sh                                    # GPU, pip, timesfm 2.0.2 + autots 1.0.4 + jax[cuda12], build/resolve LightGBM, preflight, unit test
   PYTHONPATH=src:. python scripts/vast_canary.py --config configs/p0_full.json
   PYTHONPATH=src:. python scripts/canary_xreg_gpu.py --config configs/p0_full.json
-  python run.py check-data --config configs/p0_full.json --write-checksums   # lần đầu: ghi anchor; in fold rolling + TEST 30 ngày; cần ≥ 90 ngày
-  python run.py lock-s0 --config configs/p0_full.json               # S0_m khoá + collision audit + Candidate_m → experiments/full/s0/
+  [ -f data/BTC_5m_2y.csv ] || python run.py derive-lf --config configs/p0_full.json   # LF 5' dẫn xuất tất định (sha phải = 0e5fb9ad…f2fef)
+  python run.py check-data --config configs/p0_full.json            # KHÔNG --write-checksums: anchor data/data_checksums_2y.json đã commit → phải in "verify … OK"
+  python run.py lock-s0 --config configs/p0_full.json               # S0_m khoá + overlap audit + Candidate_m → experiments/full/s0/ (audit label = dataset 2 năm)
   PYTHONPATH=src:. python -m pytest -q -x
 
-check-data phải in: HF ok:true, LF phủ HF, 5 fold + final_TEST đều OK. lock-s0 phải in: S0 (locked_b0 + locked_ext): lgbm 72+14, xgb 72+11,
-cat 72+5, xgbrf 72+12, lstm 72+23, autots_wr 72+21, autots_mr 72+8, tfm 0+0; C_short 163; Candidate_m = 163 − overlap S0_m (dự kiến 163,
-trên data 15 ngày là 163 cho mọi model); near vs S0 chỉ báo (không bỏ). Sau đó: `python scripts/checker_record.py --exp experiments/full --blocking`
-phải sạch ERROR.
+check-data phải in: HF 1.051.201 bar 2024-09-03 16:29 → 2026-09-03 16:29 ok:true; LF 210.239 bar dẫn xuất từ đúng HF; B0-eligible 1.049.358;
+split rolling_spread 5 fold: VAL 2025-01-07, 2025-05-30, 2025-10-19, 2026-03-11, 2026-08-01 (mỗi 3 ngày, FIT 120 ngày ≈ 172,7k origin, ES ≈ 7,1k,
+VAL ≈ 4,3k), final_TEST 2026-08-04 16:30 → 09-03 16:30 (42.918 origin), tất cả OK, và "verify … OK — khớp snapshot đã ghi".
+lock-s0 phải in: S0 (locked_b0 + locked_ext): lgbm 72+14, xgb 72+11, cat 72+5, xgbrf 72+12, lstm 72+23, autots_wr 72+21, autots_mr 72+8, tfm 0+0;
+C_short 163; Candidate_m = 163 cho mọi model (0 overlap); near vs S0 chỉ báo (không bỏ). Sau đó: `python scripts/checker_record.py --exp experiments/full --blocking`
+phải sạch ERROR. Sai bất kỳ số nào / checksum KHÔNG KHỚP → DỪNG hỏi user; KHÔNG chạy --write-checksums để ép PASS.
 Canary LoRA thời gian thật (SAU khi unlock, TRƯỚC `loop --model lgbm`): `PYTHONPATH=src:. python scripts/canary_lora.py --config configs/p0_full.json`
 — 1 fold × 1 epoch × 64 origin, adapter vào thư mục tạm, KHÔNG ghi artifact/log của experiment; ghi thời gian/epoch, VRAM đỉnh,
 ms/origin XReg và ETA vào báo cáo. Nếu OOM với 5 worker → giảm P0_FOLD_WORKERS cho bước tfm (không đổi batch LoRA nếu không bắt buộc; ghi rõ khi đổi).
@@ -85,7 +89,7 @@ Sau mỗi model: cập nhật MEMORY (Current Task / Exact Next Step, thời gia
 
 =========================== CHỈ DỪNG VÀ HỎI USER KHI ===========================
 - không có GPU backend khả dụng cho một model bắt buộc; package/API thật lệch adapter mà sửa thì đổi methodology;
-- checksum/data mismatch, LF không phủ HF, data < 90 ngày; lock-s0 báo identical pair bất thường với cột S0;
+- checksum/data mismatch, LF không dẫn xuất từ đúng HF (LF_DERIVATION_MISMATCH) hoặc không phủ HF, data < 158 ngày; lock-s0 báo overlap bất thường với cột S0;
 - phát hiện leakage hoặc bug correctness mới; test fail mà sửa thì phải đổi methodology; ERROR trong checker_log không sửa được bằng env/code;
 - OOM/hết dung lượng không xử lý được bằng tinh chỉnh execution an toàn (giảm P0_FOLD_WORKERS, tail_bars, dọn cache HF).
 

@@ -1,15 +1,16 @@
 # P0_forecasting — BTC 1-phút point forecasting
 
-Dự báo điểm `y_h(t) = log(C[t+h]/C[t])`, h = 1, 2, 3 phút, BTC 1-phút (Binance OHLCV + amount). Model dự báo log-return, **metric tính trên giá** (`P̂ = C_t·exp(ŷ)`, RMSE/MAE USD, Gain = 1 − RMSE_cand/RMSE_base trên 15 ô = 5 fold × 3 horizon). Chi tiết: [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) (plan rev 10.1, 2026-09-04).
+Dự báo điểm `y_h(t) = log(C[t+h]/C[t])`, h = 1, 2, 3 phút, BTC 1-phút (Binance OHLCV + amount). Model dự báo log-return, **metric tính trên giá** (`P̂ = C_t·exp(ŷ)`, RMSE/MAE USD, Gain = 1 − RMSE_cand/RMSE_base trên 15 ô = 5 fold × 3 horizon). Chi tiết: [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) (plan rev 10.2, 2026-09-04).
 
-Trạng thái: **vòng 15 ngày đã chạy xong (2026-09-01, artifact `experiments/15d/`, champion xgbrf, tín hiệu ≈ 0 — xem `.claude/MEMORY.md`)**. **Vòng expanded-data: code/config/doc đã migrate (2026-09-03) + pass hiệu chỉnh (2026-09-04), 139 unit test + smoke PASS, `TRAINING: LOCKED`** — chạy trên Vast khi user unlock và data đầy đủ đã đặt lên đĩa. Raw CSV không nằm trong repo (sha256 ở `data/data_checksums*.json`).
+Trạng thái: **vòng 15 ngày đã chạy xong (2026-09-01, artifact `experiments/15d/`, champion xgbrf, tín hiệu ≈ 0 — xem `.claude/MEMORY.md`)**. **Vòng expanded-data trên data 2 NĂM thật (`data/BTC_1m_2y.csv`, 2024-09-03 → 2026-09-03; LF 5' dẫn xuất; split rolling_spread 5 VAL rải đều, FIT 120): code/config/doc xong (2026-09-04), S0/Candidate_m đã lock trên data thật (163/model), 150 unit test + smoke PASS, `TRAINING: LOCKED`** — chạy trên Vast khi user unlock. Raw CSV không nằm trong repo (sha256 ở `data/data_checksums*.json`).
 
 ## Chạy
 
 ```bash
 python -m pytest -q                                        # unit test CPU (data tổng hợp, stub cho timesfm/autots)
 python run.py smoke-e2e --out tmp_smoke --days 6           # toàn bộ pipeline trên data tổng hợp, CPU, chỉ debug
-python run.py check-data --config configs/p0_full.json --write-checksums   # data đầy đủ: kiểm tra §1.1 + split rolling §1.5 + anchor sha256
+python run.py derive-lf --config configs/p0_full.json      # LF 5' đã đóng dẫn xuất tất định từ data/BTC_1m_2y.csv → data/BTC_5m_2y.csv (+ sidecar sha nguồn)
+python run.py check-data --config configs/p0_full.json     # data 2 năm: kiểm tra §1.1 + split rolling_spread §1.5 + verify anchor data/data_checksums_2y.json
 python run.py lock-s0   --config configs/p0_full.json      # S0_m khoá toàn bộ + overlap audit per model + Candidate_m → experiments/full/s0/ (không training)
 python run.py loop --config configs/p0_full.json --model lgbm   # sau khi user unlock; GPU only; rồi xgb → cat → tfm → tfm-final → xgbrf
                                                                  # → autots_wr → autots_mr → autots-search → lstm → ensemble → final
@@ -20,7 +21,7 @@ Bootstrap Vast: `scripts/vast_bootstrap.sh`; prompt cho session Vast: `docs/VAST
 ## Flow vòng expanded-data (2026-09-03, hiệu chỉnh 2026-09-04)
 
 ```
-Data đầy đủ → split rolling neo vào cuối data (5 fold VAL 3 ngày, FIT 40 + ES 5, TEST 30 ngày cuối)     (§1.5)
+Data 2 năm (BTC_1m_2y.csv + LF 5' dẫn xuất) → split rolling_spread: 5 VAL 3 ngày RẢI ĐỀU trên 2 năm, FIT 120 + ES 5 rolling, TEST 30 ngày cuối  (§1.5)
 → S0_m = B0* ∪ F_old_m KHOÁ TOÀN BỘ (locked_b0/locked_ext, từ experiments/15d/wins/<m>.json); C_short 163 feature ≤ 15'
   → Candidate_m = C_short \ overlap(C_short, S0_m) RIÊNG từng model (chỉ trùng tên/giá trị với S0_m; tương quan chỉ báo)   (§0b, §2.3b)
 → Mỗi model từ S0_m của CHÍNH nó: calibrate trên data mới (số vòng/epoch + ε mới) → add-one Candidate_m → F*_raw
@@ -44,7 +45,7 @@ Luật KEEP/DROP (§2.1): `MedianGain ≥ −ε_m` → KEEP, `< −ε_m` → DRO
 
 | Loại | Vị trí | Ghi chú |
 |---|---|---|
-| **Chính thức** | `docs/RESEARCH_PLAN.md` | plan duy nhất có hiệu lực (rev 10.1) |
+| **Chính thức** | `docs/RESEARCH_PLAN.md` | plan duy nhất có hiệu lực (rev 10.2) |
 | Chính thức (vận hành) | `.claude/CLAUDE.md`, `.claude/MEMORY.md`, `.claude/AGENT.md`, `.claude/agents/` | hiến pháp rút gọn, trạng thái, registry agent |
 | Audit API (căn cứ code) | `docs/reference/audit_timesfm_lora.md`, `audit_timesfm.md`, `audit_autots.md` | version/API đã kiểm; phần khác của `docs/reference/` chỉ tham khảo |
 | Lưu trữ (hết hiệu lực) | `docs/archive/` | plan / hiến pháp / memory bản 2026-08-24 |

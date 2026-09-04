@@ -63,9 +63,13 @@ def make_folds(first_origin_ts: int, val_days: list[str], purge_minutes: int = 6
 
 @dataclass(frozen=True)
 class RollingSpec:
-    """Split data đầy đủ (plan §5, neo vào CUỐI data thật — không hard-code ngày): TEST = `test_days` cuối;
-    n_folds VAL liên tiếp `val_days` ngày kết thúc ngay trước TEST; mỗi fold train region rolling = FIT `fit_days`
-    + ES `es_days` (trừ purge) ngay trước VAL; Final refit = cùng train region ngay trước TEST."""
+    """Split data đầy đủ, neo vào data thật — không hard-code ngày. Hai mode:
+
+    - `rolling_from_end` (rev 10): n_folds VAL `val_days` ngày LIÊN TIẾP kết thúc ngay trước TEST.
+    - `rolling_spread` (2026-09-04, data 2 năm): n_folds VAL RẢI ĐỀU trên toàn bộ lịch sử trước TEST (từ VAL sớm nhất còn đủ
+      FIT + ES tới VAL muộn nhất kết thúc ngay trước TEST) để 15 ô lấy mẫu các regime khác nhau.
+    Cả hai: TEST = `test_days` cuối; mỗi fold train region ROLLING = FIT `fit_days` + ES `es_days` (trừ purge) ngay trước VAL
+    (không expanding); Final refit = cùng train region ngay trước TEST."""
 
     n_folds: int = 5
     val_days: int = 3
@@ -73,17 +77,55 @@ class RollingSpec:
     es_days: int = 5
     test_days: int = 30
     purge_minutes: int = 60
+    mode: str = "rolling_from_end"
 
     @property
     def days_needed(self) -> int:
+        if self.mode == "rolling_spread":
+            return self.test_days + self.val_days + self.fit_days + self.es_days  # tối thiểu: 1 VAL đủ train region
         return self.test_days + self.n_folds * self.val_days + self.fit_days + self.es_days
 
     @classmethod
     def from_dict(cls, d: dict) -> "RollingSpec":
         mode = str(d.get("mode", "rolling_from_end"))
-        if mode != "rolling_from_end":
+        if mode not in ("rolling_from_end", "rolling_spread"):
             raise ValueError(f"split.mode không hỗ trợ: {mode}")
-        return cls(**{k: int(v) for k, v in d.items() if k in cls.__dataclass_fields__})
+        return cls(mode=mode, **{k: int(v) for k, v in d.items() if k in cls.__dataclass_fields__ and k != "mode"})
+
+
+def make_rolling_spread(first_origin_ts: int, last_bar_ts: int, spec: RollingSpec) -> tuple[list[Fold], Fold]:
+    """(n_folds fold rải đều, final) suy ra từ data thật (2026-09-04).
+
+    t_end = sau bar cuối; test_start = t_end − test_days; latest_val_start = test_start − val_days;
+    earliest_val_start = first_origin + fit_days + es_days (FIT bắt đầu không sớm hơn origin eligible đầu — warmup B0 đã tính
+    trong first_origin); val_start_k = linspace(earliest, latest, n_folds) làm tròn lưới 60 s. Mỗi fold:
+    FIT = [val_start − es − fit, val_start − es), ES = [val_start − es, val_start − purge), VAL = [val_start, val_start + val_days)."""
+    t_end = int(last_bar_ts) + 60
+    test_start = t_end - spec.test_days * DAY_SEC
+    latest = test_start - spec.val_days * DAY_SEC
+    earliest = int(first_origin_ts) + (spec.fit_days + spec.es_days) * DAY_SEC
+    earliest = int(np.ceil(earliest / 60.0)) * 60
+    if earliest > latest:
+        raise ValueError(f"data không đủ cho rolling_spread: cần ≥ {spec.days_needed} ngày kể từ origin eligible đầu "
+                         f"({pd.Timestamp(first_origin_ts, unit='s', tz='UTC')}), thiếu {(earliest - latest) / DAY_SEC:.2f} ngày")
+    starts = [int(round(x / 60.0)) * 60 for x in np.linspace(earliest, latest, spec.n_folds)]
+    if spec.n_folds > 1:
+        min_gap = min(b - a for a, b in zip(starts, starts[1:]))
+        if min_gap < spec.val_days * DAY_SEC:
+            raise ValueError(f"rolling_spread: {spec.n_folds} VAL không tách rời được (khoảng cách {min_gap / DAY_SEC:.2f} ngày < val_days) — data quá ngắn")
+    purge = spec.purge_minutes * 60
+    folds = []
+    for k, val_start in enumerate(starts):
+        es_start = val_start - spec.es_days * DAY_SEC
+        fit = Partition(es_start - spec.fit_days * DAY_SEC, es_start)
+        es = Partition(es_start, val_start - purge)
+        val = Partition(val_start, val_start + spec.val_days * DAY_SEC)
+        day = pd.Timestamp(val_start, unit="s", tz="UTC").strftime("%Y-%m-%d")
+        folds.append(Fold(f"fold{k + 1}_{day}", fit, es, val))
+    es_start = test_start - spec.es_days * DAY_SEC
+    final = Fold("final_TEST", Partition(es_start - spec.fit_days * DAY_SEC, es_start), Partition(es_start, test_start - purge),
+                 Partition(test_start, t_end))
+    return folds, final
 
 
 def make_rolling_from_end(first_origin_ts: int, last_bar_ts: int, spec: RollingSpec) -> tuple[list[Fold], Fold]:

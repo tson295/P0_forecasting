@@ -343,18 +343,18 @@
   {
    "a": "ret_1",
    "b": "fine:t:candle_return",
-   "corr": 0.999991
+   "corr": 0.999977
   },
   {
    "a": "log_atr15_c",
    "b": "kcw_20",
-   "corr": 0.998343
+   "corr": 0.998092
   },
   {
    "a": "kcw_15",
    "b": "kcw_20",
-   "corr": 0.998353
+   "corr": 0.998095
   }
  ],
- "audit_dataset_label": "btc_1min_15d_2026-01-18_02-02"
+ "audit_dataset_label": "btc_1min_2y_2024-09-03_2026-09-03"
 }

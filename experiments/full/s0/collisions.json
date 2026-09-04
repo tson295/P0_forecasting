@@ -1,6 +1,6 @@
 {
- "audit_dataset_label": "btc_1min_15d_2026-01-18_02-02",
- "n_rows": 19009,
+ "audit_dataset_label": "btc_1min_2y_2024-09-03_2026-09-03",
+ "n_rows": 58173,
  "ident_rtol_vs_std": 0.0001,
  "corr_threshold": 0.995,
  "rule": "Candidate_m = C_short \\ overlap(C_short, S0_m) per model; near/intra chỉ báo cáo",
@@ -724,12 +724,12 @@
   {
    "a": "rsi1_centered",
    "b": "bb_pctb_2",
-   "corr": 0.999994
+   "corr": 0.998225
   },
   {
    "a": "log_atr1_c",
    "b": "log_range_1",
-   "corr": 0.99998
+   "corr": 0.999803
   },
   {
    "a": "log_atr2_c",
@@ -739,7 +739,7 @@
   {
    "a": "log_atr3_c",
    "b": "log_atr4_c",
-   "corr": 0.996423
+   "corr": 0.99589
   },
   {
    "a": "log_atr3_c",
@@ -749,17 +749,17 @@
   {
    "a": "log_atr3_c",
    "b": "kcw_4",
-   "corr": 0.996421
+   "corr": 0.99589
   },
   {
    "a": "log_atr4_c",
    "b": "log_atr5_c",
-   "corr": 0.998261
+   "corr": 0.998001
   },
   {
    "a": "log_atr4_c",
    "b": "kcw_3",
-   "corr": 0.996424
+   "corr": 0.99589
   },
   {
    "a": "log_atr4_c",
@@ -769,12 +769,12 @@
   {
    "a": "log_atr4_c",
    "b": "kcw_5",
-   "corr": 0.998259
+   "corr": 0.998
   },
   {
    "a": "log_atr5_c",
    "b": "kcw_4",
-   "corr": 0.998262
+   "corr": 0.998001
   },
   {
    "a": "log_atr5_c",
@@ -784,7 +784,7 @@
   {
    "a": "log_atr8_c",
    "b": "log_atr10_c",
-   "corr": 0.998859
+   "corr": 0.998655
   },
   {
    "a": "log_atr8_c",
@@ -794,17 +794,17 @@
   {
    "a": "log_atr8_c",
    "b": "kcw_10",
-   "corr": 0.998855
+   "corr": 0.998654
   },
   {
    "a": "log_atr10_c",
    "b": "log_atr15_c",
-   "corr": 0.996616
+   "corr": 0.996021
   },
   {
    "a": "log_atr10_c",
    "b": "kcw_8",
-   "corr": 0.998861
+   "corr": 0.998655
   },
   {
    "a": "log_atr10_c",
@@ -814,12 +814,12 @@
   {
    "a": "log_atr10_c",
    "b": "kcw_15",
-   "corr": 0.996604
+   "corr": 0.996017
   },
   {
    "a": "log_atr15_c",
    "b": "kcw_10",
-   "corr": 0.996622
+   "corr": 0.996021
   },
   {
    "a": "log_atr15_c",
@@ -829,32 +829,32 @@
   {
    "a": "kcw_3",
    "b": "kcw_4",
-   "corr": 0.996423
+   "corr": 0.99589
   },
   {
    "a": "kcw_4",
    "b": "kcw_5",
-   "corr": 0.998261
+   "corr": 0.998001
   },
   {
    "a": "kcw_8",
    "b": "kcw_10",
-   "corr": 0.998858
+   "corr": 0.998655
   },
   {
    "a": "kcw_10",
    "b": "kcw_15",
-   "corr": 0.996611
+   "corr": 0.996019
   },
   {
    "a": "hma_slope3_volnorm",
    "b": "hma_slope4_volnorm",
-   "corr": 0.995769
+   "corr": 0.995722
   },
   {
    "a": "hma_slope4_volnorm",
    "b": "hma_slope5_volnorm",
-   "corr": 0.997953
+   "corr": 0.997921
   }
  ],
  "per_model": {
@@ -1122,7 +1122,7 @@
     {
      "a": "ret_1",
      "b": "fine:t:candle_return",
-     "corr": 0.999991
+     "corr": 0.999977
     }
    ]
   },
@@ -1387,7 +1387,7 @@
     {
      "a": "ret_1",
      "b": "fine:t:candle_return",
-     "corr": 0.999991
+     "corr": 0.999977
     }
    ]
   },
@@ -1646,7 +1646,7 @@
     {
      "a": "ret_1",
      "b": "fine:t:candle_return",
-     "corr": 0.999991
+     "corr": 0.999977
     }
    ]
   },
@@ -2086,7 +2086,7 @@
     {
      "a": "ret_1",
      "b": "fine:t:candle_return",
-     "corr": 0.999991
+     "corr": 0.999977
     }
    ]
   },
@@ -2361,37 +2361,37 @@
     {
      "a": "ret_1",
      "b": "fine:t:candle_return",
-     "corr": 0.999991
+     "corr": 0.999977
     },
     {
      "a": "log_atr10_c",
      "b": "log_atr14_c",
-     "corr": 0.997642
+     "corr": 0.997225
     },
     {
      "a": "log_atr15_c",
      "b": "log_atr14_c",
-     "corr": 0.999904
+     "corr": 0.999887
     },
     {
      "a": "log_atr15_c",
      "b": "kcw_20",
-     "corr": 0.998343
+     "corr": 0.998092
     },
     {
      "a": "kcw_10",
      "b": "log_atr14_c",
-     "corr": 0.997647
+     "corr": 0.997225
     },
     {
      "a": "kcw_15",
      "b": "log_atr14_c",
-     "corr": 0.9999
+     "corr": 0.999886
     },
     {
      "a": "kcw_15",
      "b": "kcw_20",
-     "corr": 0.998353
+     "corr": 0.998095
     }
    ]
   },
@@ -2653,17 +2653,17 @@
     {
      "a": "ret_1",
      "b": "fine:t:candle_return",
-     "corr": 0.999991
+     "corr": 0.999977
     },
     {
      "a": "log_atr15_c",
      "b": "kcw_20",
-     "corr": 0.998343
+     "corr": 0.998092
     },
     {
      "a": "kcw_15",
      "b": "kcw_20",
-     "corr": 0.998353
+     "corr": 0.998095
     }
    ]
   },
@@ -2940,7 +2940,7 @@
     {
      "a": "ret_1",
      "b": "fine:t:candle_return",
-     "corr": 0.999991
+     "corr": 0.999977
     }
    ]
   }

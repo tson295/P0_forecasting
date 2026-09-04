@@ -1,13 +1,13 @@
 {
-  "dataset_label": "btc_1min_full",
-  "hf_csv": "data/BTC_hf_1min_full.csv",
-  "lf_csv": "data/BTC_lf_5min_full.csv",
-  "checksums": "data/data_checksums_full.json",
+  "dataset_label": "btc_1min_2y_2024-09-03_2026-09-03",
+  "hf_csv": "data/BTC_1m_2y.csv",
+  "lf_csv": "data/BTC_5m_2y.csv",
+  "checksums": "data/data_checksums_2y.json",
   "split": {
-    "mode": "rolling_from_end",
+    "mode": "rolling_spread",
     "n_folds": 5,
     "val_days": 3,
-    "fit_days": 40,
+    "fit_days": 120,
     "es_days": 5,
     "test_days": 30,
     "purge_minutes": 60
