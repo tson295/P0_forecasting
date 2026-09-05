@@ -1,0 +1,56 @@
+{
+ "order": [
+  "lgbm",
+  "xgb",
+  "cat",
+  "xgbrf",
+  "lstm"
+ ],
+ "missing": [],
+ "champion": "xgb",
+ "rows": [
+  {
+   "order": 1,
+   "model": "lgbm",
+   "artifact": "wins/lgbm.json",
+   "champion_before": "",
+   "champion_after": "lgbm",
+   "MedianGain_vs_E0": 0.0991
+  },
+  {
+   "order": 2,
+   "model": "xgb",
+   "artifact": "wins/xgb.json",
+   "champion_before": "lgbm",
+   "champion_after": "xgb",
+   "MedianGain_vs_E0": 0.122
+  },
+  {
+   "order": 3,
+   "model": "cat",
+   "artifact": "wins/cat.json",
+   "champion_before": "xgb",
+   "champion_after": "xgb",
+   "MedianGain_vs_E0": 0.1601
+  },
+  {
+   "order": 4,
+   "model": "xgbrf",
+   "artifact": "wins/xgbrf.json",
+   "champion_before": "xgb",
+   "champion_after": "xgb",
+   "MedianGain_vs_E0": 0.0964
+  },
+  {
+   "order": 5,
+   "model": "lstm",
+   "artifact": "wins/lstm.json",
+   "champion_before": "xgb",
+   "champion_after": "xgb",
+   "MedianGain_vs_E0": -0.1262
+  }
+ ],
+ "rule": "MedianGain > +eps_champion (§3), thứ tự cố định — KHÔNG theo thứ tự chạy xong",
+ "config_hash": "c026e25696f8",
+ "replayed_at": "2026-09-05T01:16:17"
+}

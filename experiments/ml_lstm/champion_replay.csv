@@ -1,0 +1,6 @@
+order,model,artifact,champion_before,champion_after,MedianGain_vs_E0
+1,lgbm,wins/lgbm.json,,lgbm,0.0991
+2,xgb,wins/xgb.json,lgbm,xgb,0.122
+3,cat,wins/cat.json,xgb,xgb,0.1601
+4,xgbrf,wins/xgbrf.json,xgb,xgb,0.0964
+5,lstm,wins/lstm.json,xgb,xgb,-0.1262

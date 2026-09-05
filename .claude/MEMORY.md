@@ -1,8 +1,38 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
-PHASE: **PHA VẬN HÀNH — user unlock training cho vòng ML+LSTM-only (`configs/p0_ml_lstm.json`), bootstrap + gpu-probe +
-orchestrate trên máy 2 × RTX 5000 Ada** (2026-09-04e). TimesFM/AutoTS KHÔNG nằm trong vòng này.
+PHASE: **PHA VẬN HÀNH — vòng ML+LSTM-only (`configs/p0_ml_lstm.json`, branch `run/ml-lstm-expanded`) đã xong VAL/search
+trên máy 2 × RTX 5000 Ada: 5 model (lgbm/xgb/cat/xgbrf/lstm) đều có win_m + champion-replay + ensemble check. Champion =
+`xgb`. CHƯA chạy `final` (TEST), CHƯA `visualize`** (2026-09-05). TimesFM/AutoTS KHÔNG nằm trong vòng này (vòng 8-model
+đầy đủ trên `configs/p0_full.json` vẫn CHƯA training — xem `## Current Task` bên dưới, không liên quan tới vòng ml_lstm).
 TRAINING: UNLOCKED
+
+## Vòng ML+LSTM — kết quả VAL/search (2026-09-04/05, branch `run/ml-lstm-expanded`, `experiments/ml_lstm/`)
+
+User cho unlock training + chạy `orchestrate --config configs/p0_ml_lstm.json` (chỉ 5 model lgbm/xgb/cat/xgbrf/lstm,
+model_order riêng, mọi field khác — data/split/seed/ε/GPU — giống hệt `p0_full.json`). Giữa chừng (sau ~20 candidate/model)
+user yêu cầu tắt SA (standalone diagnostic) và xác nhận MI đã tắt sẵn → dừng orchestrate bằng SIGINT (sạch, 2 GPU worker
+thoát hết, không mất dữ liệu), resume bằng 2 giai đoạn: (1) `orchestrate --models lgbm,xgb,cat,xgbrf --resume --no-standalone
+--allow-partial --skip-ensemble` (đọc lại calib + KEEP/DROP đã ghi, KHÔNG tính lại candidate đã xong); (2) `orchestrate
+--models lstm --no-standalone --allow-partial --skip-ensemble` (lstm chưa từng chạy nên không --resume). Sau khi cả 5 win_m
+có, chạy riêng `champion-replay --force-replay` (archive champion.json tạm của bước 1) rồi `ensemble` — đúng luật §3, không
+train/inference thêm.
+
+- **F_win = pruned cho CẢ 5 model** (raw-vs-pruned confirmation đều nằm trong ε). Cột mới (F_win) + cột khoá (B0*/F_old_m):
+  lgbm 72+14+77=163, xgb 72+11+70=153, cat 72+5+56=133, xgbrf 72+12+94=178, lstm 72+23+75=170.
+- **MedianGain vs E0** (3-seed mean, VAL): lgbm +0.099 · xgb +0.122 · **cat +0.160** · xgbrf +0.096 · lstm **−0.126** pp.
+- **Champion replay** (thứ tự cố định lgbm→xgb→cat→xgbrf→lstm): lgbm (đầu) → **xgb (đổi)** → cat (giữ, +0.0216 < ε=0.062) →
+  xgbrf (giữ) → lstm (giữ, −0.289). **Champion = `xgb`.**
+- **Ensemble** (equal & inv_mse, members cat/xgb/lgbm/xgbrf): cả hai +0.0283 pp vs champion < ε_champion=0.062 → KHÔNG đổi,
+  champion vẫn `xgb`.
+- `checker_log.jsonl`: 0 ERROR chưa đóng. Hai ERROR xuất hiện giữa chừng đều đã đóng bằng PASS cùng check_id: `BRANCH_FAILED`
+  (SIGINT chủ động của session để tắt SA, không phải lỗi thật) và `CHAMPION_EXISTS` (bước 2 tự động thử replay khi champion.json
+  tạm của bước 1 đã tồn tại — đúng lý do vì sao cần `--force-replay` riêng).
+- Bug thật tìm thấy TRƯỚC khi training (agent `checker` preflight) và đã vá: race TOCTOU trong `src/p0/logs.py::append_csv`
+  (`new = not path.exists()` đọc ngoài lock) — 4 branch orchestrate ghi `log.csv` mới đồng thời → header lặp ~77% lần thử
+  độc lập của checker. Vá bằng `f.tell() == 0` sau khi đã giữ lock; xác nhận 30/30 sạch. Không đổi S0/Candidate/PI/RMSE/champion.
+- Runtime: ~4h38m tổng (gồm 1 lần dừng/resume giữa chừng) trên 2 GPU cân bằng. `experiments/ml_lstm/**` (925 file, ~26 MB,
+  `.npz` qua LFS) đã commit + push lên `run/ml-lstm-expanded` — KHÔNG push `main`.
+- **Chưa làm**: `final` (TEST) và `visualize` — đợi user cho phép rõ ràng riêng (TEST một lần, sentinel).
 
 ## Current Task
 
