@@ -1,10 +1,29 @@
 # MEMORY — trạng thái (update/replace, không append mâu thuẫn)
 
 PHASE: **PHA VẬN HÀNH — vòng ML+LSTM-only (`configs/p0_ml_lstm.json`, branch `run/ml-lstm-expanded`) đã xong VAL/search
-trên máy 2 × RTX 5000 Ada: 5 model (lgbm/xgb/cat/xgbrf/lstm) đều có win_m + champion-replay + ensemble check. Champion =
-`xgb`. CHƯA chạy `final` (TEST), CHƯA `visualize`** (2026-09-05). TimesFM/AutoTS KHÔNG nằm trong vòng này (vòng 8-model
-đầy đủ trên `configs/p0_full.json` vẫn CHƯA training — xem `## Current Task` bên dưới, không liên quan tới vòng ml_lstm).
++ FINAL TEST (một lần) + visualize hậu kỳ, trên máy 2 × RTX 5000 Ada. Champion VAL = TEST = `xgb`** (2026-09-05).
+TimesFM/AutoTS KHÔNG nằm trong vòng này (vòng 8-model đầy đủ trên `configs/p0_full.json` vẫn CHƯA training — xem
+`## Current Task` bên dưới, không liên quan tới vòng ml_lstm).
 TRAINING: UNLOCKED
+
+## Vòng ML+LSTM — FINAL TEST + visualize (2026-09-05, tiếp theo phần VAL/search bên dưới)
+
+`python run.py final --config configs/p0_ml_lstm.json` chạy ĐÚNG MỘT LẦN (TEST_SENTINEL `status=completed`,
+`config_hash=c026e25696f8`), dùng NGUYÊN win_m/champion đã chọn ở VAL — không train lại/chọn lại feature/đổi champion.
+8 cấu hình refit trên FIT+ES cuối rồi predict TEST: b0_306, b0_star, cat, lgbm, lstm, xgb, xgbrf, ensemble (đều lưu
+`experiments/ml_lstm/final/<key>.npz` + `index.json`). **Champion trên TEST = `xgb`** (khớp VAL). Gain vs E0 trên TEST
+trái chiều nhau giữa model (xgbrf dương cả 3 horizon; hầu hết còn lại hơi âm) — biến thiên bình thường do tín hiệu yếu
+đã biết, KHÔNG dùng để đổi quyết định nào.
+
+Visualize: script MỚI `scripts/plot_final_test_paths.py` (hậu kỳ thuần, chỉ đọc `final/*.npz` + data thật để dựng lại
+giá/vol, không train/inference) — sinh 15 PNG `test_paths_01..15.png` dưới `reports/figures/final_test_paths/` (lưới
+2×3: hàng trên tree/ensemble {lgbm,xgb,cat,xgbrf,ensemble}, hàng dưới khác/tham chiếu {lstm,b0_306,b0_star}; 3 cột =
+3 origin TEST low/medium/high vol theo rv60; 15 theme chọn origin khác nhau — representative/good/bad prediction,
+disagreement cao/thấp, up/down/flat, reversal/monotonic, champion beat/underperform E0, lstm-vs-tree divergence,
+feature-rich-vs-B0 divergence, stratified random — 45 origin không trùng) + `index.csv`/`index.json` (figure_id,
+timestamp, vol regime, rv60 bp, actual h1/h2/h3, lý do chọn). **`reports/figures/` bị gitignore theo policy sẵn có
+của repo** ("figure sinh lại được từ artifact, không phải kết quả") — 15 PNG + index đã gửi trực tiếp cho user qua
+SendUserFile, KHÔNG nằm trong git; chỉ script sinh figure được commit (tái tạo lại được từ artifact đã track).
 
 ## Vòng ML+LSTM — kết quả VAL/search (2026-09-04/05, branch `run/ml-lstm-expanded`, `experiments/ml_lstm/`)
 
