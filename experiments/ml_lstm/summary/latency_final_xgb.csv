@@ -1,0 +1,4 @@
+model,h,n,p95_ms,p99_ms,max_ms,mean_ms,shared,train_device,predict_device,lib_version,threads
+xgb,1,42918,0.8303690000000001,1.20540767,8.712043,0.7683580097162028,False,GPU,GPU,xgboost 3.4.1,lib_default
+xgb,2,42918,0.68941015,0.8813819,19.194052,0.6436815052192553,False,GPU,GPU,xgboost 3.4.1,lib_default
+xgb,3,42918,0.63032935,0.8252068000000001,3.774577,0.620026257817233,False,GPU,GPU,xgboost 3.4.1,lib_default
