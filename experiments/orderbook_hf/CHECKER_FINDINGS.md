@@ -234,7 +234,7 @@ BLOCKED đủ** (evidence data, nguồn đã loại, cell thiếu, backup xác n
 
 ---
 
-# Checker lượt 5 — F-02 và R3-I5 (commit `81eb1c5`), 2026-09-10 ~19:35–19:42 UTC
+# Checker lượt 5 — F-02 và R3-I5 (commit `81eb1c5`), 2026-09-10 ~19:25–19:31 UTC
 
 Chỉ đọc code/metadata (parse AST). **Không có ERROR.** Cả hai bản sửa chưa chạy thật.
 
@@ -275,7 +275,7 @@ Chỉ đọc code/metadata (parse AST). **Không có ERROR.** Cả hai bản s�
 
 ---
 
-# Checker lượt 6 — đọc lại `ac8e6cf` (HEAD `f0c8852`), 2026-09-10 ~19:47–19:54 UTC
+# Checker lượt 6 — đọc lại `ac8e6cf` (HEAD `f0c8852`), 2026-09-10 ~19:34–19:40 UTC
 
 Chỉ đọc code/metadata/git (parse AST, không import/chạy). **Không có ERROR.** Chưa có prepare/train thật cho các sửa này.
 
@@ -309,7 +309,7 @@ Chỉ đọc code/metadata/git (parse AST, không import/chạy). **Không có E
 
 ---
 
-# Checker lượt 7 — đọc lại `5756084` (HEAD `d002a8a`), 2026-09-10 ~19:58–20:03 UTC
+# Checker lượt 7 — đọc lại `5756084` (HEAD `d002a8a`), 2026-09-10 ~19:43–19:48 UTC
 
 Chỉ đọc code/metadata (parse AST cả 16 file `src_OB/*.py`); không train/prepare/data-report. **Không có ERROR hay WARN.**
 
