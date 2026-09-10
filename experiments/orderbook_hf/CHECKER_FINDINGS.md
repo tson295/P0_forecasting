@@ -183,3 +183,51 @@ Chỉ đọc code/metadata (parse AST, không import/chạy). **Không có ERROR
   việc cần làm cùng adapter khi có nguồn dữ liệu mới (trước prepare thật đầu tiên dùng replay v2).
 - R3-I3 đã sửa sau lượt 3 (một điều kiện): message đệm có hard gap khai báo nằm giữa `m.ts` và timestamp snapshot không
   được dùng làm bridge. Chưa có independent review cho dòng này tại thời điểm ghi; checker cuối run đọc lại.
+
+---
+
+# Checker cuối run (HEAD `84acea0`), 2026-09-10 ~19:04–19:14 UTC
+
+Chỉ đọc code/artifact/git và metadata mạng read-only; không replay/prepare/train/test. **Không có ERROR; điều kiện kết thúc
+BLOCKED đủ** (evidence data, nguồn đã loại, cell thiếu, backup xác nhận, next step, quyết định cần user, trạng thái máy).
+
+- **F-01 PASS (đọc code, chưa chạy)**: dòng R3-I3 (`reconstruct.py:179-180`) đúng — cùng đơn vị µs; gap bắt đầu tại
+  `event.ts` bị `permitted_time` loại trước; message nằm trong gap không vào buffer; nhiều gap dùng `any()`; không khai báo
+  gap ⇒ hành vi như trước; trên HF (gap 43 phút) không đổi gì. `known_gaps()` không kiểm `start < end` (gap ≤ 0 thành reset
+  tức thời, vẫn nhất quán).
+- **F-02 INFO**: `REPLAY_VERSION` vẫn 2 dù semantics đổi ở `3f41869`; `prepare.py` chỉ ghi `replay_version`, không ghi SHA
+  code; `data.py` không kiểm `replay_version`/`known_hard_gaps_utc`. Chưa hại vì chưa có prepared v2. Fix trước prepare v2
+  thật đầu tiên: ghi SHA code + hash config vào manifest hoặc tăng version.
+- **F-03 PASS**: RUN_REPORT BLOCKED 0/96, không tuyên bố COMPLETE; replay v2 ghi rõ chưa chạy thật; số liệu §2 khớp
+  DATA_REPORT; cell thiếu liệt kê đủ.
+- **F-04 PASS**: `ls-remote` = `84acea0` = HEAD = origin/OB; không có LFS object mới sau `603738e`; không có secret trong
+  file tracked. Pending: commit ghi lượt này phải push và kiểm `ls-remote`.
+- **F-05 PASS**: GPU RTX 3090 rảnh, không process `src_OB`; tmux `ob`, `claude` còn; ổ còn 37 GB.
+- **F-06 PASS**: lý do loại có evidence (Tardis 401; Zenodo 20046390 DataCite `/api/v3/depth`, 5 s, 100 level, 21 ngày;
+  Binance Vision; Crypto Lake). predict-quant tính lại từ `pq_spot_runs.csv` theo `Data.folds`: 2 fold, context VAL tốt
+  nhất 7,42–7,51 h < 8,52 h, FIT tốt nhất 22,59–22,62 h < 25,55 h ⇒ mask rỗng mọi horizon. Lazy108 `f948a57b…`, gated
+  manual, CC-BY-4.0. Checker tự quét thêm HF (9 truy vấn, 247 kết quả, 214 chưa có tên trong report): không có nguồn dùng
+  được — `sheng9571/crypto-spot-orderbook` rỗng, `AisotTechnologies/aisot_btc_lob_trades` Bitstamp 2018 gated,
+  `PXIN/fracture-crypto-l2-enriched-v2` dollar bar với đặc trưng L2 đã gộp, `LeonardoBerti/TRADES-LOB`/`peernagy/lob_bench`
+  cổ phiếu, `walkacross/orderbook` A-share, còn lại rỗng/cache.
+- **F-07 WARN**: `run_meta/source_search/` không có artifact cho vòng 3 (hàng 24–27; phần bổ sung hàng 7, 8, 11–14), hàng
+  6 Lazy108 và script tính fold/context predict-quant, dù SOURCE_REPORT dẫn evidence ở đó. Kết luận không đổi.
+- **F-08 INFO**: MEMORY lệch report (22 vs 27 nhóm; ~60 vs ~46 phút; "xác nhận" trong khi chỉ là suy luận).
+- **F-09 INFO**: RUN_REPORT còn chỗ cũ: sha config `72d68928…` "(không đổi)" nhưng HEAD là `b73919e4…`; LFS ~130 KB (thực
+  86.652 B); "4 fold thực tế" (thực chất 4 fold lịch, 0 hợp lệ); §11 chỉ liệt kê commit tới `1e2f3ce`; §5 và §11.6 hai
+  danh sách quyết định khác nhau; vòng 3 ghi kết thúc "~19:05" muộn hơn commit 19:02:50.
+- **F-10 INFO**: R3-I1, R3-I2, R3-I4, `reset_after` của R3-I5 còn mở — chỉ mất dữ liệu, 0 ca trên HF, không chặn BLOCKED;
+  đóng trước prepare v2 thật đầu tiên cùng F-02.
+- **F-11 INFO**: raw HF untracked không nằm trong gitignore — tiếp tục stage đúng scope, không `git add -A`.
+- **Chưa có bằng chứng**: GPU-only lúc fit, metric, latency (chưa có cell nào được train).
+
+## Xử lý của session chính
+
+- F-07: chạy lại read-only và lưu vào `run_meta/source_search/`: `hf_tag_search_round3.txt`, `hf_search_rounds2_3.txt`,
+  `lazy108_dataset_api.json`, `lazy108_btc_depth_tree.json`, `lazy108_README.md` (README bị hạn chế truy cập),
+  `rogerdehe_mktdata_binance_2026_api.json`, `zenodo_{10215364,8349603,11048480,21617204,15080493}_{files,datacite}.json`,
+  `aws_open_data_registry_datasets.txt`, `github_search_round3.txt`, `pq_spot_folds.py`/`.out` (fold/context theo luật
+  pipeline). SOURCE_REPORT dẫn từng file và ghi thêm các dataset checker tự quét.
+- F-08, F-09: sửa câu chữ MEMORY và RUN_REPORT; gộp quyết định cần user vào một danh sách (RUN_REPORT §5).
+- F-02, F-10: giữ mở, ghi trong RUN_REPORT §10/§11 và MEMORY là việc trước prepare v2 thật đầu tiên.
+- F-11: không đổi `.gitignore` (việc track raw là quyết định riêng); tiếp tục stage theo đường dẫn.

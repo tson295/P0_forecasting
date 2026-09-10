@@ -1,0 +1,63 @@
+# HF id search + author listings (re-run 2026-09-10T19:14:43Z); queries of rounds 2-3
+search Lazy108/binance-polymarket-orderflow | 2026-08-29 | gated manual
+search logiover/binance-spot-market-scraper-sample-data | 2026-05-15 | gated False
+search payamdavaee/depth_snapshot | 2026-09-10 | gated False
+search rogerdehe/mktdata-binance-2026 | 2026-09-10 | gated False
+search rogerdehe/mktdata-hive-test | 2026-08-09 | gated False
+search rogerdehe/mktdata-lbank-2026 | 2026-09-10 | gated False
+search rogerdehe/mktdata-lighter-2026 | 2026-08-02 | gated False
+author Lazy108/synth-price-data 2026-06-05 gated manual
+author Lazy108/binance-polymarket-orderflow 2026-08-29 gated manual
+author rogerdehe/xfund 2022-10-12 gated False
+author rogerdehe/klines-gateio 2026-09-07 gated False
+author rogerdehe/klines-binance 2026-09-09 gated False
+author rogerdehe/klines-kucoin 2026-09-09 gated False
+author rogerdehe/klines-bybit 2026-09-09 gated False
+author rogerdehe/klines-okx 2026-09-09 gated False
+author rogerdehe/mktdata-binance-2026 2026-09-10 gated False
+author rogerdehe/mktdata-lighter-2026 2026-08-02 gated False
+author rogerdehe/mktdata-hive-test 2026-08-09 gated False
+author rogerdehe/mktdata-lbank-2026 2026-09-10 gated False
+author delmiron27/ml-research-hd2-streams 2026-08-06 gated False
+author delmiron27/ml-research-midts 2026-08-06 gated False
+author delmiron27/ml-research-results 2026-08-06 gated False
+author delmiron27/ml-research-sub60 2026-08-06 gated False
+author delmiron27/cryptolake-binance-futures-bnb 2026-08-22 gated False
+author delmiron27/cryptolake-binance-futures-doge 2026-08-22 gated False
+author delmiron27/cryptolake-binance-futures-sol 2026-08-22 gated False
+author delmiron27/cryptolake-binance-futures-link 2026-08-22 gated False
+author delmiron27/recorder-binance-futures-eth 2026-08-22 gated False
+author delmiron27/recorder-bybit-perp 2026-08-22 gated False
+author delmiron27/recorder-binance-futures-btc 2026-08-22 gated False
+author delmiron27/recorder-binance-futures-sol 2026-08-22 gated False
+author delmiron27/cryptolake-binance-futures-btc 2026-08-22 gated False
+author delmiron27/cryptolake-binance-futures-xrp 2026-08-22 gated False
+author delmiron27/cryptolake-binance-futures-eth 2026-08-22 gated False
+author delmiron27/cryptolake-binance-futures-ltc 2026-08-22 gated False
+author delmiron27/recorder-binance-futures-xrp 2026-08-22 gated False
+author delmiron27/recorder-bitget-perp 2026-08-22 gated False
+author delmiron27/recorder-binance-futures-ltc 2026-08-22 gated False
+author delmiron27/recorder-binance-futures-link 2026-08-22 gated False
+author delmiron27/recorder-binance-futures-doge 2026-08-22 gated False
+author delmiron27/recorder-gateio-perp 2026-08-22 gated False
+author delmiron27/recorder-okx-perp 2026-08-22 gated False
+author delmiron27/recorder-binance-futures-bnb 2026-08-22 gated False
+author mrochk/src_ast_cfg 2024-06-22 gated False
+author mrochk/mbpp_ast_cfg 2024-09-04 gated False
+author mrochk/binance 2025-04-11 gated auto
+author mrochk/opengenome-clean 2026-04-09 gated False
+author mrochk/opengenome-uniform 2026-04-11 gated False
+author mrochk/opengenome-shuffle 2026-04-11 gated False
+author mrochk/opengenome-markov 2026-04-11 gated False
+author mrochk/opengenome-clean-weighted 2026-04-30 gated False
+author mrochk/opengenome-clean-weighted-discriminator-small 2026-05-04 gated False
+author mrochk/opengenome-clean-weighted-discriminator-large 2026-05-04 gated False
+author mrochk/ensembl 2026-07-02 gated False
+author mrochk/phastcons 2026-07-16 gated False
+author predict-quant/binance-future-orderbook 2026-04-09 gated False
+author predict-quant/poly-btc-orderbook 2026-09-10 gated False
+author predict-quant/poly-eth-orderbook 2026-09-10 gated False
+author predict-quant/poly-sol-orderbook 2026-09-10 gated False
+author predict-quant/poly-xrp-orderbook 2026-09-10 gated False
+author predict-quant/binance-spot-orderbook 2026-05-22 gated False
+author predict-quant/tardis-dataset 2026-05-18 gated manual

@@ -1,0 +1,9 @@
+coverage 2026-04-10 06:11:11.414000 -> 2026-05-21 23:59:59.915000; folds by calendar: 2
+fold1: FIT 2026-04-14 23:59:59.915000 -> 2026-05-05 23:59:59.915000; VAL 2026-05-11 23:59:59.915000 -> 2026-05-14 23:59:59.915000
+  h60s: context needed 8.52 h | best FIT 22.62 h | best VAL 7.44 h | eligible: FIT yes, VAL no
+  h120s: context needed 17.03 h | best FIT 22.61 h | best VAL 7.43 h | eligible: FIT yes, VAL no
+  h180s: context needed 25.55 h | best FIT 22.59 h | best VAL 7.41 h | eligible: FIT no, VAL no
+fold2: FIT 2026-04-21 23:59:59.915000 -> 2026-05-12 23:59:59.915000; VAL 2026-05-18 23:59:59.915000 -> 2026-05-21 23:59:59.915000
+  h60s: context needed 8.52 h | best FIT 22.62 h | best VAL 7.51 h | eligible: FIT yes, VAL no
+  h120s: context needed 17.03 h | best FIT 22.61 h | best VAL 7.49 h | eligible: FIT yes, VAL no
+  h180s: context needed 25.55 h | best FIT 22.59 h | best VAL 7.48 h | eligible: FIT no, VAL no

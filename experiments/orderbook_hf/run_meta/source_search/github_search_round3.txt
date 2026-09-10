@@ -1,0 +1,19 @@
+# GitHub repository search (re-run 2026-09-10T19:14:59Z)
+ArLeyar/dom-collector | stars 1 | size KB 14480 | Tool for real-time Depth of Market (DOM) data collection from Binance/OKX with Parquet snapshot stor
+FatYuna19/The-Clown-Project | stars 0 | size KB 670 | Hawkes-based market-making research using reconstructed BTCUSDT order-book data, causal intensity mo
+Ligengxin96/predict.fun-data-samples | stars 0 | size KB 9121 | Free samples and docs for tick-level Predict.fun crypto Up/Down market data — order books, trade pri
+anuragpy07/binance-lob-capture | stars 0 | size KB 51 | High-performance C++17 Binance market data capture system that streams depth, depth5, and trade even
+arpanisi/as_dqn_market_maker | stars 0 | size KB 587 | Reinforcement learning for adaptive market making, tuning risk-aversion and skew for an Avellaneda-S
+arpanisi/gpu_lob_execution_sim | stars 0 | size KB 514 | GPU-batched reinforcement learning for limit-order-book optimal execution with IPPO, trained against
+denis-novega/btcusdt-market-data-collector | stars 0 | size KB 17 | Real-time BTCUSDT Binance market-data collector with local order-book reconstruction, Parquet storag
+djcode0718/Cpp_Matching_Engine | stars 0 | size KB 22 | High-throughput C++17 limit order book matching engine with price-time priority, O(1) cancel/modify 
+jatinsh95/binance-md | stars 0 | size KB 30 | C++17 tool that captures Binance WebSocket depth & trade streams, maintains a local order book, and 
+javi06699/Crypto-Micro-Alpha-LOB | stars 0 | size KB 11890 | Micro-alpha signal research on Binance Futures BTCUSDT order book data using FI-2010 features, tripl
+letuankiet146/RnSlive | stars 0 | size KB 5393 | A real-time cryptocurrency market data project that displays the BTCUSDT price and order book with l
+pecanela/bitcoin-1s-collector | stars 0 | size KB 213 | Native Windows market-data terminal in Go for collecting auditable 1-second BTCUSDT candles from Bin
+pfei-sa/binance-LOB | stars 52 | size KB 93 | Build your own historical Limit Order Book dataset
+rtheroyh/quantdatacollecter | stars 2 | size KB 46 | 生产级订单流数据管道 — 从原始逐笔数据到机器学习数据集，一键完成。Production-grade order flow data pipeline — from raw tick-by-tick 
+sanju4115/Java-Binance-WebApp | stars 1 | size KB 352 | Create an application in Java, Maven using Binance Java Library.  The application should handle orde
+shaileshkakkar/MicroPriceIndicator | stars 78 | size KB 1999 | This repository serves to share the replicated results listed in the paper by Sasha Stoikov - The Mi
+tired-wuhan384/quantdatacollecter | stars 0 | size KB 500 | Collect crypto order flow data and build ML-ready datasets from raw tick data with ClickHouse and Py
+zszszszsz/.config | stars 352 | size KB 4 | # # Automatically generated file; DO NOT EDIT. # OpenWrt Configuration # CONFIG_MODULES=y CONFIG_HAV
