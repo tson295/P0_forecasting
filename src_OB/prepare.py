@@ -20,15 +20,26 @@ def code_provenance(cfg):
     """Code commit, uncommitted pipeline/config paths and resolved-config hash behind a run."""
     def git(*args):
         try:
-            result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True,
-                                    errors="replace", timeout=30)
+            # --no-optional-locks: never take index.lock next to a concurrent artifact commit.
+            result = subprocess.run(["git", "--no-optional-locks", *args], cwd=ROOT, capture_output=True,
+                                    text=True, errors="replace", timeout=30)
         except (OSError, subprocess.TimeoutExpired):
             return None
         return result.stdout if result.returncode == 0 else None
-    head, status = git("rev-parse", "--verify", "HEAD"), git("status", "--porcelain", "--", "src_OB", "configs")
+
+    head = git("rev-parse", "--verify", "HEAD")
+    # NUL-separated porcelain v1 keeps paths unquoted; renames/copies carry the source path as an extra field.
+    status = git("status", "--porcelain", "-z", "-uall", "--", "src_OB", "configs", "src/p0")
+    paths = None
+    if status is not None:
+        paths, fields = [], iter(status.split("\0"))
+        for entry in fields:
+            if len(entry) > 3:
+                paths.append(entry[3:])
+                if entry[0] in "RC":
+                    next(fields, None)
     return {"code_commit": head.strip() if head else None,
-            # Porcelain v1 lines are "XY path"; None means git was unavailable or failed.
-            "code_uncommitted_paths": None if status is None else [line[3:] for line in status.splitlines() if line],
+            "code_uncommitted_paths": paths,  # None means git was unavailable or failed
             "config_sha256": hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()}
 
 

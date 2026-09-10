@@ -20,13 +20,19 @@ class Fold:
 
 
 class Data:
-    def __init__(self, cfg):
+    def __init__(self, cfg, require_current_replay=True):
+        from .reconstruct import REPLAY_VERSION
+
         self.cfg = cfg
         folder = Path(cfg["prepared_dir"])
         self.meta = json.loads((folder / "manifest.json").read_text())
         if (self.meta.get("schema_version") != 3 or self.meta.get("dataset_repo") != cfg["dataset_repo"]
                 or self.meta.get("dataset_revision") != cfg["dataset_revision"]):
             raise ValueError("Cần reconstructed HF dataset schema v3 đúng revision.")
+        # Training must not silently use data built by an older replay (checker R6-W1); reports may read it.
+        if require_current_replay and self.meta.get("replay_version") != REPLAY_VERSION:
+            raise ValueError(f"Prepared data dùng replay {self.meta.get('replay_version')}, cần {REPLAY_VERSION}; "
+                             "prepare vào prepared_dir mới trước khi train.")
         segments = json.loads((folder / "segments.json").read_text())
         self.segment_start = np.asarray([s["start_us"] for s in segments], np.int64)
         self.segment_end = np.asarray([s["end_exclusive_us"] for s in segments], np.int64)

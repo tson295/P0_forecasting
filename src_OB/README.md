@@ -40,11 +40,15 @@ segment đóng với `snapshot_ahead_unconfirmed` (message kế tiếp là bản
 `invalid_timestamp_gap` rồi neo tại snapshot. Gap ID được kiểm trước quy tắc timestamp để reset ghi đúng nguyên nhân;
 message gây đứt được đệm làm ứng viên bridge, buffer giữ qua một lần neo lỗi và chỉ xóa sau khi neo thành công;
 message đệm nằm trước một hard gap khai báo không được dùng làm bridge cho snapshot sau gap. Trong cùng một
-timestamp, snapshot có `lastUpdateId` lớn nhất được thử trước và mỗi timestamp chỉ neo một lần; snapshot còn lại cùng
-timestamp bị bỏ và đếm vào `snapshot_at_or_before_reset`. Manifest prepared ghi `replay_version`, `code_commit`,
-`code_uncommitted_paths` (đường dẫn chưa commit trong `src_OB/`, `configs/`, lấy lúc bắt đầu prepare; `null` nếu git
-lỗi) và `config_sha256` (hash của config đã resolve đường dẫn tuyệt đối, khác sha256 của file config); `run.json` của
-mỗi cell chép lại các field này cùng commit code lúc train. Commit code trước khi prepare/train để provenance sạch.
+timestamp, snapshot có `lastUpdateId` lớn nhất được thử trước và mỗi timestamp chỉ được thử neo một lần (neo thành công
+hoặc thất bại đều nâng guard); snapshot cũ hơn cùng timestamp bị bỏ — đếm vào `snapshot_at_or_before_reset`, hoặc vào
+`snapshot_behind_live_book`/`snapshot_redundant_live_book` khi snapshot mới nhất bị bỏ qua vì book đang sống. Manifest
+prepared ghi `replay_version`, `code_commit`, `code_uncommitted_paths` (đường dẫn chưa commit trong `src_OB/`,
+`configs/`, `src/p0/`, lấy lúc bắt đầu prepare; `null` nếu git lỗi) và `config_sha256` (hash của config đã resolve đường
+dẫn tuyệt đối, khác sha256 của file config); `train` lấy provenance code một lần lúc bắt đầu và `run.json` của mỗi cell
+chép lại cùng provenance của bản prepared. `Data` cho train từ chối prepared có `replay_version` khác replay hiện tại
+(`data-report` vẫn đọc được bản cũ). `REPLAY_VERSION = 2` chỉ gán cho prepared tạo sau các sửa này (chưa có bản nào);
+`code_commit` xác định chính xác code. Commit code trước khi prepare/train để provenance sạch.
 Book đang sống không làm mới độ sâu từ snapshot. Prepared HF v3 hiện có được giữ nguyên (replay v1).
 Quantity mới ghi đè quantity hiện tại; quantity bằng 0 xóa đúng price đó. Áp dụng đủ bid và ask của message
 rồi prune cache về tối đa **1.000 level mỗi phía**, sau đó mới lấy top 10 và tính mid/OF.

@@ -272,3 +272,37 @@ Chỉ đọc code/metadata (parse AST). **Không có ERROR.** Cả hai bản s�
 - R5-I5: README ghi thứ tự snapshot cùng ms, phạm vi/dạng `code_uncommitted_paths`, ý nghĩa `config_sha256`, và yêu cầu
   commit code trước prepare/train; README đã commit cùng `ac8e6cf`.
 - Checker lượt 6 đọc lại `ac8e6cf`.
+
+---
+
+# Checker lượt 6 — đọc lại `ac8e6cf` (HEAD `f0c8852`), 2026-09-10 ~19:47–19:54 UTC
+
+Chỉ đọc code/metadata/git (parse AST, không import/chạy). **Không có ERROR.** Chưa có prepare/train thật cho các sửa này.
+
+- **R6-P1 PASS** (`prepare.py`): `returncode`, `rev-parse --verify HEAD`, `errors="replace"`, `None` khi git lỗi;
+  provenance lấy trước `mkdir`/replay; `**provenance` không trùng key; manifest cũ vẫn load (field null).
+- **R6-I1 INFO**: `line[3:]` không luôn là đường dẫn trơn (rename `"old -> new"`, đường dẫn C-quote, thư mục untracked gộp).
+- **R6-P2 PASS** (`train.py`): chỉ thêm import và 2 key; logic fit/metric/E0 không đổi; không vòng import; chi phí nhỏ.
+- **R6-W1 WARN**: nửa sau R5-I2 chưa sửa — `data.py` không kiểm `replay_version`; config mặc định trỏ `prepared_hf`
+  (replay v1) ⇒ `train` sẽ chạy trên v1 mà không báo lỗi. Fix: `Data` yêu cầu `replay_version == REPLAY_VERSION`.
+- **R6-I2 INFO**: pathspec `src_OB configs` bỏ sót `src/p0` (train dùng `src.p0.metrics`, `lora`, `models_tfm`).
+- **R6-I3 INFO**: provenance mỗi cell đọc HEAD trên đĩa lúc cell bắt đầu trong khi process chạy code đã import; `git status`
+  có thể lấy `index.lock`. Fix: lấy một lần đầu `train()`, dùng `git --no-optional-locks`.
+- **R6-P3 PASS (đọc code)** (`reconstruct.py`): tách guard giữ hành vi; `DESC` chỉ áp `last_update_id`; `grouped_events`
+  gom đúng; thử snapshot mới hơn trước là an toàn (bridge của S1 có u > S2 cũng nối được S2); HF 38 timestamp khác nhau ⇒
+  không đổi.
+- **R6-I4 INFO**: README "neo một lần" chưa đúng khi snapshot mới nhất bị bỏ vì book sống (counter khác) và khi neo lỗi
+  (thực chất "thử một lần").
+- **R6-I5 INFO**: `REPLAY_VERSION` vẫn 2 dù semantics đổi ở `81eb1c5`/`ac8e6cf`; nên tăng hoặc ghi rõ trong README.
+- **R6-P4 PASS**: README khớp code, trừ câu chữ ở R6-I1, R6-I4.
+
+## Xử lý của session chính
+
+- R6-W1: `Data(cfg, require_current_replay=True)` từ chối prepared có `replay_version` khác `REPLAY_VERSION`;
+  `report.py` gọi với `require_current_replay=False` để vẫn mô tả được bản cũ.
+- R6-I1: `git status --porcelain -z -uall`, tách field theo NUL, bỏ field nguồn của rename/copy.
+- R6-I2: pathspec thêm `src/p0`.
+- R6-I3: `train()` lấy `train_code` một lần sau khi nạp `Data`, trước import lười của model; mọi lệnh git dùng
+  `--no-optional-locks`.
+- R6-I4, R6-I5: README ghi "mỗi timestamp chỉ thử neo một lần", các counter tương ứng, và `REPLAY_VERSION = 2` chỉ gán cho
+  prepared tạo sau các sửa này (chưa có bản nào), `code_commit` xác định chính xác code.

@@ -82,7 +82,7 @@ def data_report(cfg):
     manifest = json.loads((folder / "manifest.json").read_text())
     segments = json.loads((folder / "segments.json").read_text())
     reconstruction = json.loads((folder / "reconstruction.json").read_text())
-    data = Data(cfg)
+    data = Data(cfg, require_current_replay=False)  # reporting may describe an older prepared version
     raw = raw_continuity(cfg, manifest["files"])
     kept = np.bincount(np.asarray(data.segment), minlength=len(segments))
     seg_rows = [{"id": s["id"], "start_utc": utc(s["start_us"]), "last_utc": utc(s["last_us"]),
