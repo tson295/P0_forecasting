@@ -231,3 +231,44 @@ BLOCKED đủ** (evidence data, nguồn đã loại, cell thiếu, backup xác n
 - F-08, F-09: sửa câu chữ MEMORY và RUN_REPORT; gộp quyết định cần user vào một danh sách (RUN_REPORT §5).
 - F-02, F-10: giữ mở, ghi trong RUN_REPORT §10/§11 và MEMORY là việc trước prepare v2 thật đầu tiên.
 - F-11: không đổi `.gitignore` (việc track raw là quyết định riêng); tiếp tục stage theo đường dẫn.
+
+---
+
+# Checker lượt 5 — F-02 và R3-I5 (commit `81eb1c5`), 2026-09-10 ~19:35–19:42 UTC
+
+Chỉ đọc code/metadata (parse AST). **Không có ERROR.** Cả hai bản sửa chưa chạy thật.
+
+- **R5-P1 PASS**: `code_provenance` đúng cú pháp/import (`ROOT` từ `config.py:7`); không có git thì bắt `FileNotFoundError`;
+  không lộ secret; hash lấy trên đúng `cfg` ghi vào `"config"` (`sort_keys`, phụ thuộc đường dẫn tuyệt đối); serialize được
+  với `allow_nan=False`; `Data`/`report.py` vẫn tương thích, manifest cũ vẫn load.
+- **R5-W1 WARN**: provenance tính ở cuối prepare (sau replay, sau khi ghi `segments.json`/`reconstruction.json`) ⇒ commit
+  giữa chừng làm `code_commit` trỏ HEAD mới; hàm lỗi (vd. `UnicodeDecodeError`) để thư mục prepared thiếu manifest. Fix: gọi
+  ở đầu `prepare()` trước `mkdir`/replay.
+- **R5-I1 INFO**: `.stdout.strip()` xóa khoảng trắng đầu dòng porcelain đầu (bằng chứng cùng pattern ở
+  `run_meta/record_env.py:20` → `environment.json` `status_porcelain[0] = "M .claude/MEMORY.md"`); bỏ qua `returncode`
+  (`[]` không phân biệt "sạch" với "git lỗi"; repo chưa commit in `HEAD`); field "paths" chứa dòng status.
+- **R5-I2 INFO**: `run.json` của cell (`train.py`) không chép `replay_version`/`code_commit`/`config_sha256` của prepared;
+  `data.py` không kiểm `replay_version` ⇒ phía train của F-02 còn hở.
+- **R5-P2 PASS**: guard `reset_after` chỉ chặn snapshot `ts ≤ T`; snapshot sắp theo `timestamp_ms` nên chỉ snapshot cùng ms
+  bị ảnh hưởng; `depth()` không đọc `reset_after`; giống nhánh book sống; không còn hai segment cùng T.
+- **R5-P3 PASS (suy luận, chưa chạy)**: HF có 0 cặp snapshot cùng ms ⇒ dòng mới không tác dụng trên HF; 38 segment /
+  3.214 state không đổi.
+- **R5-I3 INFO**: trong cùng ms, snapshot có `last_update_id` nhỏ nhất được neo trước và snapshot mới hơn bị bỏ (mất dữ
+  liệu nếu `following` chỉ nối S2). Fix: sắp `timestamp_ms, last_update_id DESC` hoặc giữ S lớn nhất mỗi ms.
+- **R5-I4 INFO**: snapshot bị guard `event.ts ≤ reset_after` loại không có counter.
+- **R5-P4 PASS / R5-I5 INFO**: README khớp code nhưng thiếu: thứ tự snapshot cùng ms, phạm vi/dạng
+  `code_uncommitted_paths`, `config_sha256` khác sha256 file config; README chưa commit sẽ lọt vào provenance nếu prepare
+  chạy lúc đó.
+
+## Xử lý của session chính (commit `ac8e6cf`)
+
+- R5-W1: `provenance = code_provenance(cfg)` ở đầu `prepare()`, trước `mkdir`/replay; manifest dùng `**provenance`.
+- R5-I1: `git()` trả `None` khi `returncode ≠ 0` hoặc lỗi; `rev-parse --verify HEAD`; `errors="replace"`; không `strip()`
+  cả output porcelain; lưu đường dẫn `line[3:]`; `null` khi git lỗi.
+- R5-I2: `run.json` mỗi cell thêm `prepared` (`replay_version`, `code_commit`, `code_uncommitted_paths`, `config_sha256` từ
+  manifest) và `train_code` (provenance code lúc train).
+- R5-I3: query snapshot sắp `timestamp_ms, last_update_id DESC` ⇒ snapshot mới nhất cùng ms được thử trước.
+- R5-I4: counter `snapshot_at_or_before_reset`.
+- R5-I5: README ghi thứ tự snapshot cùng ms, phạm vi/dạng `code_uncommitted_paths`, ý nghĩa `config_sha256`, và yêu cầu
+  commit code trước prepare/train; README đã commit cùng `ac8e6cf`.
+- Checker lượt 6 đọc lại `ac8e6cf`.
