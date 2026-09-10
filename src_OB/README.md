@@ -1,23 +1,45 @@
 # Order-book Direct forecasting
 
 Pipeline mới trong `src_OB`; `src/p0` cũ được giữ nguyên. Không có smoke command hoặc feature search.
-Code được viết theo yêu cầu, chưa chạy, chưa test, chưa training local.
+Đã tải raw archive Hugging Face; chưa chạy prepare/replay, test hay training local.
 
 ## Dữ liệu và nhãn
 
 - BTCUSDT Binance spot, L2 **10 level mỗi phía**.
-- Historical dataset cố định **[2024-09-10 00:00:00, 2026-09-10 00:00:00) UTC**, đúng 730 ngày. Không stream realtime, không tự rút xuống 1–1,5 năm. `download` chỉ tải archive, `prepare` chỉ đọc file lịch sử và `train` chỉ đọc prepared memmap.
-- Nguồn đã hỗ trợ: Tardis `book_snapshot_25`, lấy 10 level đầu. Đây là snapshot do nhà cung cấp replay từ feed, không phải REST snapshot hiện tại.
+- Historical dataset: **MaximumLeverage/crypto-lob-stream** trên Hugging Face, pin revision trong config. Không giả định 2 năm; theo dataset card, public reconstructable data chỉ từ khoảng **2026-06-03**. Coverage chính xác lấy từ timestamp/state reconstruct được, không lấy ngày đầu/cuối theo tên file.
+- Không stream realtime. `download` tải snapshot + depth archive; `prepare` replay offline; `train` chỉ đọc prepared memmap. Tardis và yêu cầu freeze 730 ngày cũ đã được thay thế.
 - Mỗi snapshot có **một** mid-price: `MP_t = (bid_price_0 + ask_price_0) / 2`. Không tính một mid riêng cho từng level.
-- `local_timestamp` (microseconds UTC) là thời điểm thông tin sẵn có. `timestamp` sàn được đọc nhưng không dùng để nhìn trước arrival time.
+- Nguồn có `timestamp_ms`; nội bộ đổi sang microseconds UTC. Đây là event/receipt time tùy phiên bản collector cũ, không tự gọi nó là local arrival time được bảo đảm.
 - Tính OF theo price/volume ở từng level trước khi lọc mid-price. Bid flow và ask flow có dấu liquidity supply; `OFI = bid_OF - ask_OF`.
 - Các dòng liên tiếp cùng mid bị bỏ khỏi tập origin/sequence model; flow trong đoạn bị bỏ được cộng tới lần mid đổi kế tiếp. Giữ toàn bộ timestamp/raw mid riêng để lấy nhãn đúng thời gian.
 - Baseline input `[bid_OF, ask_OF, OFI] × 10`, cộng elapsed time giữa hai mid-change snapshot, elapsed time giữa hai raw snapshot cuối và update count (log1p): **33 feature**. Flow giữ đơn vị volume gốc trước bước scaler trên FIT.
-- `include_distances=false` mặc định. Có thể bật thành `true` rồi tạo một `prepared_dir` khác để thêm `bid_distance_bps` và `ask_distance_bps` cho input đa biến: **53 feature**. Distance không thuộc baseline OF/OFI; TimesFM zero-shot luôn bỏ qua toàn bộ covariate.
+- Baseline không nhận `bid_distance_bps`/`ask_distance_bps`. Các model multivariate nhận OF/OFI và timing; TimesFM zero-shot luôn bỏ qua toàn bộ covariate.
 - Nhãn `log(mid(t+h)/mid(t))`, h = **60, 120, 180 giây**, không phải h dòng sau khi lọc. `mid(t+h)` là quote cuối đã tới tại thời điểm đó; không lấy quote đầu tiên sau horizon.
 - Khi tính **RMSE, MAE, R²**, đổi về `predicted_price = mid(t) * exp(predicted_log_return)`. Metric trên giá USDT; giá ở đây là mid L2, không phải OHLCV close.
 - Thêm `rmse_gain_vs_e0 = 1 - RMSE_model / RMSE_E0` và `r2_os_vs_e0 = 1 - (RMSE_model / RMSE_E0)^2`, cũng trên giá gốc. E0 hiện có là zero-return → giá dự đoán bằng `mid(t)`, được tính một lần/fold/horizon và dùng chung đúng các origin cho mọi model. Tái sử dụng hàm gain cũ, xuất dưới dạng tỷ lệ (0.1 = cải thiện 10%), không nhân 100. Nếu E0 có lỗi bằng 0 thì hai tỷ số để null/ô trống và ghi trạng thái undefined, không ép thành 0 hoặc vô cực. `R2` thông thường vẫn giữ riêng.
-- Các khoảng feed im lặng >10 giây được tách segment; window/label không vượt segment. Age tối đa khi lấy quote là 10 giây. Đây là ngưỡng cấu hình, không chứng minh đã phát hiện mọi mất gói: CSV snapshot không có sequence ID.
+- Sequence gap, timestamp đảo thứ tự/gap >10 giây, book crossed/thiếu top 10 hoặc top 10 đi vào phần depth đã mất thông tin đều kết thúc segment và chờ snapshot mới. Age tối đa khi lấy quote là 10 giây **trong cùng segment**, không kéo dài quote ra sau điểm cuối segment.
+
+### Reconstruct đúng từ depth diff
+
+Mỗi row depth là một price-level update, không phải một full-book snapshot. Replay theo `last_update_id`;
+gom toàn bộ row chung `(timestamp_ms, first_update_id, last_update_id)` thành một message, kể cả khi nhóm
+bị chia giữa Arrow batch/file. Snapshot được đọc theo thời gian, chỉ dùng anchor đã xuất hiện trước event;
+mỗi snapshot thay toàn bộ cache và bắt đầu segment mới, không carry OF từ trước anchor.
+
+Với snapshot/update ID hiện tại `S`, bỏ message có `last_update_id <= S`; message tiếp theo phải bao phủ
+`S+1` trong `[first_update_id, last_update_id]`. Khoảng ID bỏ trống làm hủy book và chờ snapshot hợp lệ kế tiếp.
+Quantity mới ghi đè quantity hiện tại; quantity bằng 0 xóa đúng price đó. Áp dụng đủ bid và ask của message
+rồi prune cache về tối đa **1.000 level mỗi phía**, sau đó mới lấy top 10 và tính mid/OF.
+Không cắt cache còn 10 level: các level phía dưới vẫn cần khi best levels biến mất.
+
+Cache bị prune không được hồi sinh ghost level cũ. Nếu top 10 đi sâu qua ranh giới đã bị quên, pipeline
+yêu cầu snapshot mới; book crossed cũng reset, không tự xóa level để che một chuỗi diff bị thiếu.
+Gap đã biết **2026-07-05 20:56 → 21:39 UTC** là hard reset bất kể update IDs; bỏ event nằm trong khoảng này.
+
+Historical June–August 2026 có thể thiếu depth updates do collector cũ. Không forward-fill qua các khoảng
+thiếu. `segments.json` ghi khoảng hợp lệ thực tế và nguyên nhân kết thúc; `reconstruction.json` ghi số message,
+reset, prune và known gap. IDs/timestamps không chứng minh các message còn lại hoàn toàn không có thiếu row
+âm thầm; pipeline không tuyên bố sửa được dữ liệu chưa được thu thập.
 
 OF ở mỗi level `i`, với `p` là price và `q` là volume:
 
@@ -52,7 +74,10 @@ Vì vậy search hiện giới hạn `WindowRegression` với **hai backend GPU*
 Không fix sẵn backend thắng, số cây, learning rate hay window. Default: 12 candidate ban đầu, 3 generation,
 2 vòng validation bổ sung. AutoTS sinh/chấm/chọn tham số; không search subset feature hoặc learned transform.
 
-Adapter trong `autots_native.py` chỉ giữ GPU allowlist và căn feature quan sát được theo window của candidate.
+Adapter trong `autots_native.py` giữ GPU allowlist, căn feature quan sát được theo window của candidate,
+và dùng native window maker riêng trong từng segment liên tục rồi fit chung một GPU estimator.
+Không nối cuối segment trước với đầu segment sau để tạo window; gap trên regular grid để thiếu, không fill.
+Training matrix luôn lấy lại từ raw timeline, không sử dụng giá bị AutoTS nội suy ở bước làm sạch bảng.
 Regressor mang nhãn thời gian `t+h` nhưng giá trị luôn là feature đã biết tại `t`, không lấy OF tương lai.
 Search dùng các block 64 origin nằm trong outer FIT, mỗi block cách cutoff fit ít nhất 6 ngày;
 mỗi origin vẫn được dự báo direct một bước, context được cập nhật bằng quan sát lịch sử, không refit ở gap/VAL.
@@ -69,9 +94,9 @@ AutoTS tổng thời gian còn nhân theo candidate, validation, fold và horizo
 ### TimesFM LoRA
 
 Không còn vòng feature search/XReg. Một `(fold, horizon)` train **một adapter và OF head cùng một optimizer**.
-Default 5 fold × 3 horizon = **15 lần fine-tune**, không phải một model chung toàn bộ thí nghiệm.
+Tối đa 5 fold × 3 horizon = **15 lần fine-tune**; số fold thực tế phụ thuộc coverage.
 Base checkpoint được freeze; default 5 epoch, batch 32, context 512. Bỏ search giảm số lần fit, nhưng chưa thể
-khẳng định chạy rất nhanh trên 2 năm LOB: còn phụ thuộc số origin, GPU/VRAM và tốc độ đọc dữ liệu.
+khẳng định chạy rất nhanh: còn phụ thuộc số origin, GPU/VRAM và tốc độ đọc dữ liệu.
 
 AutoTS/TimesFM cần chuỗi đều để horizon có nghĩa thời gian: ở mỗi h, context price lấy cách nhau h giây;
 forecast **1 step = t+h**. Origin chấm điểm vẫn là các lần mid đổi. Không giả lập irregular event index thành phút.
@@ -81,14 +106,18 @@ chỉ import các hàm đó, không gọi training/search harness cũ.
 
 ## Walk-forward
 
-Default: rolling FIT 120 ngày, **gap 6 ngày**, VAL 7 ngày; 5 fold, bước 30 ngày, đi theo thời gian.
+Default cho archive ngắn: rolling FIT **21 ngày**, **gap 6 ngày**, VAL **3 ngày**; tối đa 5 fold,
+bước 7 ngày. Điểm kết thúc lấy từ state cuối reconstruct được. Pipeline chỉ tạo số fold vừa coverage
+thực tế và ghi coverage/revision vào run metadata; không đủ một fold thì dừng, không pad hoặc tạo lịch sử.
 Nhãn cuối cùng của training phải nằm trước train_end. Window training không bắt đầu trước train_start.
 Không early-stop/tune trên outer VAL; số cây/epoch của các model ngoài AutoTS khóa trong config.
 AutoTS chọn tham số bằng validation nội bộ FIT. Scaler và target scale chỉ lấy từ FIT.
 Gap 6 ngày tuân theo yêu cầu; nhãn dài tối đa 3 phút tự nó không đòi gap 5 ngày.
 
 Tất cả model chấm trên cùng origin mask được quyết định bởi danh sách `models` trong config, kể cả khi tách job bằng `--models`.
-Nguồn thiếu ngày không được tự lấp vào hoặc coi các ngày đầu tháng rời rạc là 2 năm liên tục.
+Calendar coverage không đồng nghĩa liên tục. Window của LSTM, TimesFM và AutoTS cùng nhãn phải nằm trong
+segment hợp lệ. Nếu các segment quá ngắn cho context cấu hình (TimesFM hiện 512 điểm), tập origin có thể
+rỗng; pipeline báo thiếu dữ liệu, không giảm context ngầm hoặc nối qua gap để đủ sample.
 
 ## Dùng trên Vast
 
@@ -101,36 +130,36 @@ pip install -r src_OB/requirements-vast.txt
 Default LightGBM `device_type=cuda`; nếu build trên Vast dùng OpenCL, đổi `tree.lightgbm_device` thành `gpu`.
 Không CPU fallback. Không có lệnh training nào được chạy trên local trong phiên này.
 
-Tải lịch sử **[2024-09-10, 2026-09-10)** (2 năm). Đặt `TARDIS_API_KEY` trong môi trường máy tải dữ liệu trước:
+Tải public archive, không cần Tardis key:
 
 ```bash
 python -m src_OB download --config configs/orderbook.json
 ```
 
-Hoặc đặt `TARDIS_API_KEY_FILE` trỏ tới file text chỉ chứa key, nằm ngoài repo. Downloader không ghi key vào log/manifest.
+Downloader chọn đúng `depth/binance/BTCUSDT/*.parquet` và `snapshots/binance/BTCUSDT/*.parquet`,
+không tải trades/ETH/SOL. Pin revision, ghi file tạm rồi rename, có retry và tiếp tục file đã hoàn tất;
+manifest ghi danh sách file và metadata kích thước từ HF.
 
-Downloader tải từng ngày, ghi file tạm rồi rename, có retry và tiếp tục các ngày đã hoàn tất.
-401/403 báo thiếu quyền, 404 báo thiếu ngày; không tự thay nguồn/market hoặc mua dữ liệu.
-**Hiện chưa có order-book dataset trên đĩa workspace; chưa tải lịch sử trong phiên này.**
-Lệnh download đã được gọi nhưng dừng trước khi tải file do phiên làm việc thiếu `TARDIS_API_KEY`.
-Downloader cần API key có quyền đủ 730 ngày; không thay bằng các sample miễn phí đầu tháng.
+**Đã tải xong 4 file, 704.186.850 byte**, revision `873f31e729ae23b1c309cd5dcb33feed27c407de`:
 
-Các đường dẫn đã cấu hình, không phải dữ liệu đã tồn tại:
+- Raw hiện có: `data/orderbook/hf_crypto_lob_stream/depth/binance/BTCUSDT/{2026-06,2026-07}.parquet`
+  và `snapshots/binance/BTCUSDT/{2026-06,2026-07}.parquet` dưới cùng raw root.
+- Download manifest hiện có: `data/orderbook/hf_crypto_lob_stream/download_manifest.json`.
+- Prepared sẽ tạo tại `data/orderbook/prepared_hf/`: raw/kept memmap, `manifest.json` schema v3,
+  `segments.json`, `reconstruction.json`. Chưa chạy prepare, chưa có coverage reconstruct chính xác.
+- Kết quả training sẽ nằm tại `experiments/orderbook_hf/`.
 
-- Raw: `data/orderbook/binance/BTCUSDT/YYYY-MM-DD.csv.gz` và `download_manifest.json`.
-- Prepared: `data/orderbook/prepared/{raw_ts,raw_mid,raw_segment,ts,mid,segment,features}.bin` và `manifest.json`.
-- Kết quả training: `experiments/orderbook/`.
-
-Thiếu bất kỳ ngày nào trong khoảng freeze thì `prepare` dừng. Manifest schema v2 lưu range và layout OF/OFI;
-prepared dataset cũ có distance layout khác cần được tạo lại sang một thư mục mới.
+Schema v2 cũ không dùng cho HF diff archive; luôn tạo prepared directory mới.
 
 Sau khi có raw data, chuẩn bị memmap một lần trên Vast/máy lưu dữ liệu:
 
 ```bash
+pip install -r src_OB/requirements-data.txt
 python -m src_OB prepare --config configs/orderbook.json
 ```
 
-`prepare` là xử lý dataset thật, không phải test. Đọc CSV theo chunk, ghi feature và raw-price memmap trên đĩa;
+`prepare` là xử lý dataset thật, không phải test. DuckDB external sort với memory limit 1 GB sắp depth theo ID,
+Arrow đọc theo chunk, snapshot/message được replay thành state rồi ghi feature và raw-price memmap trên đĩa;
 không tạo sẵn tensor `[toàn bộ sample, context, feature]` trong VRAM. Thư mục prepared mới phải chưa tồn tại;
 đổi `prepared_dir` khi cần tạo phiên bản khác. Các lỗi input được raise trong đường chạy thật.
 
@@ -148,7 +177,7 @@ P0_OB_VAST=1 CUDA_VISIBLE_DEVICES=1 python -m src_OB train --folds fold4,fold5
 ```
 
 `--models lgbm,xgb,lstm` chọn subset để chạy, không chọn feature. Checkpoint và predictions ghi ở
-`experiments/orderbook/foldN/model/h60s` (tương tự h120s/h180s), gồm model, prediction giá, metric và config.
+`experiments/orderbook_hf/foldN/model/h60s` (tương tự h120s/h180s), gồm model, prediction giá, metric và config.
 Thư mục kết quả đã tồn tại sẽ không bị ghi đè. Dùng `output_dir` mới nếu chạy lại; không có tự động resume training dở.
 Tree matrix nằm trong RAM host; cửa sổ neural chỉ chuyển batch lên GPU. Nhu cầu đĩa/RAM và thời gian chạy thực tế chưa đo.
 
@@ -189,8 +218,9 @@ Prediction Parquet và model joblib trong experiments dùng Git LFS như các ch
 
 ## Nguồn
 
-- [Tardis schema](https://docs.tardis.dev/downloadable-csv-files/data-types): snapshot L2 đã dựng, timestamps microsecond, lấy 10/25 level.
-- [Tardis API](https://docs.tardis.dev/downloadable-csv-files/api): lịch sử liên tục cần API key; miễn phí chỉ ngày đầu mỗi tháng.
+- [HF dataset](https://huggingface.co/datasets/MaximumLeverage/crypto-lob-stream): schema, coverage, prune và known gap.
+- [Collector/replay source](https://github.com/Goodie-Goody/crypto_lob_stream_pypi): snapshot depth 1000, absolute quantity, collector limitations.
+- [Binance Spot depth](https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams): U/u sequence và depth update protocol.
 - [AutoTS regressors](https://github.com/winedarksea/AutoTS/blob/1.0.4/autots/models/sklearn.py): native regressor generation và WindowRegression.
 - [AutoTS search](https://github.com/winedarksea/AutoTS/blob/1.0.4/autots/evaluator/auto_ts.py): model search và custom validation indexes.
 - [IDEA](../docs/IDEA.md): nguồn ý tưởng OF và elapsed time; yêu cầu Direct mới thay thế đề xuất MIMO cũ.

@@ -1,64 +1,78 @@
-"""Download full daily L2 snapshots; no monthly sample substitution or paid purchase."""
+"""Download a pinned public HF archive: BTCUSDT Spot depth and snapshots only."""
 from __future__ import annotations
 
-import os
+import json
 import time
-from datetime import date, timedelta
 from pathlib import Path
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
+from urllib.request import urlopen
 
-from .config import write_json, START, END
+from .config import write_json
+
+HOST = "https://huggingface.co"
+
+
+def json_get(url):
+    with urlopen(url, timeout=60) as response:
+        return json.load(response)
 
 
 def download(cfg):
-    start = date.fromisoformat(START)
-    end = date.fromisoformat(END)
-    key = os.environ.get("TARDIS_API_KEY")
-    if not key and os.environ.get("TARDIS_API_KEY_FILE"):
-        key = Path(os.environ["TARDIS_API_KEY_FILE"]).expanduser().read_text().strip()
-    if not key:
-        raise RuntimeError("Thiếu TARDIS_API_KEY hoặc TARDIS_API_KEY_FILE: lịch sử liên tục cần quyền truy cập. "
-                           "Không thay bằng các ngày sample đầu tháng.")
-    folder = Path(cfg["raw_dir"])
-    folder.mkdir(parents=True, exist_ok=True)
-    journal = folder / "download_manifest.json"
-    import json
-    manifest = json.loads(journal.read_text()) if journal.exists() else {
-        "provider": "tardis", "exchange": cfg["exchange"], "symbol": cfg["symbol"],
-        "type": "book_snapshot_25", "start_inclusive": START, "end_exclusive": END, "files": {}}
-    day = start
-    while day < end:
-        name = f"{day.isoformat()}.csv.gz"
-        target = folder / name
-        if target.exists() and name in manifest["files"]:
-            day += timedelta(days=1)
+    root = Path(cfg["raw_dir"])
+    root.mkdir(parents=True, exist_ok=True)
+    journal = root / "download_manifest.json"
+    repo = cfg["dataset_repo"]
+    revision = json_get(f"{HOST}/api/datasets/{repo}/revision/{quote(cfg['dataset_revision'], safe='')}")["sha"]
+    if journal.exists():
+        manifest = json.loads(journal.read_text())
+        if manifest["repo"] != repo or manifest["revision"] != revision:
+            raise ValueError("Pinned archive khác manifest; dùng raw_dir mới, không trộn revision.")
+    else:
+        manifest = {"provider": "huggingface", "repo": repo, "revision": revision,
+                    "exchange": cfg["exchange"], "asset": cfg["symbol"], "files": {},
+                    "historical_fixed": True, "coverage": "read from reconstructed data, not filenames"}
+    selected = []
+    for kind in ("snapshots", "depth"):
+        prefix = f"{kind}/{cfg['exchange']}/{cfg['symbol']}"
+        url = f"{HOST}/api/datasets/{repo}/tree/{revision}/{prefix}?limit=1000"
+        while url:
+            with urlopen(url, timeout=60) as response:
+                selected.extend(item for item in json.load(response)
+                                if item["type"] == "file" and item["path"].endswith(".parquet"))
+                link = response.headers.get("Link", "")
+            url = next((part.split("<", 1)[1].split(">", 1)[0]
+                        for part in link.split(",") if 'rel="next"' in part), None)
+    if not any(f["path"].startswith("snapshots/") for f in selected) or not any(
+            f["path"].startswith("depth/") for f in selected):
+        raise ValueError("Archive phải có cả snapshot và depth diff.")
+    manifest["selected_files"] = [{"path": f["path"], "bytes": f["size"]} for f in selected]
+    manifest["status"] = "downloading"
+    write_json(journal, manifest)
+    print(f"HF revision={revision}, {len(selected)} files, {sum(f['size'] for f in selected):,} bytes", flush=True)
+    for item in selected:
+        name = item["path"]
+        target = root / name
+        if name in manifest["files"] and target.is_file() and target.stat().st_size == item["size"]:
             continue
-        url = (f"https://datasets.tardis.dev/v1/{quote(cfg['exchange'], safe='')}/"
-               f"book_snapshot_25/{day:%Y/%m/%d}/{quote(cfg['symbol'], safe='')}.csv.gz")
-        temporary = folder / (name + ".part")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(".parquet.part")
+        url = f"{HOST}/datasets/{repo}/resolve/{revision}/{quote(name, safe='/')}?download=true"
         for attempt in range(5):
             try:
-                req = Request(url, headers={"Authorization": f"Bearer {key}"})
-                with urlopen(req, timeout=120) as response, temporary.open("wb") as out:
+                with urlopen(url, timeout=120) as response, temporary.open("wb") as output:
                     while block := response.read(4 * 1024 * 1024):
-                        out.write(block)
+                        output.write(block)
+                if temporary.stat().st_size != item["size"]:
+                    raise OSError("Incomplete archive transfer")
                 temporary.replace(target)
-                manifest["files"][name] = {"url": url, "bytes": target.stat().st_size}
+                manifest["files"][name] = {"bytes": item["size"], "source_lfs_sha256": item.get("lfs", {}).get("oid")}
                 write_json(journal, manifest)
-                print(f"downloaded {day}", flush=True)
+                print(f"downloaded {name}: {item['size']:,} bytes", flush=True)
                 break
-            except HTTPError as exc:
-                if exc.code in (401, 403):
-                    raise RuntimeError("Tardis từ chối quyền truy cập lịch sử đã yêu cầu.") from None
-                if exc.code == 404:
-                    raise RuntimeError(f"Không có L2 ngày {day}; không tự bỏ ngày hoặc đổi dataset.") from None
+            except OSError:
                 if attempt == 4:
-                    raise RuntimeError(f"Download thất bại {day}: HTTP {exc.code}") from None
+                    raise
                 time.sleep(min(2 ** attempt, 30))
-            except (URLError, TimeoutError, ConnectionError):
-                if attempt == 4:
-                    raise RuntimeError(f"Download gián đoạn {day}; chạy lại để tiếp tục.") from None
-                time.sleep(min(2 ** attempt, 30))
-        day += timedelta(days=1)
+    manifest["status"] = "complete"
+    write_json(journal, manifest)
+    print(f"Historical archive saved to {root}", flush=True)

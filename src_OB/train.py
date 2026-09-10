@@ -73,6 +73,7 @@ def train(cfg, models=None, fold_names=None):
                 print(f"{fold.name} {model} h={horizon}s train={len(train_ids)} val={len(val_ids)}", flush=True)
                 write_json(out / "run.json", {"status": "started", "config": cfg, "fold": asdict(fold),
                            "model": model, "horizon_seconds": horizon, "strategy": "direct",
+                           "observed_coverage": data.meta["coverage"], "dataset_revision": data.meta["dataset_revision"],
                            "created_at": started, "n_train": len(train_ids), "n_val": len(val_ids)})
                 y_train, _ = data.target(train_ids, horizon)
                 actual, e0 = evaluation[horizon]

@@ -1,0 +1,6 @@
+# Offline prepare only; download itself uses Python's standard library.
+numpy>=2.0
+pandas>=2.2
+pyarrow>=18
+duckdb>=1.2
+sortedcontainers>=2.4

@@ -1,0 +1,46 @@
+{
+  "provider": "huggingface",
+  "repo": "MaximumLeverage/crypto-lob-stream",
+  "revision": "873f31e729ae23b1c309cd5dcb33feed27c407de",
+  "exchange": "binance",
+  "asset": "BTCUSDT",
+  "files": {
+    "snapshots/binance/BTCUSDT/2026-06.parquet": {
+      "bytes": 299002,
+      "source_lfs_sha256": "6b4579b4fb8a06fe46c6f11a824c42490fb4b7833ecb8e1beb53b014969e6cdb"
+    },
+    "snapshots/binance/BTCUSDT/2026-07.parquet": {
+      "bytes": 350331,
+      "source_lfs_sha256": "6c6e474ff14fba5f53b6f9570c6101fe841ebb75908d9809aa8dbefdeb6b5948"
+    },
+    "depth/binance/BTCUSDT/2026-06.parquet": {
+      "bytes": 385932069,
+      "source_lfs_sha256": "e6339adc0edfae9b62bc49f2056c8596bb431f58e99c516cba9916063a15470d"
+    },
+    "depth/binance/BTCUSDT/2026-07.parquet": {
+      "bytes": 317605448,
+      "source_lfs_sha256": "4a5d581db337201f0a2446ee7d59baaf1e5c54363f9760b52759b7dc6ac1779c"
+    }
+  },
+  "historical_fixed": true,
+  "coverage": "read from reconstructed data, not filenames",
+  "selected_files": [
+    {
+      "path": "snapshots/binance/BTCUSDT/2026-06.parquet",
+      "bytes": 299002
+    },
+    {
+      "path": "snapshots/binance/BTCUSDT/2026-07.parquet",
+      "bytes": 350331
+    },
+    {
+      "path": "depth/binance/BTCUSDT/2026-06.parquet",
+      "bytes": 385932069
+    },
+    {
+      "path": "depth/binance/BTCUSDT/2026-07.parquet",
+      "bytes": 317605448
+    }
+  ],
+  "status": "complete"
+}

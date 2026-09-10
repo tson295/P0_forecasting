@@ -1,24 +1,27 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-START = "2024-09-10"
-END = "2026-09-10"
-START_US = int(datetime(2024, 9, 10, tzinfo=timezone.utc).timestamp()) * 1_000_000
-END_US = int(datetime(2026, 9, 10, tzinfo=timezone.utc).timestamp()) * 1_000_000
 
 
 def load(path):
     cfg = json.loads(Path(path).read_text())
-    if (cfg["download_start"], cfg["download_end"]) != (START, END):
-        raise ValueError("Historical dataset đã freeze: [2024-09-10, 2026-09-10) UTC.")
+    if re.fullmatch(r"[0-9a-f]{40}", cfg["dataset_revision"]) is None:
+        raise ValueError("dataset_revision phải là full commit SHA để freeze public archive.")
+    if cfg["exchange"] != "binance" or cfg["symbol"] != "BTCUSDT":
+        raise ValueError("Pipeline này dùng BTCUSDT Binance Spot, không gộp market.")
     for key in ("raw_dir", "prepared_dir", "output_dir"):
         cfg[key] = str((ROOT / cfg[key]).resolve())
     if cfg["levels"] != 10 or cfg["gap_days"] <= 5:
         raise ValueError("L2 phải có 10 level và gap_days phải > 5.")
+    if cfg["book_max_depth"] < cfg["levels"] or cfg.get("include_distances", False):
+        raise ValueError("Book cache >= 10 levels; baseline chỉ dùng OF/OFI và timing.")
+    if any(cfg[k] <= 0 for k in ("train_days", "val_days", "step_days", "n_folds",
+                                 "max_feed_gap_seconds", "max_price_age_seconds", "chunk_rows")):
+        raise ValueError("Fold durations, gap limits, counts and chunk_rows must be positive.")
     if cfg["context"] < 10 or any(h <= 0 for h in cfg["horizons_seconds"]):
         raise ValueError("context >= 10; horizon tính bằng số giây dương.")
     if cfg["tree"]["lightgbm_device"] not in ("gpu", "cuda"):

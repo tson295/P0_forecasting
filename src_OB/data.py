@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from .config import START, END, END_US
 
 DAY = 86400 * 1_000_000
 
@@ -25,13 +24,17 @@ class Data:
         self.cfg = cfg
         folder = Path(cfg["prepared_dir"])
         self.meta = json.loads((folder / "manifest.json").read_text())
-        if (self.meta.get("schema_version") != 2 or
-                (self.meta.get("start_inclusive"), self.meta.get("end_exclusive")) != (START, END)):
-            raise ValueError("Cần prepared dataset OF/OFI schema v2 trên đúng 2 năm đã freeze.")
+        if (self.meta.get("schema_version") != 3 or self.meta.get("dataset_repo") != cfg["dataset_repo"]
+                or self.meta.get("dataset_revision") != cfg["dataset_revision"]):
+            raise ValueError("Cần reconstructed HF dataset schema v3 đúng revision.")
+        segments = json.loads((folder / "segments.json").read_text())
+        self.segment_start = np.asarray([s["start_us"] for s in segments], np.int64)
+        self.segment_end = np.asarray([s["end_exclusive_us"] for s in segments], np.int64)
         if self.meta["config"].get("include_distances", False) != cfg.get("include_distances", False):
             raise ValueError("Feature distance config khác prepared dataset; tạo prepared_dir riêng.")
-        if any(self.meta["config"][k] != cfg[k] for k in ("symbol", "exchange", "levels")):
-            raise ValueError("Prepared data không khớp thị trường/độ sâu trong config.")
+        if any(self.meta["config"][k] != cfg[k] for k in
+               ("symbol", "exchange", "levels", "book_max_depth", "max_feed_gap_seconds")):
+            raise ValueError("Prepared data không khớp thị trường/độ sâu/segment policy trong config.")
         self.width = len(self.meta["features"])
         for key, dtype in self.meta["dtypes"].items():
             shape = ((self.meta["counts"]["kept"], self.width) if key == "features" else
@@ -40,9 +43,16 @@ class Data:
 
     def folds(self):
         cfg = self.cfg
-        end = END_US
-        for n in range(cfg["n_folds"]):
-            val_end = end - (cfg["n_folds"] - 1 - n) * cfg["step_days"] * DAY
+        coverage = self.meta["coverage"]
+        start, end = coverage["start_inclusive_us"], coverage["end_exclusive_us"]
+        required = (cfg["train_days"] + cfg["gap_days"] + cfg["val_days"]) * DAY
+        available = int((end - start - required) // (cfg["step_days"] * DAY)) + 1
+        count = min(cfg["n_folds"], max(0, available))
+        if not count:
+            raise ValueError("Coverage thực tế không đủ train/gap/VAL; không pad lịch sử bị thiếu.")
+        print(f"walk-forward: {count} folds from observed coverage, requested maximum={cfg['n_folds']}", flush=True)
+        for n in range(count):
+            val_end = end - (count - 1 - n) * cfg["step_days"] * DAY
             val_start = val_end - cfg["val_days"] * DAY
             train_end = val_start - cfg["gap_days"] * DAY
             train_start = train_end - cfg["train_days"] * DAY
@@ -56,6 +66,9 @@ class Data:
         clipped = np.maximum(pos, 0)
         valid = (pos >= 0) & (queries <= self.raw_ts[-1])
         valid &= queries - self.raw_ts[clipped] <= self.cfg["max_price_age_seconds"] * 1e6
+        # Never extend a quote past the last accepted state of a closed segment,
+        # even when the next snapshot is less than max_price_age_seconds away.
+        valid &= queries < self.segment_end[self.raw_segment[clipped]]
         return np.asarray(self.raw_mid[clipped]), valid, clipped
 
     def indices(self, start, end):
@@ -78,7 +91,8 @@ class Data:
         return np.concatenate(chunks) if chunks else np.empty(0, dtype=np.int64)
 
     def target(self, ids, horizon):
-        price, valid, _ = self.prices_at(self.ts[ids] + horizon * 1_000_000)
+        price, valid, raw_ids = self.prices_at(self.ts[ids] + horizon * 1_000_000)
+        valid &= self.raw_segment[raw_ids] == self.segment[ids]
         if not valid.all():
             raise ValueError("Nhãn không có quote hợp lệ tại thời điểm horizon.")
         return np.log(price / self.mid[ids]), price
@@ -96,8 +110,16 @@ class Data:
 
     def price_context(self, ids, horizon, length):
         times = self.ts[ids, None] - np.arange(length - 1, -1, -1)[None, :] * horizon * 1_000_000
-        prices, valid, _ = self.prices_at(times)
+        prices, valid, raw_ids = self.prices_at(times)
+        valid &= self.raw_segment[raw_ids] == self.segment[ids, None]
         return np.log(prices), valid.all(axis=1)
+
+    def covariates_at(self, queries):
+        ids = np.searchsorted(self.ts, queries, side="right") - 1
+        clipped = np.maximum(ids, 0)
+        _, valid, raw_ids = self.prices_at(queries)
+        valid &= (ids >= 0) & (self.segment[clipped] == self.raw_segment[raw_ids])
+        return np.asarray(self.features[clipped], np.float64), valid
 
 
 def price_metrics(actual, predicted):

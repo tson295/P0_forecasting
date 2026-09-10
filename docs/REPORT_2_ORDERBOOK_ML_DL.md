@@ -3,7 +3,7 @@
 > Đã được thay thế bởi yêu cầu triển khai ngày 2026-09-10 và [src_OB/README.md](../src_OB/README.md).
 > Thiết kế mới dùng Direct cho cả ML và DL (một model/horizon), không MIMO; metric chính RMSE/MAE/R² trên raw mid-price.
 > AutoTS native và TimesFM zero-shot/LoRA nằm trong pipeline mới. Không áp dụng feature search/ablation và trading-metric plan dưới đây.
-> Cập nhật cuối: baseline OF/OFI 10 level, cộng flow trước khi drop cùng mid, distance tùy chọn; historical freeze [2024-09-10, 2026-09-10) UTC. Không có DeepLOB model. AutoTS search model/tham số trong GPU allowlist, không fix sẵn LightGBM; xem README cho cấu hình đang triển khai.
+> Cập nhật cuối: HF `MaximumLeverage/crypto-lob-stream`, snapshot + depth replay theo sequence, prune/reset gap; coverage lấy từ data, không còn freeze 2 năm. Baseline OF/OFI 10 level, cộng flow trước khi drop cùng mid, không distance/DeepLOB. AutoTS search trong GPU allowlist; xem README cho cấu hình đang triển khai.
 
 Ngày: 2026-09-10  
 Trạng thái: kiểm tra và đề xuất, chưa code  

@@ -10,6 +10,7 @@ import copy
 import json
 import random
 from contextlib import contextmanager
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,13 @@ from .latency import infer
 
 def frame(ts, values):
     return pd.DataFrame(values, index=pd.to_datetime(ts, unit="us"), columns=["mid_price"])
+
+
+def contiguous_runs(times, valid, segments, step):
+    connected = valid[1:] & valid[:-1] & (np.diff(times) == step) & (segments[1:] == segments[:-1])
+    starts = np.flatnonzero(valid & ~np.r_[False, connected])
+    stops = np.flatnonzero(valid & ~np.r_[connected, False]) + 1
+    return zip(starts, stops)
 
 
 def gpu_parameters(spec, cfg):
@@ -68,10 +76,42 @@ def gpu_search_space(cfg, data, horizon):
             self.regression_model = gpu_parameters(self.regression_model, cfg)
             # AutoTS evaluates a block of origins; the fitted head remains scalar.
             self.forecast_length = 1
-            # R at target s contains features from s-h. Native window_maker
-            # reads R at window START. Align within this TRAIN partition only.
-            reg = future_regressor.reindex(df.index).shift(-self.window_size).fillna(0.0)
-            return super().fit(df, future_regressor=reg)
+            self.basic_profile(df)
+            times = df.index.to_numpy(dtype="datetime64[us]").astype(np.int64)
+            prices, valid, raw_ids = data.prices_at(times)
+            cov, cov_ok = data.covariates_at(times - step)
+            _, origin_ok, origin_raw = data.prices_at(times - step)
+            seg = data.raw_segment[raw_ids]
+            valid &= cov_ok & origin_ok & (seg == data.raw_segment[origin_raw])
+            xs, ys = [], []
+            for start, stop in contiguous_runs(times, valid, seg, step):
+                if stop - start <= self.window_size:
+                    continue
+                block = frame(times[start:stop], prices[start:stop])
+                # Build windows separately per contiguous segment. Native AutoTS
+                # may clean its input table; always read training values from raw
+                # data here, so any fill/interpolation cannot enter the estimator.
+                aligned = pd.DataFrame(cov[start:stop], index=block.index).shift(-self.window_size).fillna(0.)
+                x, y = native.window_maker(block, window_size=self.window_size,
+                    input_dim="univariate", output_dim="forecast_length", forecast_length=1,
+                    normalize_window=False, max_windows=None, regression_type="User",
+                    future_regressor=aligned, random_seed=self.random_seed)
+                xs.append(x)
+                ys.append(np.asarray(y).reshape(-1))
+            if not xs:
+                raise ValueError("AutoTS FIT has no intact segment long enough for this window.")
+            x, y = np.concatenate(xs), np.concatenate(ys)
+            if len(y) > self.max_windows:
+                selected = np.random.default_rng(self.random_seed).choice(len(y), self.max_windows, replace=False)
+                x, y = x[selected], y[selected]
+            self.model = native.retrieve_regressor(regression_model=self.regression_model,
+                verbose=self.verbose, verbose_bool=self.verbose > 0, random_seed=self.random_seed,
+                n_jobs=self.n_jobs, multioutput=False)
+            self.model.fit(x, y)
+            self.df_train = frame(times[valid], prices[valid])
+            self.last_window = self.df_train.tail(self.window_size)
+            self.fit_runtime = datetime.now() - self.startTime
+            return self
 
         def predict(self, forecast_length=None, future_regressor=None, just_point_forecast=False, df=None):
             if df is not None:
@@ -84,8 +124,8 @@ def gpu_search_space(cfg, data, horizon):
                 # back as context or read prices/features at target t+h.
                 target = reg.index[0].value // 1000
                 times = target - np.arange(self.window_size, 0, -1) * step
-                prices, valid, _ = data.prices_at(times)
-                if not valid.all():
+                prices, valid, raw_ids = data.prices_at(times)
+                if not valid.all() or not (data.raw_segment[raw_ids] == data.raw_segment[raw_ids[-1]]).all():
                     raise ValueError("AutoTS validation context has missing historical quotes.")
                 points.append(super().predict(forecast_length=1, future_regressor=reg,
                               just_point_forecast=just_point_forecast, df=frame(times, prices)))
@@ -126,19 +166,26 @@ def run(cfg, data, fold, val_ids, horizon, out):
     step = horizon * 1_000_000
     start = ((fold.train_start + step - 1) // step) * step + step
     grid = np.arange(start, fold.train_end, step)
-    prices, ok, _ = data.prices_at(grid)
-    if not ok.all():
-        raise ValueError("AutoTS training grid has missing quotes; supply complete fold data.")
-    ids = np.searchsorted(data.ts, grid - step, side="right") - 1
-    if (ids < 0).any():
-        raise ValueError("AutoTS has no observed order-book covariates.")
-    df = frame(grid, prices)  # Native search also scores raw-price RMSE.
-    reg = pd.DataFrame(np.asarray(data.features[ids], np.float64), index=df.index)
+    prices, ok, raw_ids = data.prices_at(grid)
+    cov, cov_ok = data.covariates_at(grid - step)
+    _, origin_ok, origin_ids = data.prices_at(grid - step)
+    seg = data.raw_segment[raw_ids]
+    ok &= cov_ok & origin_ok & (seg == data.raw_segment[origin_ids])
+    df = frame(grid, np.where(ok, prices, np.nan))  # No synthetic price at missing times.
+    reg = pd.DataFrame(np.where(ok[:, None], cov, 0.), index=df.index)
+    runs = list(contiguous_runs(grid, ok, seg, step))
     validations = []
     for n in range(options["num_validations"] + 1):
-        target = grid[-1] - n * cfg["val_days"] * DAY
-        target = grid[np.searchsorted(grid, target, side="right") - 1]
-        targets = target - np.arange(options["validation_points"] - 1, -1, -1) * step
+        cutoff = grid[-1] - n * cfg["val_days"] * DAY
+        if validations:
+            cutoff = min(cutoff, int(validations[-1][1][0].value // 1000) - step)
+        stop_limit = np.searchsorted(grid, cutoff, side="right")
+        candidates = [(a, min(b, stop_limit)) for a, b in runs
+                      if min(b, stop_limit) - a >= options["validation_points"] + options["max_window_size"]]
+        if not candidates:
+            raise ValueError("AutoTS internal VAL has no intact context/block; do not fill across gaps.")
+        _, stop = candidates[-1]
+        targets = grid[stop - options["validation_points"]:stop]
         train_index = df.index[grid < targets[0] - cfg["gap_days"] * DAY]
         if len(train_index) <= options["max_window_size"] + 1:
             raise ValueError("Not enough FIT history for purged AutoTS search splits.")
