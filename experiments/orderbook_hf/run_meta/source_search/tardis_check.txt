@@ -1,0 +1,9 @@
+Tardis.dev datasets API without API key (2026-09-10 UTC):
+  binance incremental_book_L2 2024-08-01 BTCUSDT -> HTTP 200 (first day of month)
+  binance book_snapshot_25    2024-08-01 BTCUSDT -> HTTP 200
+  binance incremental_book_L2 2026-08-01 BTCUSDT -> HTTP 200
+  binance incremental_book_L2 2024-08-02 BTCUSDT -> HTTP 401:
+    {"code": 10, "message": "For unauthorized requests, only historical CSV market datasets for the first day of each
+     month are available (dataset for '2024-08-02' has been requested)."}
+  (an earlier ranged request, -r 0-1000, returned 403; later non-first-day probes timed out without a response)
+Conclusion: free access = first day of each month only (max 24 h contiguous, no consecutive days).

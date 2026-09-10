@@ -129,15 +129,41 @@ GPU-only lúc fit, scaler/AutoTS FIT-only và latency: chưa có bằng chứng 
   metadata `data/orderbook/prepared_hf/{manifest,segments,reconstruction}.json` và 7 memmap `.bin` (Git LFS, ~130 KB).
 - Không commit: 4 raw Parquet (704 MB; tải lại đúng revision bằng `python -m src_OB download`, sha256 trong
   `download_manifest.json`), venv, checkpoint TimesFM pretrained (chưa tải vì chưa train).
-- Push: instance không có credential GitHub (`git push` → `could not read Username for 'https://github.com'`), nên
-  commit và LFS object chỉ nằm ở local branch `OB` trên Vast. Instance không có volume: cần push trước khi
-  recycle/destroy (cấu hình token rồi `git push origin OB`).
+- Push: lúc đầu instance không có credential HTTPS (`could not read Username for 'https://github.com'`). Ở lượt
+  tiếp nối, SSH key `~/.ssh/id_ed25519` xác thực được `tson295`; `remote.origin.pushurl` trỏ SSH và `e169df1` đã lên
+  `origin/OB` qua merge `a04d17b` (LFS 7/7). Trạng thái backup chi tiết: `BACKUP_STATUS.md`.
 - tmux session `ob` (window download/env/prepare/lgbm) còn giữ pane log trên instance.
 
 ## 10. Phần chưa đạt
 
 - 96/96 cell, `summarize`, bảng by-model/horizon, E0 gains, latency p95/p99/max, runtime training và checker sau
-  training: chưa có — bị chặn bởi B1.
+  training: chưa có — bị chặn bởi B1 và không có nguồn thay thế phù hợp (mục 11).
 - Chính sách GPU-only lúc fit và các API AutoTS 1.0.4 / TimesFM 2.0.2 / LoRA decoder trong pipeline OB vẫn chưa
   được thực thi trong lượt chạy thật nào.
-- W1/I1 trong replay cần xử lý khi có nguồn dữ liệu mới.
+- Replay v2 (sửa W1/I1) đã có trong code nhưng chưa có lượt prepare thật nào dùng nó.
+
+## 11. Tiếp nối 2026-09-10 (goal khôi phục data, 17:39 → ~18:45 UTC)
+
+**Trạng thái vẫn BLOCKED.** Không có nguồn thay thế phù hợp; không download/prepare/train mới; 0 cell.
+
+1. **Lưu việc:** remote `OB` có thêm `109cbc2` (prompt mới, chỉ docs); merge không xung đột thành `a04d17b` và push
+   qua SSH kèm LFS 7/7 (`BACKUP_STATUS.md`).
+2. **W1/I1 → replay v2** (`src_OB/reconstruct.py`, `REPLAY_VERSION = 2`): message chờ snapshot được đệm trong cửa sổ
+   `max_feed_gap_seconds`; message `u > S` nối đúng `S+1` được áp sau snapshot và book gộp chỉ phát tại timestamp
+   snapshot; book đang sống không neo lại snapshot cũ (không replay trùng), snapshot đi trước bị bỏ qua khi stream
+   vẫn nối, đứt trước `S` thì đóng `sequence_gap` rồi neo; kiểm ID trước timestamp; hard gap chuyển sang
+   `known_hard_gaps_utc` trong config (HF khai báo 2026-07-05; nguồn độc lập mặc định rỗng). `prepare` ghi
+   `replay_version`. Không prepare lại HF (goal cấm lặp bằng chứng blocker). Theo P3/P4 của checker lượt trước, trên
+   archive HF v2 chỉ đổi nhãn reset (37 segment → `sequence_gap`, 1 `known_hard_gap`), không đổi state/segment.
+   Replay v2 **chưa được lượt chạy thật nào thực thi**.
+3. **Tìm nguồn ~60 phút:** 22 nhóm ứng viên trong `SOURCE_REPORT.md`. Gần nhất: `predict-quant/binance-spot-orderbook`
+   (Spot diff 100 ms nhưng run dài nhất 22,64 h < 25,6 h, VAL ≤ 7,5 h, snapshot không timestamp, không license) và
+   Zenodo 20046390 (Spot 5 s, 100 level, liên tục nhưng 21 ngày < 30 ngày cho một fold). Tardis không key chỉ phục
+   vụ ngày đầu mỗi tháng (HTTP 401 cho ngày khác).
+4. **Checker lượt này:** `CHECKER_FINDINGS.md`, mục "Tiếp nối".
+5. **Cell thiếu:** toàn bộ (96 theo 4 fold lịch của HF; chưa có nguồn mới nên chưa có fold mới).
+6. **Quyết định tối thiểu khi user quay lại:** (a) cấp nguồn có khóa/trả phí đủ ≥ 30–58 ngày Spot liên tục; (b) đổi
+   phương pháp tường minh cho một trong hai ứng viên gần nhất; hoặc (c) thu thập mới. Next step khi có data: config
+   riêng (`raw_dir`/`prepared_dir`/`output_dir` mới) → download → prepare (replay v2) → `data-report` → checker →
+   `train` → `summarize` → checker → báo cáo.
+7. **Máy:** instance Vast vẫn chạy, GPU rảnh; không stop/destroy.
