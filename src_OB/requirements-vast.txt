@@ -1,0 +1,13 @@
+# Install on Vast only. Install CUDA-enabled torch and LightGBM for the image first.
+numpy>=2.0
+pandas>=2.2
+pyarrow>=18
+scikit-learn>=1.6
+joblib>=1.4
+xgboost>=3.0
+# This requirements file targets a CUDA 12 Vast image.
+cupy-cuda12x>=13
+catboost>=1.2
+autots==1.0.4
+timesfm[torch]==2.0.2
+statsmodels>=0.14
