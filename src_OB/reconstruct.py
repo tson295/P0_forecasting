@@ -148,7 +148,10 @@ class BookReplay:
         """Anchor at an observed snapshot; `following` is the first depth message at/after it."""
         self.observe(event)
         self.counts["snapshot_messages"] += 1
-        if not self.permitted_time(event.ts) or event.ts <= self.reset_after:
+        if not self.permitted_time(event.ts):
+            return None
+        if event.ts <= self.reset_after:
+            self.counts["snapshot_at_or_before_reset"] += 1  # e.g. another snapshot at an anchored instant
             return None
         if self.last_id is not None:
             # The live book is proven by contiguous IDs. Re-anchoring to an older snapshot would
@@ -264,7 +267,8 @@ def states(cfg, raw, scratch, replay, source_files):
         def query(kind):
             paths = [str(raw / p) for p in source_files if p.startswith(kind + "/")]
             first = "last_update_id" if kind == "snapshots" else "first_update_id"
-            order = "timestamp_ms, last_update_id" if kind == "snapshots" else "last_update_id, first_update_id, timestamp_ms"
+            # Within one timestamp the newest snapshot (largest lastUpdateId) is tried first (checker R5-I3).
+            order = "timestamp_ms, last_update_id DESC" if kind == "snapshots" else "last_update_id, first_update_id, timestamp_ms"
             sql = (f"SELECT timestamp_ms, {first} AS first_update_id, last_update_id, side, price, quantity "
                    f"FROM read_parquet(?) WHERE exchange = ? AND asset = ? ORDER BY {order}, side, price")
             return connection.execute(sql, [paths, cfg["exchange"], cfg["symbol"]]).fetch_record_batch(cfg["chunk_rows"])

@@ -55,9 +55,14 @@ def train(cfg, models=None, fold_names=None):
                 out.mkdir(parents=True, exist_ok=False)  # protect prior model/prediction artifacts
                 started = time.time()
                 print(f"{fold.name} {model} h={horizon}s train={len(train_ids)} val={len(val_ids)}", flush=True)
+                from .prepare import code_provenance
                 write_json(out / "run.json", {"status": "started", "config": cfg, "fold": asdict(fold),
                            "model": model, "horizon_seconds": horizon, "strategy": "direct",
                            "observed_coverage": data.meta["coverage"], "dataset_revision": data.meta["dataset_revision"],
+                           # Provenance of the prepared data (replay/code/config) and of the training code.
+                           "prepared": {k: data.meta.get(k) for k in
+                                        ("replay_version", "code_commit", "code_uncommitted_paths", "config_sha256")},
+                           "train_code": code_provenance(cfg),
                            "created_at": started, "n_train": len(train_ids), "n_val": len(val_ids)})
                 y_train, _ = data.target(train_ids, horizon)
                 actual, e0 = evaluation[horizon]

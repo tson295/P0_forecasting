@@ -39,7 +39,12 @@ không neo lại vào snapshot cũ hơn (tránh replay trùng). Snapshot đi tr�
 segment đóng với `snapshot_ahead_unconfirmed` (message kế tiếp là bản cũ/trùng), `sequence_gap` hoặc
 `invalid_timestamp_gap` rồi neo tại snapshot. Gap ID được kiểm trước quy tắc timestamp để reset ghi đúng nguyên nhân;
 message gây đứt được đệm làm ứng viên bridge, buffer giữ qua một lần neo lỗi và chỉ xóa sau khi neo thành công;
-message đệm nằm trước một hard gap khai báo không được dùng làm bridge cho snapshot sau gap.
+message đệm nằm trước một hard gap khai báo không được dùng làm bridge cho snapshot sau gap. Trong cùng một
+timestamp, snapshot có `lastUpdateId` lớn nhất được thử trước và mỗi timestamp chỉ neo một lần; snapshot còn lại cùng
+timestamp bị bỏ và đếm vào `snapshot_at_or_before_reset`. Manifest prepared ghi `replay_version`, `code_commit`,
+`code_uncommitted_paths` (đường dẫn chưa commit trong `src_OB/`, `configs/`, lấy lúc bắt đầu prepare; `null` nếu git
+lỗi) và `config_sha256` (hash của config đã resolve đường dẫn tuyệt đối, khác sha256 của file config); `run.json` của
+mỗi cell chép lại các field này cùng commit code lúc train. Commit code trước khi prepare/train để provenance sạch.
 Book đang sống không làm mới độ sâu từ snapshot. Prepared HF v3 hiện có được giữ nguyên (replay v1).
 Quantity mới ghi đè quantity hiện tại; quantity bằng 0 xóa đúng price đó. Áp dụng đủ bid và ask của message
 rồi prune cache về tối đa **1.000 level mỗi phía**, sau đó mới lấy top 10 và tính mid/OF.

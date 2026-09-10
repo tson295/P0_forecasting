@@ -12,20 +12,24 @@ import numpy as np
 from .config import ROOT, write_json
 from .reconstruct import BookReplay, REPLAY_VERSION, states
 
-
-def code_provenance(cfg):
-    """Code commit, uncommitted pipeline/config paths and resolved-config hash behind a prepared dataset."""
-    def git(*args):
-        try:
-            return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, timeout=30).stdout.strip()
-        except (OSError, subprocess.TimeoutExpired):
-            return ""
-    return {"code_commit": git("rev-parse", "HEAD") or None,
-            "code_uncommitted_paths": git("status", "--porcelain", "--", "src_OB", "configs").splitlines(),
-            "config_sha256": hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()}
-
 DTYPES = {"raw_ts": "int64", "raw_mid": "float64", "raw_segment": "int64",
           "ts": "int64", "mid": "float64", "segment": "int64", "features": "float32"}
+
+
+def code_provenance(cfg):
+    """Code commit, uncommitted pipeline/config paths and resolved-config hash behind a run."""
+    def git(*args):
+        try:
+            result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True,
+                                    errors="replace", timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        return result.stdout if result.returncode == 0 else None
+    head, status = git("rev-parse", "--verify", "HEAD"), git("status", "--porcelain", "--", "src_OB", "configs")
+    return {"code_commit": head.strip() if head else None,
+            # Porcelain v1 lines are "XY path"; None means git was unavailable or failed.
+            "code_uncommitted_paths": None if status is None else [line[3:] for line in status.splitlines() if line],
+            "config_sha256": hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()}
 
 
 def feature_names():
@@ -44,6 +48,8 @@ def prepare(cfg):
     for name in files:
         if not (raw / name).is_file():
             raise FileNotFoundError(raw / name)
+    # Provenance of the code that runs this replay, taken before any output is written.
+    provenance = code_provenance(cfg)
     dest = Path(cfg["prepared_dir"])
     dest.mkdir(parents=True, exist_ok=False)
     replay = BookReplay(cfg)
@@ -109,7 +115,7 @@ def prepare(cfg):
     write_json(dest / "reconstruction.json", {"counts": dict(replay.counts), "resets": replay.resets,
                "known_hard_gaps_us": replay.known_gaps, "replay_version": REPLAY_VERSION,
                "collector_warning": "June-August 2026 may contain missing updates; IDs/timestamps cannot certify undetectable omissions."})
-    write_json(dest / "manifest.json", {"schema_version": 3, "replay_version": REPLAY_VERSION, **code_provenance(cfg),
+    write_json(dest / "manifest.json", {"schema_version": 3, "replay_version": REPLAY_VERSION, **provenance,
                "config": cfg, "historical_fixed": True,
                "dataset_repo": source["repo"], "dataset_revision": source["revision"], "coverage": coverage,
                "counts": totals, "features": feature_names(), "dtypes": DTYPES, "files": files,
