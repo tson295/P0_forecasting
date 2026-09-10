@@ -175,7 +175,9 @@ class BookReplay:
         # Buffered messages after lastUpdateId are applied now; their effect is only observable once
         # the snapshot exists, so the combined book is stamped at the snapshot time, never earlier.
         # The buffer survives a failed anchor so the next snapshot can still use a bridge in it.
-        buffered = [m for m in self.waiting if m.ts >= event.ts - self.window and m.last > event.last]
+        # A declared hard gap between a buffered message and the snapshot also breaks the bridge (checker R3-I3).
+        buffered = [m for m in self.waiting if m.ts >= event.ts - self.window and m.last > event.last
+                    and not any(m.ts < start <= event.ts for start, _ in self.known_gaps)]
         self.bids.clear()
         self.asks.clear()
         self.bid_floor, self.ask_ceiling = -np.inf, np.inf

@@ -1,8 +1,9 @@
 # SOURCE_REPORT — tìm nguồn BTCUSDT Binance Spot L2 thay thế (2026-09-10)
 
-Tìm chủ động theo goal (tối đa ~60 phút): vòng 1 **17:39–18:11 UTC**, vòng 2 sau checker **~18:33–18:36 UTC**
-(~35 phút; mốc lấy từ lệnh `date`, mtime evidence và giờ commit). Chỉ đọc metadata/schema/cột qua HTTP, không tải archive lớn, không trả phí, không đăng ký/xin quyền.
-Bằng chứng: `run_meta/source_search/` (tree/metadata đã lưu, card, listing, script + output của từng probe).
+Tìm chủ động theo goal (tối đa ~60 phút), 3 vòng: **17:39–18:11 UTC**; **~18:33–18:36 UTC** (sau checker lượt 2);
+**~18:54–19:05 UTC** (sau stop-hook: tag/full-text HF, Zenodo, GitHub, AWS Open Data) — tổng ~46 phút; mốc lấy từ lệnh
+`date`, mtime evidence và giờ commit. Chỉ đọc metadata/schema/cột qua HTTP, không tải archive lớn, không trả phí,
+không đăng ký/xin quyền. Bằng chứng: `run_meta/source_search/` (tree/metadata đã lưu, card, listing, script + output).
 
 ## Yêu cầu tối thiểu theo phương pháp cố định
 
@@ -24,14 +25,14 @@ Bằng chứng: `run_meta/source_search/` (tree/metadata đã lưu, card, listin
 | 4 | HF `predict-quant/binance-future-orderbook` | — | public | USDⓈ-M futures depth20 | — | **Loại** (futures) |
 | 5 | HF `payamdavaee/depth_snapshot` | `2d0e1c8fba99…` | public, không license | 1.000 level, 1.439 snapshot/ngày, bước trung vị 60,1 s, spread 0,1 ⇒ tick futures (`payamdavaee_probe.out`) | 205 file 2026-02-17 → 09-09 (2,0 GB) | **Loại** (không phải Spot; nhịp 60 s > age guard 10 s) |
 | 6 | HF `Lazy108/binance-polymarket-orderflow` | `f948a57b7fa7b80c1e426846cb61857c0230dabc` | **gated manual**, CC-BY-4.0 | card: Binance Spot L2 depth (WS snapshot), 1 s, 20 level | BTC 22 file 2026-08-07 → 08-29 | **Loại** (phải xin quyền; 22 ngày < 30). Gần phương pháp nhất về dạng snapshot, liên quan phương án (a) |
-| 7 | HF `rogerdehe/mktdata-binance-2026` | `497445537d0d…` | public, MIT | USDT **perpetual** L2 deltas + snapshot mỗi ~60 s | 2026-07 → 09 | **Loại** (futures) |
-| 8 | HF `delmiron27/*binance-futures*` | — | public | Binance futures recorder/cryptolake | — | **Loại** (futures) |
+| 7 | HF `rogerdehe/mktdata-binance-2026` (+ `-lbank`, `-lighter`) | `497445537d0d…` | public, MIT | USDT **perpetual** L2 deltas + snapshot mỗi ~60 s | 2026-07 → 09 | **Loại** (futures / sàn khác) |
+| 8 | HF `delmiron27/*binance-futures*`, `dataforge-labs/*` | — | public | Binance futures recorder/cryptolake; perps/options | — | **Loại** (futures/phái sinh) |
 | 9 | HF `mad0g4/l2_orderbook_binance` | `99bee8b8…` | public nhưng file `.jsonl.zst.enc` | mã hóa | 48,7 GB | **Loại** (không giải mã được) |
 | 10 | HF `yinelon/crypto_lob_3m`, `_10m`, `_2y`; `mrochk/binance` | — | gated (restricted / auto — cần đăng nhập HF, không có token) | `.npy` theo symbol (có `1000PEPEUSDT` ⇒ futures); mrochk không đọc được | — | **Loại** / không truy cập |
-| 11 | HF `alfredojrc/mercury-lob-history-v1` | — | public | chỉ feature chuẩn hóa (`bid_p_norm_*`, `target_return`), không giá gốc/exchange | 2024-11 → 2025-03 | **Loại** (không có L2 gốc) |
-| 12 | HF `AdamAtractor/*`, `THULab/crypto_orderbook_30lvl` | — | CC-BY-4.0 sample | Hyperliquid perp, bar 1–5 phút | 7 ngày sample | **Loại** (sai sàn/thị trường) |
-| 13 | HF `ibrahimdaud/binance-btcusdt` | — | public | Binance futures `bookDepth` theo dải % | 2023 → 2026 | **Loại** (futures, không phải level L2) |
-| 14 | HF `jescy525/*`, `TommyKwok/*`, `edzhu/*`, `hanhvn/*`, `quant-iota/*`, `maherdik/binance-crypto-btcusdt-*`, `trade2rich/binance`, `3ltrashpanda`/`KEDevO` `crypto-market-datasets` | — | public | klines / trades / aggTrades / funding | — | **Loại** (không có L2) |
+| 11 | HF `alfredojrc/mercury-lob-history-v1`, `deusmos/cbb26-*` | — | public | feature/tensor đã chuẩn hóa (`bid_p_norm_*`; slab 10 s), không giá gốc Binance | — | **Loại** (không có L2 gốc) |
+| 12 | HF `AdamAtractor/*`, `THULab/crypto_orderbook_30lvl`, `Barthel/variouscryptodata`, `asiletto81/hl_btc` | — | public/CC-BY | Hyperliquid, Polymarket | — | **Loại** (sai sàn/thị trường) |
+| 13 | HF `ibrahimdaud/binance-btcusdt`, `tmmycruise/autoresearch-crypto-data` | — | public | Binance futures `bookDepth` theo dải %, mirror data.binance.vision | — | **Loại** (futures / không phải level L2) |
+| 14 | HF klines/trades/OHLCV: `jescy525/*`, `TommyKwok/*`, `edzhu/*`, `hanhvn/*`, `quant-iota/*`, `maherdik/binance-crypto-btcusdt-*`, `trade2rich/binance`, `3ltrashpanda`/`KEDevO` `crypto-market-datasets`, `commanderzee/1s-crypto-data`, `linxy/CryptoCoin`, `jponfiru/*`, `alexmindustry/*`, `duonlabs/apogee`, `mamoth/*`, `WinkingFace/*`, `Sierra-Arn/*`, `shanaka95/BTCUSDT`, `sheganinans/BTCUSD` | — | public | klines / trades / aggTrades / funding / chuỗi giá | — | **Loại** (không có L2) |
 | 15 | HF `rfab85/crypto-5s-market-data-adausdc-sample`, `rameez543/*`, `Pltrr/*`, `predict-quant/poly-*` | — | public | ADAUSDC; Polymarket/Kalshi; Binance BBO (L1) | — | **Loại** (sai symbol / không phải L2 Binance Spot) |
 | 16 | Binance Vision `data.binance.vision` | S3 listing | public | Spot chỉ có aggTrades/klines/trades; futures có bookDepth/bookTicker | — | **Loại** (không có Spot L2) |
 | 17 | Binance historical order book (`/sapi` S_DEPTH/T_DEPTH) | — | cần API key + duyệt | — | — | **Không truy cập được** |
@@ -41,7 +42,10 @@ Bằng chứng: `run_meta/source_search/` (tree/metadata đã lưu, card, listin
 | 21 | Crypto Lake sample `s3://sample.crypto.lake` (anonymous) | listing S3 đã lưu | free sample "for testing" | Binance BTC-USDT `book` và `book_delta_v2` | `book` 3 ngày (2022-10-01..03), `book_delta_v2` 3 ngày (2024-04-01..03) | **Loại** (< 30 ngày) |
 | 22 | Zenodo `10.5281/zenodo.20046390` | `btcusdt_lob_oct2023.tar.gz`, 308.618.431 B, md5 `58507a0f…` (`zenodo_20046390_files.json`) | CC-BY-4.0 / CC-BY-NC-4.0; disclaimer "strictly for academic peer review… non-commercial" | Binance Spot REST `/api/v3/depth`, 100 level, 5 s/snapshot | **21 ngày liên tục** 2023-10-01 → 21 | **Loại**: 21 < 30 ngày ⇒ 0 fold với FIT 21/gap 6/VAL 3 |
 | 23 | Zenodo `10.5281/zenodo.10600374` | `order-book-data.zip` md5 `f1c7535f…` (`zenodo_10600374_listing.txt`) | CC-BY-4.0 | 6 sàn, Binance BTC-USDT 2022: snapshot **mỗi giờ** (744/tháng), giá float32 | 12 tháng | **Loại** (nhịp 60 phút, mất độ chính xác giá) |
-| 24 | Zenodo 8349603 / 11048480 / 21617204; figshare; Harvard Dataverse | — | — | DAX stocks, code, Bybit features; không có kết quả phù hợp | — | **Loại** |
+| 24 | Zenodo `10.5281/zenodo.10215364` ("Limits to arbitrage for blockchain-based assets") | file list qua Zenodo API | CC0 | `best_bids_n_asks.rds` (L1) + dữ liệu arbitrage dẫn xuất | — | **Loại** (L1/dẫn xuất) |
+| 25 | Zenodo 8349603 / 11048480 / 21617204 / 15080493; figshare; Harvard Dataverse | — | — | DAX stocks, code, Bybit features, dữ liệu khí hậu; không có kết quả phù hợp | — | **Loại** |
+| 26 | AWS Open Data Registry (git tree 1.203 dataset YAML) | — | — | không có dataset crypto/order book | — | **Loại** |
+| 27 | GitHub repo search (dom-collector, binance-LOB, binance-lob-capture, …) | — | — | công cụ thu thập, repo ≤ 15 MB, không kèm dữ liệu nhiều tuần | — | **Loại** |
 
 ## Kết luận
 

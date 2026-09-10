@@ -156,7 +156,9 @@ GPU-only lúc fit, scaler/AutoTS FIT-only và latency: chưa có bằng chứng 
    `replay_version`. Không prepare lại HF (goal cấm lặp bằng chứng blocker). Theo P3/P4 của checker lượt trước, trên
    archive HF v2 chỉ đổi nhãn reset (37 segment → `sequence_gap`, 1 `known_hard_gap`), không đổi state/segment.
    Replay v2 **chưa được lượt chạy thật nào thực thi**.
-3. **Tìm nguồn** (17:39–18:11 và ~18:33–18:36 UTC, ~35 phút): 24 nhóm ứng viên trong `SOURCE_REPORT.md`. Gần nhất:
+3. **Tìm nguồn** (3 vòng: 17:39–18:11, ~18:33–18:36, ~18:54–19:05 UTC; ~46 phút): 27 nhóm ứng viên trong
+   `SOURCE_REPORT.md` (HF theo tên/tag/full-text/tác giả, Zenodo, figshare, Dataverse, GitHub, AWS Open Data, Binance
+   Vision, Tardis, Crypto Lake, Crypto Chassis, CryptoDataDownload, Kaggle). Gần nhất:
    `predict-quant/binance-spot-orderbook` (Spot diff 100 ms nhưng run dài nhất 22,64 h < 25,6 h, context VAL ≤ 7,5 h,
    snapshot không timestamp, không license), Zenodo 20046390 (Spot 5 s, 100 level, liên tục nhưng 21 ngày < 30 ngày
    cho một fold, phi thương mại) và `Lazy108/binance-polymarket-orderflow` (Spot snapshot 1 s nhưng gated manual, 22 ngày).
@@ -166,8 +168,8 @@ GPU-only lúc fit, scaler/AutoTS FIT-only và latency: chưa có bằng chứng 
    `CHECKER_FINDINGS.md`, mục "Tiếp nối".
    **Checker lượt 3** (đọc lại `1e2f3ce`): không ERROR/WARN; 5 INFO. README đã cập nhật (R3-I5). Còn mở, làm cùng adapter
    nguồn mới trước prepare thật đầu tiên dùng v2: giữ snapshot làm ứng viên khi `depth(following)` lỗi (R3-I1), kiểm book
-   snapshot trước khi đóng book sống (R3-I2), lọc buffer qua hard gap/chặn gap < window (R3-I3), báo tần suất
-   `crossed_insufficient_or_unknown_depth` (R3-I4), nâng `reset_after` khi neo (R3-I5).
+   snapshot trước khi đóng book sống (R3-I2), báo tần suất `crossed_insufficient_or_unknown_depth` (R3-I4), nâng
+   `reset_after` khi neo (R3-I5). R3-I3 (lọc buffer qua hard gap) đã sửa sau lượt 3; checker cuối run đọc lại.
 5. **Cell thiếu:** toàn bộ (96 theo 4 fold lịch của HF; chưa có nguồn mới nên chưa có fold mới).
 6. **Quyết định tối thiểu khi user quay lại:** (a) cấp nguồn có khóa/trả phí đủ ≥ 30–58 ngày Spot liên tục; (b) đổi
    phương pháp tường minh cho một trong hai ứng viên gần nhất; hoặc (c) thu thập mới. Next step khi có data: config

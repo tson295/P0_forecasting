@@ -179,5 +179,7 @@ Chỉ đọc code/metadata (parse AST, không import/chạy). **Không có ERROR
 - Không có ERROR/WARN nên không đổi thêm code replay trong lượt này (tránh thay đổi chưa review/chưa chạy thật).
 - R3-I5 (README): đã ghi các lý do reset, tiêu chí "nối tiếp" theo ID + window, buffer sống qua neo lỗi, book sống không
   làm mới độ sâu.
-- R3-I1, R3-I2, R3-I3, R3-I4 và phần `reset_after` của R3-I5 giữ mở dưới dạng INFO, ghi trong RUN_REPORT §11 và MEMORY là
+- R3-I1, R3-I2, R3-I4 và phần `reset_after` của R3-I5 giữ mở dưới dạng INFO, ghi trong RUN_REPORT §11 và MEMORY là
   việc cần làm cùng adapter khi có nguồn dữ liệu mới (trước prepare thật đầu tiên dùng replay v2).
+- R3-I3 đã sửa sau lượt 3 (một điều kiện): message đệm có hard gap khai báo nằm giữa `m.ts` và timestamp snapshot không
+  được dùng làm bridge. Chưa có independent review cho dòng này tại thời điểm ghi; checker cuối run đọc lại.

@@ -20,8 +20,8 @@ phương pháp cố định. Không train. Không smoke/canary/test/trial fit.
   book sống, ID check trước timestamp, hard gap theo `known_hard_gaps_utc` trong config. Chưa có prepare thật nào dùng v2;
   prepared HF v3 giữ nguyên (checker lượt 2 xác nhận v2 chỉ đổi nhãn reset trên HF). Checker lượt 2: không ERROR;
   T-W1 (snapshot redundant chỉ khi message kế tiếp được book sống chấp nhận) và T-I3 (buffer sống qua anchor lỗi) đã sửa.
-  Checker lượt 3 (`1e2f3ce`): không ERROR/WARN; INFO còn mở R3-I1..I5 (xem CHECKER_FINDINGS) — xử lý cùng adapter nguồn mới
-  trước prepare thật đầu tiên dùng replay v2.
+  Checker lượt 3 (`1e2f3ce`): không ERROR/WARN; R3-I3 (lọc buffer qua hard gap) đã sửa sau đó; INFO còn mở R3-I1, I2, I4,
+  I5 (xem CHECKER_FINDINGS) — xử lý cùng adapter nguồn mới trước prepare thật đầu tiên dùng replay v2.
 - Nguồn đã xét: `experiments/orderbook_hf/SOURCE_REPORT.md` (22 nhóm). Gần nhất: HF `predict-quant/binance-spot-orderbook`
   @bf8ffb20… (Spot diff 100 ms, run dài nhất 22,64 h < 25,6 h, không license) và Zenodo 20046390 (Spot 5 s, 21 ngày < 30).
   Tardis không key chỉ ngày đầu tháng. Evidence: `experiments/orderbook_hf/run_meta/source_search/`.
