@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 from .neural import fit_scaler
+from .latency import infer
 
 REPO = "google/timesfm-2.5-200m-pytorch"
 REVISION = "1d952420fba87f3c6dee4f240de0f1a0fbc790e3"
@@ -97,15 +98,13 @@ def run(name, cfg, data, train_ids, val_ids, horizon, out):
                     "horizon_seconds": horizon, "config": cfg}, out / "adapter.pt")
         encoder.eval()
     wrapper.model.eval()
-    result = []
+    def predict(ids):
+        x = contexts(data, ids, horizon, p["context"])
+        _, quantile = wrapper.forecast(horizon=1, inputs=list(x.copy()))
+        delta = np.asarray(quantile)[:len(ids), -1, 0].astype(np.float64)
+        if encoder is not None:
+            f = torch.as_tensor((data.features[ids] - mean) / std, device="cuda")
+            delta += encoder(f).squeeze(-1).cpu().numpy() * target_scale
+        return delta
     with torch.inference_mode():
-        for s in range(0, len(val_ids), p["batch_size"]):
-            ids = val_ids[s:s + p["batch_size"]]
-            x = contexts(data, ids, horizon, p["context"])
-            _, quantile = wrapper.forecast(horizon=1, inputs=list(x.copy()))
-            delta = np.asarray(quantile)[:len(ids), -1, 0].astype(np.float64)
-            if encoder is not None:
-                f = torch.as_tensor((data.features[ids] - mean) / std, device="cuda")
-                delta += encoder(f).squeeze(-1).cpu().numpy() * target_scale
-            result.append(delta)
-    return np.concatenate(result)
+        return infer(cfg, val_ids, out, predict)

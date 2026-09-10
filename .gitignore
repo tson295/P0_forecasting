@@ -18,8 +18,17 @@ data/*.csv
 # LoRA adapter, checkpoint, log, cache) đều được track; file nhị phân lớn đi qua Git LFS (.gitattributes).
 # Checkpoint TimesFM gốc tải từ HF KHÔNG nằm trong experiments/ (chỉ ghi model id + revision).
 
-# Figure sinh lại được từ artifact (không phải kết quả) — nằm ngoài experiments/
-reports/figures/
+# Kết quả training/evaluation và figure đều có thể được track, kể cả ngoài experiments/.
 
 # Claude Code local-only
 .claude/settings.local.json
+
+# Giữ mọi artifact trong các thư mục kết quả, kể cả tên trùng rule cache ở trên.
+!experiments/
+!experiments/**
+!reports/
+!reports/**
+!results/
+!results/**
+!outputs/
+!outputs/**

@@ -16,8 +16,10 @@ def download(cfg):
     start = date.fromisoformat(START)
     end = date.fromisoformat(END)
     key = os.environ.get("TARDIS_API_KEY")
+    if not key and os.environ.get("TARDIS_API_KEY_FILE"):
+        key = Path(os.environ["TARDIS_API_KEY_FILE"]).expanduser().read_text().strip()
     if not key:
-        raise RuntimeError("Thiếu TARDIS_API_KEY: lịch sử liên tục cần quyền truy cập. "
+        raise RuntimeError("Thiếu TARDIS_API_KEY hoặc TARDIS_API_KEY_FILE: lịch sử liên tục cần quyền truy cập. "
                            "Không thay bằng các ngày sample đầu tháng.")
     folder = Path(cfg["raw_dir"])
     folder.mkdir(parents=True, exist_ok=True)

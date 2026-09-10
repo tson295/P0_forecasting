@@ -4,6 +4,7 @@ from __future__ import annotations
 import numpy as np
 
 from .gpu import GPURegressor
+from .latency import infer
 
 
 def matrix(data, ids):
@@ -36,12 +37,13 @@ def make_model(name, cfg, seed):
     raise KeyError(name)
 
 
-def run(name, cfg, x_train, y_train, x_val, out):
+def run(name, cfg, x_train, y_train, data, val_ids, out):
     import joblib
     # Constant train-only scaling; no global volatility from unseen future data.
     scale = max(float(np.std(y_train)), 1e-8)
     model = GPURegressor(make_model(name, cfg, cfg["seed"]), name)
     model.fit(x_train, y_train / scale)
-    pred = np.asarray(model.predict(x_val), np.float64) * scale
     joblib.dump({"model": model, "target_scale": scale}, out / "model.joblib")
-    return pred
+    def predict(ids):
+        return np.asarray(model.predict(data.flat(ids)), np.float64) * scale
+    return infer(cfg, val_ids, out, predict)

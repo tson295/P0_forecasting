@@ -16,6 +16,7 @@ Code được viết theo yêu cầu, chưa chạy, chưa test, chưa training l
 - `include_distances=false` mặc định. Có thể bật thành `true` rồi tạo một `prepared_dir` khác để thêm `bid_distance_bps` và `ask_distance_bps` cho input đa biến: **53 feature**. Distance không thuộc baseline OF/OFI; TimesFM zero-shot luôn bỏ qua toàn bộ covariate.
 - Nhãn `log(mid(t+h)/mid(t))`, h = **60, 120, 180 giây**, không phải h dòng sau khi lọc. `mid(t+h)` là quote cuối đã tới tại thời điểm đó; không lấy quote đầu tiên sau horizon.
 - Khi tính **RMSE, MAE, R²**, đổi về `predicted_price = mid(t) * exp(predicted_log_return)`. Metric trên giá USDT; giá ở đây là mid L2, không phải OHLCV close.
+- Thêm `rmse_gain_vs_e0 = 1 - RMSE_model / RMSE_E0` và `r2_os_vs_e0 = 1 - (RMSE_model / RMSE_E0)^2`, cũng trên giá gốc. E0 hiện có là zero-return → giá dự đoán bằng `mid(t)`, được tính một lần/fold/horizon và dùng chung đúng các origin cho mọi model. Tái sử dụng hàm gain cũ, xuất dưới dạng tỷ lệ (0.1 = cải thiện 10%), không nhân 100. Nếu E0 có lỗi bằng 0 thì hai tỷ số để null/ô trống và ghi trạng thái undefined, không ép thành 0 hoặc vô cực. `R2` thông thường vẫn giữ riêng.
 - Các khoảng feed im lặng >10 giây được tách segment; window/label không vượt segment. Age tối đa khi lấy quote là 10 giây. Đây là ngưỡng cấu hình, không chứng minh đã phát hiện mọi mất gói: CSV snapshot không có sequence ID.
 
 OF ở mỗi level `i`, với `p` là price và `q` là volume:
@@ -106,9 +107,12 @@ Tải lịch sử **[2024-09-10, 2026-09-10)** (2 năm). Đặt `TARDIS_API_KEY`
 python -m src_OB download --config configs/orderbook.json
 ```
 
+Hoặc đặt `TARDIS_API_KEY_FILE` trỏ tới file text chỉ chứa key, nằm ngoài repo. Downloader không ghi key vào log/manifest.
+
 Downloader tải từng ngày, ghi file tạm rồi rename, có retry và tiếp tục các ngày đã hoàn tất.
 401/403 báo thiếu quyền, 404 báo thiếu ngày; không tự thay nguồn/market hoặc mua dữ liệu.
 **Hiện chưa có order-book dataset trên đĩa workspace; chưa tải lịch sử trong phiên này.**
+Lệnh download đã được gọi nhưng dừng trước khi tải file do phiên làm việc thiếu `TARDIS_API_KEY`.
 Downloader cần API key có quyền đủ 730 ngày; không thay bằng các sample miễn phí đầu tháng.
 
 Các đường dẫn đã cấu hình, không phải dữ liệu đã tồn tại:
@@ -147,6 +151,41 @@ P0_OB_VAST=1 CUDA_VISIBLE_DEVICES=1 python -m src_OB train --folds fold4,fold5
 `experiments/orderbook/foldN/model/h60s` (tương tự h120s/h180s), gồm model, prediction giá, metric và config.
 Thư mục kết quả đã tồn tại sẽ không bị ghi đè. Dùng `output_dir` mới nếu chạy lại; không có tự động resume training dở.
 Tree matrix nằm trong RAM host; cửa sổ neural chỉ chuyển batch lên GPU. Nhu cầu đĩa/RAM và thời gian chạy thực tế chưa đo.
+
+## Kết quả và inference latency
+
+Mỗi `foldN/model/hHs/` ghi `metrics.json`, bảng một dòng `metrics.csv`, `predictions.parquet`,
+`latency.json`, trace `inference_latency.csv`, checkpoint và trạng thái run. Các metric E0 gain và latency
+cũng đi vào `summary/per_fold_per_horizon.csv` và `summary/by_model_horizon.csv`, cập nhật sau mỗi cell hoàn tất.
+Summary chỉ dùng cell đã có `completed.json`, có khóa ghi cho nhiều job fold dùng chung output directory.
+
+Summary theo model/horizon báo mean/min/max qua fold và số fold có giá trị. Các cột `pooled_*` tính từ
+MSE được gộp theo số origin; chúng khác mean gain qua fold và được ghi riêng. Không tạo model baseline mới.
+Để dựng lại bảng từ artifact đã có, không train/infer lại:
+
+```bash
+python -m src_OB summarize --config configs/orderbook.json
+```
+
+Latency được đo **ngay trong lượt inference thật trên Vast**, không benchmark pass, không warmup, không
+predict lặp để đối chiếu. Default chọn đều tối đa 1024 origin trên cùng tập VAL chạy batch 1; prediction
+của chúng vẫn dùng trong RMSE. Những origin còn lại chạy batch 32, AutoTS gọi API từng origin. Mỗi origin
+được dự đoán đúng một lần. Có đồng bộ CUDA trước và sau đồng hồ `perf_counter` để không chỉ đo enqueue.
+
+- `inference_mean_ms`, `inference_p50_ms`, `inference_p95_ms`, `inference_p99_ms`: latency request batch 1 trên các origin được chọn.
+- `inference_upper_bound_ms`: **max quan sát được của các request batch 1 được chọn**, không phải hard bound hay confidence bound. `inference_upper_bound_kind` ghi rõ điều này.
+- `inference_batch_p95_ms`, `inference_batch_p99_ms`, `inference_batch_max_ms`: latency của tất cả call, kèm số prediction/call trong trace; không gọi batch-time/batch-size là latency từng request.
+- `inference_total_seconds`, `inference_amortized_ms_per_prediction`: tổng thời gian các call và chi phí trung bình phân bổ/prediction.
+- `inference_first_call_ms`: call đầu, giữ cả ảnh hưởng khởi tạo/lazy allocation; không loại warmup. Percentile của summary được tính từ trace gộp, không lấy trung bình p95/p99 các fold.
+
+Phạm vi đồng hồ: đọc prepared context/feature, gom input, scaler, chuyển CPU/GPU, predict và lấy log-return
+về host. Không gồm download, prepare toàn dataset, load checkpoint, training/search, ghi artifact, đổi log-return
+thành giá hoặc tính metric. Với TimesFM, native backend có thể pad batch 1 theo cấu hình; số đo phản ánh call
+thật của pipeline. `duration_seconds` vẫn là thời gian toàn cell, không được dùng thay inference latency.
+
+Git không ignore artifact dưới `experiments/`, `reports/`, `results/`, `outputs/`; đã bỏ ignore `reports/figures/`.
+Prediction Parquet và model joblib trong experiments dùng Git LFS như các checkpoint khác; metric/CSV/JSON
+được track thông thường. Code không tự commit/push artifact khi training.
 
 ## Nguồn
 

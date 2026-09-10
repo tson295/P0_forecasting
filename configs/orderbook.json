@@ -19,6 +19,7 @@
   "step_days": 30,
   "n_folds": 5,
   "seed": 8587,
+  "inference": {"batch_size": 32, "single_origin_samples": 1024},
   "models": ["lgbm", "xgb", "cat", "xgbrf", "lstm", "autots", "tfm_zero_shot", "tfm_lora"],
   "tree": {"n_estimators": 400, "max_depth": 6, "learning_rate": 0.03, "lightgbm_device": "cuda"},
   "neural": {"hidden": 64, "epochs": 10, "batch_size": 256, "lr": 0.001},

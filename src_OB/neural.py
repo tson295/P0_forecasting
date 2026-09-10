@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from torch import nn
 
+from .latency import infer
+
 
 class LSTM(nn.Module):
     def __init__(self, width, hidden):
@@ -59,8 +61,7 @@ def run(name, cfg, data, train_ids, val_ids, horizon, out):
                 "std": torch.from_numpy(std), "target_scale": target_scale,
                 "model": name, "horizon_seconds": horizon, "config": cfg}, out / "model.pt")
     net.eval()
-    result = []
+    def predict(ids):
+        return net(batch(ids)).cpu().numpy() * target_scale
     with torch.inference_mode():
-        for s in range(0, len(val_ids), p["batch_size"]):
-            result.append(net(batch(val_ids[s:s + p["batch_size"]])).cpu().numpy() * target_scale)
-    return np.concatenate(result).astype(np.float64)
+        return infer(cfg, val_ids, out, predict)

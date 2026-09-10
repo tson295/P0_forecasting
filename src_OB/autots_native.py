@@ -17,6 +17,7 @@ import pandas as pd
 from .config import write_json
 from .data import DAY
 from .gpu import GPUOnlyError, GPURegressor
+from .latency import infer
 
 
 def frame(ts, values):
@@ -175,8 +176,8 @@ def run(cfg, data, fold, val_ids, horizon, out):
                      "feature_names": data.meta["features"], "horizon_seconds": horizon,
                      "input_order": "oldest-to-newest raw mid window, then origin features",
                      "output": "raw mid price"}, out / "model.joblib")
-        predicted = np.empty(len(val_ids), dtype=np.float64)
-        for j, origin in enumerate(val_ids):
+        def predict(ids):
+            origin = ids[0]
             t = int(data.ts[origin])
             reg_at_origin = pd.DataFrame(np.asarray(data.features[origin:origin + 1], np.float64),
                                         index=pd.to_datetime([t + step], unit="us"))
@@ -184,5 +185,6 @@ def run(cfg, data, fold, val_ids, horizon, out):
             price = float(np.asarray(point).reshape(-1)[0])
             if not np.isfinite(price) or price <= 0:
                 raise ValueError("AutoTS predicted a non-positive or non-finite raw price.")
-            predicted[j] = np.log(price / data.mid[origin])
-    return predicted
+            return np.asarray([np.log(price / data.mid[origin])])
+        # AutoTS's public predict API here consumes one observed origin per call.
+        return infer(cfg, val_ids, out, predict, batch_size=1)

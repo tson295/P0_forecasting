@@ -23,6 +23,8 @@ def load(path):
         raise ValueError("context >= 10; horizon tính bằng số giây dương.")
     if cfg["tree"]["lightgbm_device"] not in ("gpu", "cuda"):
         raise ValueError("LightGBM training phải dùng gpu/cuda.")
+    if any(cfg["inference"][k] < 1 for k in ("batch_size", "single_origin_samples")):
+        raise ValueError("Inference batch size và single_origin_samples phải >= 1.")
     return cfg
 
 

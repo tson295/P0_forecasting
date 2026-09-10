@@ -11,6 +11,7 @@ import pandas as pd
 
 from .config import write_json
 from .data import Data, price_metrics, date_string
+from .results import gains_vs_e0, atomic_csv, refresh_summaries
 
 FAMILIES = ("lgbm", "xgb", "cat", "xgbrf", "lstm", "autots", "tfm_zero_shot", "tfm_lora")
 
@@ -52,13 +53,19 @@ def train(cfg, models=None, fold_names=None):
                 train_ids = train_ids[data.ts[train_ids] - (length - 1) * horizon * 1_000_000 >= fold.train_start]
         if not len(train_ids) or not len(val_ids):
             raise ValueError(f"{fold.name}: không còn sample với nhãn/context hợp lệ.")
-        x_train = x_val = None
+        # Same existing E0: zero return means predicted raw price equals origin mid.
+        # Compute once per fold/horizon, reuse for every model on the common VAL ids.
+        evaluation = {}
+        for horizon in cfg["horizons_seconds"]:
+            _, actual = data.target(val_ids, horizon)
+            evaluation[horizon] = (actual, price_metrics(actual, data.mid[val_ids]))
+        x_train = None
         for model in models:
             if model not in ("lgbm", "xgb", "cat", "xgbrf"):
-                x_train = x_val = None
+                x_train = None
             if model in ("lgbm", "xgb", "cat", "xgbrf") and x_train is None:
                 from .trees import matrix
-                x_train, x_val = matrix(data, train_ids), matrix(data, val_ids)
+                x_train = matrix(data, train_ids)
             for horizon in cfg["horizons_seconds"]:
                 out = output / fold.name / model / f"h{horizon}s"
                 out.mkdir(parents=True, exist_ok=False)  # protect prior model/prediction artifacts
@@ -68,31 +75,35 @@ def train(cfg, models=None, fold_names=None):
                            "model": model, "horizon_seconds": horizon, "strategy": "direct",
                            "created_at": started, "n_train": len(train_ids), "n_val": len(val_ids)})
                 y_train, _ = data.target(train_ids, horizon)
-                _, actual = data.target(val_ids, horizon)
+                actual, e0 = evaluation[horizon]
                 try:
                     if model in ("lgbm", "xgb", "cat", "xgbrf"):
                         from .trees import run
-                        delta = run(model, cfg, x_train, y_train, x_val, out)
+                        delta, latency = run(model, cfg, x_train, y_train, data, val_ids, out)
                     elif model == "lstm":
                         from .neural import run
-                        delta = run(model, cfg, data, train_ids, val_ids, horizon, out)
+                        delta, latency = run(model, cfg, data, train_ids, val_ids, horizon, out)
                     elif model == "autots":
                         from .autots_native import run
-                        delta = run(cfg, data, fold, val_ids, horizon, out)
+                        delta, latency = run(cfg, data, fold, val_ids, horizon, out)
                     else:
                         from .timesfm import run
-                        delta = run(model, cfg, data, train_ids, val_ids, horizon, out)
+                        delta, latency = run(model, cfg, data, train_ids, val_ids, horizon, out)
                     predicted = np.asarray(data.mid[val_ids], np.float64) * np.exp(np.asarray(delta, np.float64))
                     metrics = price_metrics(actual, predicted)
+                    metrics.update(gains_vs_e0(metrics, e0))
                     pd.DataFrame({"timestamp_us": data.ts[val_ids], "origin_price": data.mid[val_ids],
                                   "horizon_seconds": horizon, "actual_price": actual, "predicted_price": predicted,
                                   "predicted_log_return": delta}).to_parquet(out / "predictions.parquet", index=False)
-                    write_json(out / "metrics.json", {"model": model, "fold": fold.name,
+                    record = {"model": model, "fold": fold.name,
                                "horizon_seconds": horizon, "price": "L2 mid", **metrics,
-                               "E0": price_metrics(actual, data.mid[val_ids]),
+                               "E0": e0, **latency,
                                "train_end": date_string(fold.train_end), "val_start": date_string(fold.val_start),
-                               "gap_days": cfg["gap_days"], "duration_seconds": time.time() - started})
+                               "gap_days": cfg["gap_days"], "duration_seconds": time.time() - started}
+                    write_json(out / "metrics.json", record)
+                    atomic_csv(pd.json_normalize(record, sep="_"), out / "metrics.csv")
                     write_json(out / "completed.json", {"status": "completed"})
+                    refresh_summaries(output)
                     print(f"{model} {fold.name} h={horizon}s {metrics}", flush=True)
                 except BaseException as exc:
                     write_json(out / "failed.json", {"error": str(exc), "type": type(exc).__name__})
