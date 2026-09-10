@@ -144,11 +144,14 @@ mục 2). GPU-only lúc fit, scaler/AutoTS FIT-only và latency: chưa có bằn
   training: chưa có — bị chặn bởi B1 và không có nguồn thay thế phù hợp (mục 11).
 - Chính sách GPU-only lúc fit và các API AutoTS 1.0.4 / TimesFM 2.0.2 / LoRA decoder trong pipeline OB vẫn chưa
   được thực thi trong lượt chạy thật nào.
-- Replay v2 đã có trong code nhưng chưa có lượt prepare thật nào dùng nó. F-02 (manifest ghi `code_commit`,
-  `code_uncommitted_paths`, `config_sha256`) và `reset_after` của R3-I5 đã sửa ở `81eb1c5`; R3-I4 được đáp ứng bằng
-  bảng lý do kết thúc segment/reset mà `data-report` đã in. Còn mở trước prepare v2 thật đầu tiên: R3-I1 (giữ snapshot
-  làm ứng viên khi `depth(following)` lỗi) và R3-I2 (kiểm book snapshot trước khi đóng book sống) — cả hai cần refactor
-  đường xử lý nóng nên chưa làm khi chưa có dữ liệu thật; xem `CHECKER_FINDINGS.md`.
+- Replay v2 đã có trong code nhưng chưa có lượt prepare thật nào dùng nó. Đã sửa theo checker: F-02 + R3-I5 (`81eb1c5`),
+  R5 (`ac8e6cf`: provenance lấy đầu prepare, `run.json` chép provenance prepared + code train, snapshot cùng ms thử bản mới
+  nhất trước, counter guard) và R6 (`5756084`: `Data` cho train từ chối prepared khác `REPLAY_VERSION` — nên
+  `data/orderbook/prepared_hf` (replay v1) không còn dùng để train được; porcelain `-z`, pathspec thêm `src/p0`, git
+  `--no-optional-locks`, provenance train lấy một lần). R3-I4 được đáp ứng bằng bảng lý do kết thúc segment/reset mà
+  `data-report` đã in. Còn mở trước prepare v2 thật đầu tiên: R3-I1 (giữ snapshot làm ứng viên khi `depth(following)` lỗi)
+  và R3-I2 (kiểm book snapshot trước khi đóng book sống) — cần refactor đường xử lý nóng nên chưa làm khi chưa có dữ liệu
+  thật; xem `CHECKER_FINDINGS.md`.
 
 ## 11. Tiếp nối 2026-09-10 (goal khôi phục data, bắt đầu 17:39 UTC)
 

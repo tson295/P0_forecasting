@@ -8,8 +8,9 @@
   xác nhận thêm 7/7 LFS object có trên remote). Code replay v2 + phần sửa theo checker lượt 2:
   `1e2f3ce88b97916e90fad04c5a8e2d009ee215be` (commit 18:38:47 UTC) đã push và khớp `ls-remote`. Tiếp theo đã push và khớp
   `ls-remote`: `7d65cd6` (sửa mốc giờ), `500ad0d` (checker lượt 3), `3f41869953e917ee530b09f5581200e805ae6775` (R3-I3 +
-  vòng tìm nguồn 3, ~19:03 UTC). Commit chứa bản cập nhật này và checker cuối run được xác nhận bằng `ls-remote` trong báo
-  cáo cuối của session.
+  vòng tìm nguồn 3, ~19:03 UTC), rồi `84acea0`, `6217f9e` (evidence + checker cuối run), `70dd706` (kiểm credential),
+  `81eb1c5`, `8420112`, `ac8e6cf`, `f0c8852`, `575608422cd5e240d12f862a29f5600ee5c45fc4` (sửa checker lượt 5–6, ~19:56 UTC)
+  — mỗi commit đều khớp `ls-remote` ngay sau push. SHA của commit cuối cùng được xác nhận trong báo cáo cuối của session.
 - **Commit chứa file này:** được push ngay sau khi tạo và xác nhận bằng `git ls-remote`; kết quả ghi ở báo cáo cuối
   của session. Nếu push thất bại, trạng thái là BACKUP_PENDING cho commit đó.
 - **Không backup ra ngoài (có chủ đích):** 4 raw Parquet HF (704.186.850 byte; tải lại đúng revision bằng
