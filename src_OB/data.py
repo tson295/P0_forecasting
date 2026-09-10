@@ -122,6 +122,40 @@ class Data:
         return np.asarray(self.features[clipped], np.float64), valid
 
 
+def select_origins(cfg, data, fold, counts=None):
+    """Common FIT/VAL origin population for every family; train and DATA_REPORT share it.
+
+    Label and context stay in one valid segment. When TimesFM/AutoTS are in the configured
+    model list, their h-spaced price context must be intact too; --models never changes this.
+    `counts` receives the number of origins left after each mask (cumulative over horizons).
+    """
+    counts = {} if counts is None else counts
+    train_ids = data.indices(fold.train_start, fold.train_end)
+    counts["train_label_context"] = len(train_ids)
+    train_ids = train_ids[data.ts[train_ids - cfg["context"] + 1] >= fold.train_start]
+    counts["train_context_inside_fit"] = len(train_ids)
+    val_ids = data.indices(fold.val_start, fold.val_end)
+    counts["val_label_context"] = len(val_ids)
+    population_models = cfg["models"]  # --models splits jobs without changing their scoring population
+    if any(m.startswith("tfm") or m == "autots" for m in population_models):
+        length = max(cfg["tfm"]["context"] if any(m.startswith("tfm") for m in population_models) else 1,
+                     cfg["autots"]["max_window_size"] if "autots" in population_models else 1)
+        counts["price_context_points"] = length
+        for horizon in cfg["horizons_seconds"]:
+            def eligible(ids):
+                keep = []
+                for s in range(0, len(ids), 4096):
+                    batch = ids[s:s + 4096]
+                    _, valid = data.price_context(batch, horizon, length)
+                    keep.append(batch[valid])
+                return np.concatenate(keep) if keep else np.empty(0, np.int64)
+            train_ids, val_ids = eligible(train_ids), eligible(val_ids)
+            train_ids = train_ids[data.ts[train_ids] - (length - 1) * horizon * 1_000_000 >= fold.train_start]
+            counts[f"train_price_context_h{horizon}s"] = len(train_ids)
+            counts[f"val_price_context_h{horizon}s"] = len(val_ids)
+    return train_ids, val_ids
+
+
 def price_metrics(actual, predicted):
     """All three metrics are evaluated on raw L2 mid prices, never log returns."""
     a, p = np.asarray(actual, np.float64), np.asarray(predicted, np.float64)

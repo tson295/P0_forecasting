@@ -1,0 +1,2 @@
+walk-forward: 4 folds from observed coverage, requested maximum=5
+DATA_REPORT status=BLOCKED; folds=4; blocked=['fold1', 'fold2', 'fold3', 'fold4']

@@ -1,0 +1,7 @@
+HF revision=873f31e729ae23b1c309cd5dcb33feed27c407de, 4 files, 704,186,850 bytes
+downloaded snapshots/binance/BTCUSDT/2026-06.parquet: 299,002 bytes
+downloaded snapshots/binance/BTCUSDT/2026-07.parquet: 350,331 bytes
+downloaded depth/binance/BTCUSDT/2026-06.parquet: 385,932,069 bytes
+downloaded depth/binance/BTCUSDT/2026-07.parquet: 317,605,448 bytes
+Historical archive saved to /home/ubuntu/P0_forecasting/data/orderbook/hf_crypto_lob_stream
+EXIT=0

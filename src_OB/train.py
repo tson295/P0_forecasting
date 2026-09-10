@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from .config import write_json
-from .data import Data, price_metrics, date_string
+from .data import Data, price_metrics, date_string, select_origins
 from .results import gains_vs_e0, atomic_csv, refresh_summaries
 
 FAMILIES = ("lgbm", "xgb", "cat", "xgbrf", "lstm", "autots", "tfm_zero_shot", "tfm_lora")
@@ -32,25 +32,9 @@ def train(cfg, models=None, fold_names=None):
     for fold in data.folds():
         if fold_names and fold.name not in fold_names:
             continue
-        train_ids = data.indices(fold.train_start, fold.train_end)
-        train_ids = train_ids[data.ts[train_ids - cfg["context"] + 1] >= fold.train_start]
-        val_ids = data.indices(fold.val_start, fold.val_end)
         # Common evaluation population across native price-sequence and OF models.
         # No model silently scores an easier subset when its context has a gap.
-        population_models = cfg["models"]  # --models splits jobs without changing their scoring population
-        if any(m.startswith("tfm") or m == "autots" for m in population_models):
-            for horizon in cfg["horizons_seconds"]:
-                length = max(cfg["tfm"]["context"] if any(m.startswith("tfm") for m in population_models) else 1,
-                             cfg["autots"]["max_window_size"] if "autots" in population_models else 1)
-                def eligible(ids):
-                    keep = []
-                    for s in range(0, len(ids), 4096):
-                        batch = ids[s:s + 4096]
-                        _, valid = data.price_context(batch, horizon, length)
-                        keep.append(batch[valid])
-                    return np.concatenate(keep) if keep else np.empty(0, np.int64)
-                train_ids, val_ids = eligible(train_ids), eligible(val_ids)
-                train_ids = train_ids[data.ts[train_ids] - (length - 1) * horizon * 1_000_000 >= fold.train_start]
+        train_ids, val_ids = select_origins(cfg, data, fold)
         if not len(train_ids) or not len(val_ids):
             raise ValueError(f"{fold.name}: không còn sample với nhãn/context hợp lệ.")
         # Same existing E0: zero return means predicted raw price equals origin mid.

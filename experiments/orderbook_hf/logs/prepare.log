@@ -1,0 +1,3 @@
+Prepared observed coverage: {'start_inclusive_us': 1780640988543000, 'end_exclusive_us': 1785431658706001, 'valid_segment_microseconds': 300620038, 'source_first_observed_us': 1780534480378000, 'source_last_observed_us': 1785542206326000}
+EXIT=0
+2026-09-10T16:23:50Z

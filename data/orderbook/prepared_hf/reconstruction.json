@@ -1,0 +1,212 @@
+{
+  "counts": {
+    "depth_messages": 4225572,
+    "depth_waiting_for_snapshot": 4222272,
+    "snapshot_messages": 38,
+    "snapshot_reanchor": 38,
+    "invalid_timestamp_gap": 35,
+    "obsolete_or_duplicate_depth": 89,
+    "pruned_bid_levels": 2138,
+    "pruned_ask_levels": 205,
+    "known_hard_gap": 1
+  },
+  "resets": [
+    {
+      "timestamp_us": 1780642218637000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 0
+    },
+    {
+      "timestamp_us": 1780678443024000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 1
+    },
+    {
+      "timestamp_us": 1780854777231000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 2
+    },
+    {
+      "timestamp_us": 1780894354430000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 3
+    },
+    {
+      "timestamp_us": 1781067082380000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 4
+    },
+    {
+      "timestamp_us": 1781243460016000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 5
+    },
+    {
+      "timestamp_us": 1781416284779000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 6
+    },
+    {
+      "timestamp_us": 1781592897824000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 7
+    },
+    {
+      "timestamp_us": 1781765618814000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 8
+    },
+    {
+      "timestamp_us": 1781938222511000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 9
+    },
+    {
+      "timestamp_us": 1782114787113000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 10
+    },
+    {
+      "timestamp_us": 1782244189402000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 11
+    },
+    {
+      "timestamp_us": 1782247905500000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 12
+    },
+    {
+      "timestamp_us": 1782396420446000,
+      "reason": "snapshot_reanchor",
+      "segment": 13
+    },
+    {
+      "timestamp_us": 1782399198056000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 14
+    },
+    {
+      "timestamp_us": 1782571952345000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 15
+    },
+    {
+      "timestamp_us": 1782723039760000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 16
+    },
+    {
+      "timestamp_us": 1782895831395000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 17
+    },
+    {
+      "timestamp_us": 1783068750902000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 18
+    },
+    {
+      "timestamp_us": 1783241669321000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 19
+    },
+    {
+      "timestamp_us": 1783284960000000,
+      "reason": "known_hard_gap",
+      "segment": 20
+    },
+    {
+      "timestamp_us": 1783288499262000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 21
+    },
+    {
+      "timestamp_us": 1783461143669000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 22
+    },
+    {
+      "timestamp_us": 1783590695328000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 23
+    },
+    {
+      "timestamp_us": 1783767176003000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 24
+    },
+    {
+      "timestamp_us": 1783940021711000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 25
+    },
+    {
+      "timestamp_us": 1784062328642000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 26
+    },
+    {
+      "timestamp_us": 1784063808379000,
+      "reason": "snapshot_reanchor",
+      "segment": 27
+    },
+    {
+      "timestamp_us": 1784065934162000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 28
+    },
+    {
+      "timestamp_us": 1784242378628000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 29
+    },
+    {
+      "timestamp_us": 1784375641669000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 30
+    },
+    {
+      "timestamp_us": 1784548485526000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 31
+    },
+    {
+      "timestamp_us": 1784721214528000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 32
+    },
+    {
+      "timestamp_us": 1784731970518000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 33
+    },
+    {
+      "timestamp_us": 1784908362891000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 34
+    },
+    {
+      "timestamp_us": 1785084599050000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 35
+    },
+    {
+      "timestamp_us": 1785257427866000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 36
+    },
+    {
+      "timestamp_us": 1785434089928000,
+      "reason": "invalid_timestamp_gap",
+      "segment": 37
+    }
+  ],
+  "known_hard_gaps_us": [
+    [
+      1783284960000000,
+      1783287540000000
+    ]
+  ],
+  "collector_warning": "June-August 2026 may contain missing updates; IDs/timestamps cannot certify undetectable omissions."
+}

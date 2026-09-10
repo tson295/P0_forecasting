@@ -1,0 +1,344 @@
+[
+  {
+    "id": 0,
+    "start_us": 1780640988543000,
+    "last_us": 1780640988543000,
+    "end_exclusive_us": 1780640988543001,
+    "snapshot_update_id": 94988831130,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 1,
+    "start_us": 1780676290307000,
+    "last_us": 1780676290307000,
+    "end_exclusive_us": 1780676290307001,
+    "snapshot_update_id": 95065632714,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 2,
+    "start_us": 1780852038842000,
+    "last_us": 1780852038842000,
+    "end_exclusive_us": 1780852038842001,
+    "snapshot_update_id": 95278422569,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 3,
+    "start_us": 1780892830935000,
+    "last_us": 1780892830935000,
+    "end_exclusive_us": 1780892830935001,
+    "snapshot_update_id": 95325776792,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 4,
+    "start_us": 1781066777055000,
+    "last_us": 1781066777055000,
+    "end_exclusive_us": 1781066777055001,
+    "snapshot_update_id": 95508077662,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 5,
+    "start_us": 1781240419301000,
+    "last_us": 1781240419301000,
+    "end_exclusive_us": 1781240419301001,
+    "snapshot_update_id": 95653035753,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 6,
+    "start_us": 1781415980957000,
+    "last_us": 1781415980957000,
+    "end_exclusive_us": 1781415980957001,
+    "snapshot_update_id": 95737950149,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 7,
+    "start_us": 1781589858422000,
+    "last_us": 1781589858422000,
+    "end_exclusive_us": 1781589858422001,
+    "snapshot_update_id": 95837729369,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 8,
+    "start_us": 1781764099707000,
+    "last_us": 1781764099707000,
+    "end_exclusive_us": 1781764099707001,
+    "snapshot_update_id": 95963114417,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 9,
+    "start_us": 1781937918712000,
+    "last_us": 1781937918712000,
+    "end_exclusive_us": 1781937918712001,
+    "snapshot_update_id": 96064809663,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 10,
+    "start_us": 1782111439498000,
+    "last_us": 1782111439498000,
+    "end_exclusive_us": 1782111439498001,
+    "snapshot_update_id": 96143486675,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 11,
+    "start_us": 1782243266905000,
+    "last_us": 1782243266905000,
+    "end_exclusive_us": 1782243266905001,
+    "snapshot_update_id": 96241434985,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 12,
+    "start_us": 1782244562948000,
+    "last_us": 1782244562948000,
+    "end_exclusive_us": 1782244562948001,
+    "snapshot_update_id": 96242285595,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 13,
+    "start_us": 1782396000648000,
+    "last_us": 1782396000648000,
+    "end_exclusive_us": 1782396000648001,
+    "snapshot_update_id": 96372472934,
+    "states": 1,
+    "end_reason": "snapshot_reanchor"
+  },
+  {
+    "id": 14,
+    "start_us": 1782396420446000,
+    "last_us": 1782396420446000,
+    "end_exclusive_us": 1782396420446001,
+    "snapshot_update_id": 96374517133,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 15,
+    "start_us": 1782570736735000,
+    "last_us": 1782570736735000,
+    "end_exclusive_us": 1782570736735001,
+    "snapshot_update_id": 96537499080,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 16,
+    "start_us": 1782720908598000,
+    "last_us": 1782720908598000,
+    "end_exclusive_us": 1782720908598001,
+    "snapshot_update_id": 96626913292,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 17,
+    "start_us": 1782894918745000,
+    "last_us": 1782894918745000,
+    "end_exclusive_us": 1782894918745001,
+    "snapshot_update_id": 96766539283,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 18,
+    "start_us": 1783068139474000,
+    "last_us": 1783068139474000,
+    "end_exclusive_us": 1783068139474001,
+    "snapshot_update_id": 96895035797,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 19,
+    "start_us": 1783241061011000,
+    "last_us": 1783241061011000,
+    "end_exclusive_us": 1783241061011001,
+    "snapshot_update_id": 96966912724,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 20,
+    "start_us": 1783284612355000,
+    "last_us": 1783284912975000,
+    "end_exclusive_us": 1783284912975001,
+    "snapshot_update_id": 96980990616,
+    "states": 3177,
+    "end_reason": "known_hard_gap"
+  },
+  {
+    "id": 21,
+    "start_us": 1783287587558000,
+    "last_us": 1783287587558000,
+    "end_exclusive_us": 1783287587558001,
+    "snapshot_update_id": 96982234645,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 22,
+    "start_us": 1783460839112000,
+    "last_us": 1783460839112000,
+    "end_exclusive_us": 1783460839112001,
+    "snapshot_update_id": 97106981031,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 23,
+    "start_us": 1783587656448000,
+    "last_us": 1783587656448000,
+    "end_exclusive_us": 1783587656448001,
+    "snapshot_update_id": 97189385282,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 24,
+    "start_us": 1783763840278000,
+    "last_us": 1783763840278000,
+    "end_exclusive_us": 1783763840278001,
+    "snapshot_update_id": 97274741664,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 25,
+    "start_us": 1783937895801000,
+    "last_us": 1783937895801000,
+    "end_exclusive_us": 1783937895801001,
+    "snapshot_update_id": 97340091270,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 26,
+    "start_us": 1784062024454000,
+    "last_us": 1784062024454000,
+    "end_exclusive_us": 1784062024454001,
+    "snapshot_update_id": 97413767366,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 27,
+    "start_us": 1784063702080000,
+    "last_us": 1784063702080000,
+    "end_exclusive_us": 1784063702080001,
+    "snapshot_update_id": 97414283764,
+    "states": 1,
+    "end_reason": "snapshot_reanchor"
+  },
+  {
+    "id": 28,
+    "start_us": 1784063808379000,
+    "last_us": 1784063808379000,
+    "end_exclusive_us": 1784063808379001,
+    "snapshot_update_id": 97414305191,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 29,
+    "start_us": 1784239340374000,
+    "last_us": 1784239340374000,
+    "end_exclusive_us": 1784239340374001,
+    "snapshot_update_id": 97511107050,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 30,
+    "start_us": 1784372612217000,
+    "last_us": 1784372612217000,
+    "end_exclusive_us": 1784372612217001,
+    "snapshot_update_id": 97574695724,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 31,
+    "start_us": 1784546959105000,
+    "last_us": 1784546959105000,
+    "end_exclusive_us": 1784546959105001,
+    "snapshot_update_id": 97640628043,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 32,
+    "start_us": 1784719999395000,
+    "last_us": 1784719999395000,
+    "end_exclusive_us": 1784719999395001,
+    "snapshot_update_id": 97733555118,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 33,
+    "start_us": 1784730445504000,
+    "last_us": 1784730445504000,
+    "end_exclusive_us": 1784730445504001,
+    "snapshot_update_id": 97739929981,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 34,
+    "start_us": 1784906839256000,
+    "last_us": 1784906839256000,
+    "end_exclusive_us": 1784906839256001,
+    "snapshot_update_id": 97822696089,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 35,
+    "start_us": 1785081560656000,
+    "last_us": 1785081560656000,
+    "end_exclusive_us": 1785081560656001,
+    "snapshot_update_id": 97861588919,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 36,
+    "start_us": 1785256819650000,
+    "last_us": 1785256819650000,
+    "end_exclusive_us": 1785256819650001,
+    "snapshot_update_id": 97951795268,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  },
+  {
+    "id": 37,
+    "start_us": 1785431658706000,
+    "last_us": 1785431658706000,
+    "end_exclusive_us": 1785431658706001,
+    "snapshot_update_id": 98054051699,
+    "states": 1,
+    "end_reason": "invalid_timestamp_gap"
+  }
+]

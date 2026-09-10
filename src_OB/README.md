@@ -1,7 +1,8 @@
 # Order-book Direct forecasting
 
 Pipeline mới trong `src_OB`; `src/p0` cũ được giữ nguyên. Không có smoke command hoặc feature search.
-Đã tải raw archive Hugging Face; chưa chạy prepare/replay, test hay training local.
+Vast 2026-09-10: download + prepare thật đã chạy; archive pinned chỉ dựng được 300,6 s book hợp lệ nên
+data **BLOCKED**, chưa training (bằng chứng: `experiments/orderbook_hf/DATA_REPORT.md`, `RUN_REPORT.md`).
 
 ## Dữ liệu và nhãn
 
@@ -145,8 +146,11 @@ manifest ghi danh sách file và metadata kích thước từ HF.
 - Raw hiện có: `data/orderbook/hf_crypto_lob_stream/depth/binance/BTCUSDT/{2026-06,2026-07}.parquet`
   và `snapshots/binance/BTCUSDT/{2026-06,2026-07}.parquet` dưới cùng raw root.
 - Download manifest hiện có: `data/orderbook/hf_crypto_lob_stream/download_manifest.json`.
-- Prepared sẽ tạo tại `data/orderbook/prepared_hf/`: raw/kept memmap, `manifest.json` schema v3,
-  `segments.json`, `reconstruction.json`. Chưa chạy prepare, chưa có coverage reconstruct chính xác.
+- Prepared tại `data/orderbook/prepared_hf/`: raw/kept memmap, `manifest.json` schema v3,
+  `segments.json`, `reconstruction.json` (prepare thật trên Vast 2026-09-10).
+- Kết quả thật: depth chỉ gồm 1.392 run ID-liên tục ≈300 s (5 phút/giờ, lỗi flush-overwrite của collector v1
+  theo card nguồn); 1/38 snapshot nối được; 3.214 raw state, 61 origin, segment hợp lệ dài nhất 300,6 s;
+  4 fold theo lịch nhưng 0 origin FIT/VAL → không cell nào train được với phương pháp hiện tại.
 - Kết quả training sẽ nằm tại `experiments/orderbook_hf/`.
 
 Schema v2 cũ không dùng cho HF diff archive; luôn tạo prepared directory mới.
@@ -162,6 +166,13 @@ python -m src_OB prepare --config configs/orderbook.json
 Arrow đọc theo chunk, snapshot/message được replay thành state rồi ghi feature và raw-price memmap trên đĩa;
 không tạo sẵn tensor `[toàn bộ sample, context, feature]` trong VRAM. Thư mục prepared mới phải chưa tồn tại;
 đổi `prepared_dir` khi cần tạo phiên bản khác. Các lỗi input được raise trong đường chạy thật.
+
+Sau prepare, ghi `DATA_REPORT.md`/`data_report.json` vào `output_dir` (đọc raw Parquet và prepared data;
+đếm origin bằng cùng hàm `select_origins` mà `train` dùng; không fit/infer):
+
+```bash
+python -m src_OB data-report --config configs/orderbook.json
+```
 
 Chạy trên GPU Vast, từng fold/horizon tuần tự:
 

@@ -1,0 +1,67 @@
+{
+  "recorded_at_utc": "2026-09-10T16:37:19.300142+00:00",
+  "git": {
+    "head": "a5872b9d3899c70c9016ec338c78854edfb9d4ac",
+    "branch": "OB",
+    "status_porcelain": [
+      "M .claude/MEMORY.md",
+      " M src_OB/README.md",
+      " M src_OB/__main__.py",
+      " M src_OB/data.py",
+      " M src_OB/train.py",
+      "?? data/orderbook/hf_crypto_lob_stream/depth/",
+      "?? data/orderbook/hf_crypto_lob_stream/snapshots/",
+      "?? data/orderbook/prepared_hf/",
+      "?? experiments/orderbook_hf/",
+      "?? src_OB/report.py"
+    ]
+  },
+  "config_sha256": "72d68928bdcb9eb54087164086b715e79cba09581c28d776fd8ee6acc3c00187",
+  "host": {
+    "hostname": "f81e18e4550b",
+    "vast_container": "50503596",
+    "cpu_count": 96,
+    "kernel": "7.0.0-28-generic"
+  },
+  "gpu": "0, NVIDIA GeForce RTX 3090, GPU-7745473c-82d7-079d-7a96-db04ea3fcee6, 595.84, 24576 MiB, 8.6",
+  "cuda_toolkit": [
+    "Build cuda_12.8.r12.8/compiler.35583870_0"
+  ],
+  "image_cuda_version": "12.8.1",
+  "python": {
+    "executable": "/home/ubuntu/venv-ob/bin/python",
+    "version": "3.12.3 (main, Jul 15 2026, 23:46:41) [GCC 13.3.0]"
+  },
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "lightgbm": "4.7.0",
+    "xgboost": "3.4.1",
+    "catboost": "1.2.10",
+    "cupy-cuda12x": "14.2.0",
+    "timesfm": "2.0.2",
+    "autots": "1.0.4",
+    "statsmodels": "0.15.0",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.0",
+    "scipy": "1.18.1",
+    "pyarrow": "25.0.1",
+    "duckdb": "1.5.5",
+    "sortedcontainers": "2.4.0",
+    "joblib": "1.6.0",
+    "safetensors": "0.8.0",
+    "huggingface-hub": "1.31.0",
+    "jax": null
+  },
+  "torch_cuda": {
+    "torch_version_cuda": "12.8",
+    "cudnn": 91900,
+    "cuda_available": true,
+    "device": "NVIDIA GeForce RTX 3090"
+  },
+  "xgboost_build_USE_CUDA": true,
+  "lightgbm_lib_cuda_links": [
+    "libnccl.so.2"
+  ],
+  "catboost_gpu_device_count": 1
+}
