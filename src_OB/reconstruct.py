@@ -201,6 +201,9 @@ class BookReplay:
             self.reset("invalid_snapshot_book", event.ts)
             return None
         self.waiting.clear()
+        # One anchor per snapshot timestamp: a second snapshot stamped at the same instant cannot open
+        # an overlapping segment (checker R3-I5); later snapshots are handled by the live-book rules.
+        self.reset_after = max(self.reset_after, event.ts)
         self.counts["snapshots_anchored"] += 1
         self.segment += 1
         self.last_id, self.last_ts = last, event.ts
