@@ -34,9 +34,12 @@ Replay v2 (sửa checker W1/I1, `REPLAY_VERSION = 2`, ghi trong manifest/reconst
 chờ snapshot được giữ trong một cửa sổ `max_feed_gap_seconds`; khi snapshot `S` được quan sát, các message
 `u > S` đã nhận trước nó (quy trình Binance: buffer stream rồi lấy snapshot) được áp sau snapshot nếu nối đúng
 `S+1`, và book gộp chỉ được phát tại timestamp snapshot, không phát state quá khứ. Book đang sống liên tục theo ID
-không neo lại vào snapshot cũ hơn (tránh replay trùng) và bỏ qua snapshot đi trước khi stream vẫn nối tiếp; nếu
-stream đứt trước `S` thì segment đóng với `sequence_gap` và neo tại snapshot. Gap ID được kiểm trước quy tắc
-timestamp để reset ghi đúng nguyên nhân. Prepared HF v3 hiện có được giữ nguyên (replay v1).
+không neo lại vào snapshot cũ hơn (tránh replay trùng). Snapshot đi trước chỉ được bỏ qua khi message depth kế tiếp
+được book sống chấp nhận (`u > last_id`, `U ≤ last_id+1`, cách message trước ≤ `max_feed_gap_seconds`); nếu không,
+segment đóng với `snapshot_ahead_unconfirmed` (message kế tiếp là bản cũ/trùng), `sequence_gap` hoặc
+`invalid_timestamp_gap` rồi neo tại snapshot. Gap ID được kiểm trước quy tắc timestamp để reset ghi đúng nguyên nhân;
+message gây đứt được đệm làm ứng viên bridge, buffer giữ qua một lần neo lỗi và chỉ xóa sau khi neo thành công.
+Book đang sống không làm mới độ sâu từ snapshot. Prepared HF v3 hiện có được giữ nguyên (replay v1).
 Quantity mới ghi đè quantity hiện tại; quantity bằng 0 xóa đúng price đó. Áp dụng đủ bid và ask của message
 rồi prune cache về tối đa **1.000 level mỗi phía**, sau đó mới lấy top 10 và tính mid/OF.
 Không cắt cache còn 10 level: các level phía dưới vẫn cần khi best levels biến mất.

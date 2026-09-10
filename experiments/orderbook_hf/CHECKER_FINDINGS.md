@@ -141,3 +141,43 @@ Agent `checker` chỉ đọc code/metadata, một truy vấn DuckDB tổng hợp
 - T-I4: README ghi hard gap theo `known_hard_gaps_utc` (chỉ HF khai báo). Việc `Data` không kiểm `replay_version` được giữ
   (prepared v1 hợp lệ cho HF; nguồn mới luôn dùng `prepared_dir` mới); adapter cho nguồn mới làm khi có nguồn được chọn.
 - Bản sửa T-W1/T-I3 được làm sau lượt review này; checker đọc lại (lượt 3) sau khi commit.
+
+---
+
+# Checker lượt 3 — đọc lại bản sửa T-W1/T-I3 (commit `1e2f3ce`), 2026-09-10 ~18:39–18:51 UTC
+
+Chỉ đọc code/metadata (parse AST, không import/chạy). **Không có ERROR hay WARN.**
+
+- **R3-P1 PASS — T-W1** (`reconstruct.py:147-208`): snapshot phía sau bị bỏ (không replay trùng); snapshot đi trước chỉ
+  "redundant" khi `following` qua đủ 3 điều kiện ID/thời gian như `depth()`; nếu không, lý do reset theo đúng thứ tự của
+  `depth()` rồi neo tại S; không phát state quá khứ (snapshot xử lý ở depth event đầu có ts ≥ T); không nối gap (mỗi lần
+  neo tăng `segment`, OF đầu segment = 0); raw timeline không đi lùi; nhiều snapshot trong cùng vòng `while` vẫn đúng.
+- **R3-P2 PASS — T-I3** (`:73-98, 178-201, 215-230`): `reset()` không đụng `waiting`; buffer chỉ xóa sau `top()` thành
+  công; buffer chỉ nhận message lúc chưa có book và message gây đứt (chưa áp); không tái dùng message đã phát state; book
+  sống thì buffer rỗng; cửa sổ thời gian đúng; các nhánh lỗi trả None, không đặt `last_id`, giữ buffer.
+- **R3-P3 PASS (suy luận, chưa chạy thật)**: trên HF vẫn 38 segment / 3.214 state, nhãn 37 `sequence_gap` + 1
+  `known_hard_gap`; chỉ counter đổi (`snapshots_anchored`, `depth_waiting_for_snapshot` +35).
+- **R3-P4 PASS**: `reconstruct.py`/`prepare.py` parse AST không lỗi; không còn `KNOWN_GAPS`/`waiting_bridge`;
+  `snapshot()` chỉ gọi ở `states():277` với 2 tham số; `report.py` in counter tổng quát.
+- **R3-I1 INFO**: điều kiện "redundant" chỉ xét ID/thời gian; `depth(following)` vẫn có thể reset vì hard gap,
+  `invalid_depth_message` hoặc `top()` thất bại ⇒ mất anchor S (chỉ mất dữ liệu). Fix: giữ S làm ứng viên; nếu
+  `depth(following)` lỗi, neo S tại T rồi xử lý lại `following` (chú ý `reset_after`).
+- **R3-I2 INFO**: `snapshot_ahead_unconfirmed` đóng book sống trước khi kiểm snapshot; nếu snapshot lỗi thì mất cả hai,
+  nếu thành công segment bị chia (context 511×h tính lại). HF 0 ca. Fix: dựng/kiểm book S trong SortedDict tạm trước khi
+  reset, hoặc hoãn tới message đầu có `u > last_id`.
+- **R3-I3 INFO**: buffer chỉ lọc theo cửa sổ 10 s; với hard gap cấu hình ngắn hơn 10 s, message trước gap có thể bridge
+  snapshot sau gap. HF (43 phút) không ảnh hưởng. Fix: bỏ message có hard gap nằm giữa `m.ts` và T, hoặc chặn gap < window.
+- **R3-I4 INFO (thiết kế)**: book sống không bao giờ làm mới độ sâu từ snapshot; segment dài có thể chết với
+  `crossed_insufficient_or_unknown_depth` khi giá trôi khỏi vùng 1.000 level đã biết. Fix: báo tần suất lý do này trong
+  DATA_REPORT nguồn mới; cân nhắc làm mới trong segment khi S ≥ last_id và ID đã xác nhận.
+- **R3-I5 INFO**: nhánh neo khi chưa có book không nâng `reset_after` ⇒ hai snapshot cùng ms có thể mở hai segment cùng
+  T (timeline không lùi, `data.py` vẫn đúng; HF 0 ca). README chưa ghi `snapshot_ahead_unconfirmed`/`invalid_timestamp_gap`,
+  tiêu chí "nối tiếp" và việc buffer sống qua neo lỗi.
+
+## Xử lý của session chính
+
+- Không có ERROR/WARN nên không đổi thêm code replay trong lượt này (tránh thay đổi chưa review/chưa chạy thật).
+- R3-I5 (README): đã ghi các lý do reset, tiêu chí "nối tiếp" theo ID + window, buffer sống qua neo lỗi, book sống không
+  làm mới độ sâu.
+- R3-I1, R3-I2, R3-I3, R3-I4 và phần `reset_after` của R3-I5 giữ mở dưới dạng INFO, ghi trong RUN_REPORT §11 và MEMORY là
+  việc cần làm cùng adapter khi có nguồn dữ liệu mới (trước prepare thật đầu tiên dùng replay v2).

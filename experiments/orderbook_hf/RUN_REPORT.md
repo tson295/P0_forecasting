@@ -164,6 +164,10 @@ GPU-only lúc fit, scaler/AutoTS FIT-only và latency: chưa có bằng chứng 
 4. **Checker lượt 2:** không ERROR; T-W1 (điều kiện snapshot "redundant" khi book sống) và T-I3 (buffer bị xóa sau anchor
    lỗi) đã sửa; T-W2 (code v2 chưa push) xử lý bằng commit kế tiếp; T-W3 (ứng viên sót) đã bổ sung. Chi tiết:
    `CHECKER_FINDINGS.md`, mục "Tiếp nối".
+   **Checker lượt 3** (đọc lại `1e2f3ce`): không ERROR/WARN; 5 INFO. README đã cập nhật (R3-I5). Còn mở, làm cùng adapter
+   nguồn mới trước prepare thật đầu tiên dùng v2: giữ snapshot làm ứng viên khi `depth(following)` lỗi (R3-I1), kiểm book
+   snapshot trước khi đóng book sống (R3-I2), lọc buffer qua hard gap/chặn gap < window (R3-I3), báo tần suất
+   `crossed_insufficient_or_unknown_depth` (R3-I4), nâng `reset_after` khi neo (R3-I5).
 5. **Cell thiếu:** toàn bộ (96 theo 4 fold lịch của HF; chưa có nguồn mới nên chưa có fold mới).
 6. **Quyết định tối thiểu khi user quay lại:** (a) cấp nguồn có khóa/trả phí đủ ≥ 30–58 ngày Spot liên tục; (b) đổi
    phương pháp tường minh cho một trong hai ứng viên gần nhất; hoặc (c) thu thập mới. Next step khi có data: config
