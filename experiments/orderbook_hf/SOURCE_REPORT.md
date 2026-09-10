@@ -58,4 +58,9 @@ Không có nguồn miễn phí/đã có quyền nào đáp ứng đồng thời 
 - Zenodo 20046390: đúng Spot, 100 level, 5 s, liên tục nhưng chỉ 21 ngày < 30 ngày cho một fold; chỉ dùng phi thương mại.
 - `Lazy108/binance-polymarket-orderflow`: Spot WS snapshot 1 s/20 level nhưng gated manual và chỉ 22 ngày.
 
+Nguồn "project đã có quyền dùng" (kiểm lúc ~19:25 UTC, chỉ in tên, không in giá trị): instance không có biến môi trường
+hay file credential của nhà cung cấp dữ liệu nào (Tardis, Kaiko, CoinAPI, Crypto Lake/AWS, Kaggle, HF token, Binance API);
+`CONTAINER_API_KEY` chỉ là khóa quản lý container Vast; repo không khai báo key hay nguồn trả phí nào. Không có đường truy cập
+đã được cấp quyền.
+
 Không chọn nguồn nào, không download/prepare/train thêm. Quyết định cần user: danh sách duy nhất ở `RUN_REPORT.md` §5.
