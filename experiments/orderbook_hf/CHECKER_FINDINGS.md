@@ -75,3 +75,69 @@ phương pháp hiện tại để có origin.
 - Không có ERROR cần sửa. B1 được báo cho user như blocker, không lách bằng cách nối gap/giảm context/đổi revision.
 - W1, I1: chưa sửa code vì không đổi kết quả trên archive này và prepared hiện tại phải giữ nguyên contract; sửa khi
   prepare nguồn dữ liệu mới vào `prepared_dir` mới. I2–I4 được ghi rõ trong RUN_REPORT §2.
+  (Cập nhật: W1/I1 đã được sửa ở lượt tiếp nối — replay v2, xem mục dưới.)
+
+---
+
+# Tiếp nối — checker lượt 2 (replay v2, SOURCE_REPORT, BACKUP_STATUS), 2026-09-10 ~18:15–18:35 UTC
+
+Agent `checker` chỉ đọc code/metadata, một truy vấn DuckDB tổng hợp read-only trên raw HF, metadata mạng (HF, Zenodo,
+`git ls-remote`, LFS batch); không replay/prepare/test, không sửa file. **Không có ERROR correctness.**
+
+## PASS
+
+- **T-P1 Semantics v2** (`reconstruct.py`): chỉ đệm message khi chưa có book, chỉ lấy `u > S` trong cửa sổ 10 s, message
+  đầu phải phủ `S+1`, bỏ trùng; snapshot chỉ xử lý khi gặp depth event đầu tiên có ts ≥ T ⇒ mọi message đệm có ts < T và
+  book gộp gắn tại T (không state quá khứ, không dùng snapshot tương lai); book sống không neo lại snapshot cũ hơn (không
+  replay trùng); ID trước timestamp; message gây đứt được đệm; hard gap theo config; floor/ceiling vẫn áp khi áp message
+  đệm; OF state đầu segment = 0; `replay_version` ghi vào manifest.
+- **T-P2 Nhận định HF đúng** (kiểm độc lập): 0 ts đảo, 0 (U,u) trùng; 0/38 snapshot có message `u > S` với ts < T; 37
+  snapshot có message đầu sau S với `U−S−1 ≥ 62.181` ⇒ `sequence_gap`; segment 20: 89 obsolete, bridge `U=S+1` +0,349 s,
+  không có message đệm; hai ca `snapshot_reanchor` (13→14, 27→28) thành `sequence_gap` rồi neo, cùng segment; snapshot
+  21:39:47 xử lý khi segment 20 còn sống ⇒ `known_hard_gap` trước như v1. Kết quả vẫn 38 segment / 3.214 state; nhãn
+  37 `sequence_gap` + 1 `known_hard_gap`; giữ prepared v3 là đúng.
+- **T-P3 SOURCE_REPORT khớp evidence**: predict-quant (18 file, 1 rỗng, 0,926 GB, SHA còn là main, không card/license;
+  650 run, 211,23 h, dài nhất 22,639 h; 3/2/0; theo mask pipeline 2 fold, context VAL tốt nhất 7,44/7,51 h < 8,52 h,
+  FIT h180 tốt nhất 22,59 h < 25,55 h); Zenodo 20046390 (Spot REST, 5 s, 100 level, 21 ngày ⇒ 0 fold; size/md5 khớp);
+  Zenodo 10600374; Crypto Lake 3+3 ngày; Binance Vision; Tardis 401; Goooddy 2026-08.
+- **T-P4 Backup**: `ls-remote` = `603738e…` = HEAD = origin/OB; LFS batch API: 7/7 `prepared_hf/*.bin` có trên remote.
+
+## Findings
+
+- **T-W1 — WARN** (`reconstruct.py` nhánh book sống): snapshot bị coi "redundant" chỉ theo `following.first <= last_id+1`;
+  nếu `following` nối ID nhưng trễ > 10 s, hoặc là bản trùng obsolete rồi message sau đứt, `depth()` reset ngay sau và
+  anchor S hợp lệ bị mất (chỉ mất dữ liệu; không leak/replay trùng; không ảnh hưởng HF). Fix: redundant chỉ khi
+  `following` thực sự được chấp nhận (`u > last_id`, `U ≤ last_id+1`, `0 ≤ ts−last_ts ≤ window`); nếu không, đóng
+  segment đúng lý do rồi neo tại S.
+- **T-W2 — WARN**: `603738e` đã push chứa MEMORY/RUN_REPORT mô tả `REPLAY_VERSION = 2` nhưng code/config v2 mới ở working
+  tree (instance không volume); BACKUP_STATUS còn ghi tip `a04d17b`. Fix: commit/push 4 file, kiểm `ls-remote`, cập nhật
+  BACKUP_STATUS.
+- **T-W3 — WARN**: SOURCE_REPORT thiếu `Lazy108/binance-polymarket-orderflow` @`f948a57b…` (card: Binance Spot L2 WS
+  snapshot 1 s/20 level; 22 file BTC 2026-08-07→29; gated manual, CC-BY-4.0 — vẫn loại vì phải xin quyền và 22 < 30 ngày),
+  và `rogerdehe/mktdata-binance-2026` (USDT-perp), `delmiron27/*binance-futures*`, `mrochk/binance` (gated auto),
+  `maherdik/binance-crypto-btcusdt-*` (trades), `trade2rich/binance` (OHLCV). Kết luận BLOCKED không đổi.
+- **T-I1 — INFO**: thiếu script sinh `pq_spot_runs.csv`/`pq_spot_probe2.out`; probe Tardis, zip Zenodo 10600374, card
+  Goooddy chỉ ở scratchpad; tick/nhịp payamdavaee chưa có evidence lưu; size/md5 Zenodo 20046390 không có trong DataCite.
+- **T-I2 — INFO**: code dùng span 511×h (8,52/17,03/25,55 h) còn SOURCE_REPORT ghi 512×h; Zenodo 20046390 có disclaimer
+  phi thương mại; khung giờ trong SOURCE_REPORT/RUN_REPORT muộn hơn giờ commit.
+- **T-I3 — INFO**: `depth_waiting_for_snapshot` nay gồm cả message gây đứt (+35 trên HF, đổi đẳng thức đếm P2);
+  `snapshot_reanchor` → `snapshots_anchored`; `reset()` xóa buffer cả khi `invalid_snapshot`/`invalid_snapshot_book` lúc
+  chưa có book ⇒ có thể mất bridge cho snapshot kế tiếp (chỉ mất dữ liệu).
+- **T-I4 — INFO**: `data.py` không kiểm `replay_version`/`known_hard_gaps_utc` (prepared v1 vẫn được code v2 nhận); hash
+  config đổi (`b73919e4…` vs `72d68928…`), semantics HF không đổi; `prepare.py`/`data.py` vẫn chỉ nhận HF ⇒ nguồn mới cần
+  adapter; README còn ghi gap 07-05 vô điều kiện; raw HF untracked — tránh `git add -A`.
+- **Chưa có bằng chứng**: replay v2 chưa được thực thi trong lượt prepare thật nào.
+
+## Xử lý của session chính
+
+- T-W1: sửa đúng đề xuất — redundant chỉ khi `following` được book sống chấp nhận; nếu không, reset với
+  `snapshot_ahead_unconfirmed` / `sequence_gap` / `invalid_timestamp_gap` rồi neo tại S.
+- T-I3: `reset()` không còn xóa buffer; buffer chỉ xóa sau khi neo thành công, nên snapshot kế tiếp vẫn dùng được bridge.
+  Đẳng thức đếm mới (message gây đứt tính vào `depth_waiting_for_snapshot`) sẽ dùng cho DATA_REPORT của nguồn mới.
+- T-W2: commit/push code + config + README cùng lượt sửa này; BACKUP_STATUS cập nhật.
+- T-W3, T-I2: SOURCE_REPORT viết lại (thêm ứng viên, 511×h, giờ thật, ghi chú phi thương mại).
+- T-I1: lưu `pq_spot_scan.py`, `pq_spot_runs.py`, `payamdavaee_probe.py/.out`, card pinned/Goooddy, listing Zenodo
+  10600374, `zenodo_20046390_files.json`, `tardis_check.txt` trong `run_meta/source_search/`.
+- T-I4: README ghi hard gap theo `known_hard_gaps_utc` (chỉ HF khai báo). Việc `Data` không kiểm `replay_version` được giữ
+  (prepared v1 hợp lệ cho HF; nguồn mới luôn dùng `prepared_dir` mới); adapter cho nguồn mới làm khi có nguồn được chọn.
+- Bản sửa T-W1/T-I3 được làm sau lượt review này; checker đọc lại (lượt 3) sau khi commit.

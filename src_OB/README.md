@@ -24,18 +24,27 @@ data **BLOCKED**, chưa training (bằng chứng: `experiments/orderbook_hf/DATA
 
 Mỗi row depth là một price-level update, không phải một full-book snapshot. Replay theo `last_update_id`;
 gom toàn bộ row chung `(timestamp_ms, first_update_id, last_update_id)` thành một message, kể cả khi nhóm
-bị chia giữa Arrow batch/file. Snapshot được đọc theo thời gian, chỉ dùng anchor đã xuất hiện trước event;
-mỗi snapshot thay toàn bộ cache và bắt đầu segment mới, không carry OF từ trước anchor.
+bị chia giữa Arrow batch/file. Snapshot được đọc theo thời gian, chỉ dùng anchor đã xuất hiện trước event.
+Khi chưa có book sống, snapshot thay toàn bộ cache và bắt đầu segment mới, không carry OF từ trước anchor.
 
 Với snapshot/update ID hiện tại `S`, bỏ message có `last_update_id <= S`; message tiếp theo phải bao phủ
 `S+1` trong `[first_update_id, last_update_id]`. Khoảng ID bỏ trống làm hủy book và chờ snapshot hợp lệ kế tiếp.
+
+Replay v2 (sửa checker W1/I1, `REPLAY_VERSION = 2`, ghi trong manifest/reconstruction): message đến trong lúc
+chờ snapshot được giữ trong một cửa sổ `max_feed_gap_seconds`; khi snapshot `S` được quan sát, các message
+`u > S` đã nhận trước nó (quy trình Binance: buffer stream rồi lấy snapshot) được áp sau snapshot nếu nối đúng
+`S+1`, và book gộp chỉ được phát tại timestamp snapshot, không phát state quá khứ. Book đang sống liên tục theo ID
+không neo lại vào snapshot cũ hơn (tránh replay trùng) và bỏ qua snapshot đi trước khi stream vẫn nối tiếp; nếu
+stream đứt trước `S` thì segment đóng với `sequence_gap` và neo tại snapshot. Gap ID được kiểm trước quy tắc
+timestamp để reset ghi đúng nguyên nhân. Prepared HF v3 hiện có được giữ nguyên (replay v1).
 Quantity mới ghi đè quantity hiện tại; quantity bằng 0 xóa đúng price đó. Áp dụng đủ bid và ask của message
 rồi prune cache về tối đa **1.000 level mỗi phía**, sau đó mới lấy top 10 và tính mid/OF.
 Không cắt cache còn 10 level: các level phía dưới vẫn cần khi best levels biến mất.
 
 Cache bị prune không được hồi sinh ghost level cũ. Nếu top 10 đi sâu qua ranh giới đã bị quên, pipeline
 yêu cầu snapshot mới; book crossed cũng reset, không tự xóa level để che một chuỗi diff bị thiếu.
-Gap đã biết **2026-07-05 20:56 → 21:39 UTC** là hard reset bất kể update IDs; bỏ event nằm trong khoảng này.
+Hard gap chỉ áp khi nguồn công bố, qua `known_hard_gaps_utc` trong config: HF khai báo **2026-07-05 20:56 → 21:39 UTC**
+(reset bất kể update IDs, bỏ event nằm trong khoảng này); nguồn độc lập mặc định không có hard gap nào.
 
 Historical June–August 2026 có thể thiếu depth updates do collector cũ. Không forward-fill qua các khoảng
 thiếu. `segments.json` ghi khoảng hợp lệ thực tế và nguyên nhân kết thúc; `reconstruction.json` ghi số message,

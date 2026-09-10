@@ -1,7 +1,7 @@
 """Offline snapshot + atomic Binance depth-message replay, with hard segment resets."""
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, deque
 from dataclasses import dataclass
 from itertools import islice
 from pathlib import Path
@@ -10,9 +10,16 @@ import numpy as np
 import pandas as pd
 from sortedcontainers import SortedDict
 
-# Conservative minute boundaries supplied with the public dataset.
-KNOWN_GAPS = [(int(pd.Timestamp("2026-07-05T20:56:00Z").value // 1000),
-               int(pd.Timestamp("2026-07-05T21:39:00Z").value // 1000))]
+# Replay v2 (checker W1/I1): messages received before a snapshot with u > lastUpdateId bridge it;
+# a live ID-contiguous book is never re-anchored to a snapshot (no update is replayed twice);
+# the ID check precedes the timestamp rule so resets carry the actual cause.
+REPLAY_VERSION = 2
+
+
+def known_gaps(cfg):
+    """Hard resets documented by the chosen source (UTC); an independent source declares none."""
+    return [(int(pd.Timestamp(start).value // 1000), int(pd.Timestamp(end).value // 1000))
+            for start, end in cfg.get("known_hard_gaps_utc", [])]
 
 
 @dataclass
@@ -51,9 +58,13 @@ class BookReplay:
         self.segments = []
         self.resets = []
         self.counts = Counter()
-        self.waiting_bridge = True
         self.reset_after = -1
         self.source_first = self.source_last = None
+        self.known_gaps = known_gaps(cfg)
+        self.window = int(cfg["max_feed_gap_seconds"] * 1e6)
+        # Messages seen without a live book, kept for one feed-gap window: the Binance procedure
+        # buffers the stream before the snapshot arrives, so one of them may bridge it.
+        self.waiting = deque()
 
     def observe(self, event):
         self.source_first = event.ts if self.source_first is None else min(self.source_first, event.ts)
@@ -68,11 +79,10 @@ class BookReplay:
         self.bids.clear()
         self.asks.clear()
         self.last_id = self.last_ts = None
-        self.waiting_bridge = True
         self.reset_after = max(self.reset_after, timestamp)
 
     def permitted_time(self, ts):
-        for start, end in KNOWN_GAPS:
+        for start, end in self.known_gaps:
             if self.last_ts is not None and self.last_ts < start <= ts:
                 self.reset("known_hard_gap", start)
             if start <= ts < end:
@@ -80,6 +90,12 @@ class BookReplay:
                 self.counts["inside_known_gap"] += 1
                 return False
         return True
+
+    def wait(self, event):
+        self.counts["depth_waiting_for_snapshot"] += 1
+        while self.waiting and self.waiting[0].ts < event.ts - self.window:
+            self.waiting.popleft()
+        self.waiting.append(event)
 
     def validated_levels(self, event):
         if event.first < 0 or event.last < event.first:
@@ -128,30 +144,67 @@ class BookReplay:
             return None
         return bp, np.asarray([self.bids[p] for p in bp]), ap, np.asarray([self.asks[p] for p in ap])
 
-    def snapshot(self, event):
+    def snapshot(self, event, following):
+        """Anchor at an observed snapshot; `following` is the first depth message at/after it."""
         self.observe(event)
         self.counts["snapshot_messages"] += 1
         if not self.permitted_time(event.ts) or event.ts <= self.reset_after:
             return None
+        if self.last_id is not None:
+            # The live book is proven by contiguous IDs. Re-anchoring to an older snapshot would
+            # replay its updates twice. One ahead of it is redundant only if the live book accepts the
+            # next message; otherwise the segment closes for that reason and this snapshot anchors.
+            if event.last <= self.last_id:
+                self.counts["snapshot_behind_live_book"] += 1
+                return None
+            if (following.last > self.last_id and following.first <= self.last_id + 1
+                    and 0 <= following.ts - self.last_ts <= self.window):
+                self.counts["snapshot_redundant_live_book"] += 1
+                return None
+            if following.last <= self.last_id:
+                reason = "snapshot_ahead_unconfirmed"
+            elif following.first > self.last_id + 1:
+                reason = "sequence_gap"
+            else:
+                reason = "invalid_timestamp_gap"
+            self.reset(reason, event.ts)
         levels = self.validated_levels(event)
         if levels is None:
             self.reset("invalid_snapshot", event.ts)
             return None
-        self.reset("snapshot_reanchor", event.ts)
+        # Buffered messages after lastUpdateId are applied now; their effect is only observable once
+        # the snapshot exists, so the combined book is stamped at the snapshot time, never earlier.
+        # The buffer survives a failed anchor so the next snapshot can still use a bridge in it.
+        buffered = [m for m in self.waiting if m.ts >= event.ts - self.window and m.last > event.last]
+        self.bids.clear()
+        self.asks.clear()
         self.bid_floor, self.ask_ceiling = -np.inf, np.inf
         self.apply_levels(levels)
         if self.bids and self.asks:
             self.bid_floor = self.bids.peekitem(0)[0]
             self.ask_ceiling = self.asks.peekitem(-1)[0]
+        last = event.last
+        for message in buffered:
+            if message.last <= last:
+                continue  # duplicate of an update already applied
+            levels = self.validated_levels(message) if message.first <= last + 1 else None
+            if levels is None:
+                self.reset("snapshot_bridge_invalid", event.ts)
+                return None
+            self.apply_levels(levels)
+            last = message.last
+            self.counts["buffered_messages_applied"] += 1
         top = self.top()
         if top is None:
             self.reset("invalid_snapshot_book", event.ts)
             return None
+        self.waiting.clear()
+        self.counts["snapshots_anchored"] += 1
         self.segment += 1
-        self.last_id, self.last_ts = event.last, event.ts
+        self.last_id, self.last_ts = last, event.ts
         self.segments.append({"id": self.segment, "start_us": event.ts, "last_us": event.ts,
                               "end_exclusive_us": event.ts + 1, "snapshot_update_id": event.last,
-                              "states": 1, "end_reason": "archive_end"})
+                              "buffered_update_id": last, "states": 1, "end_reason": "archive_end"})
         return event.ts, self.segment, top
 
     def depth(self, event):
@@ -160,19 +213,20 @@ class BookReplay:
         if not self.permitted_time(event.ts):
             return None
         if self.last_id is None:
-            self.counts["depth_waiting_for_snapshot"] += 1
+            self.wait(event)
             return None
         if event.last <= self.last_id:
             self.counts["obsolete_or_duplicate_depth"] += 1
             return None
-        if event.ts < self.last_ts or event.ts - self.last_ts > self.cfg["max_feed_gap_seconds"] * 1e6:
-            self.reset("invalid_timestamp_gap", max(event.ts, self.last_ts))
-            return None
-        # U..u must cover the next missing ID. This also permits a buffered
-        # message overlapping the snapshot; fully obsolete messages were skipped.
-        contiguous = event.first <= self.last_id + 1 <= event.last
-        if not contiguous:
+        # U..u must cover the next missing ID; checked before the timestamp rule so the reset
+        # records an ID gap as such. The message that broke the book may bridge the next snapshot.
+        if event.first > self.last_id + 1:
             self.reset("sequence_gap", event.ts)
+            self.wait(event)
+            return None
+        if event.ts < self.last_ts or event.ts - self.last_ts > self.window:
+            self.reset("invalid_timestamp_gap", max(event.ts, self.last_ts))
+            self.wait(event)
             return None
         if event.first <= self.last_id:
             self.counts["overlapping_contiguous_messages"] += 1
@@ -186,7 +240,6 @@ class BookReplay:
             self.reset("crossed_insufficient_or_unknown_depth", event.ts)
             return None
         self.last_id, self.last_ts = event.last, event.ts
-        self.waiting_bridge = False
         self.segments[-1].update(last_us=event.ts, end_exclusive_us=event.ts + 1)
         self.segments[-1]["states"] += 1
         return event.ts, self.segment, top
@@ -221,7 +274,7 @@ def states(cfg, raw, scratch, replay, source_files):
                 continue
             last_depth_ts = event.ts
             while anchor is not None and anchor.ts <= event.ts:
-                value = replay.snapshot(anchor)
+                value = replay.snapshot(anchor, event)
                 if value is not None:
                     yield value
                 anchor = next(snapshots, None)

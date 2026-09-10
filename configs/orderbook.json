@@ -13,6 +13,7 @@
   "context": 100,
   "max_feed_gap_seconds": 10,
   "max_price_age_seconds": 10,
+  "known_hard_gaps_utc": [["2026-07-05T20:56:00Z", "2026-07-05T21:39:00Z"]],
   "chunk_rows": 100000,
   "train_days": 21,
   "gap_days": 6,

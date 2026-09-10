@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from .config import write_json
-from .reconstruct import BookReplay, KNOWN_GAPS, states
+from .reconstruct import BookReplay, REPLAY_VERSION, states
 
 DTYPES = {"raw_ts": "int64", "raw_mid": "float64", "raw_segment": "int64",
           "ts": "int64", "mid": "float64", "segment": "int64", "features": "float32"}
@@ -93,9 +93,10 @@ def prepare(cfg):
                 "source_first_observed_us": replay.source_first, "source_last_observed_us": replay.source_last}
     write_json(dest / "segments.json", replay.segments)
     write_json(dest / "reconstruction.json", {"counts": dict(replay.counts), "resets": replay.resets,
-               "known_hard_gaps_us": KNOWN_GAPS,
+               "known_hard_gaps_us": replay.known_gaps, "replay_version": REPLAY_VERSION,
                "collector_warning": "June-August 2026 may contain missing updates; IDs/timestamps cannot certify undetectable omissions."})
-    write_json(dest / "manifest.json", {"schema_version": 3, "config": cfg, "historical_fixed": True,
+    write_json(dest / "manifest.json", {"schema_version": 3, "replay_version": REPLAY_VERSION, "config": cfg,
+               "historical_fixed": True,
                "dataset_repo": source["repo"], "dataset_revision": source["revision"], "coverage": coverage,
                "counts": totals, "features": feature_names(), "dtypes": DTYPES, "files": files,
                "timestamp_unit": "microseconds (source timestamp_ms * 1000)",

@@ -1,0 +1,6 @@
+   n_rows                first_ts                 last_ts  median_step_ms  min_spread  median_spread  min_bid_levels  min_ask_levels
+0    1439 2026-05-20 00:00:01.976 2026-05-20 23:59:02.117         60099.5         0.1            0.1            1000            1000
+   best_bid     bid2  best_ask
+0   76794.5  76794.4   76794.6
+1   76782.8  76782.7   76782.9
+2   76802.9  76802.8   76803.0
