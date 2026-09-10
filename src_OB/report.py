@@ -111,7 +111,10 @@ def data_report(cfg):
     report = {"status": status, "blocked_folds": blocked, "fold_error": fold_error,
               "dataset": {"repo": manifest["dataset_repo"], "revision": manifest["dataset_revision"],
                           "files": manifest["files"], "prepared_dir": str(folder),
-                          "schema_version": manifest["schema_version"]},
+                          "schema_version": manifest["schema_version"],
+                          # Which replay/code/config produced this prepared version (absent before replay v2).
+                          "replay_version": manifest.get("replay_version"), "code_commit": manifest.get("code_commit"),
+                          "config_sha256": manifest.get("config_sha256")},
               "raw_archive": raw,
               "prepared": {"coverage": manifest["coverage"], "counts": manifest["counts"],
                            "reconstruction_counts": reconstruction["counts"],
@@ -150,6 +153,8 @@ def markdown(cfg, report):
         "## 1. Nguồn", "",
         f"- `{report['dataset']['repo']}` revision `{report['dataset']['revision']}`; prepared schema "
         f"v{report['dataset']['schema_version']} tại `{Path(report['dataset']['prepared_dir']).relative_to(Path(cfg['raw_dir']).parents[2])}`.",
+        f"- Replay {report['dataset']['replay_version'] or 'v1 (manifest chưa ghi replay_version)'}; code "
+        f"`{report['dataset']['code_commit'] or '—'}`; config_sha256 `{report['dataset']['config_sha256'] or '—'}`.",
         f"- File: {', '.join('`' + f + '`' for f in report['dataset']['files'])}.", "",
         "## 2. Depth diff thô trước replay", "",
         f"- {raw['depth_messages']:,} message ({raw['depth_rows']:,} row), từ {raw['first_message_utc']} tới {raw['last_message_utc']}.",

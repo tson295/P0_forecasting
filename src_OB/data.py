@@ -30,9 +30,12 @@ class Data:
                 or self.meta.get("dataset_revision") != cfg["dataset_revision"]):
             raise ValueError("Cần reconstructed HF dataset schema v3 đúng revision.")
         # Training must not silently use data built by an older replay (checker R6-W1); reports may read it.
-        if require_current_replay and self.meta.get("replay_version") != REPLAY_VERSION:
-            raise ValueError(f"Prepared data dùng replay {self.meta.get('replay_version')}, cần {REPLAY_VERSION}; "
-                             "prepare vào prepared_dir mới trước khi train.")
+        # A current prepared version also records its code commit, which the final v2 prepare writes (checker R7-I3).
+        if require_current_replay and (self.meta.get("replay_version") != REPLAY_VERSION
+                                       or not self.meta.get("code_commit")):
+            found = self.meta.get("replay_version") or "chưa ghi (replay v1)"
+            raise ValueError(f"Prepared data dùng replay {found}, code_commit={self.meta.get('code_commit')}; cần replay "
+                             f"{REPLAY_VERSION} có code_commit. Prepare vào prepared_dir mới trước khi train.")
         segments = json.loads((folder / "segments.json").read_text())
         self.segment_start = np.asarray([s["start_us"] for s in segments], np.int64)
         self.segment_end = np.asarray([s["end_exclusive_us"] for s in segments], np.int64)

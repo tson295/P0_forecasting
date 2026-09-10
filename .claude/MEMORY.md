@@ -21,7 +21,8 @@ smoke/canary/test/trial fit.
   book sống (redundant chỉ khi message kế tiếp được chấp nhận), buffer sống qua anchor lỗi, ID check trước timestamp, hard
   gap theo `known_hard_gaps_utc` trong config và không bridge qua hard gap, mỗi timestamp snapshot chỉ thử neo một lần (bản mới
   nhất trước). Manifest prepared ghi `code_commit`/`code_uncommitted_paths`/`config_sha256` (F-02); `Data` cho train từ
-  chối prepared có `replay_version` khác replay hiện tại (R6-W1, `5756084`) ⇒ `prepared_hf` (replay v1) không train được. **Chưa có prepare thật nào dùng
+  chối prepared có `replay_version` khác replay hiện tại hoặc thiếu `code_commit` (R6-W1/R7-I3) ⇒ `prepared_hf` (replay v1)
+  không train được; prepare mới phải chạy trong git checkout. **Chưa có prepare thật nào dùng
   v2**; prepared HF v3 giữ nguyên (checker suy luận từ evidence, chưa chạy thật: trên HF v2 chỉ đổi nhãn reset). Các lượt
   checker không có ERROR. Còn mở trước prepare v2 thật đầu tiên: R3-I1, R3-I2 (xem CHECKER_FINDINGS).
 - Nguồn đã xét: `experiments/orderbook_hf/SOURCE_REPORT.md` (27 nhóm, evidence trong `run_meta/source_search/`). Gần nhất:

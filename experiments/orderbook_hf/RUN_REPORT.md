@@ -148,7 +148,8 @@ mục 2). GPU-only lúc fit, scaler/AutoTS FIT-only và latency: chưa có bằn
   R5 (`ac8e6cf`: provenance lấy đầu prepare, `run.json` chép provenance prepared + code train, snapshot cùng ms thử bản mới
   nhất trước, counter guard) và R6 (`5756084`: `Data` cho train từ chối prepared khác `REPLAY_VERSION` — nên
   `data/orderbook/prepared_hf` (replay v1) không còn dùng để train được; porcelain `-z`, pathspec thêm `src/p0`, git
-  `--no-optional-locks`, provenance train lấy một lần). R3-I4 được đáp ứng bằng bảng lý do kết thúc segment/reset mà
+  `--no-optional-locks`, provenance train lấy một lần) và R7 (commit kế tiếp: train còn yêu cầu `code_commit`, nhận
+  rename/copy cả cột Y, `data-report` ghi replay/code/config của bản prepared). R3-I4 được đáp ứng bằng bảng lý do kết thúc segment/reset mà
   `data-report` đã in. Còn mở trước prepare v2 thật đầu tiên: R3-I1 (giữ snapshot làm ứng viên khi `depth(following)` lỗi)
   và R3-I2 (kiểm book snapshot trước khi đóng book sống) — cần refactor đường xử lý nóng nên chưa làm khi chưa có dữ liệu
   thật; xem `CHECKER_FINDINGS.md`.

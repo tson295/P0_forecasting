@@ -36,7 +36,7 @@ def code_provenance(cfg):
         for entry in fields:
             if len(entry) > 3:
                 paths.append(entry[3:])
-                if entry[0] in "RC":
+                if {"R", "C"} & set(entry[:2]):  # rename/copy in index or work tree carries a source field
                     next(fields, None)
     return {"code_commit": head.strip() if head else None,
             "code_uncommitted_paths": paths,  # None means git was unavailable or failed

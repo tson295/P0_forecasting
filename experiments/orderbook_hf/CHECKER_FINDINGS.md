@@ -306,3 +306,35 @@ Chỉ đọc code/metadata/git (parse AST, không import/chạy). **Không có E
   `--no-optional-locks`.
 - R6-I4, R6-I5: README ghi "mỗi timestamp chỉ thử neo một lần", các counter tương ứng, và `REPLAY_VERSION = 2` chỉ gán cho
   prepared tạo sau các sửa này (chưa có bản nào), `code_commit` xác định chính xác code.
+
+---
+
+# Checker lượt 7 — đọc lại `5756084` (HEAD `d002a8a`), 2026-09-10 ~19:58–20:03 UTC
+
+Chỉ đọc code/metadata (parse AST cả 16 file `src_OB/*.py`); không train/prepare/data-report. **Không có ERROR hay WARN.**
+
+- **R7-P1 PASS (đọc code)**: `Data` import cục bộ `REPLAY_VERSION` (không vòng import); chỉ 2 chỗ gọi `Data` — `train.py`
+  (mặc định từ chối replay cũ) và `report.py` (`False`); `prepared_hf` không có `replay_version` ⇒ `train` dừng ở `Data(cfg)`,
+  trước `output.mkdir` và trước khi tạo thư mục cell; `data-report` chỉ bỏ đúng kiểm tra này.
+- **R7-P2 PASS**: `code_provenance` (`--no-optional-locks`, `-z -uall`, pathspec gồm `src/p0` bao phủ import thật, `None` khi
+  git lỗi, `__pycache__` bị ignore).
+- **R7-I1 INFO**: chỉ xét cột X; Y=`R`/`C` (rename/copy trong work tree, với `git add -N`) cũng có field nguồn ⇒ field nguồn bị
+  đọc thành entry mới (chỉ ảnh hưởng provenance).
+- **R7-P3 PASS**: `train_code` lấy sau `Data`, trước import lười; `run.json` dùng đúng biến; fit/metric/E0 không đổi.
+- **R7-I2 INFO**: module model nạp lười ở cell đầu mỗi family, có thể nhiều giờ sau thời điểm ghi provenance ⇒ sửa adapter lúc
+  job khác đang chạy làm `run.json` ghi commit không khớp code thực thi.
+- **R7-P4 PASS**: README khớp code (thứ tự DESC, guard khi neo thành công/thất bại, counter, pathspec, Data từ chối replay cũ,
+  "chưa có bản v2 nào" khớp đĩa).
+- **R7-I3 INFO**: `REPLAY_VERSION = 2` vẫn gộp semantics của `1e2f3ce`, `3f41869`, `81eb1c5`/`ac8e6cf`; câu README không được code
+  ép (bản dựng từ `1e2f3ce..3f41869`, chưa có `code_commit`, vẫn qua guard). Fix: tăng version hoặc yêu cầu `code_commit`.
+- **R7-I4 INFO**: `data_report.json`/`DATA_REPORT.md` không ghi phiên bản replay; thông báo lỗi in "replay None" với v1.
+- **R7-P5 PASS**: không thấy lỗi cú pháp/logic khác.
+
+## Xử lý của session chính
+
+- R7-I1: nhận rename/copy khi `R`/`C` xuất hiện ở cột X hoặc Y.
+- R7-I3: `Data` cho train yêu cầu `replay_version == REPLAY_VERSION` **và** `code_commit` có giá trị (chỉ prepare từ code có
+  provenance mới qua), thông báo lỗi ghi "chưa ghi (replay v1)"; README ghi prepare phải chạy trong git checkout.
+- R7-I4: `data_report.json` (`dataset.replay_version/code_commit/config_sha256`) và dòng mới trong `DATA_REPORT.md`.
+- R7-I2: giữ thiết kế; README ghi không sửa code trong lúc train đang chạy.
+- Các sửa R7 chỉ rà bằng đọc code và parse AST (không có checker lượt 8); vòng review dừng vì các lượt gần nhất chỉ còn INFO.

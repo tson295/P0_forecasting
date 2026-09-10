@@ -47,8 +47,10 @@ prepared ghi `replay_version`, `code_commit`, `code_uncommitted_paths` (đườn
 `configs/`, `src/p0/`, lấy lúc bắt đầu prepare; `null` nếu git lỗi) và `config_sha256` (hash của config đã resolve đường
 dẫn tuyệt đối, khác sha256 của file config); `train` lấy provenance code một lần lúc bắt đầu và `run.json` của mỗi cell
 chép lại cùng provenance của bản prepared. `Data` cho train từ chối prepared có `replay_version` khác replay hiện tại
-(`data-report` vẫn đọc được bản cũ). `REPLAY_VERSION = 2` chỉ gán cho prepared tạo sau các sửa này (chưa có bản nào);
-`code_commit` xác định chính xác code. Commit code trước khi prepare/train để provenance sạch.
+hoặc thiếu `code_commit` (nên prepare phải chạy trong git checkout); `data-report` vẫn đọc được bản cũ và ghi replay/code/
+config của bản prepared vào report. `REPLAY_VERSION = 2` chỉ gán cho prepared tạo sau các sửa này (chưa có bản nào);
+`code_commit` xác định chính xác code. Commit code trước khi prepare/train để provenance sạch, và không sửa code trong lúc
+train đang chạy (module model được nạp lười ở cell đầu mỗi family, sau thời điểm ghi provenance).
 Book đang sống không làm mới độ sâu từ snapshot. Prepared HF v3 hiện có được giữ nguyên (replay v1).
 Quantity mới ghi đè quantity hiện tại; quantity bằng 0 xóa đúng price đó. Áp dụng đủ bid và ask của message
 rồi prune cache về tối đa **1.000 level mỗi phía**, sau đó mới lấy top 10 và tính mid/OF.
