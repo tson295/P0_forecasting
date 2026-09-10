@@ -79,7 +79,7 @@ phương pháp hiện tại để có origin.
 
 ---
 
-# Tiếp nối — checker lượt 2 (replay v2, SOURCE_REPORT, BACKUP_STATUS), 2026-09-10 ~18:15–18:35 UTC
+# Tiếp nối — checker lượt 2 (replay v2, SOURCE_REPORT, BACKUP_STATUS), 2026-09-10 ~18:12–18:33 UTC
 
 Agent `checker` chỉ đọc code/metadata, một truy vấn DuckDB tổng hợp read-only trên raw HF, metadata mạng (HF, Zenodo,
 `git ls-remote`, LFS batch); không replay/prepare/test, không sửa file. **Không có ERROR correctness.**

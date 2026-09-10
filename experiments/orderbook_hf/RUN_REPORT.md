@@ -142,7 +142,7 @@ GPU-only lúc fit, scaler/AutoTS FIT-only và latency: chưa có bằng chứng 
   được thực thi trong lượt chạy thật nào.
 - Replay v2 (sửa W1/I1) đã có trong code nhưng chưa có lượt prepare thật nào dùng nó.
 
-## 11. Tiếp nối 2026-09-10 (goal khôi phục data, 17:39 → ~19:00 UTC)
+## 11. Tiếp nối 2026-09-10 (goal khôi phục data, bắt đầu 17:39 UTC; commit `a04d17b` 17:43, `603738e` 18:13, `1e2f3ce` 18:38)
 
 **Trạng thái vẫn BLOCKED.** Không có nguồn thay thế phù hợp; không download/prepare/train mới; 0 cell.
 
@@ -156,7 +156,7 @@ GPU-only lúc fit, scaler/AutoTS FIT-only và latency: chưa có bằng chứng 
    `replay_version`. Không prepare lại HF (goal cấm lặp bằng chứng blocker). Theo P3/P4 của checker lượt trước, trên
    archive HF v2 chỉ đổi nhãn reset (37 segment → `sequence_gap`, 1 `known_hard_gap`), không đổi state/segment.
    Replay v2 **chưa được lượt chạy thật nào thực thi**.
-3. **Tìm nguồn** (17:39–18:10 và 18:36–18:45 UTC, ~40 phút): 24 nhóm ứng viên trong `SOURCE_REPORT.md`. Gần nhất:
+3. **Tìm nguồn** (17:39–18:11 và ~18:33–18:36 UTC, ~35 phút): 24 nhóm ứng viên trong `SOURCE_REPORT.md`. Gần nhất:
    `predict-quant/binance-spot-orderbook` (Spot diff 100 ms nhưng run dài nhất 22,64 h < 25,6 h, context VAL ≤ 7,5 h,
    snapshot không timestamp, không license), Zenodo 20046390 (Spot 5 s, 100 level, liên tục nhưng 21 ngày < 30 ngày
    cho một fold, phi thương mại) và `Lazy108/binance-polymarket-orderflow` (Spot snapshot 1 s nhưng gated manual, 22 ngày).

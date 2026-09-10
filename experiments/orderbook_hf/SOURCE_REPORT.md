@@ -1,7 +1,7 @@
 # SOURCE_REPORT — tìm nguồn BTCUSDT Binance Spot L2 thay thế (2026-09-10)
 
-Tìm chủ động theo goal (tối đa ~60 phút): vòng 1 **17:39–18:10 UTC**, vòng 2 sau checker **18:36–18:45 UTC**
-(~40 phút). Chỉ đọc metadata/schema/cột qua HTTP, không tải archive lớn, không trả phí, không đăng ký/xin quyền.
+Tìm chủ động theo goal (tối đa ~60 phút): vòng 1 **17:39–18:11 UTC**, vòng 2 sau checker **~18:33–18:36 UTC**
+(~35 phút; mốc lấy từ lệnh `date`, mtime evidence và giờ commit). Chỉ đọc metadata/schema/cột qua HTTP, không tải archive lớn, không trả phí, không đăng ký/xin quyền.
 Bằng chứng: `run_meta/source_search/` (tree/metadata đã lưu, card, listing, script + output của từng probe).
 
 ## Yêu cầu tối thiểu theo phương pháp cố định
