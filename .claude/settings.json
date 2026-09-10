@@ -2,8 +2,16 @@
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": [
-      "Edit(data/**)",
-      "Write(data/**)",
+      "Edit(data/BTC_1m_2y.csv)",
+      "Write(data/BTC_1m_2y.csv)",
+      "Edit(data/BTC_5m_2y.csv)",
+      "Write(data/BTC_5m_2y.csv)",
+      "Edit(data/data_checksums_2y.json)",
+      "Write(data/data_checksums_2y.json)",
+      "Edit(data/BTC_5m_2y.derivation.json)",
+      "Write(data/BTC_5m_2y.derivation.json)",
+      "Edit(data/data_checksums.json)",
+      "Write(data/data_checksums.json)",
       "Edit(Baseline_LGBM.py)",
       "Write(Baseline_LGBM.py)"
     ]

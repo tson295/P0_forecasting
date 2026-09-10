@@ -1,61 +1,63 @@
-# P0_forecasting — Hiến pháp (bản rút gọn 2026-09-04)
+# P0_forecasting — Order Book / branch OB
 
-File này chỉ giữ invariants. Kế hoạch nghiên cứu: `docs/RESEARCH_PLAN.md` (rev 10.3). Code: `src/p0/` + `run.py` (§8 plan); prompt Vast: `docs/VAST_SESSION_PROMPT.md`. Trạng thái hiện tại: `.claude/MEMORY.md` (auto-import cuối file). Bản cũ ở `docs/archive/` và tài liệu tham khảo ở `docs/reference/` không có hiệu lực (trừ audit API được plan trích dẫn). Agents: `.claude/AGENT.md` (pha vận hành: checker · run-monitor · infra · analyst hậu-run · researcher dormant).
+Luồng đang dùng: `src_OB/`, `configs/orderbook.json`, `src_OB/README.md` và
+`docs/VAST_SESSION_PROMPT.md`. `src/p0/` là code cũ được giữ lại, chỉ import helper cần thiết.
+`docs/RESEARCH_PLAN.md`, các report đề xuất cũ và `docs/archive/` không điều khiển run OB.
+Khi mâu thuẫn, yêu cầu mới nhất của user thắng. Không tự thêm model, feature search hoặc quy trình nghiên cứu.
 
-Khi mâu thuẫn: quyết định user mới nhất > `docs/RESEARCH_PLAN.md` > file này > code hiện có > đề xuất. **Không tự mở rộng protocol/governance/stage/rule/framework khi user không yêu cầu.** Chỉ đổi thiết kế đã có khi phát hiện logic sai, leakage, hoặc model/metric rõ ràng không phù hợp — và nói rõ cái nào, vì sao, không thay bằng thứ phức tạp hơn.
+## Cách vận hành
 
-## Bài toán
+- Python CLI tự lặp fold/model/horizon. Session chính chạy `download → prepare → train → summarize`,
+  xử lý lỗi thực tế và theo dõi process trong cùng một goal; không cần agent điều phối từng model.
+- Chỉ giữ agent `checker`: đọc code, dữ liệu/metadata đã sinh và artifact để báo lỗi. Không train, không sửa code,
+  không tự gọi agent khác. Session chính sửa lỗi và tiếp tục phần việc đã được user cho phép.
+- User đã cấm **smoke test, canary, unit/integration test, synthetic run, trial fit, benchmark pass**.
+  Không chạy chúng dưới tên preflight/check/probe khác. Được đọc code/log/metadata, xem thiết bị và xem kết quả
+  của download/prepare/training thật. Guard sequence/causality/GPU trong đường chạy thật vẫn bắt buộc.
+- Không dùng `scripts/vast_bootstrap.sh`, các `*canary*`, `gpu-probe` hoặc workflow `run.py` cũ cho OB.
+- Code đã viết nhưng chưa được xác nhận bằng full run. Chỉ ghi PASS/hoàn tất khi có bằng chứng thực tế.
 
-- Point forecast BTC 1 phút: `y_h(t) = log(C[t+h]/C[t])`, h ∈ {1, 2, 3}. Mọi model sinh ŷ1, ŷ2, ŷ3 trên đúng target này; model dự báo one-step return phải cộng dồn trước khi chấm. Không có distribution objective.
+## Data và phương pháp cố định
 
-## Data
+- BTCUSDT Binance Spot; HF `MaximumLeverage/crypto-lob-stream`, pin full commit SHA theo config.
+  Public archive không phải 2 năm. Coverage và số fold lấy từ dữ liệu reconstruct hợp lệ.
+- Depth row là diff price-level. Gom trọn message, replay từ snapshot theo U/u; quantity là giá trị mới tuyệt đối,
+  0 thì xóa; prune cache sau mỗi message rồi lấy top 10 bid + top 10 ask.
+- Gap sequence/timestamp, book không hợp lệ và hard gap 2026-07-05 20:56–21:39 UTC: kết thúc segment,
+  chờ snapshot mới. Không nối/forward-fill qua gap, không che lỗi collector June–August 2026.
+- Một mid-price `(bestBid + bestAsk)/2`. OF theo price/quantity giữa state liên tiếp; OFI = bidOF − askOF.
+  Tính và cộng flow trước khi drop same-mid. Raw timestamp/mid timeline được giữ riêng trước khi lọc.
+- Direct: một model/adapter mỗi fold/horizon; h = 60/120/180 giây. Label và context as-of `timestamp <= query`,
+  trong cùng segment. Gap train/VAL > 5 ngày. Scaler/fit/search chỉ dùng FIT, không chọn tham số bằng outer VAL.
+- Baseline chỉ OF/OFI + timing, không distance, không DeepLOB-inspired. Các family: lgbm, xgb, cat, xgbrf,
+  lstm, autots, tfm_zero_shot, tfm_lora. AutoTS search trong GPU allowlist; không feature subset search.
+  TimesFM zero-shot chỉ chuỗi mid-price; LoRA + OF head cùng optimizer, không XReg.
+- RMSE/MAE/R² trên raw price. `rmse_gain_vs_e0` và `r2_os_vs_e0` dùng E0 hiện có cùng fold/horizon/origins.
+  Latency đo trong inference thật; p95/p99 batch 1 và max quan sát được, không thêm pass benchmark.
 
-- **Data canonical NẰM TRONG REPO qua Git LFS (2026-09-04d)**: `data/BTC_1m_2y.csv` + `data/BTC_5m_2y.csv` được TRACK
-  (`.gitignore` có ngoại lệ `!`, `.gitattributes` chỉ LFS đúng hai file này) → `git clone` + `git lfs pull` là đủ chạy
-  `check-data`, KHÔNG cần scp, KHÔNG cần `derive-lf` (lệnh này ở lại làm công cụ tái lập/kiểm chứng). Mọi `data/*.csv`
-  khác vẫn bị ignore. Sha256 phải khớp `data/data_checksums_2y.json` + `data/BTC_5m_2y.derivation.json`.
-- Nguồn: OHLCV 1 phút Binance (`datetime,timestamp,open,high,low,close,volume,amount`; UTC, lưới 60 s) + bar 5 phút cho feature 5'. `data\` read-only; không trộn `*_close.csv`; không tự fetch data mới khi user chưa yêu cầu. Mỗi config trỏ đúng snapshot + file checksum sha256 riêng (§6.1) — CLI từ chối chạy khi CSV không khớp; không ghi đè file checksum khi chưa có lệnh user.
-- **Vòng hiện tại = data 2 NĂM thật (2026-09-04)**: `configs/p0_full.json` → nguồn canonical `data/BTC_1m_2y.csv` (1.051.201 bar 60 s, 2024-09-03 16:29 → 2026-09-03 16:29 UTC; cột `ts` được alias thành `timestamp` trong bộ nhớ, không sửa file; sha256 `559ce040…f097`) + LF 5' **dẫn xuất tất định** `data/BTC_5m_2y.csv` bằng `python run.py derive-lf` (bar 5' đã đóng, nhãn T = bar cuối, bỏ nhóm thiếu, sidecar `.derivation.json` ghi sha nguồn; `check-data` hard-fail nếu LF không dẫn xuất từ HF hiện tại). Anchor `data/data_checksums_2y.json` (không ghi đè anchor cũ). Kết quả ở `experiments/full/`. Không dùng `data/BTC_hf_1min_full.csv`. **Split `rolling_spread` (§1.5 plan)**: TEST = 30 ngày cuối; 5 fold VAL 3 ngày **rải đều** trên toàn bộ lịch sử trước TEST (từ VAL sớm nhất còn đủ FIT + ES tới VAL muộn nhất ngay trước TEST — trên data này 2025-01-07, 05-30, 10-19, 2026-03-11, 08-01); mỗi fold train region ROLLING = FIT **120 ngày** + ES 5 ngày (trừ purge 60') ngay trước VAL; Final refit = FIT 120 + ES 5 trước TEST. Không expanding, không FIT 365/730 cho từng candidate. Không hard-code ngày. Vòng 15 ngày (2026-01-18 → 02-02) đã xong: `configs/p0_15d.json` (split `make_folds` calendar, không đổi), artifact `experiments/15d/` — lịch sử, không sửa, không đổi tên.
-- OHLCV-only: không giả định và không đặt tên feature như order book, trades, order-flow, funding, OI… `amount/volume` là VWAP thật theo trade trong bar; biến thể volume-weighted tính từ TP·V phải mang tên `proxy`.
-- Header lowercase → uppercase cho B0 xử lý ở ingestion adapter; không sửa B0.
+## Authorization và xử lý lỗi
 
-## Baseline, model, metric, split (đã thiết kế — giữ nguyên)
+- Prompt Vast do user gửi là authorization cho goal OB trên **máy Vast đã được cấp**: chuẩn bị data,
+  sửa lỗi data/env/tích hợp trong scope và training tất cả model. Không yêu cầu unlock lại giữa các bước.
+  Việc sửa tài liệu ở local không tự khởi chạy training.
+- Fit model **GPU-only**, không fallback CPU. CPU dùng cho I/O/reconstruct/features/scaler/metric và inference
+  vốn chạy CPU của LightGBM/CatBoost. Thiếu GPU hoặc backend lỗi: dừng fit, sửa env/thiết bị trong phạm vi đã cấp;
+  không thuê/đổi/xóa instance, không tự hạ batch/epoch/context hoặc bỏ model để báo thành công.
+- Lỗi triển khai/API/env có thể sửa mà giữ phương pháp: sửa rồi tiếp tục lượt chạy thật, lưu traceback và thay đổi.
+  Không chạy smoke/test để chứng minh bản sửa. Không lặp lại nguyên lệnh lỗi mà không xử lý nguyên nhân.
+- Dữ liệu hợp lệ nhưng không đủ segment/context/fold: không tạo dữ liệu giả, không giảm gap hoặc đổi methodology
+  ngầm. Ghi bằng chứng và nêu đúng quyết định còn cần từ user. Goal chưa hoàn tất khi còn model bắt buộc chưa chạy.
 
-- **B0 = `Baseline_LGBM.py`** frozen (settings deny Edit/Write): không sửa file, không đổi hyperparameter. Bug đã biết: `TargetTransform` nhân in-place → harness dùng `src/p0/transform.py` tái hiện đúng công thức. **B0\*** (72 cột, lọc §1.4 ở vòng 15 ngày) là phần B0 của mọi S0_m; B0-306 vẫn log làm reference.
-- **Điểm xuất phát vòng expanded-data = S0_m KHOÁ TOÀN BỘ**: `S0_m = B0\* ∪ F_old_m` dựng từ `experiments/15d/wins/<m>.json` + `b0_star.json` (không gõ tay); artifact `experiments/<run>/s0/<m>.json` ghi tường minh `locked_b0 == b0` (mọi cột B0\*) và `locked_ext == ext` (mọi cột ext thắng cũ). Không phép toán nào bỏ được cột khoá; prune PI chỉ xét cột MỚI; candidate không bao giờ chứa cột đã có trong S0_m. AutoTS: mỗi nhánh probe (WR/MR) kế thừa đúng bộ thắng của nhánh đó. TimesFM: S0 = ∅ (không B0\*, không covariate kế thừa). Phân biệt tên: **S0_m** = tập xuất phát khoá; **F_raw_m / F_pruned_m / F_best_m** = tập do vòng tìm kiếm mới sinh. **Không** kế thừa số vòng/epoch/ε/RMSE/champion cũ — mọi đại lượng đo lại trên data mới.
-- **Candidate = CHỈ C_short** (`src/p0/features_short.py`, sinh một lần cho mọi model — không phải stage nghiên cứu, không gọi là "master pool"): feature ngắn hạn ≤ 15' trên lưới {1,2,3,4,5,8,10,15} làm DÀY mọi họ (VWAP gap, return, RV ratio, EMA gap, RSI, Bollinger, ATR/ATR-vs-RV, Keltner, MFI, VWCLV, drawdown/run-up, range, skew, HMA slope, MACD, PSAR cửa sổ reset, log rv_k/median 2 ngày, r5_2/r5_3, log_c5_ema5_2/3); chỉ bỏ cửa sổ **suy biến/không xác định về toán** hoặc chính là candidate cũ §2.3; `dow` là ngoại lệ không cửa sổ. KHÔNG bỏ vì tương quan cao, xấp xỉ, cửa sổ gần nhau, cùng họ, hay vì có trong B0-306 ngoài B0\*. Candidate cũ (KEEP lẫn DROP) không quay lại. **`Candidate_m = C_short \ overlap(C_short, S0_m)` tính RIÊNG từng model** (`s0/candidates_<m>.json`): chỉ trừ cột đã có trong S0_m của chính model đó (trùng tên, hoặc giá trị giống hệt cùng timestamp); cùng indicator khác lag KHÔNG phải trùng; KHÔNG lọc toàn cục theo B0-306 hay candidate cũ; **tương quan cao = báo cáo (`near_vs_s0`), không bao giờ tự xoá**. `python run.py lock-s0` ghi `s0/`.
-- **Model** (thứ tự = thời gian chạy tăng dần): LightGBM → XGBoost → CatBoost → **TimesFM-LoRA** → XGB-RF → AutoTS (WR/MR probe → `autots-search` → AutoTS-final) → LSTM; ensemble của các model tốt. Mỗi model: calibrate riêng trên S0_m bằng `calib_seed` → số vòng/epoch cố định (XGB-RF/AutoTS theo cơ chế riêng) → ε_m mới (3 `eval_seeds`) → add-one Candidate_m ở `selection_seed` (KEEP nếu ≥ −ε_m, DROP nếu tệ hơn) → F_raw → prune PI CHỈ cột mới → F_pruned → confirmation 3 seed raw vs pruned (mean RMSE từng ô, ES bật) → F_best = win_m → so champion (`> +ε_champion` đổi, ngược lại giữ). Không model nào kế thừa F\* của model khác; chạy từng model một.
-- **TimesFM-LoRA** (§2.2 #4): pretrained 2.5 → **calibrate = LoRA fine-tune trên FIT + ES chọn epoch** (calib_seed → `fixed_epoch_TFM`; adapter cho `eval_seeds` → ε; adapter `selection_seed` FREEZE) → add-one Candidate_TFM qua XReg trên CÙNG adapter (thêm candidate = fit lại xreg, KHÔNG train lại/đổi trọng số LoRA; hash assert) → F_raw → prune PI → F_pruned → **confirmation F_raw vs F_pruned → F_win** (`wins/tfm_lora_xreg.json`, metadata `feature_set_source`) → rồi mới dựng **hệ thống A = TimesFM-LoRA baseline** (LoRA đã fine-tune, 0 feature, 0 B0\*, 0 covariate XReg; `wins/tfm_lora_baseline.json`, tên cũ `tfm_lora_native.json` vẫn đọc được) → `tfm-final` so **HAI HỆ THỐNG HOÀN CHỈNH**: B = {TimesFM-LoRA + XReg(F_win)} vs A = {TimesFM-LoRA baseline} theo luật project (> +ε_TFM), ngược lại A → `wins/tfm.json`. **KHÔNG gọi là "XReg vs LoRA"/"XReg vs TimesFM"** (XReg không phải model độc lập); A và B phải dùng CÙNG adapter đã freeze (`lora_adapters` trùng). Chỉ TFM-final mới đủ tư cách champion/ensemble/Final. Không có nhánh `tfm_b0`. Input LoRA: r_{t−511..t}, r_t = log(C_t/C_{t−1}); dự báo r̂_{t+1..t+3}; target/dự báo cộng dồn y1..y3. Metadata artifact ghi rõ backbone/LoRA/native/covariates/input/target. Giữ mọi bảo vệ causality: covariate dịch 1 bar, 1 origin/lời gọi, mean head, xreg trên GPU (jax cuda, `PREALLOCATE=false`).
-- **Metric**: model dự báo log return, **metric tính trên giá** `P̂ = C_t·exp(ŷ_h)` (USD): RMSE, MAE; `Gain = 1 − RMSE_cand/RMSE_base` per horizon × fold; MedianGain, WinRate, P10Gain, WorstGain; r và dir-acc trên thay đổi giá; E0 luôn log. **Chỉ MedianGain (với ε) quyết định** KEEP/DROP, champion, thành viên ensemble, TFM-final. Ba vai trò seed tách bạch: `calib_seed` chỉ ES; 3 `eval_seeds` đo ε (`noise = 100·std/mean` từng ô, ε = max(floor, RMS 15 ô)) và confirmation; **một `selection_seed`** cho mọi bước selection. Latency chỉ theo dõi.
-- **Scheduler GPU (§9, 2026-09-04c)**: **lịch chạy/tài nguyên chỉ đổi wall-clock — logic chọn model là ĐÓNG BĂNG.** Số worker = `len(gpu_devices) × gpu_slots_per_device` (máy thí nghiệm 2 × RTX 5000 Ada 32 GB → 2 worker, mặc định 1 task nặng/GPU, không gộp 64 GB, không oversubscribe); mỗi worker là process khoá vào ĐÚNG một GPU vật lý bằng `CUDA_VISIBLE_DEVICES` đặt trước mọi import CUDA. **Không GPU nào có vai trò ML/DL cố định, không pin model family vào GPU**: worker đối xứng, task sẵn sàng → GPU rảnh (round-robin giữa nhánh, FIFO trong nhánh). 5 fold của một cấu hình rải động; **candidate vẫn TUẦN TỰ**; prune PI trọn trong một worker (giữ một dòng RNG); kết quả ghép theo thứ tự fold cố định → y hệt tuần tự. Không CPU fallback (OOM → fail rõ, giảm slot). Nhiều nhánh model độc lập được chạy song song bằng `orchestrate`; mọi task ghi `scheduler_log.jsonl`. **Champion HOÃN** (`defer_champion`): nhánh chỉ sinh artifact đại diện, `champion-replay` so theo THỨ TỰ CỐ ĐỊNH lgbm → xgb → cat → tfm → xgbrf → autots → lstm, chỉ đọc artifact (không train/inference). Thứ tự chạy xong không bao giờ đổi champion.
-- **`final` (TEST) không đi qua scheduler**: chạy tuần tự trong process chính, đúng một lần, `orchestrate` không bao giờ chạm TEST.
-- **Không vẽ trong training** (§10): calibrate/lock-s0/loop/confirmation/champion/ensemble/final chỉ lưu artifact; `python run.py visualize` dựng lại mọi figure sau khi xong, không train/inference. Định nghĩa figure §7.3 giữ nguyên.
-- **Split**: walk-forward FIT → ES → purge 60' → VAL; **TEST chỉ chạm ở `final`, đúng một lần — ép trong code** bằng `final/TEST_SENTINEL.json` (ghi trước khi chạm TEST; lần hai → dừng ngay, không hỏi; chỉ cờ `--force-test-rerun` recovery tường minh mới vượt, phải ghi lý do). Origin t thuộc `[T_start, T_end)` chỉ khi `t ≥ T_start` và `t + 3' < T_end`. Feature chỉ dùng τ ≤ t; TargetTransform/scaler fit train-only mỗi fold.
-- Mỗi experiment đi qua checklist §6 của RESEARCH_PLAN (input, target, time alignment, leakage, biên, causality, metric, decode, S0/candidate, LoRA, hợp lý).
+## Artifact và lịch sử
 
-## Training state & bất biến cứng (không tương tác)
-
-`TRAINING: LOCKED` (xem MEMORY). Chỉ user unlock bằng lệnh rõ ("unlock training" / "bắt đầu training" / "run experiments"). Viết code không phải permission để train. **Training/inference trên data thật chỉ trên GPU — cấm CPU, không CPU fallback, không hỏi user**: GPU không có hoặc backend không thực sự CUDA (preflight XGBoost kiểm `build_info USE_CUDA` + booster device) → dừng ngay bằng `checker_log.hard_fail`. CPU chỉ cho việc không phải training: tính feature, metric, MI/PI, overlap audit, unit/smoke test synthetic, visualize, và predict của thư viện mặc định chạy CPU (LightGBM/CatBoost). Vast tính giờ: mỗi run phải thuộc một bước và trả lời một câu hỏi; không idle, không chạy trùng.
-
-**Ngoại lệ tương tác DUY NHẤT — sự cố TÀI NGUYÊN GPU** (2026-09-04d): không có GPU, GPU được giao biến mất, CUDA/backend
-không train được trên GPU, phát hiện CPU fallback, định tuyến GPU sai (UUID trùng), worker CUDA chết, OOM chặn đường GPU
-→ `checker_log.gpu_stop`: DỪNG AN TOÀN (giữ artifact đã xong, flush log), **KHÔNG CPU fallback**, **KHÔNG tự đổi
-batch/hyperparameter/seed/methodology**, ghi ERROR `ref=USER_DECISION_REQUIRED`, in phương án và **HỎI USER** (exit 3).
-Mọi vi phạm bất biến KHOA HỌC khác (checksum, leakage, biên, S0 malformed, TEST lần hai, TRAINING LOCKED) vẫn dừng tự
-động, không hỏi, không có tuỳ chọn "chạy tiếp" — đó là thí nghiệm không hợp lệ, không phải lựa chọn tài nguyên.
-
-**Agent theo pha vận hành** (2026-09-04d): `checker` (trước `orchestrate` + trước `final`) · `run-monitor` (theo dõi
-run, CHỈ đọc) · `infra` (GPU/env hỏng) · `analyst` (HẬU run) · `researcher` (DORMANT, chỉ khi user yêu cầu đổi
-methodology). Chi tiết `.claude/AGENT.md`.
-
-**Checker không tương tác** (2026-09-04): mọi finding → `experiments/<run>/checker_log.jsonl` (timestamp, stage, model, severity PASS/INFO/WARN/ERROR, check_id, message, file, ref). Bất biến cứng do code ép và tự dừng (checksum lệch, biên leakage, target ngoài partition, artifact S0/Candidate_m malformed, GPU/CPU fallback, TEST lần hai, TRAINING LOCKED, LF không phủ HF). Finding tư vấn (tương quan cao, nghi dư thừa, gain bất thường, runtime, ghi chú methodology) = WARN/INFO, ghi rồi tiếp tục. Agent `checker` ghi qua `scripts/checker_record.py`; ERROR chặn run cho tới khi sửa + PASS cùng check_id; **không bao giờ hỏi user "tiếp hay dừng"**.
-
-## Artifact & hygiene
-
-- **Không đường dẫn nào dưới `experiments/**` bị gitignore**: runs/, prediction, LoRA adapter (.pt + .json), s0/, checker_log.jsonl, final/TEST_SENTINEL.json, log, cache đều track; nhị phân `.npz/.safetensors/.pt/.pth/.png` dưới `experiments/` đi Git LFS (`.gitattributes`). Không commit checkpoint TimesFM gốc; ghi model id + revision + version môi trường.
-- Không đưa secrets (Vast API key, SSH key, token, password) vào repo/CLAUDE.md/MEMORY.md/git; IP/instance id ngắn hạn không thành memory.
-- Không tự ý: xóa raw data, `git reset --hard`, force push, xóa experiment results, rotate/xóa Vast resources — kể cả trong bypassPermissions.
-- MEMORY.md là trạng thái, không phải log: update/replace khi obsolete; finding chỉ ghi khi đã chạy thật.
-- Context: <70% bình thường; 70–85% chọn lọc, checkpoint ở ranh giới có nghĩa; ≥85% hoàn tất đơn vị nhỏ nhất → cập nhật MEMORY → `/compact`. Không compact giữa một atomic change.
+- Không xóa/sửa raw archive đã tải để làm nó có vẻ liên tục. Tạo prepared version mới khi sửa replay.
+  Hai CSV OHLCV canonical, checksum cũ, `experiments/15d/` và `Baseline_LGBM.py` giữ nguyên.
+- Không ignore metric/prediction/checkpoint/log/figure. Không ghi đè cell đã hoàn tất; CLI hiện chưa có resume
+  hoàn chỉnh theo cell. Khi cần recovery, session chính bổ sung skip/select cell đúng config/revision hoặc lưu
+  attempt mới có provenance, không tuyên bố CLI đã có `--resume` khi chưa thêm.
+- Commit/push phần việc OB và artifact được phép, stage theo scope; không dùng `git add -A` kéo thay đổi ngoài run.
+  Không force push, reset --hard, xóa kết quả hoặc commit secret/checkpoint pretrained gốc.
+- `.claude/MEMORY.md` ghi trạng thái thật, không kế thừa PASS từ vòng OHLCV. Context compact không kết thúc goal;
+  lưu run/config/stage/process/việc còn thiếu trước khi compact rồi tiếp tục.
 
 @MEMORY.md

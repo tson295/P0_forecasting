@@ -1,139 +1,119 @@
-# Prompt cho session Claude Code trên Vast — vòng EXPANDED-DATA (2026-09-03; cập nhật 2026-09-04d: 2 GPU, data trong repo, pha vận hành)
+# Prompt Claude trên Vast — một goal Order Book
 
-> Chỉ dùng khi user đã **cho phép rõ ràng** chạy experiment vòng expanded-data (MEMORY hiện ghi `TRAINING: LOCKED`).
-> Copy nguyên khối dưới đây vào một session Claude Code mới trên máy Vast sau khi: instance đã tạo và repo đã clone vào
-> `~/P0_forecasting` bằng `git clone … && cd P0_forecasting && git lfs install && git lfs pull`.
-> **Data 2 năm nằm TRONG repo qua Git LFS** — `data/BTC_1m_2y.csv` (sha256 559ce040…f097, 1.051.201 dòng) và
-> `data/BTC_5m_2y.csv` (sha256 0e5fb9ad…f2fef, 210.239 dòng) có sẵn sau `git lfs pull`. KHÔNG scp, KHÔNG cần `derive-lf`
-> (lệnh đó ở lại làm công cụ kiểm chứng). Nếu quên `git lfs pull`, hai file chỉ là pointer ~130 byte → `check-data` báo checksum lệch.
+Copy toàn bộ khối dưới vào session Claude đang ở repo branch `OB` trên **Vast GPU đã được cấp**.
+Prompt này cho phép chạy data preparation và training thật; không cần một lần unlock riêng.
+Đây không phải khẳng định code đã chạy thành công: hiện raw đã tải ở máy local, còn prepare/full run chưa chạy.
 
----
+```text
+Thực hiện MỘT GOAL duy nhất cho P0_forecasting trên Vast:
+Hoàn thiện historical Order Book data của BTCUSDT Binance Spot từ archive HF pinned,
+chạy đầy đủ pipeline src_OB cho tất cả model/fold/horizon thực tế, xuất metrics/latency/summary,
+kiểm tra artifact và báo cáo kết quả. Không kết thúc goal ở bước viết plan, data xong, hay một model vừa xong.
 
-Bạn là session Claude Code chạy trên máy Vast.ai GPU cho project P0_forecasting (BTC 1-phút point forecasting), vòng
-EXPANDED-DATA trên DATA 2 NĂM. Repo ở ~/P0_forecasting; CẢ HAI file data (1m + 5m) đã có sẵn trong repo qua Git LFS.
+Đây là authorization của user cho toàn bộ công việc trên instance Vast đang được cấp:
+cài/build dependency GPU, tải archive, prepare/reconstruct data thật, sửa lỗi triển khai/env/adapter
+trong phạm vi phương pháp đã chốt, training thật, ghi artifact, commit/push branch OB.
+Không hỏi unlock/approval giữa các bước. Không tạo/thuê/xóa instance hoặc tự đổi GPU ngoài quyền đã cấp.
+Không training trên máy local. Không CPU training/fallback.
 
-PROMPT NÀY LÀ AUTHORIZATION CỦA USER ĐỂ CHẠY TOÀN BỘ EXPERIMENT END-TO-END (user đã unlock bằng cách gửi prompt này):
-sau khi mọi preflight PASS, bạn TỰ chuyển TRAINING: UNLOCKED và chạy LIÊN TỤC theo thứ tự plan §8 tới hết `final` + `visualize`.
-KHÔNG hỏi user để duyệt giữa các bước/model. Chỉ DỪNG và hỏi user trong các blocker liệt kê ở cuối prompt.
+Đọc theo thứ tự:
+1. .claude/CLAUDE.md và .claude/MEMORY.md
+2. .claude/AGENT.md và .claude/agents/checker.md
+3. src_OB/README.md và configs/orderbook.json
+4. Code src_OB liên quan tới stage đang xử lý.
+docs/RESEARCH_PLAN.md, workflow OHLCV run.py và docs/archive là lịch sử, không điều khiển goal này.
 
-ĐỌC TRƯỚC (theo thứ tự): .claude/CLAUDE.md → .claude/MEMORY.md → docs/RESEARCH_PLAN.md (rev 10.4) → README.md → .claude/AGENT.md
-→ docs/reference/audit_timesfm_lora.md. docs/archive/ là lịch sử; experiments/15d/ là vòng 15 ngày đã xong (không sửa).
+VẬN HÀNH
+- Python CLI tự lặp các family/fold/horizon; không dựng agent runner/controller/monitor/infra/researcher/analyst.
+  Session chính chạy lệnh, theo dõi process, sửa lỗi và tiếp tục. Chỉ gọi checker để đọc evidence sau prepare,
+  khi có lỗi correctness cụ thể, và khi tổng kết; không gọi checker trước/sau từng model.
+- Cấm mọi smoke/canary/unit/integration test, synthetic run, trial fit, GPU-probe fit, benchmark pass, warmup riêng.
+  Không dùng scripts/vast_bootstrap.sh, các *canary*, run.py gpu-probe, pytest hoặc các workflow cũ.
+  Được đọc code/data/metadata/log, xem nvidia-smi/process và đối chiếu artifact của lượt chạy thật.
+- Không suy ra code đã hoàn thiện chỉ từ commit. Nếu lượt chạy thật lộ bug/API mismatch, tự sửa trong src_OB
+  và tiếp tục mà giữ các invariants dưới đây. Giữ src/p0, Baseline_LGBM.py và kết quả cũ nguyên trạng.
 
-=========================== LUẬT BẤT BIẾN (không tương tác) ===========================
-0. Bất biến cứng do code tự ép (checker_log.hard_fail → ERROR + dừng): checksum lệch, LF không phủ HF, biên/purge sai, artifact
-   S0/Candidate_m malformed hoặc audit trên dataset khác, GPU không có / backend không CUDA, TEST lần hai, TRAINING LOCKED. Khi gặp:
-   KHÔNG hỏi user "tiếp hay dừng" — sửa nếu là lỗi code/env rồi chạy lại, hoặc dừng và báo cáo nếu thuộc danh sách blocker cuối prompt.
-   Finding tư vấn (WARN/INFO trong experiments/full/checker_log.jsonl: tương quan cao, gain bất thường, runtime) → ghi, tiếp tục.
-1. Training CHỈ trên GPU, cấm CPU, không fallback âm thầm; backend từng thư viện do scripts/vast_bootstrap.sh RESOLVE bằng fit thật
-   và ghi vào configs/p0_full.json (LightGBM device_type gpu|cuda → chảy sang AutoTS-WR và template bake-off). xreg của TimesFM
-   chạy jax GPU (jax[cuda12]==0.11.1, XLA_PYTHON_CLIENT_PREALLOCATE=false). Thiếu GPU backend cho một model bắt buộc → DỪNG hỏi user.
-2. TRAINING lock: CLI tự từ chối khi MEMORY còn LOCKED. TEST chỉ chạm ở `final`, đúng MỘT lần.
-3. Mỗi run thuộc đúng một bước §8; không chạy trùng, không để GPU idle.
-4. Không thêm model/metric/feature ngoài plan; không sweep hyperparameter; không sửa Baseline_LGBM.py; không đổi luật KEEP/DROP,
-   prune (chỉ cột mới), confirmation, champion, ensemble, vai trò seed §1.3, S0_m khoá, C_short. Không sửa test để né failure.
-5. TimesFM: calibrate = LoRA FIT + ES chọn epoch per fold (VAL không thấy) → freeze → XReg search trên CÙNG adapter → F_raw → prune PI →
-   F_pruned → confirmation raw vs pruned → F_win → RỒI MỚI dựng hệ thống A = TimesFM-LoRA baseline (0 feature, 0 B0*, 0 covariate) →
-   tfm-final so HAI HỆ THỐNG HOÀN CHỈNH: B = {LoRA + XReg(F_win)} vs A = {LoRA baseline}. KHÔNG gọi là "XReg vs LoRA".
-   loss MSE trên ŷ_h; không torch.compile; inject sau load_checkpoint; giữ mean head, 1 origin/lời gọi, dịch 1 bar, cộng dồn one-step.
-   Artifact: wins/tfm_lora_baseline.json, wins/tfm_lora_xreg.json → tfm-final → wins/tfm.json (chỉ TFM-final vào champion).
-   AutoTS: probe = 2 class cố định từ S0 của nhánh; framework chỉ với initial_template GPU + max_generations=0 trên FIT+ES.
-6. data/ read-only: KHÔNG sửa data/BTC_1m_2y.csv hay data/BTC_5m_2y.csv (đã commit qua Git LFS), KHÔNG ghi đè
-   data/data_checksums_2y.json và data/BTC_5m_2y.derivation.json. Không secret vào repo/MEMORY/git.
-   experiments/** KHÔNG được ignore: commit + push (LFS cho .npz/.pt) sau mỗi model; adapter LoRA trong experiments/full/lora/.
-7. KHÔNG vẽ figure trong bất kỳ bước training nào; figure chỉ sinh bằng `python run.py visualize` sau `final`.
-8. `final` chỉ chạy MỘT lần (final/TEST_SENTINEL.json). KHÔNG BAO GIỜ dùng --force-test-rerun trừ khi user ra lệnh rõ (recovery).
-9. LỊCH CHẠY/GPU CHỈ ĐỔI WALL-CLOCK (2026-09-04c). Máy có 2 × RTX 5000 Ada 32 GB = HAI GPU ĐỘC LẬP (không gộp 64 GB), worker ĐỐI XỨNG:
-   KHÔNG gán GPU0 = ML / GPU1 = DL, không pin model family. Mặc định 1 task nặng/GPU (gpu_slots_per_device = 1) — không tự tăng.
-   Nhiều nhánh model độc lập được chạy song song (`orchestrate`), nhưng candidate trong một model VẪN TUẦN TỰ và champion được HOÃN
-   tới `champion-replay` (thứ tự cố định lgbm→xgb→cat→tfm→xgbrf→autots→lstm). Không đổi seed/hyperparameter/batch/metric để chạy nhanh hơn.
-   OOM → giảm gpu_slots_per_device hoặc chạy nhánh nặng riêng; TUYỆT ĐỐI không CPU fallback, không đổi batch LoRA nếu không bắt buộc (ghi rõ khi đổi).
-10. SỰ CỐ TÀI NGUYÊN GPU = TÌNH HUỐNG DUY NHẤT ĐƯỢC DỪNG VÀ HỎI USER (quyết định user 2026-09-04d).
-   GPU không có / GPU được giao biến mất / CUDA hỏng / backend không train được trên GPU / phát hiện CPU fallback /
-   định tuyến GPU sai (UUID trùng) / worker CUDA chết / OOM chặn đường GPU → code gọi `checker_log.gpu_stop`:
-   dừng an toàn, giữ artifact đã xong, KHÔNG CPU fallback, KHÔNG tự đổi batch/hyperparameter/seed/methodology,
-   ghi ERROR `ref=USER_DECISION_REQUIRED`, exit code 3. Khi thấy exit 3 hoặc ERROR đó: BÁO CÁO NGUYÊN VĂN CHO USER
-   kèm phương án (sửa/đổi GPU rồi chạy lại đúng bước, chạy 1 GPU với P0_GPU_DEVICES=0, hoặc dừng) và CHỜ user chọn.
-   Không tự chọn, không tự chạy lại bằng CPU, không tự giảm batch. Mọi vi phạm bất biến KHOA HỌC khác (checksum,
-   leakage, biên, S0 malformed, TEST lần hai) vẫn dừng TỰ ĐỘNG, KHÔNG hỏi, không có tuỳ chọn "chạy tiếp".
-11. AGENT theo pha VẬN HÀNH: `checker` trước `orchestrate` và trước `final`; `run-monitor` theo dõi trong lúc chạy
-   (chỉ đọc scheduler_log/orchestrate_log/checker_log + nvidia-smi); `infra` khi GPU/env hỏng; `analyst` SAU khi có
-   artifact thật; `researcher` KHÔNG gọi trong đường chạy này.
+DATA / PHƯƠNG PHÁP KHÔNG ĐỔI
+- HF MaximumLeverage/crypto-lob-stream, full SHA theo configs/orderbook.json:
+  873f31e729ae23b1c309cd5dcb33feed27c407de. Chỉ BTCUSDT, exchange binance (Spot).
+- Archive hiện có 4 file depth/snapshots tháng 6 và 7/2026, 704.186.850 byte. Không giả định 2 năm.
+  Raw đã tải ở máy local; chỉ manifest được commit, clone trên Vast chưa chắc có các Parquet.
+  Dùng downloader để lấy đúng revision, không cần Tardis key. Không đổi revision, bịa/pad lịch sử.
+- Depth là diff, không phải snapshot từng row. Gom đủ một message theo timestamp/U/u; replay từ snapshot
+  quan sát được trước event; quantity mới là absolute, 0 xóa; prune cache sau message rồi lấy top 10 mỗi phía.
+- Gap ID/timestamp hoặc book không hợp lệ: kết thúc segment, không replay xuyên gap, chờ snapshot mới.
+  2026-07-05 20:56–21:39 UTC là hard reset. Không forward-fill qua phần thiếu do collector cũ.
+- Một mid; OF tính trước same-mid drop và cộng dồn tới mid-change; OFI = bidOF - askOF, 10 level.
+  Baseline chỉ OF/OFI + timing. Giữ raw timestamp/mid timeline riêng để as-of sampling.
+- Direct h60/120/180 giây, một model/adapter mỗi fold/horizon. Label log(MP(t+h)/MP(t)), quote cuối <= t+h.
+  Feature/window/label nằm trong segment hợp lệ. Gap FIT/VAL >5 ngày, default 6 ngày.
+- Family đủ: lgbm,xgb,cat,xgbrf,lstm,autots,tfm_zero_shot,tfm_lora. Không thêm DeepLOB, không feature search.
+  AutoTS tự search model/tham số trong GPU allowlist. TimesFM zero-shot chỉ mid; LoRA + OF head, không XReg.
+- RMSE/MAE/R² trên raw price; thêm rmse_gain_vs_e0 và r2_os_vs_e0 từ cùng E0 hiện có/cùng origins.
+  Không tính metric trên log-return. Latency trong inference thật: p95/p99 batch 1 và max quan sát, không hard bound.
 
-=========================== PREFLIGHT (fail-fast) ===========================
-  cd ~/P0_forecasting && git lfs install && git lfs pull && tmux new -s p0
-  git log --oneline -1
-  git lfs ls-files | grep BTC_          # phải thấy CẢ data/BTC_1m_2y.csv lẫn data/BTC_5m_2y.csv
-  ls -l data/BTC_1m_2y.csv data/BTC_5m_2y.csv    # ~101,8 MB và ~21,1 MB (nếu ~130 byte = quên `git lfs pull`)
-  export P0_GPU_DEVICES=0,1 XLA_PYTHON_CLIENT_PREALLOCATE=false     # 2 GPU đối xứng, 1 task nặng/GPU (KHÔNG đặt P0_FOLD_WORKERS)
-  nvidia-smi --query-gpu=index,name,memory.total --format=csv        # phải thấy đúng 2 × RTX 5000 Ada 32 GB
-  bash scripts/vast_bootstrap.sh                                    # GPU, pip, timesfm 2.0.2 + autots 1.0.4 + jax[cuda12], build/resolve LightGBM, preflight, unit test
-  PYTHONPATH=src:. python scripts/vast_canary.py --config configs/p0_full.json
-  PYTHONPATH=src:. python scripts/canary_xreg_gpu.py --config configs/p0_full.json
-  python run.py gpu-probe --config configs/p0_full.json             # worker 0 → GPU vật lý 0, worker 1 → GPU vật lý 1; UUID PHẢI KHÁC NHAU;
-                                                                   # probe backend THẬT trong từng worker (torch/xgboost/lightgbm/catboost/jax/timesfm);
-                                                                   # lỗi GPU ở đây = dừng exit 3 → hỏi user (KHÔNG tự sửa bằng CPU)
-  # (tuỳ chọn kiểm chứng) python run.py derive-lf --config configs/p0_full.json --force  → phải tái lập ĐÚNG sha 0e5fb9ad…f2fef
-  python run.py check-data --config configs/p0_full.json            # KHÔNG --write-checksums: anchor data/data_checksums_2y.json đã commit → phải in "verify … OK"
-  python run.py lock-s0 --config configs/p0_full.json               # S0_m khoá + overlap audit + Candidate_m → experiments/full/s0/ (audit label = dataset 2 năm)
-  PYTHONPATH=src:. python -m pytest -q -x
+THỰC HIỆN LIÊN TỤC
+1. Ở checkout OB, ghi commit code, config, GPU/driver/package versions của môi trường thật vào thư mục run.
+   Chuẩn bị CUDA-enabled PyTorch, LightGBM build gpu/cuda phù hợp image và requirements-vast.txt.
+   Requirements hiện hướng tới CUDA 12. Không cài JAX/XReg hoặc gọi bootstrap cũ. Không fit thử để chọn backend;
+   sử dụng backend GPU tường minh, xử lý lỗi nếu actual fit thất bại. Một process nặng/GPU, không cộng VRAM nhiều GPU.
 
-check-data phải in: HF 1.051.201 bar 2024-09-03 16:29 → 2026-09-03 16:29 ok:true; LF 210.239 bar dẫn xuất từ đúng HF; B0-eligible 1.049.358;
-split rolling_spread 5 fold: VAL 2025-01-07, 2025-05-30, 2025-10-19, 2026-03-11, 2026-08-01 (mỗi 3 ngày, FIT 120 ngày ≈ 172,7k origin, ES ≈ 7,1k,
-VAL ≈ 4,3k), final_TEST 2026-08-04 16:30 → 09-03 16:30 (42.918 origin), tất cả OK, và "verify … OK — khớp snapshot đã ghi".
-lock-s0 phải in: S0 (locked_b0 + locked_ext): lgbm 72+14, xgb 72+11, cat 72+5, xgbrf 72+12, lstm 72+23, autots_wr 72+21, autots_mr 72+8, tfm 0+0;
-C_short 163; Candidate_m = 163 cho mọi model (0 overlap); near vs S0 chỉ báo (không bỏ). Sau đó: `python scripts/checker_record.py --exp experiments/full --blocking`
-phải sạch ERROR. Sai bất kỳ số nào / checksum KHÔNG KHỚP → DỪNG hỏi user; KHÔNG chạy --write-checksums để ép PASS.
-Canary LoRA thời gian thật (SAU khi unlock, TRƯỚC khi chạy nhánh model): `PYTHONPATH=src:. python scripts/canary_lora.py --config configs/p0_full.json`
-— 1 fold × 1 epoch × 64 origin, adapter vào thư mục tạm, KHÔNG ghi artifact/log của experiment; ghi thời gian/epoch, VRAM đỉnh,
-ms/origin XReg và ETA vào báo cáo. Nếu OOM khi 2 task nặng cùng chạy → đặt P0_GPU_DEVICES=0 cho bước tfm (1 task nặng), KHÔNG đổi batch LoRA
-nếu không bắt buộc (ghi rõ khi đổi), KHÔNG bao giờ chuyển sang CPU.
+2. Chạy download thật:
+   python -m src_OB download --config configs/orderbook.json
+   Downloader tiếp tục file đã hoàn tất; manifest không thay thế cho file Parquet thực tế trên Vast.
 
-TỰ UNLOCK khi và chỉ khi đủ: commit đúng · bootstrap PASS · hai canary PASS · check-data PASS · lock-s0 PASS · pytest PASS · checker_log sạch ERROR.
-Khi đó: sửa .claude/MEMORY.md thành "TRAINING: UNLOCKED", commit, rồi chạy tiếp mà không hỏi lại.
+3. Hoàn thiện data bằng prepare thật:
+   python -m src_OB prepare --config configs/orderbook.json
+   Nếu prepared_dir đã có: đọc manifest/status để phân biệt complete/partial/revision khác. Không xóa để chạy đè;
+   reuse chỉ khi cùng contract, nếu sửa replay thì tạo prepared version mới và lưu nguyên nhân/config.
+   Ghi DATA_REPORT.md trong thư mục output: coverage thực, n raw/kept states, segment duration distribution,
+   gap/reset reasons, known gap handling, số fold và eligible train/VAL origins theo đúng mask của pipeline.
+   Đây là kết quả xử lý dữ liệu thật, không synthetic test hoặc model benchmark.
 
-=========================== THỨ TỰ CHẠY (plan §8) ===========================
-  # KHUYẾN NGHỊ trên máy 2 GPU — một lệnh, DAG nhánh, hai GPU luôn có việc, champion replay ở cuối:
-  python run.py orchestrate --config configs/p0_full.json --dry-run    # in DAG rồi thoát (kiểm tra trước)
-  python run.py orchestrate --config configs/p0_full.json              # loop lgbm/xgb/cat/tfm/xgbrf/autots_wr/autots_mr/lstm (song song theo GPU rảnh)
-                                                                       # → tfm-final (ngay khi nhánh tfm xong) + autots-search (ngay khi CẢ hai probe xong)
-                                                                       # → champion-replay (thứ tự cố định, chỉ đọc artifact) → ensemble. KHÔNG chạm TEST.
-  # HOẶC từng bước (tương đương; dùng khi cần theo dõi/thử từng model):
-  python run.py loop --config configs/p0_full.json --model lgbm        # champion ban đầu §3 (khi replay: lgbm vẫn là mốc đầu)
-  python run.py loop --config configs/p0_full.json --model xgb
-  python run.py loop --config configs/p0_full.json --model cat
-  python run.py loop --config configs/p0_full.json --model tfm         # calibrate = LoRA FIT+ES → freeze → XReg add-one → prune → confirmation → F_win + hệ thống A
-  python run.py tfm-final --config configs/p0_full.json                # B {LoRA + XReg(F_win)} vs A {LoRA baseline} → TimesFM-final
-  python run.py loop --config configs/p0_full.json --model xgbrf
-  python run.py loop --config configs/p0_full.json --model autots_wr   # probe (S0 = bộ thắng WR cũ)
-  python run.py loop --config configs/p0_full.json --model autots_mr   # probe (S0 = bộ thắng MR cũ)
-  python run.py autots-search --config configs/p0_full.json            # framework(F_WR_best) vs framework(F_MR_best) → AutoTS-final
-  python run.py loop --config configs/p0_full.json --model lstm
-  python run.py champion-replay --config configs/p0_full.json          # champion theo THỨ TỰ CỐ ĐỊNH, chỉ đọc artifact (defer_champion: true)
-  python run.py ensemble --config configs/p0_full.json
-  python run.py final --config configs/p0_full.json                    # TEST đúng một lần; tuần tự, không qua scheduler; lưu final/*.npz
-  python run.py visualize --config configs/p0_full.json                # hậu kỳ: mọi figure từ artifact
+4. Checker đọc data/metadata/code trước training. Chú ý: context TimesFM 512 điểm cách nhau h giây;
+   ở h180 cần 25h33 context liên tục, chưa tính label. Snapshot reanchor/missing updates có thể làm common
+   origin mask rỗng cho tất cả model. Đọc bằng chứng thật, sửa lỗi replay nếu có; không nối gap, bỏ model,
+   giảm context/gap ngầm hoặc khẳng định data khả dụng chỉ vì đủ tháng trên lịch.
+   Số fold có thể ít hơn 5 theo coverage như code đã cho phép. Nếu phương pháp hiện tại không thể chạy trên
+   các segment hợp lệ, nêu blocker có số liệu và quyết định data/context còn cần; không báo goal hoàn tất giả.
 
-Sau mỗi model: cập nhật MEMORY (Current Task / Exact Next Step, thời gian thật vs ETA), `git add -A && git commit && git push`
-(LFS cho .npz/.pt), rồi chạy tiếp ngay. `loop --resume` nếu SSH rớt giữa add-one (đọc log.csv + calib/<m>_base.json).
+5. Nếu data khả dụng, chạy FULL training thật ngay, không dừng chờ user duyệt:
+   export P0_OB_VAST=1
+   export CUDA_VISIBLE_DEVICES=0
+   python -m src_OB train --config configs/orderbook.json
+   python -m src_OB summarize --config configs/orderbook.json
+   Chỉ chạy lệnh sau khi lệnh trước thành công. CLI tự xử lý toàn bộ model/fold/horizon.
+   Giữ process/log trong tmux hoặc cơ chế chạy bền của Vast để SSH/context đổi không làm mất run.
+   Nếu dùng nhiều GPU, chia các fold thật thành tập rời nhau bằng --folds, cùng config và common mask;
+   không mở nhiều agent điều phối và không chạy trùng cell.
 
-=========================== ĐỌC KẾT QUẢ ===========================
-- MedianGain vs E0 chỉ cỡ 0.05–0.3 pp là bình thường; Gain > ~1 pp vs B0/E0 → NGHI LEAKAGE, dừng và gọi agent checker.
-- TimesFM-LoRA ≈ E0 là kết quả hợp lệ (r1 gần nhiễu trắng); ES trên ES-partition là chốt chặn.
-- checker_log WARN (UNUSUAL_GAIN, C_SHORT_INTRA_IDENTICAL, near) chỉ ghi nhận; ERROR (hard invariant) = run đã tự dừng → sửa rồi chạy lại.
-- experiments/full/scheduler_log.jsonl: xem GPU nào bận/rảnh (duration_sec, gpu_physical_id, queue_wait_sec). Nếu một GPU idle nhiều
-  trong khi GPU kia đầy việc → BÁO CÁO trong report (để chỉnh scheduling sau), KHÔNG tự đổi methodology/hyperparameter để "cân" máy.
-- KHÔNG chạy lại `final` nếu experiments/full/summary/all_models_test.csv đã tồn tại.
+6. Nếu lỗi runtime/env/GPU build/API: giữ traceback/artifact, sửa nguyên nhân rồi tiếp tục công việc thật.
+   Không fallback CPU, không hạ batch/epoch/context, đổi seed/target/split hoặc giảm search để lách lỗi.
+   Không lặp nguyên lệnh lỗi vô hạn. Không bỏ model lỗi rồi tổng kết như đầy đủ.
+   CLI hiện CHƯA có --resume/--horizons, completed directory không được overwrite. Nếu run bị ngắt,
+   session chính được bổ sung recovery theo cell: reuse completed chỉ khi khớp code/config/data phù hợp,
+   lưu failed attempt và chạy lại cell chưa hoàn tất, không giả nhận checkpoint thiếu optimizer là resume chính xác.
+   Không train lại cell thành công chỉ để có thêm số đo latency. Nếu correctness fix làm artifact cũ mất hiệu lực,
+   lưu riêng chúng và ghi rõ các cell cần chạy lại; không trộn config/revision khác trong summary.
 
-=========================== CHỈ DỪNG VÀ HỎI USER KHI ===========================
-- **SỰ CỐ TÀI NGUYÊN GPU (ngoại lệ chính thức, luật 10)**: exit code 3 / ERROR `ref=USER_DECISION_REQUIRED` — báo nguyên văn + phương án, chờ user;
-- package/API thật lệch adapter mà sửa thì đổi methodology;
-- checksum/data mismatch (kể cả khi quên `git lfs pull`), LF không dẫn xuất từ đúng HF (LF_DERIVATION_MISMATCH) hoặc không phủ HF; lock-s0 báo overlap bất thường với cột S0;
-- phát hiện leakage hoặc bug correctness mới; test fail mà sửa thì phải đổi methodology; ERROR trong checker_log không sửa được bằng env/code;
-- OOM/hết dung lượng không xử lý được bằng tinh chỉnh execution an toàn (giảm gpu_slots_per_device / P0_GPU_DEVICES, tail_bars, dọn cache HF).
+7. Sau khi hết cell, checker đọc artifact và summary, không infer/fit lại.
+   Expected cells = số fold THỰC TẾ × 8 family × 3 horizon. Mỗi cell phải có completed.json,
+   metrics.json/metrics.csv, predictions.parquet, latency.json/inference_latency.csv và checkpoint/adapter
+   phù hợp (zero-shot chỉ cần pretrained ID/revision). Không chỉ đếm thư mục hoặc nhìn exit code.
+   Summary phải có per_fold_per_horizon.csv và by_model_horizon.csv, gồm metrics giá, E0 gains và latency.
+   E0 denominator=0 được để null có lý do, không ép số để checker PASS.
 
-KHÔNG phải lý do để dừng: một bước/model vừa xong; champion đổi/không đổi; ETA cao; cần commit/push.
+8. Viết RUN_REPORT.md: coverage/segment/cell counts, kết quả theo model/horizon, hai E0 gains, latency,
+   runtime thật, GPU/env/code/config provenance, lỗi đã sửa, phần chưa đạt và giới hạn dữ liệu.
+   Lưu checker findings cùng report. Cập nhật MEMORY theo trạng thái thực; không dùng PASS của OHLCV cũ.
+   Commit/push code, config, reports và artifact OB theo scope trên branch OB; LFS cho file lớn đã cấu hình.
+   Không git add -A, force push, xóa dữ liệu/kết quả, commit secret hoặc checkpoint pretrained gốc.
 
-=========================== BÁO CÁO ===========================
-Cuối mỗi bước và cuối run: lệnh, thời gian thật vs ETA, GPU, file output, số liệu chính (MedianGain/WinRate/P10/Worst, ε,
-số vòng/epoch LoRA, KEEP/DROP, prune, win, champion đổi/giữ ở replay, TFM-final = hệ thống A hay B), thời gian bận của TỪNG GPU (scheduler_log), bất thường, việc kế tiếp, commit hash.
-Bắt đầu bằng: đọc các file context ở trên, `git log --oneline -1`, rồi chạy preflight.
+GIỮ MỘT GOAL
+Không dừng vì data vừa xong, một model xong, cần commit, thời gian dài hoặc cần compact context.
+Cập nhật trạng thái định kỳ từ process/log thật. Lưu exact next step/run/config trước compact rồi tiếp tục goal.
+Chỉ báo COMPLETE khi data hợp lệ và tất cả cell bắt buộc cùng artifact/summary/report đã hoàn tất.
+Nếu bị chặn thật bởi dữ liệu không khả dụng, quyền truy cập hoặc GPU/tài nguyên không thể sửa trong quyền hiện có,
+ghi rõ bằng chứng, công việc đã xong, cell còn thiếu và thông tin/quyết định cần từ user; không gọi đó là hoàn tất.
+Bắt đầu thực hiện trên Vast ngay sau khi đọc context; không chỉ trả lời bằng kế hoạch.
+```
