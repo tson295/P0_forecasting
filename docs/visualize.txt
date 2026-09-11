@@ -1,0 +1,114 @@
+PROMPT HẬU KỲ RIÊNG — VISUALIZE TIMESFM / AUTOTS
+
+Thực hiện visualization cho run đã hoàn tất trên branch tfm_autots. Chỉ bắt đầu SAU khi toàn bộ training,
+feature search, confirmation, AutoTS bake-off và summary đã xong. Nếu training còn chạy, ghi pending và
+để nó hoàn tất trước; không tranh CPU/RAM bằng plotting. Đây là task riêng, không sửa/chèn vào
+docs/VAST_GOAL.txt, docs/VAST_SESSION_PROMPT.md hoặc tự thêm plotting vào training entrypoint.
+
+MỤC TIÊU
+Xuất 30 ảnh forecast path zoom vào t, t+1, t+2, t+3; MỖI ảnh chồng TimesFM-final và AutoTS-final,
+actual và E0 trên CÙNG trục, có đủ CẢ BA horizon. Thêm heatmap từ số liệu đã lưu/tính được từ predictions.
+Khoảng 30 ảnh chính + 2–5 ảnh heatmap là đủ; không tạo hàng trăm ảnh hoặc một ảnh riêng mỗi model/horizon.
+Chỉ CPU hậu kỳ trên artifact, không train/refit/infer, không tải/nạp checkpoint, không probe/test/smoke/
+canary/benchmark/warmup. Được viết script hậu kỳ riêng và chạy nó trực tiếp để sinh bộ hình thật.
+
+THAM CHIẾU CÁCH VẼ CŨ
+Đã đọc origin/main tại commit 2b9b662a8c04e612657d0824b7dbcb3f9d6802d7:
+- src/p0/plots.py: _path(), _panel(), fig_path() là Fig P cần giữ ngữ nghĩa.
+  Một origin t tạo 4 điểm x=[0,1,2,3], nhãn [t,t+1,t+2,t+3].
+  Actual màu đen, E0 là đường ngang 0; model có màu/marker riêng.
+- fig_trajectory()/Fig T cũ là trajectory toàn khoảng evaluation, mỗi ảnh một horizon.
+  Đừng dùng ba ảnh Fig T toàn lịch sử thay cho yêu cầu zoom có cả 3 horizon này.
+- fig_hm()/final_heatmaps() có heatmap Gain vs E0. Giữ ý tưởng fold × horizon, chú thích ô và colorbar.
+- src/p0/visualize.py cũ dùng champion_log/final TEST và thường chỉ vẽ cặp model hoặc ba origin.
+  Gọi nguyên python run.py visualize không đủ yêu cầu 30 ảnh overlay của phase này.
+Đọc source tham chiếu nếu cần, không checkout/cherry-pick main vào branch training.
+
+INPUT VÀ CĂN CHỈ SỐ
+1. Dùng output thật theo config run (mặc định experiments/tfm_autots), phase_config/phase_progress,
+   configs/tfm_autots.json, data/data_checksums_2y.json và data/BTC_1m_2y.csv.
+   Đây là BTC OHLCV 1m hai năm 2024-09-03 → 2026-09-03, không phải Order Book.
+   Phase này đánh giá VAL, chưa chạy TEST. Tên TimesFM-final/AutoTS-final là đại diện model, không phải TEST.
+2. Bắt buộc wins/tfm.json, wins/autots.json và wins/{tfm,autots}_seed{k}.npz của cùng run.
+   NPZ có idx_0/yhat_0, idx_1/yhat_1,... theo fold; idx là global row index trên timeline CSV đã load.
+   Fold names/order lấy từ metadata thật, không mặc định tên fold chỉ là số hoặc ngày cuối tên.
+   yhat có shape (N,3), là CUMULATIVE log-return h=1,2,3. KHÔNG cumsum thêm lần nữa.
+3. seed0 trong filename là VỊ TRÍ k=0 của eval_seeds, không có nghĩa random seed bằng 0.
+   Để đúng cách cũ và không tạo ensemble mới, 30 path dùng cùng actual seed eval_seeds[0]
+   của cả hai model (config hiện tại là 8587). Ghi seed lên ảnh và manifest.
+   Không tự trung bình log-return/prediction các seed rồi so với metric mean-seed RMSE.
+4. Đọc CSV một lần với cột thời gian ts/timestamp và close/Close phù hợp header thực tế.
+   Giữ đúng timeline/sort/alignment như data loader; không drop/reindex rows làm lệch idx.
+   Không gọi Store/load_store/build_ohlcv_features, không dựng lại 306 features/S0/scaler/cache training
+   chỉ để lấy close và timestamp. Không cần CSV 5m để vẽ giá/đo metric từ predictions này.
+5. Dùng origins giao nhau của hai model trong CÙNG fold, đủ nhãn cả ba horizon và timestamps t+h*60.
+   Không ghép theo số thứ tự dòng nếu idx khác nhau, không as-of/forward-fill dự báo bị thiếu,
+   không nối qua gap/fold. Nếu common origins khác tập dùng trong metric đã lưu, ghi rõ trong manifest;
+   không dùng denominator E0 của tập khác. Thiếu model/fold/seed thì ghi thiếu, không lấy kết quả 15d/main bù vào.
+
+30 ẢNH ZOOM FORECAST PATH
+- Với 5 folds thực tế: chọn 6 origins khác nhau/fold, chia danh sách common origins đã sort thành
+  6 khoảng thời gian bằng nhau và lấy origin gần trung điểm mỗi khoảng. Quy tắc deterministic,
+  không nhìn prediction/error để chọn ảnh đẹp. Nếu số folds khác, phân bổ tổng 30 đều theo folds;
+  thiếu origins thì vẽ số hợp lệ, ghi thiếu, không lặp một origin để đủ số ảnh.
+- Một ảnh = một origin = một panel lớn, đủ legend cho Actual, E0, TimesFM-final, AutoTS-final.
+  Không cần thêm models của experiments/15d hoặc main. Không tự thêm WR/MR/baseline variants vào bộ chính.
+- Convert về giá trước:
+      P_hat(t+h|t) = C_t * exp(yhat[t,h-1])
+      Actual(h) = C_(t+h)
+  Vẽ theo đúng Fig P cũ:
+      model  = [0, P_hat(t+1|t)-C_t, P_hat(t+2|t)-C_t, P_hat(t+3|t)-C_t]
+      actual = [0, C_(t+1)-C_t, C_(t+2)-C_t, C_(t+3)-C_t]
+      E0     = [0,0,0,0]
+  Mỗi đường dùng CÙNG origin t; không lấy dự báo của origin t+1/t+2 để ghép thành forecast path.
+- Trục X ghi rõ +1/+2/+3 PHÚT. Trục Y là “Thay đổi giá so với C_t (USD)”, không phải log-return/bps.
+  Tiêu đề có model comparison, fold, timestamp UTC đầy đủ, C_t và actual seed. Điểm t cùng xuất phát 0.
+- Actual đen, E0 xám dashed, màu/marker hai model nhất quán trên mọi ảnh; nét mảnh đủ rõ, không che marker.
+  Auto-scale Y từ tất cả đường của ảnh có padding, không cắt điểm/outlier để model trông tốt hơn.
+  PNG khoảng 10×5 inch, 140–160 dpi; Agg backend, đóng figure ngay sau save.
+  Tên: path_001_<fold>_<UTC>.png ...; không chỉ đặt tên theo horizon.
+
+HEATMAP VÀ METRICS — CHỈ KHI CÓ DỮ LIỆU
+Ưu tiên tfm_autots_per_fold_horizon.csv, tfm_autots_summary.csv, wins/*.json và artifact metrics có sẵn.
+Tối thiểu vẽ rmse_gain_vs_e0 và r2_os_vs_e0 nếu các trường đủ. Có RMSE/MAE/R² đúng nghĩa thì thêm heatmap.
+Mỗi ảnh heatmap = một metric, hai panel model, hàng=fold, cột=h1/h2/h3; cùng scale giữa model trong ảnh đó.
+Annotate giá trị; gains dùng diverging scale quanh 0, RMSE/MAE dùng sequential scale. Không áp giới hạn
+vmax=0.3 cũ làm clip dữ liệu: chọn range từ số thật. Null/undefined để trống hoặc màu riêng có lý do.
+
+Nếu metric thiếu nhưng có đầy đủ actual + saved predictions cùng fold/seed/horizon, được tính hậu kỳ:
+      RMSE = sqrt(mean((P_hat - Actual)^2))
+      MAE = mean(abs(P_hat - Actual))
+      R² = 1 - sum((P_hat - Actual)^2) / sum((Actual - mean(Actual))^2)
+Tính trên TOÀN BỘ origins evaluation hợp lệ của fold, KHÔNG trên 30 origins đã chọn để vẽ.
+Không đổi cột Pearson r thành R² và không dùng r*r thay R². Actual không có phương sai thì R²=null có lý do.
+
+E0 là baseline zero-return hiện có, tương ứng giá origin C_t. REUSE e0 RMSE/MSE đã ghi của đúng fold/horizon
+và đúng tập origins; không tạo baseline mới, không lấy E0 khác split/sample set. Nếu E0 tương ứng chưa có,
+ghi missing và bỏ heatmap gain liên quan thay vì bịa số. Không chia denominator=0; để null có lý do.
+      rmse_gain_vs_e0 = 1 - RMSE_model / RMSE_E0
+      r2_os_vs_e0 = 1 - MSE_model / MSE_E0
+Giữ aggregation như phase: tính metric từng seed rồi mean qua seeds. R² OS dùng mean(seed_rmse**2),
+không bình phương mean(seed_rmse). Mean-fold không phải pooled. Không lấy metric của ensemble mean prediction.
+Gain cũ gain_pp đã nhân 100; trường rmse_gain_vs_e0 mới là ratio. Nếu đổi sang cách hiển thị cũ,
+nhân 100 đúng MỘT lần và ghi đơn vị percentage points (pp); không tạo metric trùng tên khác chỉ để đổi đơn vị.
+Giữ bảng hậu kỳ riêng, không ghi đè metrics chính. Có thể vẽ ít heatmap hơn nếu evidence thiếu.
+Không suy ra inference time từ thời gian render hay tính lại latency bằng model.
+
+TRIỂN KHAI VÀ OUTPUT
+Viết script hậu kỳ riêng, ví dụ scripts/visualize_tfm_autots.py, có --config/--out/--n-paths=30.
+Script chỉ đọc raw timeline và prediction/metric artifacts; không import model wrappers hoặc fit pipeline.
+Sau khi training đã xong, chạy script đúng một lần để tạo bộ ảnh thật; không test/synthetic run trước đó.
+Không render nhiều process đồng thời; load data/NPZ một lần, chỉ lấy 4 điểm/path, tính metrics vectorized
+theo fold/seed. Không chạy visualizer cũ trước rồi mới tạo lại toàn bộ hình bằng script mới.
+Output: experiments/tfm_autots/visualize/ hoặc <actual_output>/visualize/.
+Ghi:
+- 30 PNG path (hoặc số hợp lệ), các heatmap có dữ liệu;
+- figure_manifest.csv: file, loại ảnh, run/config/code provenance, model names, fold, timestamp/origin idx,
+  actual seed, selection rule, units; heatmap ghi nguồn metric/aggregation;
+- plot_values.csv: các giá trị actual/predicted raw price và delta USD tại 30 origins/3 horizons, để đọc lại;
+- visualization_metrics.csv nếu có metric tính bổ sung từ saved predictions;
+- VISUALIZE_REPORT.md: counts, input paths, seed, công thức, thiếu artifact/metric và giới hạn so sánh.
+Checker chỉ đọc số liệu/ảnh/report đã sinh, không gọi lại fit/inference hoặc test.
+Commit/push script + output/report đúng scope lên tfm_autots bằng credentials đã cấp; binary experiment dùng LFS.
+Không git add -A/force push, không sửa raw data, predictions, results cũ hoặc prompt training hiện tại.
+Thiếu quyền push thì giữ commit và ghi PUSH_PENDING; không bịa đã push. Báo ngắn số ảnh và đường dẫn output.
