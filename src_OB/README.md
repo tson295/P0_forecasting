@@ -109,7 +109,7 @@ Mỗi `(fold, family, horizon)` có model/adapter riêng và scalar output, khô
 |---|---|
 | LightGBM, XGBoost, CatBoost, XGB-RF | Cùng feature cố định: snapshot mới nhất, mean 10/100 event, tổng OFI theo level; Direct riêng từng h |
 | LSTM | 100 mid-change event với OF/elapsed time; 1 lớp hidden 64, scalar linear head |
-| AutoTS | Native AutoTS tự search backend LightGBM/XGBoost, tham số và window trong family `WindowRegression`; mọi candidate fit bằng GPU, nhận OF/OFI/elapsed cố định |
+| AutoTS | Native AutoTS tự search backend LightGBM/XGBoost, tham số và window trong family `WindowRegression`; mọi candidate fit bằng GPU, nhận OF/OFI/elapsed cố định; estimator học log-return quanh giá origin của từng cửa sổ (adapter v2) |
 | TimesFM zero-shot | Chỉ chuỗi một mid-price, đổi sang log và center theo giá tại origin; pretrained univariate, không train, không OF/XReg |
 | TimesFM LoRA | Adapter riêng mỗi h; cùng pretrained mean decoder + đầu residual OF/elapsed nhỏ, fine-tune đồng thời; không XReg search |
 
@@ -133,6 +133,15 @@ và dùng native window maker riêng trong từng segment liên tục rồi fit 
 Không nối cuối segment trước với đầu segment sau để tạo window; gap trên regular grid để thiếu, không fill.
 Training matrix luôn lấy lại từ raw timeline, không sử dụng giá bị AutoTS nội suy ở bước làm sạch bảng.
 Regressor mang nhãn thời gian `t+h` nhưng giá trị luôn là feature đã biết tại `t`, không lấy OF tương lai.
+
+**Target (adapter v2, user duyệt 2026-09-11).** Mỗi cửa sổ W giá trên grid h giây được center cố định theo origin của
+chính cửa sổ đó: X = log(P_window) − log(P_origin), với P_origin là giá mới nhất trong cửa sổ (giá tại origin); target
+y = log(MP(t+h)/MP(t)); giá dự báo = P_origin·exp(ŷ). Đây là phép biến đổi cố định bên trong estimator
+(`CenteredLogReturn`), không phải learned transform hay transformer search của AutoTS, và không center toàn chuỗi.
+Bảng `df`, validation và chấm điểm nội bộ của AutoTS vẫn trên giá thô, nên selection vẫn theo raw-price RMSE. Regressor
+OF/OFI + elapsed tại origin giữ như cũ. Native `window_maker` đổi giá sang float32 (làm tròn ≤ 0,002 USDT ở mức ~27k,
+giống nhau lúc fit và predict). `selected_model.json` và `model.joblib` ghi `target` và `adapter_version`. Bản v1
+hồi quy mức giá thô (code 2a5a1c3) đã bị thay; cell cũ nằm ở `experiments/orderbook_zenodo/superseded/autots_raw_price/`.
 Search dùng các block 64 điểm lưới trong outer FIT (kết thúc ở cuối FIT, lùi từng `val_days`); dữ liệu fit của mỗi
 split dừng trước block ít nhất `gap_days` (HF 6 ngày, Zenodo 1 ngày);
 mỗi origin vẫn được dự báo direct một bước, context được cập nhật bằng quan sát lịch sử, không refit ở gap/VAL.
@@ -155,7 +164,8 @@ khẳng định chạy rất nhanh: còn phụ thuộc số origin, GPU/VRAM và
 
 AutoTS/TimesFM cần chuỗi đều để horizon có nghĩa thời gian: ở mỗi h, context price lấy cách nhau h giây;
 forecast **1 step = t+h**. Origin chấm điểm vẫn là các lần mid đổi. Không giả lập irregular event index thành phút.
-AutoTS fit trên price grid h giây của FIT; regressor căn theo window của API. Zero-shot TimesFM giữ checkpoint gốc
+AutoTS fit trên price grid h giây của FIT, estimator học log-return quanh giá origin của cửa sổ; regressor căn theo
+window của API. Zero-shot TimesFM giữ checkpoint gốc
 và không được mô tả là model đã học OF. LoRA dùng bộ decode có gradient và LoRA helper đã có trong `src/p0`,
 chỉ import các hàm đó, không gọi training/search harness cũ.
 

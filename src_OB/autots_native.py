@@ -1,8 +1,10 @@
 """Native AutoTS search over GPU regressors using fixed observed OF features.
 
 The scoped adapter aligns features with each candidate's window and enforces
-devices. AutoTS generates, scores and selects model parameters. No CPU fitting,
-feature subset search, recursive horizon or outer-VAL tuning.
+devices. AutoTS generates, scores and selects model parameters on raw prices;
+inside every candidate a fixed per-window centering (not a learned transform)
+lets the GPU estimator learn log returns around the window's origin price. No
+CPU fitting, feature subset search, recursive horizon or outer-VAL tuning.
 """
 from __future__ import annotations
 
@@ -20,6 +22,10 @@ from .data import DAY
 from .gpu import GPUOnlyError, GPURegressor
 from .latency import infer
 
+# v1 (code 2a5a1c3) regressed raw price levels; v2 centers every window at its origin (user decision 2026-09-11).
+ADAPTER_VERSION = 2
+TARGET = "log_return_centered_at_origin"
+
 
 def frame(ts, values):
     return pd.DataFrame(values, index=pd.to_datetime(ts, unit="us"), columns=["mid_price"])
@@ -30,6 +36,40 @@ def contiguous_runs(times, valid, segments, step):
     starts = np.flatnonzero(valid & ~np.r_[False, connected])
     stops = np.flatnonzero(valid & ~np.r_[connected, False]) + 1
     return zip(starts, stops)
+
+
+class CenteredLogReturn:
+    """Fixed per-window centering around a GPU estimator, so the model does not depend on the price level.
+
+    Rows are native AutoTS windows: `window_size` raw prices oldest-to-newest, then the origin features. The
+    newest price is the origin price P0. The estimator sees log(P_window) - log(P0) plus the unchanged features
+    and learns log(P(t+h) / P0); predictions return to raw price as P0 * exp(y). Nothing outside the window.
+    """
+
+    def __init__(self, estimator, window_size):
+        self.estimator = estimator
+        self.window_size = window_size
+
+    def centered(self, x):
+        x = np.array(x, dtype=np.float64)
+        window = x[:, :self.window_size]
+        if not (window > 0).all():  # also rejects NaN
+            raise ValueError("AutoTS window has a missing or non-positive price.")
+        origin = window[:, -1].copy()
+        x[:, :self.window_size] = np.log(window) - np.log(origin)[:, None]
+        return x, origin
+
+    def fit(self, x, y):
+        x, origin = self.centered(x)
+        y = np.asarray(y, np.float64).reshape(-1)
+        if not (y > 0).all():
+            raise ValueError("AutoTS target has a missing or non-positive price.")
+        self.estimator.fit(x, np.log(y) - np.log(origin))
+        return self
+
+    def predict(self, x):
+        x, origin = self.centered(x)
+        return origin * np.exp(np.asarray(self.estimator.predict(x), np.float64).reshape(-1))
 
 
 def gpu_parameters(spec, cfg):
@@ -79,7 +119,10 @@ def gpu_search_space(cfg, data, horizon):
             return params
 
         def fit(self, df, future_regressor=None):
-            if self.regression_type != "User" or self.scale or self.datepart_method is not None:
+            # CenteredLogReturn relies on the native layout: raw prices oldest-to-newest, then the regressors.
+            if (self.regression_type != "User" or self.scale or self.datepart_method is not None
+                    or self.normalize_window or self.fourier_encoding_components is not None
+                    or self.input_dim != "univariate" or self.output_dim != "forecast_length"):
                 raise GPUOnlyError("AutoTS candidate changed the fixed OF input contract.")
             self.regression_model = gpu_parameters(self.regression_model, cfg)
             # AutoTS evaluates a block of origins; the fitted head remains scalar.
@@ -112,10 +155,11 @@ def gpu_search_space(cfg, data, horizon):
             if len(y) > self.max_windows:
                 selected = np.random.default_rng(self.random_seed).choice(len(y), self.max_windows, replace=False)
                 x, y = x[selected], y[selected]
-            self.model = native.retrieve_regressor(regression_model=self.regression_model,
+            estimator = native.retrieve_regressor(regression_model=self.regression_model,
                 verbose=self.verbose, verbose_bool=self.verbose > 0, random_seed=self.random_seed,
                 n_jobs=self.n_jobs, multioutput=False)
-            self.model.fit(x, y)
+            # AutoTS keeps building windows and scoring on raw prices; only the estimator works in log returns.
+            self.model = CenteredLogReturn(estimator, self.window_size).fit(x, y)
             self.df_train = frame(times[valid], prices[valid])
             self.last_window = self.df_train.tail(self.window_size)
             self.fit_runtime = datetime.now() - self.startTime
@@ -222,15 +266,21 @@ def run(cfg, data, fold, val_ids, horizon, out):
         params["regression_model"] = gpu_parameters(params["regression_model"], cfg)
         write_json(out / "selected_model.json", {"family": "WindowRegression", "parameters": params,
                    "search": options, "score": "raw_price_RMSE", "gap_days": cfg["gap_days"],
+                   "target": TARGET, "adapter_version": ADAPTER_VERSION,
+                   "centering": "fixed per window: log(P_window) - log(P_origin), P_origin = newest window price; "
+                                "prediction = P_origin * exp(estimator output)",
                    "regressor": "OF/OFI and elapsed at origin only"})
         model = Regression(**params, forecast_length=1, frequency=f"{horizon}s",
                            random_seed=cfg["seed"], n_jobs=1)
         model.fit(df, future_regressor=reg)
         # Save estimator instead of a local class closure containing dataset memmaps.
-        joblib.dump({"estimator": model.model, "parameters": params,
-                     "feature_names": data.meta["features"], "horizon_seconds": horizon,
+        joblib.dump({"estimator": model.model, "parameters": params, "target": TARGET,
+                     "adapter_version": ADAPTER_VERSION, "feature_names": data.meta["features"],
+                     "horizon_seconds": horizon,
                      "input_order": "oldest-to-newest raw mid window, then origin features",
-                     "output": "raw mid price"}, out / "model.joblib")
+                     "output": "raw mid price: the estimator centers the window at its newest price P_origin, "
+                               "predicts log(P(t+h)/P_origin) and returns P_origin * exp(prediction)"},
+                    out / "model.joblib")
         def predict(ids):
             origin = ids[0]
             t = int(data.ts[origin])
