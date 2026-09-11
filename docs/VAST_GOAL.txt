@@ -1,17 +1,26 @@
-Tiếp tục MỘT GOAL P0_forecasting trên Vast hiện có: tự giải quyết data rồi chạy đủ src_OB, metrics/latency/report và lưu công việc. Tôi đi ngủ; tự làm trong scope sau, không hỏi duyệt từng bước.
+/goal Thực hiện MỘT GOAL đầy đủ P0_forecasting trên instance Vast đã cấp: clone branch tfm_autots, chuẩn bị data/env GPU, chạy full TimesFM + AutoTS, xuất kết quả/checker/report và commit/push. Không dừng ở setup/cache hoặc một model xong.
 
-Đọc .claude/{CLAUDE,MEMORY,AGENT}.md, .claude/agents/checker.md, src_OB/README.md, config và reports thật. Nếu docs/VAST_SESSION_PROMPT.md đã cập nhật sau blocker HF thì theo đó; prompt này thay quy định HF-only cũ.
+Nếu chưa có repo, chạy tại thư mục làm việc:
+GIT_LFS_SKIP_SMUDGE=1 git clone --branch tfm_autots --single-branch https://github.com/tson295/P0_forecasting.git
+cd P0_forecasting
+Nếu đã có đúng checkout thì tiếp nối, không clone đè/reset. Cài git-lfs nếu thiếu, rồi:
+git lfs install --local
+git lfs pull --include="data/BTC_1m_2y.csv,data/BTC_5m_2y.csv" --exclude=""
 
-1. Tiếp nối e169df1/OB trên Vast, không reset/ghi đè. Đọc RUN_REPORT, DATA_REPORT, CHECKER_FINDINGS; HF đã BLOCKED, 0 cell, không lặp tải/prepare archive lỗi. Reuse GPU env đã build; không cài JAX/XReg.
+Đọc và THỰC HIỆN docs/VAST_SESSION_PROMPT.md, .claude/CLAUDE.md, .claude/MEMORY.md, .claude/AGENT.md, checker và configs/tfm_autots.json. Runbook này có lệnh setup/launcher và điều kiện hoàn tất; không tái nghiên cứu toàn repo. docs/archive, RESEARCH_PLAN và src_OB không điều khiển goal này.
 
-2. Lưu việc ngay: push qua auth sẵn có. Thiếu auth thì tạo Git bundle + gói reports/logs/config/metadata/artifact và LFS objects chưa push; chuyển tới đích ngoài instance đã được cấp quyền nếu có. Bundle trên ổ Vast chưa phải backup. Thiếu đích/auth: ghi BACKUP_PENDING, tiếp tục việc khác. Không lộ secret, git add -A, force push, stop/destroy/thuê instance.
+Data là BTC 1m HAI NĂM 2024-09-03 16:29 → 2026-09-03 16:29 UTC; LF 5m chỉ features phụ. Giữ checksum, folds, seeds, batch, context, epochs, candidates và 10 AutoTS validations. Không tải Order Book. Chỉ hai family TimesFM/AutoTS; WR/MR là nhánh AutoTS. Không TEST holdout/champion/ensemble/models khác.
 
-3. Đọc/sửa W1 snapshot/buffer/replay theo evidence và semantics nguồn; không nối gap, replay trùng hoặc dùng snapshot tương lai tạo state quá khứ. Giữ prepared cũ, tạo version mới nếu fix ảnh hưởng kết quả.
+Tôi cho phép cài/build dependency GPU, tải LFS/pretrained pinned, training thật, sửa lỗi env/runtime/adapter trong phương pháp đã chốt, ghi artifact, commit/push tfm_autots bằng quyền sẵn có. Không hỏi unlock/approval giữa các bước. Không thuê/đổi/stop/destroy instance, không CPU training/fallback.
 
-4. Tự tìm/chọn historical BTCUSDT Binance Spot L2 public miễn phí hoặc nguồn project đã có quyền dùng. Được đổi nguồn/revision, thêm downloader/adapter/config riêng, pin manifest/hash, ghi SOURCE_REPORT. Không tự mua data, đổi thị trường/symbol, dùng OHLCV/trades/L1/synthetic thay L2 hay nối phần thiếu. Không cần đủ 2 năm; lấy coverage/fold thật. Đọc metadata/dung lượng trước tải, không làm đầy disk. Tìm nguồn chủ động tối đa khoảng 60 phút; không ngắt download/prepare/train đang tiến triển. Không chờ upstream/thu mới nhiều tuần. Không có nguồn phù hợp: làm hết sửa lỗi/report/backup rồi báo BLOCKED, không hỏi tôi giữa đêm.
+Sau setup CUDA .venv theo runbook, chạy FULL phase trong tmux:
+tmux new-session -d -s p0_tfm_autots 'bash scripts/vast_tfm_autots_run.sh'
+Nếu session/process đã chạy, theo dõi nó; không chạy trùng. Launcher tự giữ lock, lưu env/log và dùng --resume khi có progress. CLI tự chạy toàn bộ loop/final/summary; session chính điều phối process/git, checker chỉ đọc evidence ở mốc cần thiết. Không thêm agent tìm feature/model hoặc tự dựng runner.
 
-5. Giữ top10 bid+ask, một mid; diff quantity tuyệt đối, 0 xóa, gom message, kiểm tra U/u, prune đúng. Gap ID/timestamp đóng segment, chờ snapshot. Hard gap July5 thuộc HF, không áp mù lên nguồn độc lập. OF trước same-mid drop, cộng flow, OFI 10 level; raw timeline riêng. Baseline OF/OFI+timing, không distance/DeepLOB mới. Direct h60/120/180, label log(MP(t+h)/MP(t)), as-of <=t+h/age guard, context/label cùng segment. Giữ config/context/seed/budget: FIT21d/gap6d/VAL3d/step7d, tối đa5 fold; common mask đủ mọi family/horizon, TimesFM512. Không giảm cấu hình ép data đạt.
+Cấm mọi test/smoke/canary/pytest/synthetic/trial fit/GPU-probe/benchmark/warmup/latency replay; không bootstrap cũ hay check-data riêng. Chỉ đọc code/data/metadata/log/process và evidence của training thật. Không suy ra sạch lỗi hoặc fit GPU thành công từ commit/package metadata.
 
-6. Download/prepare/data-report thật bằng config đã chọn. Checker chỉ đọc evidence sau prepare/khi có lỗi correctness/cuối run; session chính sửa và train. FIT/VAL hợp lệ thì FULL ngay: P0_OB_VAST=1, CUDA_VISIBLE_DEVICES=0; python -m src_OB train --config <config-thật>, thành công rồi summarize cùng config. Đủ lgbm,xgb,cat,xgbrf,lstm,autots,tfm_zero_shot,tfm_lora × mọi fold × 3h. AutoTS GPU allowlist search; zero-shot chỉ mid; LoRA+OF head không XReg. Fit GPU-only trên Vast, cấm CPU fallback/local training. Cấm test/smoke/canary/probe/trial fit/benchmark/warmup riêng. Giữ tmux/log, sửa lỗi thật rồi tiếp tục; recovery theo cell có provenance, không ghi đè completed.
+Theo dõi log thật, sửa nguyên nhân lỗi rồi tiếp tục, không lặp mù hoặc giảm workload. Giữ failed attempt; không ép đổi hash để reuse cache/artifact khác code/config/data. Resume chưa có optimizer giữa epoch hoặc từng validation bake-off; xử lý đúng giới hạn runbook. Trước compact lưu stage/config/log/process/next step vào MEMORY rồi tiếp tục cùng goal.
 
-7. RMSE/MAE/R² raw price; rmse_gain_vs_e0/r2_os_vs_e0 reuse cùng E0/origins. Latency inference thật p95/p99 batch1/max quan sát. COMPLETE chỉ khi >=1 fold hợp lệ, đủ folds×8×3 cell với completed/metrics/predictions/latency/checkpoint, summaries/reports/checker findings. Cập nhật MEMORY, commit/push scope OB, lưu backup status. BLOCKED phải có evidence, nguồn đã loại, cell thiếu, vị trí backup hoặc pending và next step. Không hoàn tất giả; không dừng vì compact/data xong/một model xong. Bắt đầu ngay.
+Cuối run đối chiếu đủ stages/candidates/folds/seeds, wins + predictions, metrics/E0 gains/runtime và summaries. Ghi RUN_REPORT, CHECKER_FINDINGS, MEMORY. Commit/push theo stage hoàn tất và cuối goal, stage đúng scope output mới/code/docs/config; không add -A, force push, secret, pretrained gốc hay artifacts 15d cũ. Dùng GitHub auth đã cấp, không in token. Thiếu auth/quota thì ghi PUSH_PENDING, vẫn làm hết training/report được phép; không bịa đã push/backup.
+
+Chỉ COMPLETE khi full phase và artifacts/summaries/checker/report/push hoàn tất. Blocker thật ngoài quyền hiện có: báo evidence và phần còn thiếu, không COMPLETE giả. Bắt đầu thực hiện ngay, không chỉ trả lời plan.

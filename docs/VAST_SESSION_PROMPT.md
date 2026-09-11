@@ -1,149 +1,124 @@
-# Vast — tiếp tục sau HF BLOCKED, tìm data thay thế và FULL TRAINING
+# Vast session — TimesFM / AutoTS, BTC 1m hai năm
 
-Bản này thay prompt khởi động HF cũ. Không yêu cầu tải lại archive đã thất bại.
-Trong Claude, mở `/goal` và dán nội dung `docs/VAST_GOAL.txt` vào goal condition (giới hạn 4.000 ký tự).
-Tài liệu này là chỉ dẫn đầy đủ, không phải nội dung để dán cả file vào goal condition.
+Đây là runbook đang có hiệu lực trên branch `tfm_autots`. Prompt `/goal` ngắn ở `docs/VAST_GOAL.txt`.
+Goal bao gồm FULL TRAINING, summaries/report và push; không dừng ở setup, cache hoặc một model xong.
+Không chạy `src_OB`, không tìm/crawl Order Book. Tài liệu OB trước đó đã archive.
 
-## Điểm xuất phát và đích đến
+## 1. Clone và dữ liệu
 
-User đi ngủ. Session chính tiếp tục tự chủ trên instance Vast hiện có, không chờ user duyệt từng bước:
-**giữ công việc → sửa W1 → tìm/chọn data thay thế → download/prepare thật → FULL TRAINING → summary/report/backup**.
-
-Theo báo cáo Vast user cung cấp: e169df1 trên OB chưa push; HF đã tải đủ 4 file nhưng chỉ reconstruct được
-300,6 giây, FIT/VAL rỗng, chưa train cell nào. Đọc reports/commit thật để xác nhận trạng thái đang tiếp nối.
-Không coi package đã cài hoặc checker không có ERROR là bằng chứng toàn bộ code/fit đã đúng.
-
-Đọc `.claude/CLAUDE.md`, `.claude/MEMORY.md`, `.claude/AGENT.md`, `.claude/agents/checker.md`,
-`src_OB/README.md`, config, DATA_REPORT/RUN_REPORT/CHECKER_FINDINGS và code liên quan.
-Quyết định mới ở đây thay quy định HF-only hoặc yêu cầu hỏi lại khi đổi nguồn trong context cũ.
-Giữ `src/p0`, `Baseline_LGBM.py`, `experiments/15d` và kết quả cũ. Không dùng workflow OHLCV/run.py/docs/archive.
-
-## Quyền tự làm và cách vận hành
-
-Được tìm/chọn nguồn public miễn phí hoặc nguồn project đã được cấp quyền dùng; pin revision mới;
-viết downloader/adapter/config riêng; sửa lỗi correctness/env/API; prepare và training thật; recovery;
-ghi artifact, commit/push OB. Không hỏi unlock hoặc duyệt giữa những bước này.
-Không tự mua data, đăng ký trả phí/trial cần thanh toán, liên hệ nhà cung cấp, thuê/đổi/stop/destroy instance.
-Dùng auth đã có đúng scope, không in/commit secret. Thiếu key thì xét nguồn khác, không chờ user giữa đêm.
-
-Session chính hoàn thiện data/code/env và chạy CLI. CLI tự lặp model/fold/horizon, không dựng agent điều phối.
-Checker chỉ đọc evidence sau prepare, khi có lỗi correctness cụ thể và cuối run; không train/infer/prepare,
-sửa code hay gọi subagent. Session chính xử lý findings, không coi WARN là miễn xử lý correctness.
-Nếu không có subagent capability thì đọc cùng checklist và ghi rõ thiếu independent review.
-
-Cấm mọi smoke/canary/unit/integration test, synthetic run, trial fit, GPU-probe fit, benchmark pass, warmup riêng.
-Không pytest, scripts/vast_bootstrap.sh, run.py gpu-probe hoặc workflow cũ. Được đọc code/data/log/metadata,
-xem process/nvidia-smi và artifact lượt chạy thật. Guard runtime sequence/causality/GPU vẫn bắt buộc.
-Training chỉ trên Vast, fit GPU-only, cấm CPU fallback. CPU dùng cho IO/reconstruction/features/scaler/metric
-và native inference LightGBM/CatBoost theo policy hiện tại. Không fit thử để chọn backend.
-
-## 1. Giữ công việc và môi trường đang có
-
-Giữ e169df1, các commit tiếp theo và thay đổi chưa commit. Không reset/reclone đè hoặc force push.
-Push bằng auth sẵn có. Remote OB tiến thêm thì fetch/merge phù hợp, giữ công việc cả hai phía.
-Nếu thiếu auth, tạo Git bundle và gói reports/config/log/metadata/artifact cần phục hồi, kèm manifest/hash.
-Bundle không chứa untracked files hoặc nội dung LFS: sao lưu riêng artifact và LFS objects chưa push.
-Chuyển tới đích ngoài instance của user đã được cấu hình/cấp quyền, xác nhận đích nhận khớp manifest.
-Không upload repo lên dịch vụ công cộng tùy ý hoặc phân phối raw trái điều kiện nguồn.
-Bundle nằm trên cùng ổ Vast chưa phải backup. Thiếu đích/auth thì ghi BACKUP_PENDING và tiếp tục việc khác.
-Không tự tắt instance; cuối run báo máy còn chạy và trạng thái backup. Lưu định kỳ trong quá trình làm.
-
-Reuse venv GPU đã build nếu phù hợp; giữ fix LightGBM shared NCCL để tránh lặp lỗi ABI cũ.
-Không cài JAX/XReg. Ghi code/config/data/GPU/driver/package provenance vào run mới.
-
-## 2. Sửa W1 từ evidence thật
-
-Đọc finding W1 về buffer depth trước snapshot và replay/schema liên quan. Sửa nguyên nhân nếu xác nhận lỗi.
-Đồng bộ snapshot với buffered messages theo update IDs và semantics nguồn; không phát state quá khứ từ
-snapshot tương lai, không replay trùng, không nối gap. Ghi rõ xử lý timestamps/bridge và evidence.
-Giữ prepared cũ; fix ảnh hưởng kết quả thì tạo prepared version mới, không sửa manifest giả tương thích.
-Checker đọc bản sửa, không chạy test. Không prepare lại HF chỉ để lặp bằng chứng blocker đã có.
-
-## 3. Tự chọn nguồn historical thay thế
-
-HF MaximumLeverage/crypto-lob-stream SHA 873f31e729ae23b1c309cd5dcb33feed27c407de là evidence nguồn lỗi,
-không còn là nguồn duy nhất bắt buộc. Không sửa raw, tải mirror của cùng archive như nguồn mới, hoặc giả rằng
-nâng collector khôi phục được depth đã bị ghi đè.
-
-Chỉ BTCUSDT Binance Spot L2. Ưu tiên snapshot anchor + incremental depth liên tục đủ reconstruct top 10.
-Full snapshots thật chỉ dùng khi tần suất/semantics đáp ứng age/context; ghi OF là flow quan sát giữa snapshots,
-không giả là đầy đủ message-level flow. Không dùng futures/exchange/symbol khác, OHLCV/trades-only/L1/synthetic.
-Không nối nhiều nguồn để che missing sequence; source boundary là segment boundary.
-
-Tự tìm bằng tài liệu/metadata/schema và dữ liệu thật. Nguồn trả phí chỉ dùng nếu project đã có quyền truy cập.
-Ghi SOURCE_REPORT.md: URL, revision/manifest/hash, access/license, schema/time semantics, coverage/gaps,
-dung lượng và lý do chọn/loại từng ứng viên. Dùng config/raw/prepared/output riêng, không trộn với HF lỗi.
-Đọc metadata/dung lượng trước tải; ingest theo chunk/partition nếu cần, không làm đầy disk hoặc xóa kết quả lấy chỗ.
-Không cần đủ 2 năm. 30d/58d chỉ là ngưỡng lịch theo split cho 1/5 fold, không đảm bảo đủ origins/context.
-
-Nếu sau khoảng 60 phút tìm nguồn chủ động chưa có ứng viên phù hợp, ghi các nguồn đã xét và blocker.
-Giới hạn này không ngắt download/prepare/training đang tiến triển. Không tìm vô hạn, chờ upstream qua đêm
-hoặc thu mới nhiều tuần để gọi là giải quyết historical run này. Có nguồn phù hợp thì chuyển ngay sang chạy thật.
-Không có nguồn/access/tài nguyên phù hợp: làm hết W1/report/backup có thể làm, rồi kết thúc với BLOCKED có evidence.
-
-## 4. Giữ phương pháp khi đổi nguồn
-
-- Historical data cố định trong run, pin manifest/revision; actual coverage, không bịa/pad lịch sử.
-- 10 bid + 10 ask, một mid `(bestBid + bestAsk)/2`. Depth là diff: quantity tuyệt đối, 0 xóa;
-  gom trọn message, kiểm tra U/u, prune đúng semantics nguồn rồi lấy top 10; không giữ ghost levels.
-- ID/timestamp gap hoặc book invalid đóng segment, chờ snapshot hợp lệ, không nối/forward-fill qua thiếu data.
-  Hard gap 2026-07-05 20:56–21:39 UTC thuộc collector HF lỗi, không áp mù lên nguồn độc lập có continuity
-  được chứng minh. Ghi source-specific gap policy rõ ràng trong config/report.
-- OF theo price/quantity giữa states; OFI = bidOF - askOF cho 10 levels. OF trước same-mid drop và cộng flow
-  đến mid-change; giữ raw timestamp/mid timeline trước drop. Baseline OF/OFI + timing, không distances.
-- Direct h60/120/180 giây, một model/adapter mỗi fold/horizon. Label log(MP(t+h)/MP(t)), quote cuối <=t+h,
-  age guard theo config; feature/window/label cùng segment. FIT21d/gap6d (>5)/VAL3d/step7d, tối đa5 fold.
-- Common origins đủ mọi family/horizon. TimesFM512 tại h180 cần 25h33 context liên tục trước origin,
-  cộng label. Không giảm context/gap/batch/epoch/search budget, đổi seed/split/target/h để ép data chạy được.
-- Đủ lgbm,xgb,cat,xgbrf,lstm,autots,tfm_zero_shot,tfm_lora. Không thêm DeepLOB hoặc feature search.
-  AutoTS tự search trong GPU allowlist. TimesFM zero-shot chỉ mid; LoRA + OF head, không XReg.
-- RMSE/MAE/R² raw price. rmse_gain_vs_e0 và r2_os_vs_e0 reuse E0 cùng fold/horizon/origins;
-  denominator0 thì null có lý do. Không metric trên log-return hoặc tạo baseline thay thế.
-- Latency trong inference thật: batch1 p95/p99/max quan sát, batch stats riêng, CUDA synchronization quanh
-  timing; không thêm inference benchmark/warmup pass, không gọi observed max là hard bound.
-
-## 5. Download/prepare thật rồi FULL TRAINING ngay
-
-Dùng config nguồn đã chọn và downloader/entrypoint đúng adapter; ghi lệnh thực tế. Không dùng mặc định HF lỗi.
-Chạy download rồi prepare thật. DATA_REPORT ghi actual coverage, raw/kept states, segment distribution,
-gap/reset reasons, eligible FIT/VAL origins và số fold bằng đúng hàm chọn origins của train.
-Dùng data-report nếu commit Vast đã thêm, không giả CLI có lệnh/flag chưa tồn tại.
-Prepared_dir tồn tại thì đọc manifest/status, chỉ reuse khi complete và contract tương thích; không xóa chạy đè.
-
-Checker đọc correctness và masks. Có ít nhất một fold hợp lệ cho đầy đủ family/horizon thì train ngay,
-không dừng chờ user xác nhận hoặc viết plan mới. Thay <run_config> bằng đường dẫn config thực:
+Làm trên instance Vast đã được cấp. Nếu đã có đúng checkout thì tiếp nối, không clone đè/reset.
+Nếu chưa có, ở thư mục làm việc có đủ disk:
 
 ```bash
-export P0_OB_VAST=1
-export CUDA_VISIBLE_DEVICES=0
-python -m src_OB train --config <run_config>
-python -m src_OB summarize --config <run_config>
+GIT_LFS_SKIP_SMUDGE=1 git clone --branch tfm_autots --single-branch https://github.com/tson295/P0_forecasting.git
+cd P0_forecasting
+git lfs install --local
+git lfs pull --include="data/BTC_1m_2y.csv,data/BTC_5m_2y.csv" --exclude=""
 ```
 
-Chỉ chạy summarize sau train thành công. CLI tự lặp mọi cell; giữ tmux/log để SSH/context đổi không mất run.
-Một process nặng/GPU, không cộng VRAM nhiều GPU; nếu chia fold trên GPU được cấp thì các tập cell phải rời nhau.
-Actual fit lỗi thì lưu traceback/artifact, sửa env/API/implementation rồi tiếp tục, không fallback CPU/bỏ model
-hoặc lặp nguyên lệnh lỗi vô hạn. Không dừng chỉ vì data xong, một model xong, thời gian dài hay compact.
+Cài `git-lfs` nếu thiếu. Clone skip smudge để không tải toàn bộ LFS experiments cũ/prepared OB.
+Feature definitions S0 dùng JSON/CSV có sẵn trong `experiments/15d/` (`b0_star`, wins, keepdrop),
+không cần nạp toàn bộ figures/checkpoints/predictions cũ. Không stage các thay đổi LFS ngoài scope.
 
-Recovery: đọc CLI thật, không giả định --resume/--horizons. Được bổ sung recovery theo cell với provenance:
-giữ failed attempts, reuse completed khi code/config/data/population tương thích, chạy cell chưa hoàn tất.
-Checkpoint thiếu optimizer không gọi là resume chính xác. Fix correctness làm artifact cũ invalid thì lưu riêng,
-ghi cell phải chạy lại. Không train lại cell thành công chỉ để bổ sung latency hoặc trộn các config/revision.
+Đọc `.claude/CLAUDE.md`, `.claude/MEMORY.md`, `.claude/AGENT.md`, checker, `docs/TFM_AUTOTS_PHASE.md`,
+`docs/TFM_AUTOTS_VAST_REVIEW.md` và `configs/tfm_autots.json`. Chỉ mở code liên quan nếu có lỗi cụ thể,
+không tái điều tra toàn repo hay tự dựng pipeline mới.
 
-## 6. Kết quả, backup và điều kiện kết thúc
+Data canonical theo manifest đã commit:
+- HF 1m: 1.051.201 bar, 2024-09-03 16:29 → 2026-09-03 16:29 UTC, 101.766.374 bytes,
+  SHA256 `559ce040efd737d38f6d541b26e1533f4afc4682b5af2a94ef5cf842e31f8097`.
+- LF 5m: 210.239 bar dẫn xuất cho features 5m, 21.146.273 bytes,
+  SHA256 `0e5fb9ad20478dd4cc8b26c3669453ff35b3ceff1c72b81d20a6337540f52fef`.
+- Giữ `data/data_checksums_2y.json` và `data/BTC_5m_2y.derivation.json`. CLI đối chiếu chúng trong lần load thật.
+  LFS pointer chưa phải CSV thật; thiếu data thì sửa download/auth, không ghi checksum mới để lách lỗi.
 
-COMPLETE chỉ khi >=1 fold đủ FIT/VAL và đủ actual_folds × 8 family × 3 horizon. Không coi 0 cell là thành công.
-Mỗi cell có completed.json, metrics.json/metrics.csv, predictions.parquet, latency.json/inference_latency.csv
-và checkpoint/adapter phù hợp; zero-shot ghi pretrained ID/revision. Summary có per_fold_per_horizon.csv và
-by_model_horizon.csv với price metrics/E0 gains/latency. Checker đọc nội dung và population/provenance,
-không chỉ đếm folder hoặc exit code, không infer/fit lại.
+## 2. Môi trường GPU
 
-Lưu SOURCE_REPORT, DATA_REPORT, CHECKER_FINDINGS, RUN_REPORT, BACKUP_STATUS trong output run.
-Báo coverage/segments/origins/cells, kết quả, runtime, GPU/env/code/config/data provenance, lỗi đã sửa,
-giới hạn, cell thiếu, vị trí backup xác nhận hoặc BACKUP_PENDING. Cập nhật MEMORY và exact next step,
-run/config/process trước compact, rồi tiếp tục. Commit/push scope OB, LFS cho file lớn có quyền phân phối;
-không git add -A, force push, commit secrets/pretrained gốc hay ignore metrics/predictions/log/checkpoint mới.
+Được cài/build dependencies trong instance hiện có. Đọc GPU/driver, RAM/disk và package/build metadata;
+không thử fit/probe/infer để chọn backend. Một process training trên một GPU, config mặc định GPU 0.
+Không gộp VRAM; không thuê/đổi GPU hoặc giảm batch/epochs/context/search space/validations.
+Reuse env tương thích nếu đã có; không force-reinstall/build lại chỉ vì session mới.
 
-Nếu bị chặn thật sau khi làm hết phần được phép: báo BLOCKED có evidence, ứng viên đã loại, việc đã xong,
-cell thiếu, backup đã ở đâu hoặc chưa chuyển được, và quyết định tối thiểu cần user khi quay lại.
-Không hỏi user giữa các việc độc lập, không báo COMPLETE giả. Không tự tắt instance; báo trạng thái máy rõ ràng.
+Env mới: dùng Python phù hợp package (ưu tiên Python 3.11 nếu có), venv `.venv`, CUDA toolkit/NCCL shared,
+compiler/CMake phù hợp image. Các lệnh cài đặt tham chiếu cho image CUDA 12.8:
+
+```bash
+python3.11 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
+.venv/bin/python -m pip install -r requirements-tfm-autots.txt
+.venv/bin/python -m pip install --no-binary=lightgbm --no-cache-dir \
+  --config-settings=cmake.define.USE_CUDA=ON \
+  --config-settings=cmake.define.BUILD_WITH_SHARED_NCCL=ON lightgbm
+```
+
+Cài toolchain hệ thống nếu thiếu và đã có quyền root/sudo. Nếu có CPU LightGBM sẵn, phải rebuild CUDA;
+không coi `pip install` báo satisfied là đã build GPU. Có thể chỉ định CMAKE_CUDA_ARCHITECTURES theo GPU thật
+để tránh build các arch không dùng. Dùng shared NCCL để tránh lỗi nvlink ABI của static NCCL.
+Không cài JAX/XReg; giữ autots==1.0.4 và timesfm[torch]==2.0.2. Không gọi `scripts/vast_bootstrap.sh`.
+Nếu image khác CUDA 12, chuẩn bị bộ CUDA torch/CuPy/build tương thích và ghi lại dependency changes;
+không đổi backend thành CPU. Checkpoint TimesFM pinned tự tải khi actual model load, để ngoài experiments.
+Metadata thấy GPU chưa chứng minh fit GPU đã thành công; bằng chứng fit lấy từ training thật.
+
+## 3. Chạy ngay full phase
+
+Sau setup, checker đọc config/data/env evidence; lỗi có bằng chứng thì session chính sửa.
+Không biến checker thành vòng xin duyệt. Không test/smoke/canary/pytest/probe fit/synthetic run,
+check-data riêng, benchmark, latency replay hoặc warmup. Không chạy lệnh `orchestrate`, `final`,
+champion/ensemble hoặc models khác. S0/caches chuẩn bị trong đường chạy thật, không phải test.
+
+Chạy launcher trong tmux từ repo (nếu tmux session đã tồn tại, đọc trạng thái rồi attach, không chạy trùng):
+
+```bash
+tmux new-session -d -s p0_tfm_autots 'bash scripts/vast_tfm_autots_run.sh'
+```
+
+Launcher dùng `.venv/bin/python`, ghi package versions/GPU/config/git/log vào
+`experiments/tfm_autots_sessions/run_*`, giữ khóa process và gọi:
+`P0_TFM_AUTOTS_VAST=1 python -u run.py tfm-autots --config configs/tfm_autots.json`.
+Tự thêm `--resume` khi có phase_progress.json. Output phase: `experiments/tfm_autots/`.
+Không đặt file log/setup/report trong output phase trước lần chạy đầu: guard yêu cầu output mới rỗng.
+Nếu cần config recovery riêng chỉ để đổi experiments_dir, truyền đường dẫn đó cho launcher, ghi rõ lý do.
+
+CLI chạy S0 → loop tfm → tfm-final → loop autots_wr → loop autots_mr → autots-search → summary.
+Giữ 163-column candidate pool; số candidate thực tế theo S0 collision handling. Giữ 5 folds/seeds trong config.
+Cache phải READY trước calibration/candidates. TimesFM forecast-first/residual suffix causal; không native XReg.
+Từng seed/fold/epoch mode vẫn có LoRA fit riêng; MR recursive steps và native final bake-off vẫn có CPU work.
+Không kết luận treo chỉ vì chưa sang candidate khi epoch/cache/validation log còn tiến triển.
+
+Theo dõi tmux, process, log thật và nvidia-smi định kỳ, cập nhật MEMORY. Thời gian dài không phải lý do dừng.
+Trước compact ghi config, stage, log, tmux/process và next step, sau compact tiếp tục cùng goal.
+Khi lỗi runtime/env/API: giữ traceback, sửa đúng nguyên nhân và tiếp tục, không benchmark để xác nhận.
+Không chạy lại cell/stage đã hoàn tất chỉ để đo thêm latency. `--resume` chưa có optimizer resume giữa epoch
+hay từng validation của bake-off; giữ failed attempt và chỉ chạy lại phần chưa hoàn tất mà CLI cho phép.
+Code/config đổi sẽ bị contract guard từ chối reuse: không sửa hash/bỏ guard. Phân loại ảnh hưởng và giữ
+artifact cũ, bổ sung recovery có provenance nếu cần, không tự gọi tất cả kết quả cũ là còn hợp lệ.
+
+## 4. Checker, báo cáo và push
+
+Checker chỉ đọc evidence sau setup, khi có lỗi cụ thể và cuối phase; không trước/sau từng candidate.
+Session chính điều phối và sửa code/env. Không agent researcher/runner tự quyết feature/model/hyperparameter.
+
+Đối chiếu đủ stage/candidate/fold/seed thực tế, wins/tfm và wins/autots, seed predictions, calibration,
+keepdrop/prune, templates, adapters/estimators và runtime/cache provenance. Không dùng checklist 96 cells OB.
+Summary phải có `tfm_autots_per_fold_horizon.csv` và `tfm_autots_summary.csv` từ đúng final representatives.
+RMSE và E0 gains ở raw price; không gọi correlation r là R². Metric/latency nào chưa xuất thì ghi rõ,
+không bịa hoặc thêm inference benchmark. Batch p95 không phải single-request p95; max không phải hard bound.
+
+Ghi RUN_REPORT.md trong output sau khi phase bắt đầu: data coverage thực, stages/candidates, kết quả,
+runtime từng phần, GPU/package/code/config provenance, lỗi đã sửa, hạn chế và trạng thái push.
+Ghi CHECKER_FINDINGS.md, cập nhật MEMORY đúng evidence. Code/launcher chưa được run ở phiên local chuẩn bị.
+
+Dùng GitHub credentials đã cấp (SSH agent, credential helper hoặc GH_TOKEN qua gh auth setup-git),
+không in token, nhét token vào URL/log hoặc commit secret. Không có credential thì ghi PUSH_PENDING,
+commit local và tiếp tục training/report, không ngồi chờ user. Không thể hứa push thành công khi thiếu quyền.
+Sau stage hoàn tất và cuối goal, stage rõ các file code/config/docs/.claude đã sửa cùng artifact hoàn tất
+trong output phase và session logs. Không `git add -A`, không force push, không sửa `experiments/15d`.
+Không add file đang ghi dở, venv hoặc checkpoint pretrained gốc; binary experiments dùng LFS đã cấu hình.
+Không thêm ignore metric/predict/checkpoint/cache. Push bằng `git push origin tfm_autots`.
+Nếu remote đã tiến: fetch, reconcile trên lịch sử hiện có, giữ local work, không reset/force push.
+Nếu auth/quota thật sự chặn: giữ commits/LFS objects và ghi bước còn thiếu; backup trên cùng disk chưa phải off-instance backup.
+
+COMPLETE chỉ khi full phase hợp lệ, đủ artifacts/summaries/reports/checker và push thành công.
+Nếu blocker không sửa được trong quyền hiện có, báo BLOCKED/PUSH_PENDING với evidence và phần còn thiếu;
+không báo COMPLETE giả. Không kết thúc goal chỉ vì data, cache hoặc một model vừa xong.

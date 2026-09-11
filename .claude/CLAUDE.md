@@ -1,73 +1,54 @@
-# P0_forecasting — branch tfm_autots
+# P0_forecasting — phase tfm_autots trên Vast
 
-Phase hiện tại trên branch này: chỉ TimesFM và AutoTS của pipeline OHLCV `src/p0`.
-Đọc `docs/TFM_AUTOTS_PHASE.md`, `configs/tfm_autots.json` và `src/p0/phase_tfm_autots.py`.
-Lệnh chạy thật trên Vast: `P0_TFM_AUTOTS_VAST=1 python run.py tfm-autots`.
-User hiện chỉ yêu cầu code/commit/push; không tự chạy training ở phiên sửa code.
-Cấm mọi test/smoke/canary/probe fit/benchmark/warmup riêng. Chưa có bằng chứng runtime cho code mới.
-Session chính làm việc, không gọi thêm agent nếu user chưa yêu cầu. Các ghi chú OB dưới đây là context
-của nhánh trước, không điều khiển phase tfm_autots và không yêu cầu chạy các model OB khác.
+Chỉ pipeline OHLCV `src/p0`, hai family TimesFM và AutoTS (WR/MR là hai nhánh AutoTS).
+Nguồn có hiệu lực: `docs/VAST_SESSION_PROMPT.md`, `docs/TFM_AUTOTS_PHASE.md`,
+`docs/TFM_AUTOTS_VAST_REVIEW.md`, `configs/tfm_autots.json` và code entrypoint.
+`src_OB`, IDEA Order Book, docs/RESEARCH_PLAN.md và docs/archive là lịch sử, không điều khiển phase này.
 
-## Context Order Book được giữ lại
+## Vai trò và quyền
 
-Luồng đang dùng: `src_OB/`, `configs/orderbook.json`, `src_OB/README.md` và
-`docs/VAST_SESSION_PROMPT.md`. `src/p0/` là code cũ được giữ lại, chỉ import helper cần thiết.
-`docs/RESEARCH_PLAN.md`, các report đề xuất cũ và `docs/archive/` không điều khiển run OB.
-Khi mâu thuẫn, yêu cầu mới nhất của user thắng. Không tự thêm model, feature search hoặc quy trình nghiên cứu.
+Session chính điều phối môi trường/process/git, chạy CLI đã có, xử lý lỗi thực tế và giữ một goal đến cuối.
+Không dò lại thiết kế pipeline, nghiên cứu feature/model mới hoặc dựng hệ thống agent runner.
+Chỉ gọi `checker` để đọc evidence ở mốc cần thiết; Python tự lặp stage/candidate/fold/seed.
+Khi user đưa goal Vast: được cài/build dependency GPU, tải đúng Git LFS/pretrained pinned, chạy training thật,
+sửa lỗi env/runtime/tích hợp mà giữ phương pháp, ghi artifact, commit/push `tfm_autots` bằng quyền có sẵn.
+Không hỏi unlock/approval giữa các bước đã được giao. Thiếu credential không được bịa hoặc lộ token.
+Không thuê, đổi, stop/destroy instance. Phiên sửa code local không tự khởi chạy training.
 
-## Cách vận hành
+## Bất biến
 
-- Python CLI tự lặp fold/model/horizon. Session chính chạy `download → prepare → train → summarize`,
-  xử lý lỗi thực tế và theo dõi process trong cùng một goal; không cần agent điều phối từng model.
-- Chỉ giữ agent `checker`: đọc code, dữ liệu/metadata đã sinh và artifact để báo lỗi. Không train, không sửa code,
-  không tự gọi agent khác. Session chính sửa lỗi và tiếp tục phần việc đã được user cho phép.
-- User đã cấm **smoke test, canary, unit/integration test, synthetic run, trial fit, benchmark pass**.
-  Không chạy chúng dưới tên preflight/check/probe khác. Được đọc code/log/metadata, xem thiết bị và xem kết quả
-  của download/prepare/training thật. Guard sequence/causality/GPU trong đường chạy thật vẫn bắt buộc.
-- Không dùng `scripts/vast_bootstrap.sh`, các `*canary*`, `gpu-probe` hoặc workflow `run.py` cũ cho OB.
-- Code đã viết nhưng chưa được xác nhận bằng full run. Chỉ ghi PASS/hoàn tất khi có bằng chứng thực tế.
+- BTC 1m hai năm: `data/BTC_1m_2y.csv`, 2024-09-03 16:29 → 2026-09-03 16:29 UTC theo manifest.
+  `BTC_5m_2y.csv` chỉ cho features 5m; giữ checksum/sidecar. Lấy bằng Git LFS, không crawl Order Book.
+- Config giữ 5 fold rolling_spread: FIT 120d, ES 5d, VAL 3d, purge 60m; giữ TEST 30d chưa đánh giá.
+  Không nhầm với gap >5 ngày của phương pháp OB. Giữ seeds, candidates, validation count, batch và epochs.
+- TimesFM input r1 gốc → LoRA → forecast batch/cache → GPU residual heads với features + forecast.
+  Residual labels học trên suffix FIT chưa dùng để train/chọn LoRA; outer ES/VAL không train adapter/head.
+  Không gọi native XReg/JAX; không quay lại residual-first hoặc pooled fit qua tương lai.
+- Cache feature pool phải READY trước candidate; scaler FIT-only. MR recursive steps 2–3 vẫn phụ thuộc candidate.
+  AutoTS chỉ estimator GPU trong allowlist, native bake-off giữ 10 validations, không genetic CPU search.
+- GPU-only training, không CPU fallback. CPU được dùng cho preprocessing/metrics và LightGBM inference.
+- Cấm mọi test/smoke/canary/unit/integration/synthetic run/trial fit/probe fit/benchmark/warmup riêng.
+  Không gọi bootstrap cũ, gpu-probe, check-data riêng, pytest hoặc workflow tất cả model.
+  Được đọc code/data/metadata/log/process/nvidia-smi và đối chiếu artifact của run thật.
 
-## Data và phương pháp cố định
+## Chạy và khôi phục
 
-- BTCUSDT Binance Spot; HF `MaximumLeverage/crypto-lob-stream`, pin full commit SHA theo config.
-  Public archive không phải 2 năm. Coverage và số fold lấy từ dữ liệu reconstruct hợp lệ.
-- Depth row là diff price-level. Gom trọn message, replay từ snapshot theo U/u; quantity là giá trị mới tuyệt đối,
-  0 thì xóa; prune cache sau mỗi message rồi lấy top 10 bid + top 10 ask.
-- Gap sequence/timestamp, book không hợp lệ và hard gap 2026-07-05 20:56–21:39 UTC: kết thúc segment,
-  chờ snapshot mới. Không nối/forward-fill qua gap, không che lỗi collector June–August 2026.
-- Một mid-price `(bestBid + bestAsk)/2`. OF theo price/quantity giữa state liên tiếp; OFI = bidOF − askOF.
-  Tính và cộng flow trước khi drop same-mid. Raw timestamp/mid timeline được giữ riêng trước khi lọc.
-- Direct: một model/adapter mỗi fold/horizon; h = 60/120/180 giây. Label và context as-of `timestamp <= query`,
-  trong cùng segment. Gap train/VAL > 5 ngày. Scaler/fit/search chỉ dùng FIT, không chọn tham số bằng outer VAL.
-- Baseline chỉ OF/OFI + timing, không distance, không DeepLOB-inspired. Các family: lgbm, xgb, cat, xgbrf,
-  lstm, autots, tfm_zero_shot, tfm_lora. AutoTS search trong GPU allowlist; không feature subset search.
-  TimesFM zero-shot chỉ chuỗi mid-price; LoRA + OF head cùng optimizer, không XReg.
-- RMSE/MAE/R² trên raw price. `rmse_gain_vs_e0` và `r2_os_vs_e0` dùng E0 hiện có cùng fold/horizon/origins.
-  Latency đo trong inference thật; p95/p99 batch 1 và max quan sát được, không thêm pass benchmark.
+Theo `docs/VAST_SESSION_PROMPT.md`: clone branch → LFS → CUDA env →
+`bash scripts/vast_tfm_autots_run.sh` trong tmux → checker/report → commit/push.
+Launcher chỉ chạy một phase trong checkout, ghi log/env ở `experiments/tfm_autots_sessions/`.
+Không tạo log/file sẵn bên trong output phase còn mới (`experiments/tfm_autots/`).
+`--resume` giữ progress/caches khi đúng contract, chưa có optimizer resume hoặc recovery mỗi validation AutoTS.
+Không lặp mù lệnh lỗi. Giữ traceback và attempt, sửa nguyên nhân; không giảm workload để che lỗi.
+Thay code/config khiến contract đổi: giữ artifact cũ, xử lý recovery có provenance; không sửa hash để ép reuse.
 
-## Authorization và xử lý lỗi
+## Kết quả và git
 
-- Prompt Vast do user gửi là authorization cho goal OB trên **máy Vast đã được cấp**: chuẩn bị data,
-  sửa lỗi data/env/tích hợp trong scope và training tất cả model. Không yêu cầu unlock lại giữa các bước.
-  Việc sửa tài liệu ở local không tự khởi chạy training.
-- Fit model **GPU-only**, không fallback CPU. CPU dùng cho I/O/reconstruct/features/scaler/metric và inference
-  vốn chạy CPU của LightGBM/CatBoost. Thiếu GPU hoặc backend lỗi: dừng fit, sửa env/thiết bị trong phạm vi đã cấp;
-  không thuê/đổi/xóa instance, không tự hạ batch/epoch/context hoặc bỏ model để báo thành công.
-- Lỗi triển khai/API/env có thể sửa mà giữ phương pháp: sửa rồi tiếp tục lượt chạy thật, lưu traceback và thay đổi.
-  Không chạy smoke/test để chứng minh bản sửa. Không lặp lại nguyên lệnh lỗi mà không xử lý nguyên nhân.
-- Dữ liệu hợp lệ nhưng không đủ segment/context/fold: không tạo dữ liệu giả, không giảm gap hoặc đổi methodology
-  ngầm. Ghi bằng chứng và nêu đúng quyết định còn cần từ user. Goal chưa hoàn tất khi còn model bắt buộc chưa chạy.
-
-## Artifact và lịch sử
-
-- Không xóa/sửa raw archive đã tải để làm nó có vẻ liên tục. Tạo prepared version mới khi sửa replay.
-  Hai CSV OHLCV canonical, checksum cũ, `experiments/15d/` và `Baseline_LGBM.py` giữ nguyên.
-- Không ignore metric/prediction/checkpoint/log/figure. Không ghi đè cell đã hoàn tất; CLI hiện chưa có resume
-  hoàn chỉnh theo cell. Khi cần recovery, session chính bổ sung skip/select cell đúng config/revision hoặc lưu
-  attempt mới có provenance, không tuyên bố CLI đã có `--resume` khi chưa thêm.
-- Commit/push phần việc OB và artifact được phép, stage theo scope; không dùng `git add -A` kéo thay đổi ngoài run.
-  Không force push, reset --hard, xóa kết quả hoặc commit secret/checkpoint pretrained gốc.
-- `.claude/MEMORY.md` ghi trạng thái thật, không kế thừa PASS từ vòng OHLCV. Context compact không kết thúc goal;
-  lưu run/config/stage/process/việc còn thiếu trước khi compact rồi tiếp tục.
+Không sửa data canonical, Baseline_LGBM.py, src_OB hoặc experiments/15d trong phase này.
+Không ignore artifact. Stage rõ code/config/docs/.claude và thư mục output mới; không git add -A/force push.
+Không commit secret, venv, cache pretrained gốc. Binary experiment dùng LFS đã cấu hình.
+Push theo stage hoàn tất và cuối goal; không upload file đang ghi dở.
+Thiếu auth/quota push: ghi PUSH_PENDING, vẫn hoàn thành training/report được phép; không báo đã backup ngoài máy.
+COMPLETE chỉ khi đủ stages, artifacts/summaries/checker report và push thành công; code commit không chứng minh runtime.
+Lưu stage, tmux/process, config, log và exact next step trong MEMORY trước compact; tiếp tục cùng goal sau compact.
 
 @MEMORY.md

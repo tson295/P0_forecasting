@@ -3,6 +3,7 @@
 Cache the complete feature pool per fold. Candidate fits only select columns and
 the seed's native WR bootstrap rows. MR redundancy decisions remain conditional
 on the selected, ordered columns; only their expensive statistics are cached.
+TimesFM reuses the fold covariate pools only; its adapter/forecast cache is separate.
 """
 from __future__ import annotations
 
@@ -63,6 +64,8 @@ def _frame(ts, r1):
 
 
 def recipe(model):
+    if model.lib == "timesfm":
+        return None, {"kind": "tfm_covariates", "standardization": "fit-only-float32", "schema": SCHEMA}
     from importlib.metadata import version
 
     if version("autots") != "1.0.4":
@@ -166,6 +169,18 @@ def prepare_cache(cfg, store, folds, model, base, candidates, log=None):
         _save(dest, "scale", scale)
         for name, arr in zip(("fit_idx", "es_idx", "val_idx"), (fit_idx, es_idx, val_idx)):
             _save(dest, name, arr)
+        if native is None:  # TimesFM: no AutoTS training matrices or recursive features
+            atomic_json(dest / "metadata.json", {
+                "lo": lo, "hi": hi, "span_end": span_end, "columns": list(pool.names),
+                "base_columns": 0, "recipe": spec, "fold": fold.name,
+                "data": contract["data"], "indices_hash": contract["fold_indices"][fold.name]})
+            summaries[fold.name] = {
+                "fit_rows": len(fit_idx), "val_origins": len(val_idx),
+                "array_bytes": sum(p.stat().st_size for p in dest.glob("*.npy")),
+                "seconds": time.perf_counter() - fold_started}
+            if log is not None:
+                log(f"[{model.name}] CPU cache: {fold.name} prepared in {summaries[fold.name]['seconds']:.1f}s")
+            continue
         df = _frame(store.ts[lo:hi], store.r1[lo:hi])
         if model.kind == "wr":
             if native.window_size > len(df) - len(HORIZONS) - 1:

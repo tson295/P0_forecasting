@@ -2,8 +2,14 @@
 
 Branch `tfm_autots`. Chỉ code; chưa chạy test, smoke, training, inference hoặc benchmark.
 Luồng này dùng dữ liệu OHLCV cũ, độc lập với `src_OB` và goal Order Book trên Vast.
+Data phase: `BTC_1m_2y.csv`, 2024-09-03 16:29 → 2026-09-03 16:29 UTC theo manifest.
+File 5m đi kèm chỉ phục vụ features. Rà soát trước Vast: `TFM_AUTOTS_VAST_REVIEW.md`.
 
 ## Chạy thật trên Vast
+
+Prompt `/goal` có sẵn tại `docs/VAST_GOAL.txt`, runbook clone/setup/push tại `docs/VAST_SESSION_PROMPT.md`.
+Sau khi có `.venv` CUDA, dùng `bash scripts/vast_tfm_autots_run.sh` trong tmux để lưu env/log,
+chống process trùng và tự chọn `--resume`. Lệnh Python bên dưới là entrypoint mà launcher gọi.
 
 Chuẩn bị CUDA-enabled PyTorch và LightGBM GPU/CUDA phù hợp image, rồi cài
 `requirements-tfm-autots.txt`. Không dùng bootstrap/probe fit cũ; không cần JAX, CatBoost hoặc pytest.
@@ -55,6 +61,10 @@ dùng residual backcast trong context, còn ở đây học lỗi forecast theo 
 
 ## AutoTS: CPU cache trước feature search
 
+TimesFM cũng chuẩn bị pool covariates FIT-only trước search, dùng lại hạ tầng trong `autots_cache.py`
+nhưng lưu riêng ở `series_preprocess/tfm/`. Chỉ lấy các cột đã chọn khi fit residual head; adapter/forecast
+cache vẫn độc lập. LoRA cộng loss trên device và đọc scalar cuối epoch/ES, có log từng epoch.
+
 `loop autots_wr` và `loop autots_mr` tự gọi `autots_cache.prepare_cache()` trước calibration và candidate
 đầu tiên. Mỗi nhánh chuẩn bị toàn bộ pool S0 + các cột của 163 candidates theo cấu hình, cho mọi fold/seed.
 Không cần chạy thêm lệnh prepare riêng.
@@ -82,6 +92,7 @@ CPU: extract feature pool → scaler FIT-only → training X/Y + prediction cont
 
 Cache này phục vụ feature search WR/MR. Bước `autots-search` cuối vẫn dùng native template bake-off và
 refit trên FIT+ES với các internal validation windows riêng. Nó không dùng nhầm cache FIT của search.
+AutoTS-final tái sử dụng selection predictions khi confirmation dùng cùng seed, không fit lại cell trùng.
 CPU vẫn thực hiện chọn/copy cột, chuyển dữ liệu vào estimator, metrics và recursive features cần thiết;
 GPU-only áp dụng cho training, không có CPU training fallback.
 

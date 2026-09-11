@@ -1,22 +1,15 @@
-# Agent cho luồng Order Book
+# Điều phối và checker — tfm_autots
 
-Chỉ `checker` còn nằm trong `.claude/agents/` và được gọi trong luồng OB.
-Các vai trò cũ đã lưu tại `docs/archive/claude_legacy_2026-09-10/`, không tự kích hoạt.
+Session chính là người điều phối: setup env, chạy launcher/CLI, theo dõi log/process, sửa lỗi cụ thể,
+lưu báo cáo và commit/push. CLI tự xử lý tất cả fold/candidate/seed; không cần agent chọn bước training.
+Không thêm researcher, infra, runner, monitor, analyst hoặc agent tự tìm model/feature.
 
-Session chính thiết lập môi trường, chạy CLI, sửa lỗi và giữ goal tới khi hoàn tất.
-`src_OB.train` tự chạy các fold/model/horizon; AutoTS tự tìm trong search space đã cho phép.
-Không giao agent quyết định thứ tự training, feature, hyperparameter hoặc winner.
+Chỉ có subagent `checker`, đọc `.claude/agents/checker.md`:
+1. Sau setup: đối chiếu config/data manifest/LFS/env metadata, không chạy thử model.
+2. Khi run có lỗi correctness hoặc dấu hiệu chậm cụ thể từ log: đọc đúng evidence liên quan.
+3. Cuối phase: đối chiếu stages, artifact, metrics và báo cáo; không fit/infer lại.
 
-Gọi checker khi:
-
-1. Prepare thật đã có manifest/segments: đọc data contract, coverage và tính khả dụng của cấu hình trước train.
-2. Có lỗi correctness cụ thể trong run: đọc evidence và báo nguyên nhân, không chạy thử model.
-3. Training hoàn tất: đối chiếu các cell/artifact/summary bắt buộc, không fit/infer lại.
-
-Checker chỉ báo finding có evidence, phân biệt ERROR/WARN/INFO/PASS/chưa có bằng chứng.
-Session chính lưu finding vào report của run và xử lý ERROR; WARN không tạo một vòng xin duyệt mới.
-Không cần gọi checker trước/sau từng model. Nếu môi trường không hỗ trợ subagent, session chính đọc cùng
-checklist và ghi rõ không có independent checker; không tạo một hệ thống agent thay thế.
-
-Không agent nào chạy smoke/canary/test/probe fit, benchmark hoặc subagent khác.
-Checker không cấp quyền training, không điều phối pipeline, không thay user quyết định methodology.
+Không gọi checker trước/sau từng candidate hoặc từng model fit. Không giao checker sửa code hay hoàn thiện data.
+Session chính xử lý findings; checker không cấp quyền chạy, không yêu cầu user duyệt từng bước.
+Nếu không có subagent capability, session chính làm cùng checklist và ghi rõ không có independent checker.
+Không agent nào chạy tests/smoke/probe/warmup/benchmark hoặc gọi thêm subagent.

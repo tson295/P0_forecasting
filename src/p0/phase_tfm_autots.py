@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import hashlib
+import time
 from pathlib import Path
 
 import numpy as np
@@ -52,15 +53,19 @@ def run_phase(cfg, args):
         if name in progress["completed"]:
             return
         progress["active"] = name
+        started = time.time()
+        progress["active_started_at"] = started
         _write_json(progress_path, progress)
         action()
+        progress.setdefault("stage_seconds", {})[name] = time.time() - started
         progress["completed"].append(name)
         progress["active"] = None
         _write_json(progress_path, progress)
-    # Load existing feature definitions/artifacts, not train the other families.
-    if not all((cfg.exp_dir / "s0" / f"{name}.json").exists() for name in wanted):
-        cmd_lock_s0(cfg, ns)
     try:
+        # Load existing feature definitions/artifacts, not train the other families.
+        if not all((cfg.exp_dir / "s0" / filename).exists() for name in wanted
+                   for filename in (f"{name}.json", f"candidates_{name}.json")):
+            stage("lock-s0", lambda: cmd_lock_s0(cfg, ns))
         for name in wanted:
             ns.model = name
             # --resume is only meaningful once this branch has its own calibration.

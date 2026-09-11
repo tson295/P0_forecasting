@@ -231,6 +231,9 @@ def model_for(cfg: RunConfig, name: str, allow_cpu: bool):
         params["artifact_dir"] = str(cfg.exp_dir / "autots_fits" / name)
     if cfg.phase == "tfm_autots" and name in ("autots_wr", "autots_mr"):
         params.setdefault("preprocess_cache_dir", str(cfg.exp_dir / "autots_preprocess" / name))
+    if cfg.phase == "tfm_autots" and name == "tfm":
+        params.setdefault("preprocess_cache_dir", str(cfg.exp_dir / "series_preprocess" / name))
+        params.setdefault("progress", True)
     m = make_model(name, params, allow_cpu=allow_cpu)
     # đánh dấu: model này dựng lại được Y HỆT trong worker GPU từ (cfg, name, allow_cpu) → được phép đi qua scheduler.
     # Model mang state riêng (AutoTS frozen template, stub trong test) KHÔNG có dấu này và luôn chạy trong process gọi.
@@ -975,13 +978,15 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
                     pass
                 say(f"[{set_name}|{group}|{f.name}] template thắng: {name}")
             fold_rmse, e0_rows = [], []
-            for rmse_f, e0_f, _ in _autots_score_all(cfg, store, folds, colset, group, frozen_by_fold, cfg.sel_seed,
-                                                     args.allow_cpu):  # CHỌN candidate: outer VAL ở ĐÚNG selection_seed
+            selection_scores = _autots_score_all(cfg, store, folds, colset, group, frozen_by_fold, cfg.sel_seed,
+                                                 args.allow_cpu, want_preds=cfg.phase == "tfm_autots")
+            for rmse_f, e0_f, _ in selection_scores:  # CHỌN candidate: outer VAL ở ĐÚNG selection_seed
                 fold_rmse.append(rmse_f)
                 e0_rows.append(e0_f)
             rmse_sel, e0_tab = np.array(fold_rmse), np.array(e0_rows)
             key = f"{set_name}|{group}"
-            cands[key] = {"set": set_name, "group": group, "colset": colset, "rmse_sel": rmse_sel, "e0": e0_tab, "templates": frozen_by_fold}
+            cands[key] = {"set": set_name, "group": group, "colset": colset, "rmse_sel": rmse_sel, "e0": e0_tab,
+                          "templates": frozen_by_fold, "selection_scores": selection_scores}
             g = float(np.median(gain_pp(rmse_sel, e0_tab)))
             rows.append({"candidate": key, "set": set_name, "group": group, "n_ext": len(colset.ext),
                          "MedianGain_vs_E0_sel": round(g, 4), "rmse_selection_seed": _cells(rmse_sel),
@@ -993,8 +998,13 @@ def cmd_autots_search(cfg: RunConfig, args) -> None:
     tables, preds_by_seed = [], []
     for sd in cfg.eval_seeds:  # CONFIRMATION: winner đã FREEZE → 3 evaluation seed
         fold_rmse, preds = [], []
-        for rmse_f, _e0, pr in _autots_score_all(cfg, store, folds, fin["colset"], fin["group"], fin["templates"], sd,
-                                                 args.allow_cpu, want_preds=True):
+        if cfg.phase == "tfm_autots" and int(sd) == int(cfg.sel_seed):
+            scores = fin["selection_scores"]  # exact same template/columns/folds/seed; no repeat fit
+            say(f"AutoTS-final: reuse completed selection predictions for confirmation seed {sd}")
+        else:
+            scores = _autots_score_all(cfg, store, folds, fin["colset"], fin["group"], fin["templates"], sd,
+                                       args.allow_cpu, want_preds=True)
+        for rmse_f, _e0, pr in scores:
             fold_rmse.append(rmse_f)
             preds.append(pr)
         tables.append(np.array(fold_rmse))

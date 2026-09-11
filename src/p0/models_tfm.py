@@ -176,12 +176,13 @@ class TimesFMLoRAModel(TimesFMModel):
     supports_rounds = True
     seed_dependent = True
 
-    def __init__(self, lora: dict | None = None, adapter_dir: str | None = None, **kw):
+    def __init__(self, lora: dict | None = None, adapter_dir: str | None = None, progress: bool = False, **kw):
         kw["torch_compile"] = False  # audit §3: không torch.compile khi có LoRA (inject sau load_checkpoint, closure đọc self.model lúc gọi)
         super().__init__(**kw)
         self.lora = {**LORA_DEFAULTS, **(lora or {})}
         self.lora["targets"] = tuple(self.lora["targets"])
         self.adapter_dir = Path(adapter_dir) if adapter_dir else None
+        self.progress = bool(progress)
         self.train_calls = 0  # số lần train thật (test: candidate không được làm tăng)
         self.last_adapter: dict | None = None  # (key, sha256, epoch) của adapter ĐÃ FREEZE dùng ở fit_predict gần nhất
 
@@ -349,10 +350,13 @@ class TimesFMLoRAModel(TimesFMModel):
             return torch.cumsum(self.train_forward(xb), dim=1) / scale  # ŷ_h = cumsum(r̂) (§6.7), cùng thang với Y/scale
 
         self.train_calls += 1
+        log = (lambda message: print(f"[tfm|{key}] {message}", flush=True)) if self.progress else None
+        if log:
+            log(f"LoRA real fit: {len(X)} windows, batch={self.lora['batch_size']}, epochs={epochs or self.lora['max_epochs']}")
         res = train_lora(fwd, module, X, Y / scale, Xe, (Ye / scale if Ye is not None else None), epochs=epochs,
                          max_epochs=int(self.lora["max_epochs"]), patience=int(self.lora["patience"]), lr=float(self.lora["lr"]),
                          batch_size=int(self.lora["batch_size"]), seed=int(seed), device=self.device,
-                         weight_decay=float(self.lora["weight_decay"]))
+                         weight_decay=float(self.lora["weight_decay"]), log=log)
         for p in module.parameters():
             p.requires_grad_(False)
         module.eval()

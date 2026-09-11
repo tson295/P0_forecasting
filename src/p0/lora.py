@@ -151,20 +151,22 @@ def train_lora(forward_fn: Callable, module, X_fit: np.ndarray, Y_fit: np.ndarra
 
     def es_loss() -> float:
         module.eval()
-        tot, cnt = 0.0, 0
+        tot, cnt = torch.zeros((), dtype=torch.float64, device=dev), 0
         with torch.no_grad():
             for s in range(0, len(xe), batch_size):
                 pb = forward_fn(xe[s:s + batch_size])
-                tot += float(torch.mean((pb - ye[s:s + batch_size]) ** 2).item()) * len(pb)
+                tot += torch.mean((pb - ye[s:s + batch_size]) ** 2).detach().to(torch.float64) * len(pb)
                 cnt += len(pb)
-        return tot / max(cnt, 1)
+        return float(tot.item()) / max(cnt, 1)
 
     best_state, best_loss, best_epoch, bad = None, float("inf"), 0, 0
     curve = []
     for epoch in range(1, n_epochs + 1):
         module.train()
         perm = torch.randperm(len(xf), generator=gen).to(dev)
-        tr_tot, tr_cnt = 0.0, 0
+        # Keep scalar bookkeeping on device; a host .item() every batch would
+        # synchronize the CUDA stream thousands of times per epoch.
+        tr_tot, tr_cnt = torch.zeros((), dtype=torch.float64, device=dev), 0
         for s in range(0, len(perm), batch_size):
             sel = perm[s:s + batch_size]
             pred = forward_fn(xf[sel])
@@ -172,9 +174,9 @@ def train_lora(forward_fn: Callable, module, X_fit: np.ndarray, Y_fit: np.ndarra
             opt.zero_grad(set_to_none=True)
             loss.backward()
             opt.step()
-            tr_tot += float(loss.item()) * len(sel)
+            tr_tot += loss.detach().to(torch.float64) * len(sel)
             tr_cnt += len(sel)
-        row = {"epoch": epoch, "train_mse": tr_tot / max(tr_cnt, 1)}
+        row = {"epoch": epoch, "train_mse": float(tr_tot.item()) / max(tr_cnt, 1)}
         if epochs is None:
             cur = es_loss()
             row["es_mse"] = cur

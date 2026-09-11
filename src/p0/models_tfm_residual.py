@@ -58,8 +58,9 @@ def atomic_json(path: Path, value: dict) -> None:
 
 
 class TimesFMResidualModel(TimesFMLoRAModel):
-    def __init__(self, residual: dict | None = None, **kwargs):
+    def __init__(self, residual: dict | None = None, preprocess_cache_dir: str | None = None, **kwargs):
         super().__init__(**kwargs)
+        self.preprocess_cache_dir = preprocess_cache_dir
         self.residual = {"calibration_days": 5, "early_stopping_days": 5,
                          "purge_minutes": 60, "ridge": 0.0, "pinv_rtol": 1e-10,
                          "include_forecast": True, **(residual or {})}
