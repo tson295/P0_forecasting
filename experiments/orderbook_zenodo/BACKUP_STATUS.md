@@ -14,8 +14,9 @@ lớn (`data/orderbook/**/*.bin`, `experiments/**/*.parquet|.pt|.joblib`) đi qu
 | 60100fc → 1b5ab07 | backup từng phần: cell fold1, attempts, bản nháp report | `ls-remote` sau mỗi push |
 | 40b4c45 | toàn bộ 120 cell, summary CSV, log train/summarize; 184 object LFS (314 MB) | `ls-remote` = 40b4c4556b7ee51ed3bd81a2611ac83638e54961 |
 
-Commit cuối cùng (report, checker findings, MEMORY) được ghi trong mục "Commit cuối" của `RUN_REPORT.md` và kiểm tra
-bằng `git ls-remote origin refs/heads/OB`.
+| e171d03 | RUN_REPORT COMPLETE, CHECKER_FINDINGS lượt ZF, BACKUP_STATUS, MEMORY | `ls-remote` = e171d03180a1bc1e76c085767d5bb2e9de1bc227 |
+
+Commit chứa bản cập nhật file này nằm ngay sau e171d03 và cũng được kiểm tra bằng `git ls-remote origin refs/heads/OB`.
 
 Không nằm trong git (có chủ đích):
 - Raw `data/orderbook/zenodo_20046390/btcusdt_lob_oct2023.tar.gz` (308.618.431 B): tải lại được từ Zenodo record 20046390,
