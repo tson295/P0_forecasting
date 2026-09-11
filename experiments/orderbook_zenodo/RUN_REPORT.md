@@ -66,6 +66,20 @@ bộ sinh tham số ngẫu nhiên, không đọc data và không fit.
    attempt dở dang sang `attempts/<fold>/<model>/<h>/attemptN`; cell chạy lại ghi `train_code` và `prior_attempts`.
    Không cell completed nào bị ghi đè.
 
+## 3b. Phát hiện khi đọc kết quả AutoTS (không phải lỗi runtime)
+
+- fold1/autots/h60s (code 2a5a1c3) completed. Kết quả trên outer VAL: RMSE **498,9** USDT, R² −24,9,
+  `rmse_gain_vs_e0` −31,96; E0 RMSE trên cùng origin là 15,14. Validation nội bộ trong FIT của model được chọn (XGBoost,
+  window 5) chỉ có RMSE 7–11.
+- Nguyên nhân đọc từ artifact: 100% mid của VAL fold1 thấp hơn mức thấp nhất của FIT (VAL 26.555–27.124,68 so với FIT
+  min 27.175,30). Dự báo nằm trong 27.272,91–27.313,69, bias trung vị +493. Adapter hồi quy **mức giá thô** trên grid
+  h giây bằng model cây (không `normalize_window`, không transformer, theo contract trong README), nên dự báo không ra
+  ngoài khoảng giá đã thấy trong FIT. Đây là giới hạn của thiết kế hiện tại, không phải lỗi runtime; các family khác
+  (cây Direct, LSTM, TimesFM) dự báo log-return hoặc chuỗi đã center theo giá origin.
+- Không đổi thiết kế giữa run (đó là đổi phương pháp và phải ghi đè cell đã completed). Quyết định cần user ở mục 6.
+- Trong search, một candidate LightGBM `dart` trên CUDA có smape 200 và RMSE ~55k, tức dự báo khoảng −28k: DART trên CUDA
+  cho giá trị sai. Candidate này bị chấm điểm loại, không được chọn.
+
 ## 4. Provenance
 
 - Prepared: replay_version 2, code_commit c68fc45, `code_uncommitted_paths` rỗng, `config_sha256` `78aa19…` (sha của

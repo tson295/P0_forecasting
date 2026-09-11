@@ -32,6 +32,11 @@ scope OB (LFS predictions/checkpoints) → `git ls-remote` xác minh. Không smo
   bin) fit CUDA xong; candidate 9 (LightGBM max_bin 1000) ⇒ SIGSEGV, TRAIN_EXIT=139 (không traceback). `failed.json`
   hậu kiểm ghi vào cell trước khi resume chuyển thành attempt2. Sửa: `max_bin ≤ 255` trong allowlist, launcher bật
   `PYTHONFAULTHANDLER=1`.
+- Lần 3 (03:02:28Z, `--resume`, 2a5a1c3): qua được AutoTS; fold1/autots/h60s completed (run.json train_code 2a5a1c3,
+  prior_attempts 1+2). Kết quả outer VAL RMSE 498,9 so với E0 15,14: VAL fold1 thấp hơn toàn bộ khoảng giá FIT, và
+  adapter hồi quy mức giá thô bằng model cây nên không ngoại suy được. Đây là giới hạn thiết kế, không phải lỗi runtime;
+  đã ghi vào RUN_REPORT §3b và là quyết định cho user (đổi target AutoTS sang log-return quanh giá origin rồi chạy lại
+  15 cell AutoTS). KHÔNG tự đổi. Candidate dart trên CUDA có smape 200 (dự báo ≈ −28k), bị loại.
 - Recovery tiếp: `bash experiments/orderbook_zenodo/run_meta/run_train.sh --resume` (launcher truyền args, giữ HF_HOME).
   Cell mới ghi `train_code` (commit) + `prior_attempts`. Không ghi đè cell completed.
 
