@@ -177,6 +177,9 @@ pip install -r src_OB/requirements-vast.txt
 ```
 
 Default LightGBM `device_type=cuda`; nếu build trên Vast dùng OpenCL, đổi `tree.lightgbm_device` thành `gpu`.
+Trên image Vast hiện tại `/etc/environment` đặt `HF_HOME=/workspace/.hf_home` (thư mục của root); export
+`HF_HOME=/home/ubuntu/.cache/huggingface` trước khi tải checkpoint TimesFM hoặc train (xem
+`experiments/orderbook_zenodo/run_meta/run_train.sh`).
 Không CPU fallback. Không có lệnh training nào được chạy trên local trong phiên này.
 
 Tải public archive, không cần Tardis key:
