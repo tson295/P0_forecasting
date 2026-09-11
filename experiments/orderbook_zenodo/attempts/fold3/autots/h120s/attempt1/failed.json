@@ -1,0 +1,4 @@
+{
+  "error": "Weighted sampling cannot be achieved with replace=False. Either set replace=True or use smaller weights. See the docstring of sample for details.",
+  "type": "ValueError"
+}

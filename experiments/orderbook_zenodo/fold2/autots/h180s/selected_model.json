@@ -1,0 +1,46 @@
+{
+  "family": "WindowRegression",
+  "parameters": {
+    "window_size": 20,
+    "input_dim": "univariate",
+    "output_dim": "forecast_length",
+    "normalize_window": false,
+    "max_windows": 200000,
+    "fourier_encoding_components": null,
+    "scale": false,
+    "datepart_method": null,
+    "regression_type": "User",
+    "regression_model": {
+      "model": "xgboost",
+      "model_params": {
+        "booster": "gbtree",
+        "objective": "reg:squarederror",
+        "max_depth": 6,
+        "eta": 0.03,
+        "min_child_weight": 1,
+        "subsample": 1,
+        "colsample_bylevel": 0.7,
+        "reg_alpha": 0,
+        "reg_lambda": 1,
+        "n_estimators": 7,
+        "grow_policy": "lossguide",
+        "tree_method": "hist",
+        "device": "cuda"
+      }
+    }
+  },
+  "search": {
+    "max_window_size": 90,
+    "max_windows": 200000,
+    "initial_candidates": 12,
+    "max_generations": 3,
+    "num_validations": 2,
+    "validation_points": 64
+  },
+  "score": "raw_price_RMSE",
+  "gap_days": 1,
+  "target": "log_return_centered_at_origin",
+  "adapter_version": 2,
+  "centering": "fixed per window: log(P_window) - log(P_origin), P_origin = newest window price; prediction = P_origin * exp(estimator output)",
+  "regressor": "OF/OFI and elapsed at origin only"
+}
