@@ -1,0 +1,24 @@
+{
+  "provider": "zenodo",
+  "repo": "zenodo:20046390",
+  "revision": "58507a0fe055f0f2d3a498c15fc7d8d2",
+  "record": "20046390",
+  "exchange": "binance",
+  "asset": "BTCUSDT",
+  "license": "CC-BY-4.0 / CC-BY-NC-4.0; record disclaimer: academic peer review, reproducibility and non-commercial research only (user confirmed non-commercial research use on 2026-09-11)",
+  "files": {
+    "btcusdt_lob_oct2023.tar.gz": {
+      "bytes": 308618431,
+      "md5": "58507a0fe055f0f2d3a498c15fc7d8d2"
+    }
+  },
+  "selected_files": [
+    {
+      "path": "btcusdt_lob_oct2023.tar.gz",
+      "bytes": 308618431
+    }
+  ],
+  "historical_fixed": true,
+  "coverage": "read from reconstructed data, not filenames",
+  "status": "complete"
+}

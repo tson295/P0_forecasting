@@ -1,0 +1,235 @@
+{
+  "status": "READY",
+  "blocked_folds": [],
+  "fold_error": null,
+  "dataset": {
+    "repo": "zenodo:20046390",
+    "revision": "58507a0fe055f0f2d3a498c15fc7d8d2",
+    "files": [
+      "btcusdt_lob_oct2023.tar.gz"
+    ],
+    "prepared_dir": "/home/ubuntu/P0_forecasting/data/orderbook/prepared_zenodo_20046390",
+    "schema_version": 3,
+    "source": "Zenodo 20046390 ccxt REST full top-100 snapshots (~1.24 s cadence)",
+    "source_kind": "full_snapshots",
+    "replay_version": 2,
+    "code_commit": "c68fc452378172cba9f10af04d85d1f39fce9eb1",
+    "config_sha256": "78aa19aa43d3560403d43394e8003fae6da3eeaf61a4de35eabcd9e0c4890ac7"
+  },
+  "raw_archive": {
+    "kind": "snapshots",
+    "snapshots_kept": 1439157,
+    "first_utc": "2023-10-01T00:00:04.385000+00:00",
+    "last_utc": "2023-10-21T23:59:59.893000+00:00",
+    "span_hours": 503.999,
+    "step_seconds": {
+      "q0": 1.222,
+      "q0.01": 1.225,
+      "q0.05": 1.227,
+      "q0.25": 1.234,
+      "q0.5": 1.236,
+      "q0.75": 1.245,
+      "q0.95": 1.283,
+      "q0.99": 1.691,
+      "q1": 6.687
+    },
+    "steps_over_max_feed_gap": 0
+  },
+  "prepared": {
+    "coverage": {
+      "start_inclusive_us": 1696118404385000,
+      "end_exclusive_us": 1697932799893001,
+      "valid_segment_microseconds": 1814394242002,
+      "source_first_observed_us": 1696118401449000,
+      "source_last_observed_us": 1697932799893000
+    },
+    "counts": {
+      "raw": 1439157,
+      "kept": 237648
+    },
+    "reconstruction_counts": {
+      "snapshot_messages": 1439159,
+      "invalid_snapshot_line": 1,
+      "timestamp_not_increasing": 1,
+      "snapshots_dropped_out_of_order": 1
+    },
+    "reset_reasons": {
+      "timestamp_not_increasing": 1
+    },
+    "known_hard_gaps_utc": [],
+    "segments": 2,
+    "segment_seconds": {
+      "q0": 1.253,
+      "q0.01": 18145.17,
+      "q0.05": 90720.84,
+      "q0.25": 453599.187,
+      "q0.5": 907197.121,
+      "q0.75": 1360795.055,
+      "q0.95": 1723673.402,
+      "q0.99": 1796249.072,
+      "q1": 1814392.989
+    },
+    "segment_states": {
+      "q0": 2.0,
+      "q0.01": 14393.53,
+      "q0.05": 71959.65,
+      "q0.25": 359790.25,
+      "q0.5": 719578.5,
+      "q0.75": 1079366.75,
+      "q0.95": 1367197.35,
+      "q0.99": 1424763.47,
+      "q1": 1439155.0
+    },
+    "segment_end_reasons": {
+      "timestamp_not_increasing": 1,
+      "archive_end": 1
+    },
+    "segment_table": [
+      {
+        "id": 0,
+        "start_utc": "2023-10-01T00:00:04.385000+00:00",
+        "last_utc": "2023-10-01T00:00:05.638000+00:00",
+        "seconds": 1.253,
+        "states": 2,
+        "kept_origins": 1,
+        "end_reason": "timestamp_not_increasing"
+      },
+      {
+        "id": 1,
+        "start_utc": "2023-10-01T00:00:06.904000+00:00",
+        "last_utc": "2023-10-21T23:59:59.893000+00:00",
+        "seconds": 1814392.989,
+        "states": 1439155,
+        "kept_origins": 237647,
+        "end_reason": "archive_end"
+      }
+    ]
+  },
+  "folds": [
+    {
+      "fold": "fold1",
+      "train_start": "2023-10-01T23:59:59.893001+00:00",
+      "train_end": "2023-10-10T23:59:59.893001+00:00",
+      "val_start": "2023-10-11T23:59:59.893001+00:00",
+      "val_end": "2023-10-13T23:59:59.893001+00:00",
+      "valid_segment_seconds_fit": 777600.0,
+      "valid_segment_seconds_val": 172800.0,
+      "train_label_context": 104663,
+      "train_context_inside_fit": 104564,
+      "val_label_context": 17447,
+      "price_context_points": 512,
+      "train_price_context_h60s": 98704,
+      "val_price_context_h60s": 17447,
+      "train_price_context_h120s": 90772,
+      "val_price_context_h120s": 17447,
+      "train_price_context_h180s": 83671,
+      "val_price_context_h180s": 17447,
+      "train_origins": 83671,
+      "val_origins": 17447
+    },
+    {
+      "fold": "fold2",
+      "train_start": "2023-10-03T23:59:59.893001+00:00",
+      "train_end": "2023-10-12T23:59:59.893001+00:00",
+      "val_start": "2023-10-13T23:59:59.893001+00:00",
+      "val_end": "2023-10-15T23:59:59.893001+00:00",
+      "valid_segment_seconds_fit": 777600.0,
+      "valid_segment_seconds_val": 172800.0,
+      "train_label_context": 93248,
+      "train_context_inside_fit": 93149,
+      "val_label_context": 7621,
+      "price_context_points": 512,
+      "train_price_context_h60s": 89690,
+      "val_price_context_h60s": 7621,
+      "train_price_context_h120s": 85187,
+      "val_price_context_h120s": 7621,
+      "train_price_context_h180s": 80438,
+      "val_price_context_h180s": 7621,
+      "train_origins": 80438,
+      "val_origins": 7621
+    },
+    {
+      "fold": "fold3",
+      "train_start": "2023-10-05T23:59:59.893001+00:00",
+      "train_end": "2023-10-14T23:59:59.893001+00:00",
+      "val_start": "2023-10-15T23:59:59.893001+00:00",
+      "val_end": "2023-10-17T23:59:59.893001+00:00",
+      "valid_segment_seconds_fit": 777600.0,
+      "valid_segment_seconds_val": 172800.0,
+      "train_label_context": 80942,
+      "train_context_inside_fit": 80843,
+      "val_label_context": 31161,
+      "price_context_points": 512,
+      "train_price_context_h60s": 78993,
+      "val_price_context_h60s": 31161,
+      "train_price_context_h120s": 71318,
+      "val_price_context_h120s": 31161,
+      "train_price_context_h180s": 66173,
+      "val_price_context_h180s": 31161,
+      "train_origins": 66173,
+      "val_origins": 31161
+    },
+    {
+      "fold": "fold4",
+      "train_start": "2023-10-07T23:59:59.893001+00:00",
+      "train_end": "2023-10-16T23:59:59.893001+00:00",
+      "val_start": "2023-10-17T23:59:59.893001+00:00",
+      "val_end": "2023-10-19T23:59:59.893001+00:00",
+      "valid_segment_seconds_fit": 777600.0,
+      "valid_segment_seconds_val": 172800.0,
+      "train_label_context": 83589,
+      "train_context_inside_fit": 83490,
+      "val_label_context": 25130,
+      "price_context_points": 512,
+      "train_price_context_h60s": 81189,
+      "val_price_context_h60s": 25130,
+      "train_price_context_h120s": 77713,
+      "val_price_context_h120s": 25130,
+      "train_price_context_h180s": 75100,
+      "val_price_context_h180s": 25130,
+      "train_origins": 75100,
+      "val_origins": 25130
+    },
+    {
+      "fold": "fold5",
+      "train_start": "2023-10-09T23:59:59.893001+00:00",
+      "train_end": "2023-10-18T23:59:59.893001+00:00",
+      "val_start": "2023-10-19T23:59:59.893001+00:00",
+      "val_end": "2023-10-21T23:59:59.893001+00:00",
+      "valid_segment_seconds_fit": 777600.0,
+      "valid_segment_seconds_val": 172800.0,
+      "train_label_context": 89839,
+      "train_context_inside_fit": 89740,
+      "val_label_context": 31388,
+      "price_context_points": 512,
+      "train_price_context_h60s": 88062,
+      "val_price_context_h60s": 31388,
+      "train_price_context_h120s": 82877,
+      "val_price_context_h120s": 31388,
+      "train_price_context_h180s": 79968,
+      "val_price_context_h180s": 31388,
+      "train_origins": 79968,
+      "val_origins": 31388
+    }
+  ],
+  "context_requirements": [
+    {
+      "horizon_seconds": 60,
+      "price_context_points": 512,
+      "price_context_span_hours": 8.517,
+      "segment_hours_needed_with_label": 8.533
+    },
+    {
+      "horizon_seconds": 120,
+      "price_context_points": 512,
+      "price_context_span_hours": 17.033,
+      "segment_hours_needed_with_label": 17.067
+    },
+    {
+      "horizon_seconds": 180,
+      "price_context_points": 512,
+      "price_context_span_hours": 25.55,
+      "segment_hours_needed_with_label": 25.6
+    }
+  ]
+}

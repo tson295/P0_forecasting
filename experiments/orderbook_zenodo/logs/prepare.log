@@ -1,0 +1,18 @@
+2026-09-11T02:21:37Z
+reconstructed states=100,000, origins=15,402
+reconstructed states=200,000, origins=39,396
+reconstructed states=300,000, origins=55,116
+reconstructed states=400,000, origins=75,514
+reconstructed states=500,000, origins=85,908
+reconstructed states=600,000, origins=100,506
+reconstructed states=700,000, origins=114,804
+reconstructed states=800,000, origins=130,844
+reconstructed states=900,000, origins=142,942
+reconstructed states=1,000,000, origins=146,832
+reconstructed states=1,100,000, origins=168,642
+reconstructed states=1,200,000, origins=187,656
+reconstructed states=1,300,000, origins=206,074
+reconstructed states=1,400,000, origins=229,527
+Prepared observed coverage: {'start_inclusive_us': 1696118404385000, 'end_exclusive_us': 1697932799893001, 'valid_segment_microseconds': 1814394242002, 'source_first_observed_us': 1696118401449000, 'source_last_observed_us': 1697932799893000}
+EXIT=0
+2026-09-11T02:27:21Z

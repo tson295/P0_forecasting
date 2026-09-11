@@ -1,0 +1,19 @@
+{
+  "counts": {
+    "snapshot_messages": 1439159,
+    "invalid_snapshot_line": 1,
+    "timestamp_not_increasing": 1,
+    "snapshots_dropped_out_of_order": 1
+  },
+  "resets": [
+    {
+      "timestamp_us": 1696118401449000,
+      "reason": "timestamp_not_increasing",
+      "segment": 0
+    }
+  ],
+  "known_hard_gaps_us": [],
+  "replay_version": 2,
+  "source_kind": "full_snapshots",
+  "collector_warning": "REST snapshots about every 1.24 s: updates between snapshots are not observed."
+}

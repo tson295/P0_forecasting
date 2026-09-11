@@ -1,0 +1,20 @@
+[
+  {
+    "id": 0,
+    "start_us": 1696118404385000,
+    "last_us": 1696118405638000,
+    "end_exclusive_us": 1696118405638001,
+    "snapshot_update_id": 39158903700,
+    "states": 2,
+    "end_reason": "timestamp_not_increasing"
+  },
+  {
+    "id": 1,
+    "start_us": 1696118406904000,
+    "last_us": 1697932799893000,
+    "end_exclusive_us": 1697932799893001,
+    "snapshot_update_id": 39158905091,
+    "states": 1439155,
+    "end_reason": "archive_end"
+  }
+]
