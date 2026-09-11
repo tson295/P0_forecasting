@@ -25,6 +25,11 @@ summarize xong và checker cuối run đã đọc artifact. Chưa có kết lu�
 | Train lần 2 | `run_train.sh --resume` (code 688fefd), 02:58:19Z | skip 15 cell; SIGSEGV ở AutoTS candidate 9 (mục 3) |
 | Train lần 3 | `run_train.sh --resume` (code 2a5a1c3), 03:02:28Z | đang chạy |
 
+Thời gian đo trong run thật (fold1): 4 family cây + LSTM khoảng 2 phút cho 15 cell; AutoTS khoảng 3 phút/cell; TimesFM
+zero-shot khoảng 3 phút/cell; TimesFM LoRA khoảng 9,3 phút/epoch, tức khoảng 50 phút/cell với 5 epoch (GPU khoảng 61%,
+process 100% một lõi CPU vì overhead launch khi forward/backward). Để giữ latency p95/p99 không bị nhiễu, run dùng một
+process duy nhất trên GPU, không chạy fold song song trên cùng GPU; epoch/batch/context giữ nguyên.
+
 Không chạy smoke/canary/test/probe/trial fit/benchmark/warmup riêng. Replay tham số AutoTS theo seed (mục 3) chỉ gọi
 bộ sinh tham số ngẫu nhiên, không đọc data và không fit.
 
@@ -93,3 +98,13 @@ bộ sinh tham số ngẫu nhiên, không đọc data và không fit.
 ## 5. Kết quả
 
 Chờ train/summarize (kỳ vọng 5 fold × 8 family × 3 horizon = 120 cell).
+
+## 6. Quyết định còn cần từ user
+
+1. **Target của AutoTS (mục 3b).** Adapter hiện tại hồi quy mức giá thô bằng model cây, nên dự báo luôn nằm trong khoảng
+   giá của FIT. Mỗi khi giá VAL đi ra ngoài khoảng đó, sai số trở thành một độ lệch cố định (fold1: RMSE ~500 so với E0
+   ~15–25). Phương án đề xuất, cần user duyệt vì làm thay đổi phương pháp AutoTS: chuỗi mà `WindowRegression` nhìn thấy
+   dùng log-price đã center theo giá tại origin (giống cách TimesFM đang làm), target là `log(MP(t+h)/MP(t))`; search,
+   GPU allowlist, regressor OF và fold giữ nguyên. Sau đó chạy lại 15 cell AutoTS vào một output/attempt mới có
+   provenance; các cell AutoTS hiện tại được giữ lại, không ghi đè. Nếu không duyệt, kết quả AutoTS được báo cáo nguyên
+   trạng cùng chẩn đoán này.

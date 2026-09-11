@@ -37,6 +37,10 @@ scope OB (LFS predictions/checkpoints) → `git ls-remote` xác minh. Không smo
   adapter hồi quy mức giá thô bằng model cây nên không ngoại suy được. Đây là giới hạn thiết kế, không phải lỗi runtime;
   đã ghi vào RUN_REPORT §3b và là quyết định cho user (đổi target AutoTS sang log-return quanh giá origin rồi chạy lại
   15 cell AutoTS). KHÔNG tự đổi. Candidate dart trên CUDA có smape 200 (dự báo ≈ −28k), bị loại.
+- Nhịp đo được: fold1 trees+lstm ~2 phút, autots ~3 phút/cell, tfm_zero_shot ~3 phút/cell (RMSE ≈ E0),
+  tfm_lora ~9,3 phút/epoch → ~50 phút/cell (GPU ~61%, 1 lõi CPU 100%: TimesFM chạy fwd/bwd bị giới hạn bởi overhead launch).
+  ETA toàn run ~14 h từ 03:28Z (15 cell LoRA ≈ 12,5 h). Không chạy fold song song trên cùng GPU vì làm hỏng
+  latency p95/p99; không đổi epoch/batch/context.
 - Recovery tiếp: `bash experiments/orderbook_zenodo/run_meta/run_train.sh --resume` (launcher truyền args, giữ HF_HOME).
   Cell mới ghi `train_code` (commit) + `prior_attempts`. Không ghi đè cell completed.
 
