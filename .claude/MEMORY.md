@@ -1,5 +1,12 @@
-PHASE: OB — raw archive downloaded; awaiting Vast data preparation and full run
-TRAINING: VAST_ONLY_NOT_STARTED
+PHASE: TFM_AUTOTS — implementation only; runtime unverified
+TRAINING: NOT_RUN_IN_THIS_SESSION
+
+Branch `tfm_autots`: chỉ `tfm`, `autots_wr`, `autots_mr`; hai nhánh AutoTS gộp thành AutoTS-final.
+TimesFM forecast trước, residual heads học trên held-out suffix của FIT với features + forecast vector.
+WR/MR predict batch; xem `docs/TFM_AUTOTS_PHASE.md`. Không tests/smoke/probe/benchmark/training local.
+Lệnh cho lượt chạy thật sau này trên Vast: `P0_TFM_AUTOTS_VAST=1 python run.py tfm-autots`.
+Output riêng `experiments/tfm_autots`; không reuse kết quả residual-first cũ.
+Các ghi chú OB dưới đây là lịch sử của nhánh trước, không phải next step của phase này.
 
 ## Current task
 

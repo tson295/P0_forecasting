@@ -90,7 +90,10 @@ def search_best_template(df_tr: "pd.DataFrame", R_tr: "pd.DataFrame", template: 
         transformer_list="superfast", transformer_max_depth=0,  # [] bị coi là "all" (transform.py:8980)
         random_seed=int(seed), n_jobs=1, verbose=1,  # verbose <= 0 bật filterwarnings toàn cục
     )
-    auto.fit(df_tr, future_regressor=R_tr)
+    from .autots_batch import gpu_regressors
+
+    with gpu_regressors():
+        auto.fit(df_tr, future_regressor=R_tr)
     _random.seed(seed)  # AutoTS set random/np.random toàn cục → trả lại trạng thái cho harness
     np.random.seed(seed)
     name = str(auto.best_model_name)

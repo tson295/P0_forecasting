@@ -75,6 +75,19 @@ def _is_synthetic(cfg: RunConfig) -> bool:
 def gate(cfg: RunConfig, args, model_names: list[str]) -> None:
     """Khóa training (MEMORY) + GPU preflight. --smoke / --allow-cpu CHỈ hợp lệ với dataset tổng hợp (dataset_label 'synthetic*')."""
     smoke, allow_cpu = bool(getattr(args, "smoke", False)), bool(getattr(args, "allow_cpu", False))
+    if cfg.phase == "tfm_autots":
+        import os
+        import torch
+
+        if smoke or allow_cpu or not cfg.require_gpu:
+            raise ValueError("tfm_autots forbids smoke/test/CPU training")
+        if any(name not in ("tfm", "autots_wr", "autots_mr") for name in model_names):
+            raise ValueError("This phase only trains TimesFM and AutoTS")
+        if os.environ.get("P0_TFM_AUTOTS_VAST") != "1" or not torch.cuda.is_available():
+            raise RuntimeError("Set P0_TFM_AUTOTS_VAST=1 on the allocated Vast CUDA machine for real training")
+        # No legacy GPU probe/trial fit or MEMORY unlock. Real estimator fits
+        # enforce explicit GPU backends, CUDA arrays and fail on CPU fallback.
+        return
     if (smoke or allow_cpu) and not _is_synthetic(cfg):
         hard_fail(cfg.exp_dir, "gate", "CPU_ON_REAL_DATA", f"--smoke/--allow-cpu bị từ chối với dataset '{cfg.dataset_label}': chỉ cho data "
                   "tổng hợp (plan §0: cấm training CPU; không bỏ khóa training/GPU gate trên data thật).")
@@ -214,6 +227,8 @@ def model_for(cfg: RunConfig, name: str, allow_cpu: bool):
         params["regression_model"] = {"model": key, "model_params": reg[key]}
     if name == "tfm" and "adapter_dir" not in params:
         params["adapter_dir"] = str(cfg.exp_dir / "lora")  # adapter LoRA đã freeze: artifact versioned (LFS)
+    if name in ("autots_wr", "autots_mr") and "artifact_dir" not in params:
+        params["artifact_dir"] = str(cfg.exp_dir / "autots_fits" / name)
     m = make_model(name, params, allow_cpu=allow_cpu)
     # đánh dấu: model này dựng lại được Y HỆT trong worker GPU từ (cfg, name, allow_cpu) → được phép đi qua scheduler.
     # Model mang state riêng (AutoTS frozen template, stub trong test) KHÔNG có dấu này và luôn chạy trong process gọi.
@@ -643,7 +658,7 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         say("[tfm] calibrate = LoRA FIT + ES chọn epoch (calib_seed) → fixed_epoch_TFM → adapter cho eval_seeds (ε) → adapter selection_seed "
             "FREEZE cho toàn bộ add-one/prune (thêm candidate = fit lại XReg, không train lại LoRA)")
     calib_path = exp / "calib" / f"{mname}_base.json"
-    standalone_fn = None if args.no_standalone else _standalone_factory(store, folds, args.allow_cpu, cfg)
+    standalone_fn = None if (args.no_standalone or cfg.phase == "tfm_autots") else _standalone_factory(store, folds, args.allow_cpu, cfg)
     resume_state = None
     if getattr(args, "resume", False):
         if not calib_path.exists():
@@ -713,8 +728,9 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     pi_df.to_csv(exp / f"prune_pi_{mname}.csv", index=False)
     say(f"[{mname}] prune PI (chỉ cột mới): giữ {len(pruned.new_ext)}/{len(lr.final.new_ext)} → F_pruned (+{len(pruned.locked_ext)} ext khoá, {len(pruned.locked_b0)} B0 khoá)")
     # confirmation 3 seed (ES bật) → win; latency §7.4 đo cho cả hai cấu hình (predictor sống chỉ tồn tại trong lúc chạy)
-    unp = confirm(store, model, lr.final, folds, cfg.eval_seeds, keep_states=True, latency_origins=args.latency_origins, measure_latency=True)
-    prn = confirm(store, model, pruned, folds, cfg.eval_seeds, keep_states=True, latency_origins=args.latency_origins, measure_latency=True) \
+    separate_latency_pass = cfg.phase != "tfm_autots"
+    unp = confirm(store, model, lr.final, folds, cfg.eval_seeds, keep_states=True, latency_origins=args.latency_origins, measure_latency=separate_latency_pass)
+    prn = confirm(store, model, pruned, folds, cfg.eval_seeds, keep_states=True, latency_origins=args.latency_origins, measure_latency=separate_latency_pass) \
         if pruned.ext != lr.final.ext else unp
     which, g, s = decide_win(unp, prn, eps)
     win = prn if which == "prune" else unp
@@ -766,7 +782,7 @@ def cmd_loop(cfg: RunConfig, args) -> None:
         # CÙNG adapter đã freeze như hệ thống B; chỉ được dựng SAU khi F_win đã có (raw-vs-pruned xong ở trên).
         with scheduler.stage("confirmation", configuration=TFM_BASELINE_WIN):
             baseline = unp if not lr.final.ext else confirm(store, model, ColSet((), ()), folds, cfg.eval_seeds, keep_states=True,
-                                                            latency_origins=args.latency_origins, measure_latency=True)
+                                                            latency_origins=args.latency_origins, measure_latency=separate_latency_pass)
         if baseline is not unp:
             _log_confirm(cfg, mname, "baseline", baseline, eps, model)
         base_payload = _save_win(exp, TFM_BASELINE_WIN, baseline, eps, "baseline", folds,
@@ -835,6 +851,7 @@ def _autots_probe_model(cfg: RunConfig, group: str, allow_cpu: bool, frozen=None
     from .models_autots import AutoTSModel
 
     params = _params_for(cfg, "autots_wr" if group.startswith("wr") else "autots_mr")
+    params.setdefault("artifact_dir", str(cfg.exp_dir / "autots_fits" / group.replace(":", "_")))
     params.pop("window_size", None)
     kw = dict(kind="mr" if group == "mr" else "wr", allow_cpu=allow_cpu, frozen=frozen, **params)
     if group.startswith("wr:"):
@@ -1516,7 +1533,7 @@ def main(argv=None) -> None:
     def common(top: bool) -> argparse.ArgumentParser:
         c = argparse.ArgumentParser(add_help=False)
         sup = argparse.SUPPRESS
-        c.add_argument("--config", default="configs/p0_full.json" if top else sup)
+        c.add_argument("--config", default="configs/tfm_autots.json" if top else sup)
         c.add_argument("--smoke", action="store_true", default=False if top else sup,
                        help="bỏ qua khóa training + GPU gate — CHỈ chấp nhận với dataset_label 'synthetic*' (data tổng hợp / debug)")
         c.add_argument("--allow-cpu", action="store_true", default=False if top else sup,
@@ -1537,6 +1554,9 @@ def main(argv=None) -> None:
     s.add_argument("--no-standalone", action="store_true"); s.add_argument("--latency-origins", type=int, default=None)
     sub.add_parser("tfm-final", parents=[common(False)])
     sub.add_parser("autots-search", parents=[common(False)])
+    s = sub.add_parser("tfm-autots", parents=[common(False)])
+    s.set_defaults(config="configs/tfm_autots.json")
+    s.add_argument("--resume", action="store_true")
     s = sub.add_parser("champion-replay", parents=[common(False)])
     s.add_argument("--allow-partial", action="store_true", help="replay khi CHƯA đủ đại diện (ghi WARN) — mặc định phải đủ")
     s.add_argument("--force-replay", action="store_true", help="dựng lại champion.json đã có (archive bản cũ)")
@@ -1557,14 +1577,18 @@ def main(argv=None) -> None:
     s = sub.add_parser("smoke-e2e", parents=[common(False)]); s.add_argument("--out", default="tmp_smoke"); s.add_argument("--days", type=float, default=6)
     args = p.parse_args(argv)
     if args.cmd == "smoke-e2e":
-        cmd_smoke_e2e(None, args)
-        return
+        raise ValueError("Smoke/tests are disabled on the tfm_autots phase branch")
     cfg = RunConfig.load(args.config)
+    if cfg.phase == "tfm_autots" and args.cmd not in (
+            "tfm-autots", "loop", "tfm-final", "autots-search", "lock-s0"):
+        raise ValueError("tfm_autots phase only supports its real training/feature-preparation commands; no probes/tests/other models")
     from .orchestrate import cmd_orchestrate
+    from .phase_tfm_autots import run_phase
 
     cmds = {"check-data": cmd_check_data, "derive-lf": cmd_derive_lf, "lock-s0": cmd_lock_s0, "calibrate": cmd_calibrate,
             "filter-b0": cmd_filter_b0, "loop": cmd_loop, "tfm-final": cmd_tfm_final, "autots-search": cmd_autots_search,
             "champion-replay": cmd_champion_replay, "orchestrate": cmd_orchestrate, "gpu-probe": cmd_gpu_probe,
+            "tfm-autots": run_phase,
             "ensemble": cmd_ensemble, "final": cmd_final, "visualize": cmd_visualize}
     try:
         cmds[args.cmd](cfg, args)

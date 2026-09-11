@@ -44,6 +44,7 @@ class RunConfig:
     models: dict[str, dict[str, Any]] = field(default_factory=dict)
     model_order: list[str] = field(default_factory=lambda: ["lgbm", "xgb", "cat", "tfm", "xgbrf", "autots_wr", "autots_mr", "lstm"])
     require_gpu: bool = True
+    phase: str | None = None  # tfm_autots: restricted, real-run-only phase entrypoint
     root: str = "."
 
     @classmethod

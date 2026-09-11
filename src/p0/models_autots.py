@@ -7,9 +7,9 @@ r"""AutoTS (§2.2 #6) — 2 model CỐ ĐỊNH, không search. Theo `docs/refere
   · MultivariateRegression ghép regressor tại đúng thời điểm target → `R.loc[s] = f(s−1)`
   · WindowRegression ghép tại vị trí ĐẦU cửa sổ → `R.loc[s] = f(s + window_size − 1)`; predict dùng `future_regressor.tail(1)` = `f(t)`
   Ba hàng tương lai (t+1..t+3) luôn giữ giá trị tại t (plan §2.2).
-- Rolling-origin KHÔNG refit: `fit` một lần mỗi fold, rồi `fit_data(df ≤ t)` + `predict(forecast_length=3)` cho từng origin.
-- Vá bug autots 1.0.4 `sklearn.py:3337` (`future_regressor.reindex(df)` với df là DataFrame → ValueError): gọi `fit_data(df_slice)`
-  KHÔNG truyền regressor rồi tự gán `m.regressor_train` (đúng ngữ nghĩa của `fit`), đồng thời cắt đuôi để không concat cả FIT mỗi origin.
+- Rolling-origin KHÔNG refit: `fit` một lần mỗi fold/feature-set/seed; WR predict cả batch origins,
+  MR batch origins theo từng recursive step. Không gọi `fit_data()`/native `predict()` từng origin.
+- `autots_batch.py` giữ window/alignment/rolling features của version 1.0.4, không gộp lịch sử giữa origins.
 - Không sửa thư viện; `n_jobs=1` (tránh nhiều process tranh GPU); `max_windows` lớn (mặc định 5000 cắt mất phần lớn FIT).
 
 Giai đoạn (iii) — **bake-off template GPU** (`search_best_template`, plan §2.2 #6, audit §12.4d phương án A / §12.10):
@@ -23,6 +23,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import json
+import time
+import uuid
+from pathlib import Path
 
 from .config import HORIZONS
 from .models import FitResult, SeriesBatch, _cpu_guard
@@ -53,9 +57,14 @@ class AutoTSModel:
 
     def __init__(self, kind: str = "wr", device: str = "cuda", allow_cpu: bool = False, window_size: int = 60,
                  regression_model: dict | None = None, max_windows: int = 200_000, tail_bars: int = TAIL_BARS,
-                 n_jobs: int = 1, frequency: str = "min", model_cls=None, frozen: tuple[str, dict] | None = None):
+                 n_jobs: int = 1, frequency: str = "min", model_cls=None, frozen: tuple[str, dict] | None = None,
+                 predict_batch_size: int = 256, artifact_dir: str | None = None):
         # frozen = (tên model AutoTS, params đã search) → chạy lại nguyên trạng bằng ModelMonster (giai đoạn iii)
         self.frozen = None if frozen is None else (str(frozen[0]), dict(frozen[1]))
+        self.predict_batch_size = int(predict_batch_size)
+        if self.predict_batch_size < 1:
+            raise ValueError("AutoTS predict_batch_size must be positive")
+        self.artifact_dir = Path(artifact_dir) if artifact_dir else None
         self.use_es = frozen is not None  # template freeze: refit trên đúng dữ liệu bake-off (FIT+ES)
         if self.frozen is not None:
             kind = "wr" if self.frozen[0] == "WindowRegression" else "mr"
@@ -137,31 +146,58 @@ class AutoTSModel:
         return lo, hi
 
     def fit_predict(self, X_fit: SeriesBatch, z_fit, X_es, z_es, X_pred: SeriesBatch, rounds, seed: int) -> FitResult:
+        from .autots_batch import gpu_regressors
+
+        started = time.perf_counter()
         lo, hi = self.fit_range(X_fit, X_es)  # lát liên tục trên lưới (đã kiểm không gap §1.1), kết thúc trước purge
         df_fit, R_fit = self.frames(X_fit, lo, hi)
         m = self._make(seed)
-        m.fit(df_fit, future_regressor=R_fit)
+        frames_seconds = time.perf_counter() - started
+        started = time.perf_counter()
+        with gpu_regressors():
+            m.fit(df_fit, future_regressor=R_fit)
+        import torch
+
+        torch.cuda.synchronize()
+        fit_seconds = time.perf_counter() - started
         predictor = self._make_predictor(m)
-        return FitResult(predictor(X_pred), (0, 0, 0), [predictor], is_logret=True)
+        started = time.perf_counter()
+        prediction = predictor(X_pred)
+        prediction_seconds = time.perf_counter() - started
+        if self.artifact_dir:
+            import joblib
+
+            self.artifact_dir.mkdir(parents=True, exist_ok=True)
+            run_id = uuid.uuid4().hex
+            # Native models retain full FIT frames/X/Y. Save the fitted estimator
+            # and inference state, not another copy of FIT for every candidate.
+            state = {name: getattr(m, name, None) for name in
+                     ("column_names", "window_size", "min_threshold", "scaler", "fourier_encoder",
+                      "scaler_mean", "scaler_std", "_nonzero_var_mask")}
+            joblib.dump({"estimator": m.model, "params": m.get_params(), "inference_state": state,
+                         "kind": self.kind, "contract": "independent_origins_batched_v1"},
+                        self.artifact_dir / f"{run_id}.joblib", compress=3)
+            (self.artifact_dir / f"{run_id}.json").write_text(json.dumps({
+                "model": self.name, "seed": int(seed), "features": list(X_fit.cov_names),
+                "fit_start": int(X_fit.ts[lo]), "fit_end": int(X_fit.ts[hi - 1]),
+                "n_fit_bars": hi - lo, "n_origins": len(X_pred.idx), "frozen_template": self.frozen,
+                "frames_seconds": frames_seconds, "fit_seconds": fit_seconds,
+                "prediction_seconds": prediction_seconds, "predict_batch_size": self.predict_batch_size,
+                "prediction_batches": predictor.timings,
+                "prediction_contract": "independent_origins_batched_v1",
+            }, indent=2), encoding="utf-8")
+        return FitResult(prediction, (0, 0, 0), [predictor], is_logret=True)
 
     def _make_predictor(self, m):
+        from .autots_batch import predict_mr, predict_wr
+
         def predict(seq: SeriesBatch) -> np.ndarray:
-            out = np.empty((len(seq.idx), len(HORIZONS)), dtype=np.float64)
-            for k, t in enumerate(seq.idx):
-                t = int(t)
-                a = max(0, t + 1 - self.tail_bars)
-                df_slice = _frame(seq.ts[a:t + 1], seq.r1[a:t + 1, None], ["r1"])  # chỉ τ ≤ t
-                m.fit_data(df_slice)  # KHÔNG refit; không truyền regressor (bug autots 1.0.4 sklearn.py:3337)
-                if self.kind == "mr":
-                    # MR.predict nối regressor_train với future_regressor → phải gán tay (đúng ngữ nghĩa fit()), chỉ phần đuôi.
-                    # Shift của MR là −1 nên mọi hàng chỉ chứa f(≤ t−1). WR KHÔNG gán: predict của nó chỉ dùng
-                    # future_regressor.tail(1), và R của WR (shift +W−1) sẽ trỏ tới bar sau t → không được đưa vào lúc predict.
-                    m.regressor_train = self.regressor_frame(seq, a, t + 1)
-                fc = m.predict(forecast_length=len(HORIZONS), future_regressor=self.future_regressor(seq, t, k),
-                               just_point_forecast=True)
-                out[k] = np.asarray(fc).reshape(len(HORIZONS), -1)[:, 0]
+            timings = []
+            out = (predict_wr(m, seq, self.predict_batch_size, timings) if self.kind == "wr" else
+                   predict_mr(m, seq, self.predict_batch_size, self.tail_bars, timings))
+            predict.timings = timings
             return np.cumsum(out, axis=1).astype(np.float32)  # one-step r̂ → y_h (§6.7)
 
         predict.model = m  # model AutoTS đã fit của fold này (debug/kiểm tra)
+        predict.timings = []
         return predict
-

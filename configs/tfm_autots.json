@@ -1,0 +1,104 @@
+{
+  "dataset_label": "btc_1min_2y_2024-09-03_2026-09-03",
+  "hf_csv": "data/BTC_1m_2y.csv",
+  "lf_csv": "data/BTC_5m_2y.csv",
+  "checksums": "data/data_checksums_2y.json",
+  "split": {
+    "mode": "rolling_spread",
+    "n_folds": 5,
+    "val_days": 3,
+    "fit_days": 120,
+    "es_days": 5,
+    "test_days": 30,
+    "purge_minutes": 60
+  },
+  "purge_minutes": 60,
+  "calib_seed": 8586,
+  "eval_seeds": [
+    8587,
+    8588,
+    8589
+  ],
+  "selection_seed": 8587,
+  "eps_floor_pp": 0.005,
+  "experiments_dir": "experiments/tfm_autots",
+  "prev_run_dir": "experiments/15d",
+  "fold_workers": 1,
+  "gpu_devices": [
+    0
+  ],
+  "gpu_slots_per_device": 1,
+  "max_branches": 1,
+  "defer_champion": true,
+  "short_candidates": null,
+  "require_gpu": true,
+  "models": {
+    "lgbm": {
+      "device_type": "cuda"
+    },
+    "xgb": {
+      "device": "cuda"
+    },
+    "tfm": {
+      "device": "cuda",
+      "context": 512,
+      "batch_size": 256,
+      "lora": {
+        "r": 8,
+        "alpha": 16,
+        "dropout": 0.0,
+        "lr": 0.0001,
+        "batch_size": 64,
+        "max_epochs": 20,
+        "patience": 5,
+        "train_stride": 1
+      },
+      "residual": {
+        "calibration_days": 5,
+        "early_stopping_days": 5,
+        "purge_minutes": 60,
+        "ridge": 0.0,
+        "pinv_rtol": 1e-10,
+        "include_forecast": true
+      }
+    },
+    "autots_wr": {
+      "device": "cuda",
+      "window_size": 60,
+      "predict_batch_size": 256
+    },
+    "autots_mr": {
+      "device": "cuda",
+      "predict_batch_size": 256
+    },
+    "autots_search": {
+      "num_validations": 10,
+      "templates": [
+        {
+          "model": "wr",
+          "window_size": 60,
+          "regressor": "LightGBM"
+        },
+        {
+          "model": "wr",
+          "window_size": 60,
+          "regressor": "xgboost"
+        },
+        {
+          "model": "mr",
+          "regressor": "xgboost"
+        },
+        {
+          "model": "mr",
+          "regressor": "LightGBM"
+        }
+      ]
+    }
+  },
+  "model_order": [
+    "tfm",
+    "autots_wr",
+    "autots_mr"
+  ],
+  "phase": "tfm_autots"
+}

@@ -1,4 +1,14 @@
-# P0_forecasting — Order Book / branch OB
+# P0_forecasting — branch tfm_autots
+
+Phase hiện tại trên branch này: chỉ TimesFM và AutoTS của pipeline OHLCV `src/p0`.
+Đọc `docs/TFM_AUTOTS_PHASE.md`, `configs/tfm_autots.json` và `src/p0/phase_tfm_autots.py`.
+Lệnh chạy thật trên Vast: `P0_TFM_AUTOTS_VAST=1 python run.py tfm-autots`.
+User hiện chỉ yêu cầu code/commit/push; không tự chạy training ở phiên sửa code.
+Cấm mọi test/smoke/canary/probe fit/benchmark/warmup riêng. Chưa có bằng chứng runtime cho code mới.
+Session chính làm việc, không gọi thêm agent nếu user chưa yêu cầu. Các ghi chú OB dưới đây là context
+của nhánh trước, không điều khiển phase tfm_autots và không yêu cầu chạy các model OB khác.
+
+## Context Order Book được giữ lại
 
 Luồng đang dùng: `src_OB/`, `configs/orderbook.json`, `src_OB/README.md` và
 `docs/VAST_SESSION_PROMPT.md`. `src/p0/` là code cũ được giữ lại, chỉ import helper cần thiết.

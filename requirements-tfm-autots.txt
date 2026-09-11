@@ -1,0 +1,13 @@
+# Install only on Vast. Install CUDA-enabled torch and LightGBM separately for the image.
+# No JAX/XReg dependency: the residual regression uses torch on CUDA.
+numpy>=2.0
+pandas>=3.0
+scipy>=1.14
+scikit-learn>=1.6
+matplotlib>=3.9
+joblib>=1.4
+xgboost>=3.0
+cupy-cuda12x>=13
+autots==1.0.4
+timesfm[torch]==2.0.2
+statsmodels>=0.14

@@ -237,12 +237,12 @@ def make_model(name: str, params: dict | None = None, allow_cpu: bool = False) -
 
         return LSTMModel(allow_cpu=allow_cpu, **params)
     if name == "tfm":
-        # 2026-09-03: TimesFM = LoRA per fold (FIT/ES) → freeze → XReg covariate search trên cùng adapter; xuất phát S = ∅
-        # (native), covariate = các cột ext đang xét. Hai nhánh zero-shot `tfm_b0`/`tfm_ext` của vòng 15 ngày không còn.
-        from .models_tfm import TimesFMLoRAModel
+        # tfm_autots: LoRA prefix -> frozen batched forecasts -> held-out residual
+        # regression with origin covariates + forecast vector. S=empty is native.
+        from .models_tfm_residual import TimesFMResidualModel
 
         params.pop("covariate_scope", None)
-        return TimesFMLoRAModel(allow_cpu=allow_cpu, covariate_scope="ext", name="tfm", **params)
+        return TimesFMResidualModel(allow_cpu=allow_cpu, covariate_scope="ext", name="tfm", **params)
     if name == "tfm_zero_shot":  # chỉ để tham chiếu/kiểm tra (vòng 15 ngày); không nằm trong model_order
         from .models_tfm import TimesFMModel
 
