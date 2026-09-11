@@ -122,7 +122,8 @@ ExtraTrees, KNN, SVM, ElasticNet chạy CPU; những model thống kê cũng kh�
 Vì vậy search hiện giới hạn `WindowRegression` với **hai backend GPU** LightGBM/XGBoost, không mở toàn catalogue.
 Trong hai backend, option không chạy trên CUDA bị loại giống XGBoost `gblinear` → `gbtree`: LightGBM 4.7.0 CUDA tự
 chuyển `linear_tree` sang CPU (`config.cpp`) và lỗi với GOSS (`goss.hpp` không cấp phát buffer CUDA), nên adapter đặt
-`linear_tree=False` và đổi GOSS thành `gbdt`. Sau mỗi fit LightGBM, `GPURegressor` đọc config hiệu lực trong model text
+`linear_tree=False`, đổi GOSS thành `gbdt` và giới hạn `max_bin ≤ 255` (candidate đầu tiên có `max_bin` 1000 đi vào đường
+bin 16-bit/global memory của CUDA và làm process segfault, exit 139). Sau mỗi fit LightGBM, `GPURegressor` đọc config hiệu lực trong model text
 và dừng job nếu device không phải CUDA, còn linear tree/GOSS, hoặc objective tính gradient trên CPU.
 Không fix sẵn backend thắng, số cây, learning rate hay window. Default: 12 candidate ban đầu, 3 generation,
 2 vòng validation bổ sung. AutoTS sinh/chấm/chọn tham số; không search subset feature hoặc learned transform.

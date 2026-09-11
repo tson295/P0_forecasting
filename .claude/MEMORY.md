@@ -1,5 +1,5 @@
 PHASE: OB — Vast 2026-09-11: HF pinned BLOCKED; user chọn Zenodo 20046390 (21 ngày) + fold FIT9/gap1/VAL2/step2
-TRAINING: RUNNING — Zenodo FULL train bắt đầu 2026-09-11T02:46:25Z, tmux `ob:ztrain`, kỳ vọng 5×8×3 = 120 cell
+TRAINING: RUNNING — Zenodo FULL train; lần 2 (`--resume`, commit 688fefd) từ ~02:58Z trong tmux `ob:ztrain2`; kỳ vọng 120 cell
 
 ## Current task
 
@@ -22,9 +22,18 @@ scope OB (LFS predictions/checkpoints) → `git ls-remote` xác minh. Không smo
 - Checker trước train: không ERROR; Z-W1 (docs luật gap cũ) đã sửa; Z-I1…I8 cần ghi vào RUN_REPORT (cadence thật
   ~1,24 s khác datacite 5 s, timestamp là đồng hồ collector; ngày 10-01 bất thường nhưng ngoài mọi fold; FIT hiệu dụng
   ~7,9 d do context TimesFM h180; fold2 VAL ít origin → nêu mean-fold và pooled; 2 định nghĩa config sha).
-- Recovery: `train.py` `mkdir(exist_ok=False)` + dừng cả run khi một cell lỗi; CLI chưa có `--resume`. Nếu lỗi: lưu
-  traceback, sửa + commit, thêm skip cell completed / lưu attempt mới có provenance, chạy phần còn lại bằng
-  `--models/--folds` với cùng launcher env (HF_HOME!). Không ghi đè cell completed.
+- Lần 1 (02:46:25Z, code d8797c5): 15 cell completed (fold1 lgbm/xgb/cat/xgbrf/lstm × 3h; lgbm model text xác nhận
+  device_type cuda). Dừng ở fold1/autots/h60s: candidate LightGBM GOSS → `[CUDA] invalid argument goss.hpp 66`
+  (LightGBM 4.7.0 không cấp phát CUDA bag buffer cho GOSS). Replay seed cho thấy candidate 3 của attempt đó là
+  `linear_tree=True` ⇒ LightGBM đã âm thầm fit CPU (config.cpp:426-430) — attempt bị bỏ, phải ghi trong RUN_REPORT.
+  Sửa (688fefd): adapter đặt linear_tree=False, GOSS→gbdt; `GPURegressor` kiểm config hiệu lực sau mỗi fit LightGBM;
+  `train --resume` skip cell completed cùng config/revision, chuyển attempt dở sang `attempts/<fold>/<model>/<h>/attemptN`.
+- Lần 2 (02:58:19Z, `--resume`, 688fefd): skip đúng 15 cell, attempt1 chuyển sang `attempts/`; candidate 3 và 6 (8-bit
+  bin) fit CUDA xong; candidate 9 (LightGBM max_bin 1000) ⇒ SIGSEGV, TRAIN_EXIT=139 (không traceback). `failed.json`
+  hậu kiểm ghi vào cell trước khi resume chuyển thành attempt2. Sửa: `max_bin ≤ 255` trong allowlist, launcher bật
+  `PYTHONFAULTHANDLER=1`.
+- Recovery tiếp: `bash experiments/orderbook_zenodo/run_meta/run_train.sh --resume` (launcher truyền args, giữ HF_HOME).
+  Cell mới ghi `train_code` (commit) + `prior_attempts`. Không ghi đè cell completed.
 
 ## HF (đóng, BLOCKED — chỉ tham khảo)
 

@@ -40,9 +40,12 @@ def gpu_parameters(spec, cfg):
     if name == "LightGBM":
         # LightGBM 4.7.0 CUDA: linear trees switch the fit to CPU and GOSS crashes (see gpu.py). Like XGBoost
         # gblinear below, both are outside the GPU allowlist; the seeded sampling stream is left unchanged.
+        # max_bin > 255 takes the CUDA 16-bit bin / global-memory split path; the first such candidate killed the
+        # run with SIGSEGV (exit 139), so candidates stay on the 8-bit path the completed CUDA fits used.
         p.pop("data_sample_strategy", None)
         if p.get("boosting_type") == "goss":
             p["boosting_type"] = "gbdt"
+        p["max_bin"] = min(int(p.get("max_bin", 255)), 255)
         p.update(device_type=cfg["tree"]["lightgbm_device"], objective="regression", linear_tree=False)
     elif name == "xgboost":
         for key in ("gpu_id", "predictor", "updater", "quantile_alpha", "multi_strategy"):

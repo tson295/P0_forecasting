@@ -7,6 +7,7 @@ cd "$(dirname "$0")/../../.."
 export P0_OB_VAST=1
 export CUDA_VISIBLE_DEVICES=0
 export HF_HOME=/home/ubuntu/.cache/huggingface
+export PYTHONFAULTHANDLER=1  # Python stack in train.log if a native library segfaults (run 2 exited 139)
 LOG=experiments/orderbook_zenodo/logs
 CFG=configs/orderbook_zenodo.json
 echo "train start $(date -u +%FT%TZ) args: $*" | tee -a "$LOG/train.log"
