@@ -200,6 +200,15 @@ không cần GPU. Output ở `<output_dir>/figures/`:
   trong ô; `origins.csv`, `day_gains.csv`, `index.md`.
 Lệnh dừng nếu origin/actual/E0 khác nhau giữa các family (không vẽ trên tập không chung).
 
+Vẽ lại trên máy khác (không cần GPU, không cần raw archive; mọi input đã có trong git + LFS):
+
+```bash
+git clone -b OB https://github.com/tson295/P0_forecasting.git && cd P0_forecasting
+git lfs pull --include "data/orderbook/prepared_zenodo_20046390/**,experiments/orderbook_zenodo/**"
+python3.12 -m venv .venv && .venv/bin/pip install numpy==2.5.3 pandas==3.0.5 pyarrow==25.0.1 matplotlib==3.11.1 sortedcontainers==2.4.0
+.venv/bin/python -m src_OB visualize --config configs/orderbook_zenodo.json
+```
+
 ## Dùng trên Vast
 
 Từ root repo, dùng image Vast CUDA 12, cài CUDA-enabled PyTorch và GPU-enabled LightGBM trước, rồi:
