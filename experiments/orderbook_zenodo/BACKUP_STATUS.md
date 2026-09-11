@@ -22,7 +22,10 @@ lớn (`data/orderbook/**/*.bin`, `experiments/**/*.parquet|.pt|.joblib`) đi qu
 | 6108a1d | shim pandas weighted sample cho AutoTS 1.0.4 | `ls-remote` = 6108a1de91de8a3f5bc6ff77c8da93d2dee4e021 |
 | 749712b | 15 cell AutoTS v2, attempt fold3/autots/h120s, summary sinh lại, log; 30 object LFS | `ls-remote` = 749712bb4324b6a7819621699b2742e2ab476722 |
 
-Commit báo cáo cuối của lượt AutoTS v2 nằm ngay sau 749712b và được kiểm tra bằng `git ls-remote origin refs/heads/OB`.
+| d31b31d | RUN_REPORT AutoTS v2, CHECKER_FINDINGS lượt ZA, MEMORY | `ls-remote` = d31b31d1bb439745137590c4322412ca5b8315c3 |
+| 62b56a4 | `src_OB/visualize.py` + figures (30 ảnh path, 2 heatmap, index/csv); 32 object LFS | `ls-remote` = 62b56a41840bddfc13749b260e7d3bed63e7c976 |
+
+Commit chứa bản cập nhật file này nằm ngay sau 62b56a4 và được kiểm tra bằng `git ls-remote origin refs/heads/OB`.
 
 Không nằm trong git (có chủ đích):
 - Raw `data/orderbook/zenodo_20046390/btcusdt_lob_oct2023.tar.gz` (308.618.431 B): tải lại được từ Zenodo record 20046390,
