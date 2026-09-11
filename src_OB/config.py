@@ -9,14 +9,26 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def load(path):
     cfg = json.loads(Path(path).read_text())
-    if re.fullmatch(r"[0-9a-f]{40}", cfg["dataset_revision"]) is None:
-        raise ValueError("dataset_revision phải là full commit SHA để freeze public archive.")
+    provider = cfg.setdefault("provider", "huggingface")
+    if provider == "huggingface":
+        if re.fullmatch(r"[0-9a-f]{40}", cfg["dataset_revision"]) is None:
+            raise ValueError("dataset_revision phải là full commit SHA để freeze public archive.")
+    elif provider == "zenodo":
+        # A Zenodo record is pinned by its id plus the md5 of the archived file.
+        if re.fullmatch(r"[0-9a-f]{32}", cfg["dataset_revision"]) is None or not str(cfg.get("zenodo_record", "")).isdigit():
+            raise ValueError("Zenodo cần zenodo_record và dataset_revision = md5 của file đã pin.")
+    else:
+        raise ValueError(f"Provider không hỗ trợ: {provider}")
     if cfg["exchange"] != "binance" or cfg["symbol"] != "BTCUSDT":
         raise ValueError("Pipeline này dùng BTCUSDT Binance Spot, không gộp market.")
     for key in ("raw_dir", "prepared_dir", "output_dir"):
         cfg[key] = str((ROOT / cfg[key]).resolve())
-    if cfg["levels"] != 10 or cfg["gap_days"] <= 5:
-        raise ValueError("L2 phải có 10 level và gap_days phải > 5.")
+    if cfg["levels"] != 10:
+        raise ValueError("L2 phải có 10 level.")
+    # FIT labels already end before train_end; the gap must still exceed the longest horizon
+    # (user decision 2026-09-11: shorter gap allowed for the 21-day source).
+    if cfg["gap_days"] * 86400 <= max(cfg["horizons_seconds"]):
+        raise ValueError("gap_days phải dài hơn horizon lớn nhất.")
     if cfg["book_max_depth"] < cfg["levels"] or cfg.get("include_distances", False):
         raise ValueError("Book cache >= 10 levels; baseline chỉ dùng OF/OFI và timing.")
     if any(cfg[k] <= 0 for k in ("train_days", "val_days", "step_days", "n_folds",

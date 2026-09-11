@@ -1,6 +1,6 @@
-"""DATA_REPORT for the real prepared archive: raw continuity, replay segments, folds and origin masks.
+"""DATA_REPORT for the real prepared archive: source continuity, segments, folds and origin masks.
 
-Reads the downloaded Parquet, the prepared metadata/memmaps and the pipeline's own origin selection.
+Reads the downloaded source, the prepared metadata/memmaps and the pipeline's own origin selection.
 It does not rerun reconstruction, fit or infer any model, or create synthetic data.
 """
 from __future__ import annotations
@@ -62,7 +62,7 @@ def raw_continuity(cfg, files):
     t0, t1 = runs["t0"].to_numpy(np.int64), runs["t1"].to_numpy(np.int64)
     seconds = (t1 - t0) / 1000
     minutes = Counter(pd.to_datetime(t0, unit="ms", utc=True).minute)
-    return {"depth_messages": int(runs["messages"].sum()), "depth_rows": int(runs["rows_"].sum()),
+    return {"kind": "diff", "depth_messages": int(runs["messages"].sum()), "depth_rows": int(runs["rows_"].sum()),
             "first_message_utc": utc(t0.min() * 1000), "last_message_utc": utc(t1.max() * 1000),
             "runs": len(runs), "run_seconds": quantiles(seconds),
             "gap_between_runs_seconds": quantiles((t0[1:] - t1[:-1]) / 1000),
@@ -71,6 +71,15 @@ def raw_continuity(cfg, files):
             "run_start_minute_counts": {int(k): int(v) for k, v in sorted(minutes.items())},
             "snapshots_bridged": sum(a["bridging_message_after_s"] is not None for a in anchors),
             "snapshots": anchors}
+
+
+def snapshot_continuity(cfg, data):
+    """Cadence of the accepted full-snapshot timeline, read from the prepared raw memmap."""
+    ts = np.asarray(data.raw_ts, np.int64)
+    steps = np.diff(ts) / 1e6
+    return {"kind": "snapshots", "snapshots_kept": int(len(ts)), "first_utc": utc(ts[0]), "last_utc": utc(ts[-1]),
+            "span_hours": round(float(ts[-1] - ts[0]) / 3.6e9, 3), "step_seconds": quantiles(steps),
+            "steps_over_max_feed_gap": int((steps > cfg["max_feed_gap_seconds"]).sum())}
 
 
 def overlap_seconds(segments, start, end):
@@ -83,7 +92,8 @@ def data_report(cfg):
     segments = json.loads((folder / "segments.json").read_text())
     reconstruction = json.loads((folder / "reconstruction.json").read_text())
     data = Data(cfg, require_current_replay=False)  # reporting may describe an older prepared version
-    raw = raw_continuity(cfg, manifest["files"])
+    raw = (snapshot_continuity(cfg, data) if cfg.get("provider") == "zenodo"
+           else raw_continuity(cfg, manifest["files"]))
     kept = np.bincount(np.asarray(data.segment), minlength=len(segments))
     seg_rows = [{"id": s["id"], "start_utc": utc(s["start_us"]), "last_utc": utc(s["last_us"]),
                  "seconds": (s["last_us"] - s["start_us"]) / 1e6, "states": s["states"],
@@ -112,6 +122,7 @@ def data_report(cfg):
               "dataset": {"repo": manifest["dataset_repo"], "revision": manifest["dataset_revision"],
                           "files": manifest["files"], "prepared_dir": str(folder),
                           "schema_version": manifest["schema_version"],
+                          "source": manifest.get("source"), "source_kind": manifest.get("source_kind"),
                           # Which replay/code/config produced this prepared version (absent before replay v2).
                           "replay_version": manifest.get("replay_version"), "code_commit": manifest.get("code_commit"),
                           "config_sha256": manifest.get("config_sha256")},
@@ -138,14 +149,36 @@ def table(rows, columns):
     return lines
 
 
+def raw_lines(cfg, raw):
+    if raw["kind"] == "snapshots":
+        return ["## 2. Snapshot đầy đủ sau khi nạp", "",
+                f"- {raw['snapshots_kept']:,} snapshot hợp lệ, từ {raw['first_utc']} tới {raw['last_utc']} "
+                f"(span {raw['span_hours']} h).",
+                f"- Bước thời gian giữa hai snapshot (giây): {raw['step_seconds']}; số bước > "
+                f"{cfg['max_feed_gap_seconds']} s: {raw['steps_over_max_feed_gap']}.",
+                "- Mỗi snapshot là book đầy đủ (top 100 mỗi phía): không replay diff; OF là flow quan sát giữa hai "
+                "snapshot liên tiếp, không phải flow từng message.", ""]
+    return ["## 2. Depth diff thô trước replay", "",
+            f"- {raw['depth_messages']:,} message ({raw['depth_rows']:,} row), từ {raw['first_message_utc']} tới {raw['last_message_utc']}.",
+            f"- Chia theo đúng policy replay (U ≤ u trước + 1, bước thời gian 0–{cfg['max_feed_gap_seconds']} s): "
+            f"**{raw['runs']:,} run liên tục**. Tổng thời gian có depth **{raw['covered_hours']} h** trên span {raw['span_hours']} h "
+            f"({100 * raw['covered_hours'] / raw['span_hours']:.1f}%).",
+            f"- Độ dài run (giây): {raw['run_seconds']}.",
+            f"- Khoảng trống giữa hai run (giây): {raw['gap_between_runs_seconds']}.",
+            f"- Phút UTC bắt đầu run: {raw['run_start_minute_counts']}.",
+            f"- Snapshot: {len(raw['snapshots'])}; snapshot có depth message nối được `last_update_id + 1`: **{raw['snapshots_bridged']}**.", "",
+            *table(raw["snapshots"], ["snapshot_utc", "last_update_id", "bridging_message_after_s",
+                                      "next_message_after_s", "update_ids_missing"]), ""]
+
+
 def markdown(cfg, report):
     raw, prep = report["raw_archive"], report["prepared"]
     coverage = prep["coverage"]
     longest = max((r["seconds"] for r in prep["segment_table"]), default=0.)
     lines = [
-        "# DATA_REPORT — BTCUSDT Binance Spot L2 từ HF archive pinned", "",
-        "Sinh bởi `python -m src_OB data-report` từ raw Parquet đã tải và prepared dataset thật "
-        "(DuckDB đọc raw; memmap/metadata của `prepare`; mask origin dùng chung hàm `select_origins` với `train`). "
+        "# DATA_REPORT — BTCUSDT Binance Spot L2", "",
+        "Sinh bởi `python -m src_OB data-report` từ source đã tải và prepared dataset thật "
+        "(memmap/metadata của `prepare`; mask origin dùng chung hàm `select_origins` với `train`). "
         "Không fit/infer model, không dữ liệu tổng hợp.", "",
         f"**Trạng thái: {report['status']}**" + (f" — fold không có origin FIT/VAL hợp lệ: {', '.join(report['blocked_folds'])}"
                                                    if report["blocked_folds"] else "")
@@ -155,26 +188,17 @@ def markdown(cfg, report):
         f"v{report['dataset']['schema_version']} tại `{Path(report['dataset']['prepared_dir']).relative_to(Path(cfg['raw_dir']).parents[2])}`.",
         f"- Replay {report['dataset']['replay_version'] or 'v1 (manifest chưa ghi replay_version)'}; code "
         f"`{report['dataset']['code_commit'] or '—'}`; config_sha256 `{report['dataset']['config_sha256'] or '—'}`.",
+        f"- Nguồn: {report['dataset']['source'] or '—'} ({report['dataset']['source_kind'] or '—'}).",
         f"- File: {', '.join('`' + f + '`' for f in report['dataset']['files'])}.", "",
-        "## 2. Depth diff thô trước replay", "",
-        f"- {raw['depth_messages']:,} message ({raw['depth_rows']:,} row), từ {raw['first_message_utc']} tới {raw['last_message_utc']}.",
-        f"- Chia theo đúng policy replay (U ≤ u trước + 1, bước thời gian 0–{cfg['max_feed_gap_seconds']} s): "
-        f"**{raw['runs']:,} run liên tục**. Tổng thời gian có depth **{raw['covered_hours']} h** trên span {raw['span_hours']} h "
-        f"({100 * raw['covered_hours'] / raw['span_hours']:.1f}%).",
-        f"- Độ dài run (giây): {raw['run_seconds']}.",
-        f"- Khoảng trống giữa hai run (giây): {raw['gap_between_runs_seconds']}.",
-        f"- Phút UTC bắt đầu run: {raw['run_start_minute_counts']}.",
-        f"- Snapshot: {len(raw['snapshots'])}; snapshot có depth message nối được `last_update_id + 1`: **{raw['snapshots_bridged']}**.", "",
-        *table(raw["snapshots"], ["snapshot_utc", "last_update_id", "bridging_message_after_s",
-                                  "next_message_after_s", "update_ids_missing"]), "",
-        "## 3. Replay thật (`prepare`)", "",
+        *raw_lines(cfg, raw),
+        "## 3. Dựng book thật (`prepare`)", "",
         f"- Raw state: **{prep['counts']['raw']:,}**; origin giữ lại sau same-mid drop: **{prep['counts']['kept']:,}** "
-        "(mỗi segment tính cả state snapshot đầu tiên).",
+        "(mỗi segment tính cả state đầu tiên).",
         f"- Coverage theo segment: {utc(coverage['start_inclusive_us'])} → {utc(coverage['end_exclusive_us'] - 1)}; "
         f"tổng thời gian segment hợp lệ **{coverage['valid_segment_microseconds'] / 1e6:.3f} s**; segment dài nhất {longest:.3f} s.",
-        f"- Đếm replay: {prep['reconstruction_counts']}.",
+        f"- Đếm: {prep['reconstruction_counts']}.",
         f"- Lý do kết thúc segment: {prep['segment_end_reasons']}; reset: {prep['reset_reasons']}.",
-        f"- Hard gap đã biết: {prep['known_hard_gaps_utc']} (không replay xuyên qua; event trong khoảng này bị bỏ).",
+        f"- Hard gap khai báo: {prep['known_hard_gaps_utc'] or 'không có'}.",
         f"- Segment: {prep['segments']}; thời lượng (s) {prep['segment_seconds']}; state/segment {prep['segment_states']}.", "",
         *table(prep["segment_table"], ["id", "start_utc", "last_utc", "seconds", "states", "kept_origins", "end_reason"]), "",
         "## 4. Walk-forward và origin theo mask của pipeline", "",
@@ -189,10 +213,11 @@ def markdown(cfg, report):
         lines += table(report["folds"], columns + ["train_origins", "val_origins"])
     else:
         lines.append(f"Không tạo được fold: {report['fold_error']}")
+    tail = (f"run depth thô dài nhất: {raw['run_seconds'].get('q1')} s" if raw["kind"] == "diff"
+            else f"bước snapshot lớn nhất: {raw['step_seconds'].get('q1')} s")
     lines += ["", "## 5. Context cần so với segment thực tế", "",
               *table(report["context_requirements"], ["horizon_seconds", "price_context_points",
                                                       "price_context_span_hours", "segment_hours_needed_with_label"]), "",
               f"LSTM/tree cần {cfg['context']} origin mid-change liên tiếp cùng segment và nhãn tại t+h trong segment; "
-              f"TimesFM/AutoTS cần thêm context giá cách đều h như bảng. Segment hợp lệ dài nhất: {longest:.3f} s; "
-              f"run depth thô dài nhất: {raw['run_seconds'].get('q1')} s.", ""]
+              f"TimesFM/AutoTS cần thêm context giá cách đều h như bảng. Segment hợp lệ dài nhất: {longest:.3f} s; {tail}.", ""]
     return "\n".join(lines) + "\n"

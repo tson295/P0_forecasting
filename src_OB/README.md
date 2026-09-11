@@ -77,6 +77,30 @@ OF ở mỗi level `i`, với `p` là price và `q` là volume:
 Tính từng raw transition trước, cộng bid_OF/ask_OF tới snapshot được giữ tiếp theo, rồi lấy
 `OFI_i = accumulated_bid_OF_i - accumulated_ask_OF_i`. So sánh price của từng phía riêng biệt.
 
+### Nguồn thay thế: Zenodo 20046390 (21 ngày, full snapshot)
+
+User chọn ngày 2026-09-11 sau khi HF bị chặn (`experiments/orderbook_hf/SOURCE_REPORT.md`). Config riêng
+`configs/orderbook_zenodo.json` (`provider: zenodo`, pin record `20046390` + md5 `58507a0f…`); raw, prepared và output
+riêng, không trộn với HF.
+
+- Dữ liệu: Binance Spot BTCUSDT, snapshot REST `/api/v3/depth` qua ccxt, top 100 mỗi phía, nhịp đo được ~1,24 s,
+  2023-10-01 → 10-21 liên tục (bước lớn nhất 6,7 s; 1 dòng JSON hỏng; 1 lần timestamp/nonce đi lùi — đều ngày 10-01).
+  `nonce` = lastUpdateId. License CC-BY-4.0 / CC-BY-NC-4.0, chỉ nghiên cứu phi thương mại (user xác nhận).
+- `src_OB/snapshots.py`: mỗi dòng là book đầy đủ nên không replay diff; segment đóng khi bước thời gian > 10 s, khi
+  timestamp hoặc nonce không tăng (snapshot đó bị bỏ, timeline không đi lùi), hoặc dòng/book không hợp lệ; không nối,
+  không forward-fill, không hard gap nào được khai báo.
+- OF/OFI dùng cùng công thức nhưng là flow quan sát giữa hai snapshot liên tiếp (~1,24 s), không phải flow từng message.
+- Walk-forward cho 21 ngày (user quyết định): FIT 9 ngày, gap 1 ngày, VAL 2 ngày, bước 2 ngày, tối đa 5 fold. `config.py`
+  giờ chỉ yêu cầu gap > horizon dài nhất (nhãn FIT vẫn kết thúc trước `train_end`). Model/context/seed/budget giữ nguyên.
+
+```bash
+python -m src_OB download --config configs/orderbook_zenodo.json   # kiểm md5 bản đã pin
+python -m src_OB prepare --config configs/orderbook_zenodo.json
+python -m src_OB data-report --config configs/orderbook_zenodo.json
+P0_OB_VAST=1 CUDA_VISIBLE_DEVICES=0 python -m src_OB train --config configs/orderbook_zenodo.json
+python -m src_OB summarize --config configs/orderbook_zenodo.json
+```
+
 ## Models
 
 Mỗi `(fold, family, horizon)` có model/adapter riêng và scalar output, không dùng prediction h=1 để suy ra h=2/3.

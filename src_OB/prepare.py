@@ -1,4 +1,4 @@
-"""Reconstruct historical books, then create OF/OFI and separate raw-mid memmaps."""
+"""Reconstruct historical books (diff replay or full snapshots), then create OF/OFI and raw-mid memmaps."""
 from __future__ import annotations
 
 import hashlib
@@ -48,11 +48,32 @@ def feature_names():
             + ["log_elapsed", "log_raw_elapsed", "log_updates"])
 
 
+def source_stream(cfg, raw, dest, files):
+    """Book-state stream, segment tracker and source notes for the configured provider."""
+    if cfg["provider"] == "zenodo":
+        from .snapshots import SNAPSHOT_ADAPTER_VERSION, SnapshotSeries, snapshot_states
+        tracker = SnapshotSeries(cfg)
+        note = {"source": "Zenodo 20046390 ccxt REST full top-100 snapshots (~1.24 s cadence)",
+                "source_kind": "full_snapshots", "snapshot_adapter_version": SNAPSHOT_ADAPTER_VERSION,
+                "of": "price-aware flow observed between consecutive full snapshots, accumulated before same-mid "
+                      "filtering; not message-level flow",
+                "timestamp_semantics": "collector timestamp of each REST depth snapshot (ccxt 'timestamp', ms)",
+                "collector_warning": "REST snapshots about every 1.24 s: updates between snapshots are not observed.",
+                "license": cfg.get("source_license")}
+        return snapshot_states(cfg, raw, files, tracker), tracker, note
+    tracker = BookReplay(cfg)
+    note = {"source": "HF snapshot + sequenced absolute-quantity depth replay", "source_kind": "diff_replay",
+            "of": "price-aware, accumulated before same-mid filtering",
+            "timestamp_semantics": "dataset event/receipt timestamp; legacy collector does not guarantee arrival time",
+            "collector_warning": "June-August 2026 may contain missing updates; IDs/timestamps cannot certify undetectable omissions."}
+    return states(cfg, raw, dest / "replay_sort", tracker, files), tracker, note
+
+
 def prepare(cfg):
     raw = Path(cfg["raw_dir"])
     source = json.loads((raw / "download_manifest.json").read_text())
-    if source.get("status") != "complete" or source.get("provider") != "huggingface":
-        raise ValueError("Cần HF historical archive đã tải hoàn tất.")
+    if source.get("status") != "complete" or source.get("provider") != cfg["provider"]:
+        raise ValueError("Cần historical archive đã tải hoàn tất, đúng provider của config.")
     if source["repo"] != cfg["dataset_repo"] or source["revision"] != cfg["dataset_revision"]:
         raise ValueError("Archive revision không khớp cấu hình; không trộn data.")
     files = [f["path"] for f in source["selected_files"]]
@@ -63,7 +84,7 @@ def prepare(cfg):
     provenance = code_provenance(cfg)
     dest = Path(cfg["prepared_dir"])
     dest.mkdir(parents=True, exist_ok=False)
-    replay = BookReplay(cfg)
+    stream, replay, note = source_stream(cfg, raw, dest, files)
     pending = np.zeros((10, 2), np.float64)
     previous = None
     last_kept_ts = None
@@ -86,7 +107,7 @@ def prepare(cfg):
             kept_rows.clear()
             features.clear()
 
-        for now, segment, (bp, bq, ap, aq) in states(cfg, raw, dest / "replay_sort", replay, files):
+        for now, segment, (bp, bq, ap, aq) in stream:
             mid = (bp[0] + ap[0]) / 2  # exactly one mid-price per atomic book state
             if previous is None or previous[1] != segment:
                 pending.fill(0)
@@ -125,13 +146,11 @@ def prepare(cfg):
     write_json(dest / "segments.json", replay.segments)
     write_json(dest / "reconstruction.json", {"counts": dict(replay.counts), "resets": replay.resets,
                "known_hard_gaps_us": replay.known_gaps, "replay_version": REPLAY_VERSION,
-               "collector_warning": "June-August 2026 may contain missing updates; IDs/timestamps cannot certify undetectable omissions."})
+               "source_kind": note["source_kind"], "collector_warning": note["collector_warning"]})
     write_json(dest / "manifest.json", {"schema_version": 3, "replay_version": REPLAY_VERSION, **provenance,
                "config": cfg, "historical_fixed": True,
                "dataset_repo": source["repo"], "dataset_revision": source["revision"], "coverage": coverage,
                "counts": totals, "features": feature_names(), "dtypes": DTYPES, "files": files,
                "timestamp_unit": "microseconds (source timestamp_ms * 1000)",
-               "timestamp_semantics": "dataset event/receipt timestamp; legacy collector does not guarantee arrival time",
-               "price": "L2 best-bid/best-ask mid", "of": "price-aware, accumulated before same-mid filtering",
-               "source": "HF snapshot + sequenced absolute-quantity depth replay", "sequence_ids_available": True})
+               "price": "L2 best-bid/best-ask mid", **note, "sequence_ids_available": True})
     print(f"Prepared observed coverage: {coverage}", flush=True)
