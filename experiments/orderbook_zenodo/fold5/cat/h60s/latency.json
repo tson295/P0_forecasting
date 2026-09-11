@@ -1,0 +1,20 @@
+{
+  "inference_n_predictions": 31388,
+  "inference_n_calls": 2047,
+  "inference_single_n": 1024,
+  "inference_mean_ms": 0.5838261370740838,
+  "inference_p50_ms": 0.5797450139652938,
+  "inference_p95_ms": 0.5911543179536238,
+  "inference_p99_ms": 0.6162152939941734,
+  "inference_upper_bound_ms": 3.456346981693059,
+  "inference_upper_bound_kind": "observed_max_not_hard_bound",
+  "inference_first_call_ms": 0.8498249808326364,
+  "inference_batch_p95_ms": 0.8973557036370039,
+  "inference_batch_p99_ms": 0.9319725120440124,
+  "inference_batch_max_ms": 4.739434982184321,
+  "inference_total_seconds": 1.5112953812931664,
+  "inference_amortized_ms_per_prediction": 0.048148826981431324,
+  "inference_scope": "prepared input/context + scaling + transfers + predict + host log-return output",
+  "inference_warmup_calls": 0,
+  "inference_configured_batch_size": 32
+}

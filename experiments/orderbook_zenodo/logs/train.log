@@ -1,0 +1,2640 @@
+train start 2026-09-11T02:46:25Z
+walk-forward: 5 folds from observed coverage, requested maximum=5
+fold1 lgbm h=60s train=83671 val=17447
+lgbm fold1 h=60s {'RMSE': 15.2381269603546, 'MAE': 9.894995214055443, 'R2': 0.9757975532112527, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.006545490789700681, 'r2_os_vs_e0': -0.013133825029079338, 'e0_gain_status': 'defined'}
+fold1 lgbm h=120s train=83671 val=17447
+lgbm fold1 h=120s {'RMSE': 21.420286141041498, 'MAE': 13.984651128189178, 'R2': 0.9522542038241023, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.026224850100359243, 'r2_os_vs_e0': -0.053137442963504755, 'e0_gain_status': 'defined'}
+fold1 lgbm h=180s train=83671 val=17447
+lgbm fold1 h=180s {'RMSE': 24.54424450997423, 'MAE': 16.51344534938725, 'R2': 0.9370834923135049, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.01899815264623106, 'r2_os_vs_e0': -0.03835723509643163, 'e0_gain_status': 'defined'}
+fold1 xgb h=60s train=83671 val=17447
+xgb fold1 h=60s {'RMSE': 15.728355308100436, 'MAE': 10.118835683927188, 'R2': 0.9742152620841661, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.03892723522355679, 'r2_os_vs_e0': -0.07936980008926375, 'e0_gain_status': 'defined'}
+fold1 xgb h=120s train=83671 val=17447
+xgb fold1 h=120s {'RMSE': 22.14303812964156, 'MAE': 14.45672496263034, 'R2': 0.9489778189531756, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.06085118731532857, 'r2_os_vs_e0': -0.12540524162834243, 'e0_gain_status': 'defined'}
+fold1 xgb h=180s train=83671 val=17447
+xgb fold1 h=180s {'RMSE': 25.80336167842242, 'MAE': 17.183413164712235, 'R2': 0.9304626957589914, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.0712726509748498, 'r2_os_vs_e0': -0.14762509272668245, 'e0_gain_status': 'defined'}
+fold1 cat h=60s train=83671 val=17447
+cat fold1 h=60s {'RMSE': 15.327266938124316, 'MAE': 9.887778474348817, 'R2': 0.9755135661085501, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.012433579457463928, 'r2_os_vs_e0': -0.025021752813052967, 'e0_gain_status': 'defined'}
+fold1 cat h=120s train=83671 val=17447
+cat fold1 h=120s {'RMSE': 21.348531421875172, 'MAE': 13.92262635476274, 'R2': 0.9525735504383943, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.022787152049287496, 'r2_os_vs_e0': -0.04609355839709228, 'e0_gain_status': 'defined'}
+fold1 cat h=180s train=83671 val=17447
+cat fold1 h=180s {'RMSE': 24.649176811565873, 'MAE': 16.4164097600112, 'R2': 0.9365443772116302, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.02335460458066918, 'r2_os_vs_e0': -0.04725464671645785, 'e0_gain_status': 'defined'}
+fold1 xgbrf h=60s train=83671 val=17447
+xgbrf fold1 h=60s {'RMSE': 14.962346542328634, 'MAE': 9.746770019044295, 'R2': 0.9766656602474976, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.011671022101571116, 'r2_os_vs_e0': 0.023205831446246883, 'e0_gain_status': 'defined'}
+fold1 xgbrf h=120s train=83671 val=17447
+xgbrf fold1 h=120s {'RMSE': 20.93469340075514, 'MAE': 13.683972304813347, 'R2': 0.9543944378551044, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.002960579313827205, 'r2_os_vs_e0': -0.005929923657527869, 'e0_gain_status': 'defined'}
+fold1 xgbrf h=180s train=83671 val=17447
+xgbrf fold1 h=180s {'RMSE': 24.3278562340108, 'MAE': 16.188684222655496, 'R2': 0.9381879777782599, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.010014406849067292, 'r2_os_vs_e0': -0.020129102042673264, 'e0_gain_status': 'defined'}
+fold1 lstm h=60s train=83671 val=17447
+lstm h=60s epoch=1 train_loss=0.330637
+lstm h=60s epoch=2 train_loss=0.32561
+lstm h=60s epoch=3 train_loss=0.312259
+lstm h=60s epoch=4 train_loss=0.286708
+lstm h=60s epoch=5 train_loss=0.253151
+lstm h=60s epoch=6 train_loss=0.217154
+lstm h=60s epoch=7 train_loss=0.193717
+lstm h=60s epoch=8 train_loss=0.175749
+lstm h=60s epoch=9 train_loss=0.160495
+lstm h=60s epoch=10 train_loss=0.147954
+lstm fold1 h=60s {'RMSE': 17.436830444568734, 'MAE': 11.687828882745583, 'R2': 0.9683093470385834, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.1517795529140813, 'r2_os_vs_e0': -0.32659613851096103, 'e0_gain_status': 'defined'}
+fold1 lstm h=120s train=83671 val=17447
+lstm h=120s epoch=1 train_loss=0.336901
+lstm h=120s epoch=2 train_loss=0.327491
+lstm h=120s epoch=3 train_loss=0.315406
+lstm h=120s epoch=4 train_loss=0.282834
+lstm h=120s epoch=5 train_loss=0.23319
+lstm h=120s epoch=6 train_loss=0.19515
+lstm h=120s epoch=7 train_loss=0.162827
+lstm h=120s epoch=8 train_loss=0.139952
+lstm h=120s epoch=9 train_loss=0.126601
+lstm h=120s epoch=10 train_loss=0.114614
+lstm fold1 h=120s {'RMSE': 26.3893183962643, 'MAE': 18.407156038667516, 'R2': 0.9275328886811265, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.2642863002454845, 'r2_os_vs_e0': -0.5984198489884154, 'e0_gain_status': 'defined'}
+fold1 lstm h=180s train=83671 val=17447
+lstm h=180s epoch=1 train_loss=0.340206
+lstm h=180s epoch=2 train_loss=0.333367
+lstm h=180s epoch=3 train_loss=0.317963
+lstm h=180s epoch=4 train_loss=0.281187
+lstm h=180s epoch=5 train_loss=0.214606
+lstm h=180s epoch=6 train_loss=0.16938
+lstm h=180s epoch=7 train_loss=0.140021
+lstm h=180s epoch=8 train_loss=0.119378
+lstm h=180s epoch=9 train_loss=0.102307
+lstm h=180s epoch=10 train_loss=0.0917391
+lstm fold1 h=180s {'RMSE': 31.460635348676018, 'MAE': 21.594295970111066, 'R2': 0.8966286355798606, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.30614447262166866, 'r2_os_vs_e0': -0.706013383360137, 'e0_gain_status': 'defined'}
+fold1 autots h=60s train=83671 val=17447
+Data frequency is: min, used frequency is: 60s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+[LightGBM] [Fatal] [CUDA] invalid argument /tmp/.tmpd3EroI/sdists-v9/pypi/lightgbm/4.7.0/7lt84pBZReOOdD6o/src/src/boosting/goss.hpp 66
+
+GPU fit failed; no CPU retry: [CUDA] invalid argument /tmp/.tmpd3EroI/sdists-v9/pypi/lightgbm/4.7.0/7lt84pBZReOOdD6o/src/src/boosting/goss.hpp 66
+
+TRAIN_EXIT=1 2026-09-11T02:48:54Z
+train start 2026-09-11T02:58:19Z args: --resume
+walk-forward: 5 folds from observed coverage, requested maximum=5
+fold1 lgbm h=60s completed with this config; skipped (--resume)
+fold1 lgbm h=120s completed with this config; skipped (--resume)
+fold1 lgbm h=180s completed with this config; skipped (--resume)
+fold1 xgb h=60s completed with this config; skipped (--resume)
+fold1 xgb h=120s completed with this config; skipped (--resume)
+fold1 xgb h=180s completed with this config; skipped (--resume)
+fold1 cat h=60s completed with this config; skipped (--resume)
+fold1 cat h=120s completed with this config; skipped (--resume)
+fold1 cat h=180s completed with this config; skipped (--resume)
+fold1 xgbrf h=60s completed with this config; skipped (--resume)
+fold1 xgbrf h=120s completed with this config; skipped (--resume)
+fold1 xgbrf h=180s completed with this config; skipped (--resume)
+fold1 lstm h=60s completed with this config; skipped (--resume)
+fold1 lstm h=120s completed with this config; skipped (--resume)
+fold1 lstm h=180s completed with this config; skipped (--resume)
+moved unfinished attempt /home/ubuntu/P0_forecasting/experiments/orderbook_zenodo/fold1/autots/h60s -> /home/ubuntu/P0_forecasting/experiments/orderbook_zenodo/attempts/fold1/autots/h60s/attempt1
+fold1 autots h=60s train=83671 val=17447
+Data frequency is: min, used frequency is: 60s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+TRAIN_EXIT=139 2026-09-11T02:58:49Z
+train start 2026-09-11T03:02:28Z args: --resume
+walk-forward: 5 folds from observed coverage, requested maximum=5
+fold1 lgbm h=60s completed with this config; skipped (--resume)
+fold1 lgbm h=120s completed with this config; skipped (--resume)
+fold1 lgbm h=180s completed with this config; skipped (--resume)
+fold1 xgb h=60s completed with this config; skipped (--resume)
+fold1 xgb h=120s completed with this config; skipped (--resume)
+fold1 xgb h=180s completed with this config; skipped (--resume)
+fold1 cat h=60s completed with this config; skipped (--resume)
+fold1 cat h=120s completed with this config; skipped (--resume)
+fold1 cat h=180s completed with this config; skipped (--resume)
+fold1 xgbrf h=60s completed with this config; skipped (--resume)
+fold1 xgbrf h=120s completed with this config; skipped (--resume)
+fold1 xgbrf h=180s completed with this config; skipped (--resume)
+fold1 lstm h=60s completed with this config; skipped (--resume)
+fold1 lstm h=120s completed with this config; skipped (--resume)
+fold1 lstm h=180s completed with this config; skipped (--resume)
+moved unfinished attempt /home/ubuntu/P0_forecasting/experiments/orderbook_zenodo/fold1/autots/h60s -> /home/ubuntu/P0_forecasting/experiments/orderbook_zenodo/attempts/fold1/autots/h60s/attempt2
+fold1 autots h=60s train=83671 val=17447
+Data frequency is: min, used frequency is: 60s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.02 in 19.88s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.02 in 0.30s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.02 in 0.86s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.02 in 0.86s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.02 in 0.86s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.02 in 0.97s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.02 in 0.86s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.02 in 0.86s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.02 in 2.14s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.02 in 2.13s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.02 in 0.70s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.02 in 0.39s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.02 in 0.39s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.03 in 0.60s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.03 in 0.60s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.02 in 6.01s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.03 in 0.26s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.04 in 0.40s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.04 in 0.23s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.27 in 0.96s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.27 in 0.38s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 0.55 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 0.71 in 0.23s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 2.77 in 0.33s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.97s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.04 in 13.42s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.04 in 0.30s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+📈 3 - WindowRegression with avg smape 0.03 in 0.84s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.03 in 0.84s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.03 in 0.83s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.03 in 0.83s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.03 in 0.83s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.03 in 0.84s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.03 in 2.03s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.03 in 2.03s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.05 in 0.68s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.03 in 0.49s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.04 in 0.60s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.04 in 0.59s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.04 in 4.09s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.03 in 0.26s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.04 in 0.23s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.33 in 0.82s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.33 in 0.36s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 0.68 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.9 in 0.23s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 2.78 in 0.32s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.85s: 
+autots fold1 h=60s {'RMSE': 498.9077947759612, 'MAE': 489.2008285674113, 'R2': -24.94398455537625, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -31.95506018935881, 'r2_os_vs_e0': -1085.035992084262, 'e0_gain_status': 'defined'}
+fold1 autots h=120s train=83671 val=17447
+Data frequency is: 2min, used frequency is: 120s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.04 in 0.54s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.04 in 1.86s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.04 in 1.86s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.04 in 1.86s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.04 in 0.54s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.04 in 4.23s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.04 in 3.10s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.04 in 3.10s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.04 in 0.59s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.05 in 0.25s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.05 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.05 in 0.49s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.05 in 0.57s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.25 in 0.80s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.25 in 0.57s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.25 in 0.36s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 0.25 in 0.56s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 0.49 in 0.23s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 0.52 in 0.30s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.72s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.06 in 0.52s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.06 in 1.70s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.06 in 1.70s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.06 in 1.70s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.06 in 0.52s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+📈 6 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.05 in 0.48s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.05 in 0.38s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.06 in 0.81s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.06 in 0.80s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.06 in 0.81s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.06 in 3.80s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.06 in 2.15s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.06 in 2.14s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.06 in 0.58s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.06 in 0.25s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.08 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.07 in 0.37s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.07 in 0.37s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.07 in 0.55s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.41 in 0.79s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.42 in 0.54s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.41 in 0.35s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 0.41 in 0.69s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.81 in 0.23s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 0.86 in 0.29s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.64s: 
+autots fold1 h=120s {'RMSE': 514.2084370521412, 'MAE': 504.6854032480512, 'R2': -26.51458711117577, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -23.63522068564281, 'r2_os_vs_e0': -605.8940982303236, 'e0_gain_status': 'defined'}
+fold1 autots h=180s train=83671 val=17447
+Data frequency is: 3min, used frequency is: 180s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.05 in 0.75s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.05 in 0.81s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.05 in 0.52s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.05 in 1.69s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.05 in 1.69s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.05 in 1.69s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.05 in 0.38s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.05 in 2.15s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.05 in 2.14s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.05 in 0.63s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.05 in 0.25s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.06 in 0.59s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.06 in 0.39s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.06 in 0.38s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.06 in 0.38s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.06 in 0.37s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 0.27 in 0.79s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 0.27 in 0.36s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 0.54 in 0.30s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.62s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.1 in 0.74s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 0.09 in 0.79s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.09 in 0.52s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.09 in 0.79s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.09 in 0.90s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.09 in 0.79s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.09 in 0.79s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.09 in 0.79s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.09 in 1.55s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.09 in 1.55s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.09 in 1.55s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+📈 12 - WindowRegression with avg smape 0.08 in 0.37s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.08 in 0.37s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.08 in 0.37s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.1 in 1.50s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.1 in 1.50s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.1 in 0.51s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.08 in 0.25s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.1 in 0.57s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.1 in 0.38s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.1 in 0.37s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.09 in 0.37s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.09 in 0.36s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 0.42 in 0.77s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.42 in 0.45s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 0.86 in 0.29s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.56s: 
+autots fold1 h=180s {'RMSE': 517.542959922545, 'MAE': 508.1828270574812, 'R2': -26.974226139080884, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -20.486720435082947, 'r2_os_vs_e0': -460.6791550554111, 'e0_gain_status': 'defined'}
+fold1 tfm_zero_shot h=60s train=83671 val=17447
+tfm_zero_shot fold1 h=60s {'RMSE': 15.464590781075522, 'MAE': 10.199470037150562, 'R2': 0.9750728307046714, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.02150442492686233, 'r2_os_vs_e0': -0.04347129014515971, 'e0_gain_status': 'defined'}
+fold1 tfm_zero_shot h=120s train=83671 val=17447
+tfm_zero_shot fold1 h=120s {'RMSE': 21.732520934825267, 'MAE': 14.278188793149907, 'R2': 0.9508521168574552, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.04118371210327765, 'r2_os_vs_e0': -0.08406352234916104, 'e0_gain_status': 'defined'}
+fold1 tfm_zero_shot h=180s train=83671 val=17447
+tfm_zero_shot fold1 h=180s {'RMSE': 24.965352432749008, 'MAE': 16.554091196234655, 'R2': 0.9349060429021523, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.03648120025838342, 'r2_os_vs_e0': -0.07429327848905909, 'e0_gain_status': 'defined'}
+fold1 tfm_lora h=60s train=83671 val=17447
+tfm_lora h=60s epoch=1 train_loss=0.599615
+tfm_lora h=60s epoch=2 train_loss=0.234148
+tfm_lora h=60s epoch=3 train_loss=0.137323
+tfm_lora h=60s epoch=4 train_loss=0.0951383
+tfm_lora h=60s epoch=5 train_loss=0.0730732
+tfm_lora fold1 h=60s {'RMSE': 21.109538307375527, 'MAE': 13.40027834897487, 'R2': 0.9535534384863034, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.3943781050795785, 'r2_os_vs_e0': -0.944290299925316, 'e0_gain_status': 'defined'}
+fold1 tfm_lora h=120s train=83671 val=17447
+tfm_lora h=120s epoch=1 train_loss=0.456233
+tfm_lora h=120s epoch=2 train_loss=0.138748
+tfm_lora h=120s epoch=3 train_loss=0.0816871
+tfm_lora h=120s epoch=4 train_loss=0.0582997
+tfm_lora h=120s epoch=5 train_loss=0.0449764
+tfm_lora fold1 h=120s {'RMSE': 28.219858546814624, 'MAE': 18.548589311886442, 'R2': 0.9171305858277026, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.3519856792001794, 'r2_os_vs_e0': -0.8278652767623704, 'e0_gain_status': 'defined'}
+fold1 tfm_lora h=180s train=83671 val=17447
+tfm_lora h=180s epoch=1 train_loss=0.377077
+tfm_lora h=180s epoch=2 train_loss=0.0994223
+tfm_lora h=180s epoch=3 train_loss=0.0585097
+tfm_lora h=180s epoch=4 train_loss=0.0407782
+tfm_lora h=180s epoch=5 train_loss=0.0323914
+tfm_lora fold1 h=180s {'RMSE': 33.5156795971563, 'MAE': 22.454058799220547, 'R2': 0.8826828968250181, 'n': 17447, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.39146330539147267, 'r2_os_vs_e0': -0.9361701302509626, 'e0_gain_status': 'defined'}
+fold2 lgbm h=60s train=80438 val=7621
+lgbm fold2 h=60s {'RMSE': 9.388238881206803, 'MAE': 6.002781691161339, 'R2': 0.9944075577781133, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.03214513289889209, 'r2_os_vs_e0': 0.06325695622869676, 'e0_gain_status': 'defined'}
+fold2 lgbm h=120s train=80438 val=7621
+lgbm fold2 h=120s {'RMSE': 12.70791830499413, 'MAE': 8.382450071892341, 'R2': 0.9897882877080979, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.010335438905400895, 'r2_os_vs_e0': -0.020777699108168957, 'e0_gain_status': 'defined'}
+fold2 lgbm h=180s train=80438 val=7621
+lgbm fold2 h=180s {'RMSE': 15.8875692546049, 'MAE': 10.561697091649796, 'R2': 0.9840871222660861, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.03376657971741848, 'r2_os_vs_e0': -0.06867334134064973, 'e0_gain_status': 'defined'}
+fold2 xgb h=60s train=80438 val=7621
+xgb fold2 h=60s {'RMSE': 10.530466568624448, 'MAE': 6.444728898812562, 'R2': 0.9929639572395499, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.08560971341395573, 'r2_os_vs_e0': -0.17854844985873108, 'e0_gain_status': 'defined'}
+fold2 xgb h=120s train=80438 val=7621
+xgb fold2 h=120s {'RMSE': 14.820048953246783, 'MAE': 9.488098038649213, 'R2': 0.9861117022642332, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.1782591219439722, 'r2_os_vs_e0': -0.38829455844418037, 'e0_gain_status': 'defined'}
+fold2 xgb h=180s train=80438 val=7621
+xgb fold2 h=180s {'RMSE': 17.349761344148057, 'MAE': 11.473971860679324, 'R2': 0.9810232942756477, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.12890796296323992, 'r2_os_vs_e0': -0.2744331888418119, 'e0_gain_status': 'defined'}
+fold2 cat h=60s train=80438 val=7621
+cat fold2 h=60s {'RMSE': 9.270441504719082, 'MAE': 5.9408233445999805, 'R2': 0.9945470178184467, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.04428913196069761, 'r2_os_vs_e0': 0.08661673671156311, 'e0_gain_status': 'defined'}
+fold2 cat h=120s train=80438 val=7621
+cat fold2 h=120s {'RMSE': 12.603655053445982, 'MAE': 8.28185661126395, 'R2': 0.9899551661161686, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.0020460514946238906, 'r2_os_vs_e0': -0.004096289315966395, 'e0_gain_status': 'defined'}
+fold2 cat h=180s train=80438 val=7621
+cat fold2 h=180s {'RMSE': 15.803723660444012, 'MAE': 10.502580589274974, 'R2': 0.984254637387611, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.028310945081871264, 'r2_os_vs_e0': -0.05742339977517119, 'e0_gain_status': 'defined'}
+fold2 xgbrf h=60s train=80438 val=7621
+xgbrf fold2 h=60s {'RMSE': 9.400476928406256, 'MAE': 5.972162826063283, 'R2': 0.994392968209053, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.030883484820303675, 'r2_os_vs_e0': 0.060813180005961476, 'e0_gain_status': 'defined'}
+fold2 xgbrf h=120s train=80438 val=7621
+xgbrf fold2 h=120s {'RMSE': 12.473797787691463, 'MAE': 8.19668192725339, 'R2': 0.9901610865376588, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.008278172697121722, 'r2_os_vs_e0': 0.016487817251040093, 'e0_gain_status': 'defined'}
+fold2 xgbrf h=180s train=80438 val=7621
+xgbrf fold2 h=180s {'RMSE': 15.432041069073987, 'MAE': 10.218310463089564, 'R2': 0.9849865482218835, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.00412643736620999, 'r2_os_vs_e0': -0.008269902217757252, 'e0_gain_status': 'defined'}
+fold2 lstm h=60s train=80438 val=7621
+lstm h=60s epoch=1 train_loss=0.319764
+lstm h=60s epoch=2 train_loss=0.315929
+lstm h=60s epoch=3 train_loss=0.3033
+lstm h=60s epoch=4 train_loss=0.275382
+lstm h=60s epoch=5 train_loss=0.24478
+lstm h=60s epoch=6 train_loss=0.214579
+lstm h=60s epoch=7 train_loss=0.189611
+lstm h=60s epoch=8 train_loss=0.172176
+lstm h=60s epoch=9 train_loss=0.155637
+lstm h=60s epoch=10 train_loss=0.143995
+lstm fold2 h=60s {'RMSE': 11.992530136297875, 'MAE': 7.590383644012545, 'R2': 0.9908745376057649, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.23633716697466434, 'r2_os_vs_e0': -0.528529590442939, 'e0_gain_status': 'defined'}
+fold2 lstm h=120s train=80438 val=7621
+lstm h=120s epoch=1 train_loss=0.329767
+lstm h=120s epoch=2 train_loss=0.319022
+lstm h=120s epoch=3 train_loss=0.297165
+lstm h=120s epoch=4 train_loss=0.261321
+lstm h=120s epoch=5 train_loss=0.21013
+lstm h=120s epoch=6 train_loss=0.173933
+lstm h=120s epoch=7 train_loss=0.151136
+lstm h=120s epoch=8 train_loss=0.134948
+lstm h=120s epoch=9 train_loss=0.12336
+lstm h=120s epoch=10 train_loss=0.110474
+lstm fold2 h=120s {'RMSE': 17.014309552301487, 'MAE': 11.686538192964218, 'R2': 0.9816946346269089, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.3527124975647078, 'r2_os_vs_e0': -0.8298311010677495, 'e0_gain_status': 'defined'}
+fold2 lstm h=180s train=80438 val=7621
+lstm h=180s epoch=1 train_loss=0.331919
+lstm h=180s epoch=2 train_loss=0.304925
+lstm h=180s epoch=3 train_loss=0.262499
+lstm h=180s epoch=4 train_loss=0.212281
+lstm h=180s epoch=5 train_loss=0.168991
+lstm h=180s epoch=6 train_loss=0.144269
+lstm h=180s epoch=7 train_loss=0.12388
+lstm h=180s epoch=8 train_loss=0.110337
+lstm h=180s epoch=9 train_loss=0.0968093
+lstm h=180s epoch=10 train_loss=0.0881843
+lstm fold2 h=180s {'RMSE': 20.62134947296291, 'MAE': 14.851662862699218, 'R2': 0.9731917800977, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.3417824698163743, 'r2_os_vs_e0': -0.8003801963065293, 'e0_gain_status': 'defined'}
+fold2 autots h=60s train=80438 val=7621
+Data frequency is: min, used frequency is: 60s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 26 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.02 in 0.88s: 
+Model Number: 2 of 26 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.02 in 0.88s: 
+Model Number: 3 of 26 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.02 in 0.88s: 
+Model Number: 4 of 26 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.02 in 0.88s: 
+Model Number: 5 of 26 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.02 in 0.88s: 
+Model Number: 6 of 26 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.02 in 1.57s: 
+Model Number: 7 of 26 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.03 in 6.04s: 
+Model Number: 8 of 26 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.02 in 2.18s: 
+Model Number: 9 of 26 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.02 in 2.18s: 
+Model Number: 10 of 26 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.03 in 6.20s: 
+Model Number: 11 of 26 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.02 in 0.39s: 
+Model Number: 12 of 26 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.02 in 0.40s: 
+Model Number: 13 of 26 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.03 in 0.61s: 
+Model Number: 14 of 26 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.03 in 0.26s: 
+Model Number: 15 of 26 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.06 in 0.40s: 
+Model Number: 16 of 26 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.06 in 0.40s: 
+Model Number: 17 of 26 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.06 in 0.24s: 
+Model Number: 18 of 26 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.06 in 0.40s: 
+Model Number: 19 of 26 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.4 in 0.39s: 
+Model Number: 20 of 26 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.4 in 0.86s: 
+Model Number: 21 of 26 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.76 in 0.24s: 
+Model Number: 22 of 26 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.8 in 0.31s: 
+Model Number: 23 of 26 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.82 in 0.28s: 
+Model Number: 24 of 26 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 2.69 in 0.33s: 
+Model Number: 25 of 26 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 0.98 in 1.51s: 
+Model Number: 26 of 26 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 200.0 in 0.92s: 
+Validation Round: 2
+Model Number: 1 of 26 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.02 in 0.85s: 
+Model Number: 2 of 26 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.02 in 0.85s: 
+Model Number: 3 of 26 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.02 in 0.85s: 
+Model Number: 4 of 26 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.02 in 0.85s: 
+Model Number: 5 of 26 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.02 in 1.00s: 
+Model Number: 6 of 26 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.02 in 1.54s: 
+Model Number: 7 of 26 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.02 in 4.12s: 
+Model Number: 8 of 26 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.02 in 1.97s: 
+Model Number: 9 of 26 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.02 in 1.97s: 
+Model Number: 10 of 26 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.02 in 4.12s: 
+Model Number: 11 of 26 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.02 in 0.39s: 
+Model Number: 12 of 26 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.02 in 0.39s: 
+Model Number: 13 of 26 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.02 in 0.60s: 
+Model Number: 14 of 26 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.03 in 0.25s: 
+Model Number: 15 of 26 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 16 of 26 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 17 of 26 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.06 in 0.23s: 
+Model Number: 18 of 26 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 19 of 26 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.3 in 0.38s: 
+Model Number: 20 of 26 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.3 in 0.83s: 
+Model Number: 21 of 26 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.57 in 0.23s: 
+Model Number: 22 of 26 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.61 in 0.30s: 
+Model Number: 23 of 26 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.59 in 0.28s: 
+Model Number: 24 of 26 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 2.79 in 0.32s: 
+Model Number: 25 of 26 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.74 in 1.48s: 
+Model Number: 26 of 26 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 200.0 in 0.89s: 
+autots fold2 h=60s {'RMSE': 23.3084739936306, 'MAE': 14.381511087260682, 'R2': 0.9655284410007626, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -1.402923517912778, 'r2_os_vs_e0': -4.77404143293832, 'e0_gain_status': 'defined'}
+fold2 autots h=120s train=80438 val=7621
+Data frequency is: 2min, used frequency is: 120s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.04 in 6.96s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 0.03 in 0.85s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.03 in 0.84s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.03 in 0.84s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.03 in 0.84s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.03 in 0.39s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.03 in 1.88s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.03 in 1.88s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.03 in 3.14s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.03 in 3.13s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.03 in 0.59s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.04 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.06 in 0.39s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.06 in 0.56s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.06 in 0.39s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.06 in 0.38s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.1 in 0.23s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.4 in 0.29s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.4 in 0.37s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.4 in 0.81s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 0.79 in 0.57s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 0.79 in 0.30s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 2.66 in 0.32s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.68s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.05 in 6.89s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 0.04 in 0.83s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.04 in 1.70s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.04 in 1.69s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.04 in 2.32s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.04 in 2.16s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.04 in 0.57s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.05 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.06 in 0.38s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.05 in 0.39s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.06 in 0.38s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.06 in 0.22s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.28 in 0.29s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.29 in 0.36s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.28 in 0.80s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 0.58 in 0.53s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.58 in 0.30s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 2.8 in 0.31s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.66s: 
+autots fold2 h=120s {'RMSE': 24.27704040654442, 'MAE': 16.520873398750222, 'R2': 0.9627315591437249, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.9301315672473973, 'r2_os_vs_e0': -2.7254078668848942, 'e0_gain_status': 'defined'}
+fold2 autots h=180s train=80438 val=7621
+Data frequency is: 3min, used frequency is: 180s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.04 in 1.72s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.04 in 1.72s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.04 in 1.72s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.05 in 0.54s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.05 in 0.54s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.05 in 0.53s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.04 in 0.37s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.04 in 0.37s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.05 in 2.17s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.05 in 2.17s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.05 in 0.58s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.05 in 0.25s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.06 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.07 in 0.37s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.07 in 0.38s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.41 in 0.56s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.4 in 0.80s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.76 in 0.23s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.8 in 0.29s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 2.63 in 0.31s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 0.83 in 0.27s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 0.99 in 1.43s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.57s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.05 in 1.52s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.05 in 1.52s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.05 in 1.52s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.06 in 0.52s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.06 in 0.52s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.06 in 0.52s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.06 in 1.52s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.06 in 1.52s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.06 in 0.57s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.06 in 0.25s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.06 in 0.53s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.06 in 0.37s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.06 in 0.38s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.3 in 0.36s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.3 in 0.79s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.57 in 0.23s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.61 in 0.30s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 2.84 in 0.31s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.59 in 0.27s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 0.74 in 1.41s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.57s: 
+autots fold2 h=180s {'RMSE': 27.34895382048311, 'MAE': 19.31793281926589, 'R2': 0.9528463572967323, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.7795317834196622, 'r2_os_vs_e0': -2.1667333682007635, 'e0_gain_status': 'defined'}
+fold2 tfm_zero_shot h=60s train=80438 val=7621
+tfm_zero_shot fold2 h=60s {'RMSE': 10.202360874772449, 'MAE': 6.47400814680369, 'R2': 0.9933955811975866, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.051784552301585185, 'r2_os_vs_e0': -0.10625074446024607, 'e0_gain_status': 'defined'}
+fold2 tfm_zero_shot h=120s train=80438 val=7621
+tfm_zero_shot fold2 h=120s {'RMSE': 13.054249294619492, 'MAE': 8.754131054283418, 'R2': 0.9892241001597328, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.03787027694981693, 'r2_os_vs_e0': -0.07717471177588964, 'e0_gain_status': 'defined'}
+fold2 tfm_zero_shot h=180s train=80438 val=7621
+tfm_zero_shot fold2 h=180s {'RMSE': 16.542022401114142, 'MAE': 10.956591390306084, 'R2': 0.9827491292307073, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.07635029910268987, 'r2_os_vs_e0': -0.15852996637844985, 'e0_gain_status': 'defined'}
+fold2 tfm_lora h=60s train=80438 val=7621
+tfm_lora h=60s epoch=1 train_loss=0.598332
+tfm_lora h=60s epoch=2 train_loss=0.237901
+tfm_lora h=60s epoch=3 train_loss=0.138136
+tfm_lora h=60s epoch=4 train_loss=0.0953831
+tfm_lora h=60s epoch=5 train_loss=0.0729485
+tfm_lora fold2 h=60s {'RMSE': 13.316101087153422, 'MAE': 9.03934477875873, 'R2': 0.9887490962465393, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.37278710214871635, 'r2_os_vs_e0': -0.8845444278258703, 'e0_gain_status': 'defined'}
+fold2 tfm_lora h=120s train=80438 val=7621
+tfm_lora h=120s epoch=1 train_loss=0.457631
+tfm_lora h=120s epoch=2 train_loss=0.144819
+tfm_lora h=120s epoch=3 train_loss=0.0847263
+tfm_lora h=120s epoch=4 train_loss=0.0599634
+tfm_lora h=120s epoch=5 train_loss=0.0467115
+tfm_lora fold2 h=120s {'RMSE': 18.597376212163745, 'MAE': 13.080085715745351, 'R2': 0.9781297828504053, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.4785732648612584, 'r2_os_vs_e0': -1.186178899562481, 'e0_gain_status': 'defined'}
+fold2 tfm_lora h=180s train=80438 val=7621
+tfm_lora h=180s epoch=1 train_loss=0.380217
+tfm_lora h=180s epoch=2 train_loss=0.100299
+tfm_lora h=180s epoch=3 train_loss=0.059839
+tfm_lora h=180s epoch=4 train_loss=0.0429486
+tfm_lora h=180s epoch=5 train_loss=0.0332427
+tfm_lora fold2 h=180s {'RMSE': 27.596930177462458, 'MAE': 18.72135664203737, 'R2': 0.9519873848108552, 'n': 7621, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.7956670188541843, 'r2_os_vs_e0': -2.2244200426006735, 'e0_gain_status': 'defined'}
+fold3 lgbm h=60s train=66173 val=31161
+lgbm fold3 h=60s {'RMSE': 54.72101550963505, 'MAE': 23.493390746280102, 'R2': 0.976739509160355, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.010277329477953456, 'r2_os_vs_e0': -0.020660282457105383, 'e0_gain_status': 'defined'}
+fold3 lgbm h=120s train=66173 val=31161
+lgbm fold3 h=120s {'RMSE': 85.89326971735846, 'MAE': 34.61299180911209, 'R2': 0.9424548502867518, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.017550586310612015, 'r2_os_vs_e0': -0.03540919570107026, 'e0_gain_status': 'defined'}
+fold3 lgbm h=180s train=66173 val=31161
+lgbm fold3 h=180s {'RMSE': 111.45685062926954, 'MAE': 43.44843092764533, 'R2': 0.9028629465718374, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.00865669976579686, 'r2_os_vs_e0': -0.017388337982428892, 'e0_gain_status': 'defined'}
+fold3 xgb h=60s train=66173 val=31161
+xgb fold3 h=60s {'RMSE': 55.363178713903686, 'MAE': 23.804843888146383, 'R2': 0.9761903718363649, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.022133157098391143, 'r2_os_vs_e0': -0.044756190839924326, 'e0_gain_status': 'defined'}
+fold3 xgb h=120s train=66173 val=31161
+xgb fold3 h=120s {'RMSE': 84.33483972918569, 'MAE': 35.20785646116422, 'R2': 0.9445240815237229, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.0009116442390858515, 'r2_os_vs_e0': 0.0018224573829530577, 'e0_gain_status': 'defined'}
+fold3 xgb h=180s train=66173 val=31161
+xgb fold3 h=180s {'RMSE': 113.08969336882463, 'MAE': 44.28489365120937, 'R2': 0.8999959833251989, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.0234335193118147, 'r2_os_vs_e0': -0.047416168450966634, 'e0_gain_status': 'defined'}
+fold3 cat h=60s train=66173 val=31161
+cat fold3 h=60s {'RMSE': 54.83790306358988, 'MAE': 23.512915379234897, 'R2': 0.9766400312656833, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.012435345822476629, 'r2_os_vs_e0': -0.025025329470677926, 'e0_gain_status': 'defined'}
+fold3 cat h=120s train=66173 val=31161
+cat fold3 h=120s {'RMSE': 84.85534903032713, 'MAE': 34.42873828786261, 'R2': 0.943837180564536, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.005254665953778659, 'r2_os_vs_e0': -0.010536943421843192, 'e0_gain_status': 'defined'}
+fold3 cat h=180s train=66173 val=31161
+cat fold3 h=180s {'RMSE': 111.73739462114528, 'MAE': 43.25254169145671, 'R2': 0.9023733308488411, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.011195552921855922, 'r2_os_vs_e0': -0.022516446248938005, 'e0_gain_status': 'defined'}
+fold3 xgbrf h=60s train=66173 val=31161
+xgbrf fold3 h=60s {'RMSE': 54.48185295962196, 'MAE': 23.194624959923143, 'R2': 0.976942388489308, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.005861832066436756, 'r2_os_vs_e0': -0.011758025208048695, 'e0_gain_status': 'defined'}
+fold3 xgbrf h=120s train=66173 val=31161
+xgbrf fold3 h=120s {'RMSE': 85.37654684099324, 'MAE': 34.191459467295736, 'R2': 0.9431451361432149, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.011429132702713174, 'r2_os_vs_e0': -0.022988890479762603, 'e0_gain_status': 'defined'}
+fold3 xgbrf h=180s train=66173 val=31161
+xgbrf fold3 h=180s {'RMSE': 111.86869866555887, 'MAE': 42.93968341860173, 'R2': 0.9021437513369877, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.012383821775285409, 'r2_os_vs_e0': -0.024921002592332764, 'e0_gain_status': 'defined'}
+fold3 lstm h=60s train=66173 val=31161
+lstm h=60s epoch=1 train_loss=0.314568
+lstm h=60s epoch=2 train_loss=0.310124
+lstm h=60s epoch=3 train_loss=0.298472
+lstm h=60s epoch=4 train_loss=0.283142
+lstm h=60s epoch=5 train_loss=0.255412
+lstm h=60s epoch=6 train_loss=0.230813
+lstm h=60s epoch=7 train_loss=0.211091
+lstm h=60s epoch=8 train_loss=0.192151
+lstm h=60s epoch=9 train_loss=0.176195
+lstm h=60s epoch=10 train_loss=0.162067
+lstm fold3 h=60s {'RMSE': 57.80251395125993, 'MAE': 27.273727368863057, 'R2': 0.9740460160034236, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.06716896402459493, 'r2_os_vs_e0': -0.1388495977773272, 'e0_gain_status': 'defined'}
+fold3 lstm h=120s train=66173 val=31161
+lstm h=120s epoch=1 train_loss=0.327769
+lstm h=120s epoch=2 train_loss=0.310943
+lstm h=120s epoch=3 train_loss=0.297457
+lstm h=120s epoch=4 train_loss=0.278935
+lstm h=120s epoch=5 train_loss=0.249165
+lstm h=120s epoch=6 train_loss=0.21827
+lstm h=120s epoch=7 train_loss=0.187489
+lstm h=120s epoch=8 train_loss=0.1638
+lstm h=120s epoch=9 train_loss=0.142719
+lstm h=120s epoch=10 train_loss=0.12621
+lstm fold3 h=120s {'RMSE': 90.4517133463704, 'MAE': 40.091080513410866, 'R2': 0.9361848126077892, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.07155303612569397, 'r2_os_vs_e0': -0.14822590923019274, 'e0_gain_status': 'defined'}
+fold3 lstm h=180s train=66173 val=31161
+lstm h=180s epoch=1 train_loss=0.333671
+lstm h=180s epoch=2 train_loss=0.318788
+lstm h=180s epoch=3 train_loss=0.298179
+lstm h=180s epoch=4 train_loss=0.273364
+lstm h=180s epoch=5 train_loss=0.225102
+lstm h=180s epoch=6 train_loss=0.183964
+lstm h=180s epoch=7 train_loss=0.153309
+lstm h=180s epoch=8 train_loss=0.131118
+lstm h=180s epoch=9 train_loss=0.117551
+lstm h=180s epoch=10 train_loss=0.106003
+lstm fold3 h=180s {'RMSE': 113.0211018686241, 'MAE': 47.77063937540503, 'R2': 0.900117256009311, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.02281278334239123, 'r2_os_vs_e0': -0.0461459897686094, 'e0_gain_status': 'defined'}
+fold3 autots h=60s train=66173 val=31161
+Data frequency is: min, used frequency is: 60s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+📈 4 - WindowRegression with avg smape 0.03 in 2.12s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.03 in 2.13s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.03 in 2.13s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.03 in 0.87s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.03 in 0.88s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.03 in 0.87s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.03 in 6.02s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.03 in 6.04s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.03 in 0.40s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.03 in 0.61s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.05 in 0.59s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.06 in 0.81s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.05 in 1.03s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.09 in 0.26s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.17 in 0.39s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.15 in 0.40s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.17 in 0.58s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.29 in 3.34s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 1.21 in 0.41s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 1.21 in 0.38s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 1.21 in 0.86s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 2.41 in 0.31s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 2.65 in 0.26s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.95s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.03 in 0.39s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.03 in 0.39s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.03 in 1.88s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.03 in 1.88s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.03 in 1.88s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.04 in 0.85s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.04 in 0.85s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.04 in 0.85s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.04 in 4.13s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.04 in 4.14s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.04 in 0.39s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.04 in 0.59s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.06 in 0.56s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.06 in 0.79s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.05 in 1.18s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.06 in 0.25s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.08 in 0.38s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.07 in 0.39s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.07 in 0.39s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.12 in 3.30s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.51 in 0.41s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.52 in 0.36s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 0.51 in 0.83s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 1.01 in 0.30s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 1.12 in 0.25s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.72s: 
+autots fold3 h=60s {'RMSE': 306.73415756767935, 'MAE': 225.97613970086812, 'R2': 0.2691388775865833, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -4.663026584595846, 'r2_os_vs_e0': -31.069870097839292, 'e0_gain_status': 'defined'}
+fold3 autots h=120s train=66173 val=31161
+Data frequency is: 2min, used frequency is: 120s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.06 in 0.84s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.06 in 0.84s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.06 in 0.84s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.06 in 0.84s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.04 in 1.85s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.04 in 1.85s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.07 in 3.14s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.07 in 3.14s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.05 in 0.60s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.04 in 7.07s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.08 in 0.26s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.14 in 0.39s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.15 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.14 in 0.38s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.16 in 0.41s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.24 in 0.23s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 1.14 in 0.45s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 1.19 in 0.38s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 1.23 in 0.82s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 2.42 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 2.42 in 0.54s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 2.64 in 0.33s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.73s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.05 in 0.82s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.05 in 0.82s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.05 in 0.82s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.05 in 0.82s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.04 in 1.64s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.04 in 1.64s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+📈 8 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.05 in 2.16s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.05 in 2.17s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.04 in 0.57s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.06 in 6.95s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.04 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.08 in 0.39s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.07 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.07 in 0.38s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.08 in 0.56s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.13 in 0.23s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.51 in 0.29s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.5 in 0.37s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.5 in 0.80s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 1.0 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 1.01 in 0.48s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 2.5 in 0.31s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.57s: 
+autots fold3 h=120s {'RMSE': 314.0762373597598, 'MAE': 235.38062128441803, 'R2': 0.23058506464953632, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -2.720762529163187, 'r2_os_vs_e0': -12.844073798424837, 'e0_gain_status': 'defined'}
+fold3 autots h=180s train=66173 val=31161
+Data frequency is: 3min, used frequency is: 180s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.04 in 0.38s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.05 in 0.82s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.05 in 0.82s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.05 in 0.82s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.05 in 0.82s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.04 in 0.37s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.04 in 0.37s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.05 in 1.86s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.05 in 1.70s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.05 in 1.69s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.08 in 2.17s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.08 in 2.17s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.07 in 0.59s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.05 in 7.03s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.1 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.15 in 0.38s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.13 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.13 in 0.37s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.11 in 0.39s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.24 in 0.22s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 1.15 in 0.29s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 1.21 in 0.36s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 1.28 in 0.80s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 2.46 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 2.46 in 0.50s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 2.58 in 0.32s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.60s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.05 in 0.38s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.05 in 0.96s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.05 in 0.36s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.05 in 1.44s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.05 in 1.44s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.05 in 1.44s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.05 in 1.52s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.05 in 1.52s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.06 in 0.57s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.09 in 6.89s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.07 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.1 in 0.38s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.11 in 0.37s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.11 in 0.37s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.1 in 0.39s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.14 in 0.23s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.53 in 0.29s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.52 in 0.35s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.5 in 0.78s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 1.04 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 1.04 in 0.46s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 2.42 in 0.31s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.50s: 
+autots fold3 h=180s {'RMSE': 323.27413681916244, 'MAE': 243.539100982097, 'R2': 0.18282831047312653, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -1.925550310480633, 'r2_os_vs_e0': -7.558844619153328, 'e0_gain_status': 'defined'}
+fold3 tfm_zero_shot h=60s train=66173 val=31161
+tfm_zero_shot fold3 h=60s {'RMSE': 53.647551998245575, 'MAE': 24.413492742981383, 'R2': 0.9776431611255834, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.00954130582108681, 'r2_os_vs_e0': 0.01899157512540206, 'e0_gain_status': 'defined'}
+fold3 tfm_zero_shot h=120s train=66173 val=31161
+tfm_zero_shot fold3 h=120s {'RMSE': 83.06530435555561, 'MAE': 35.2215932987007, 'R2': 0.9461817248412705, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.015951431035306496, 'r2_os_vs_e0': 0.0316484139185389, 'e0_gain_status': 'defined'}
+fold3 tfm_zero_shot h=180s train=66173 val=31161
+tfm_zero_shot fold3 h=180s {'RMSE': 106.69288495186548, 'MAE': 42.570092115353276, 'R2': 0.9109892812703906, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': 0.034456001435057115, 'r2_os_vs_e0': 0.06772478683522154, 'e0_gain_status': 'defined'}
+fold3 tfm_lora h=60s train=66173 val=31161
+tfm_lora h=60s epoch=1 train_loss=0.635516
+tfm_lora h=60s epoch=2 train_loss=0.260205
+tfm_lora h=60s epoch=3 train_loss=0.151314
+tfm_lora h=60s epoch=4 train_loss=0.101295
+tfm_lora h=60s epoch=5 train_loss=0.0777631
+tfm_lora fold3 h=60s {'RMSE': 73.26292543620595, 'MAE': 31.113453070857066, 'R2': 0.9583054692176333, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.35260414979689414, 'r2_os_vs_e0': -0.8295379860477787, 'e0_gain_status': 'defined'}
+fold3 tfm_lora h=120s train=66173 val=31161
+tfm_lora h=120s epoch=1 train_loss=0.485359
+tfm_lora h=120s epoch=2 train_loss=0.159882
+tfm_lora h=120s epoch=3 train_loss=0.0913937
+tfm_lora h=120s epoch=4 train_loss=0.0645911
+tfm_lora h=120s epoch=5 train_loss=0.0494232
+tfm_lora fold3 h=120s {'RMSE': 111.20511072605325, 'MAE': 47.18039272332668, 'R2': 0.9035416236905421, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.3174120160099547, 'r2_os_vs_e0': -0.7355744199274132, 'e0_gain_status': 'defined'}
+fold3 tfm_lora h=180s train=66173 val=31161
+tfm_lora h=180s epoch=1 train_loss=0.404879
+tfm_lora h=180s epoch=2 train_loss=0.110211
+tfm_lora h=180s epoch=3 train_loss=0.0633399
+tfm_lora h=180s epoch=4 train_loss=0.0443486
+tfm_lora h=180s epoch=5 train_loss=0.0345109
+tfm_lora fold3 h=180s {'RMSE': 138.73954711564517, 'MAE': 56.70102468299376, 'R2': 0.8494877195819602, 'n': 31161, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.25555829839604605, 'r2_os_vs_e0': -0.5764266406711747, 'e0_gain_status': 'defined'}
+fold4 lgbm h=60s train=75100 val=25130
+lgbm fold4 h=60s {'RMSE': 21.505809361587612, 'MAE': 13.356827597355986, 'R2': 0.9854578781221409, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.031748409693679536, 'r2_os_vs_e0': -0.06450478090543688, 'e0_gain_status': 'defined'}
+fold4 lgbm h=120s train=75100 val=25130
+lgbm fold4 h=120s {'RMSE': 28.997610856478953, 'MAE': 18.69913728910073, 'R2': 0.9733711972430077, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.06891980614377102, 'r2_os_vs_e0': -0.14258955196643708, 'e0_gain_status': 'defined'}
+fold4 lgbm h=180s train=75100 val=25130
+lgbm fold4 h=180s {'RMSE': 35.64794657687488, 'MAE': 23.356667323803915, 'R2': 0.9594988160364067, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.13107793883042684, 'r2_os_vs_e0': -0.2793373037088869, 'e0_gain_status': 'defined'}
+fold4 xgb h=60s train=75100 val=25130
+xgb fold4 h=60s {'RMSE': 21.790569756160778, 'MAE': 13.609735244575829, 'R2': 0.9850702213630727, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.04540988503296073, 'r2_os_vs_e0': -0.09288182772462816, 'e0_gain_status': 'defined'}
+fold4 xgb h=120s train=75100 val=25130
+xgb fold4 h=120s {'RMSE': 31.037216156379056, 'MAE': 19.36699698645528, 'R2': 0.9694934758609658, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.14410443126925476, 'r2_os_vs_e0': -0.308974949649945, 'e0_gain_status': 'defined'}
+fold4 xgb h=180s train=75100 val=25130
+xgb fold4 h=180s {'RMSE': 39.211318538810865, 'MAE': 24.0039216981354, 'R2': 0.9509971233900129, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.24414059183067782, 'r2_os_vs_e0': -0.5478858122407892, 'e0_gain_status': 'defined'}
+fold4 cat h=60s train=75100 val=25130
+cat fold4 h=60s {'RMSE': 21.248562053913183, 'MAE': 13.258358513310949, 'R2': 0.9858036960950064, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.01940688391668921, 'r2_os_vs_e0': -0.039190394976734266, 'e0_gain_status': 'defined'}
+fold4 cat h=120s train=75100 val=25130
+cat fold4 h=120s {'RMSE': 28.426568797595067, 'MAE': 18.472602080602858, 'R2': 0.9744096580306004, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.04786985930838483, 'r2_os_vs_e0': -0.09803124204697422, 'e0_gain_status': 'defined'}
+fold4 cat h=180s train=75100 val=25130
+cat fold4 h=180s {'RMSE': 35.22674462593497, 'MAE': 22.93731950552081, 'R2': 0.9604502534739991, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.1177135720085376, 'r2_os_vs_e0': -0.24928362905208434, 'e0_gain_status': 'defined'}
+fold4 xgbrf h=60s train=75100 val=25130
+xgbrf fold4 h=60s {'RMSE': 21.12537298346521, 'MAE': 13.118465063452726, 'R2': 0.9859678257933905, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.013496846987162803, 'r2_os_vs_e0': -0.02717585885292051, 'e0_gain_status': 'defined'}
+fold4 xgbrf h=120s train=75100 val=25130
+xgbrf fold4 h=120s {'RMSE': 28.15046019850578, 'MAE': 18.14740529914773, 'R2': 0.9749043641428925, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.03769185010362963, 'r2_os_vs_e0': -0.0768043757714938, 'e0_gain_status': 'defined'}
+fold4 xgbrf h=180s train=75100 val=25130
+xgbrf fold4 h=180s {'RMSE': 35.06439785983268, 'MAE': 22.34119378172006, 'R2': 0.9608139531604933, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.11256245214858239, 'r2_os_vs_e0': -0.23779520993086667, 'e0_gain_status': 'defined'}
+fold4 lstm h=60s train=75100 val=25130
+lstm h=60s epoch=1 train_loss=0.182275
+lstm h=60s epoch=2 train_loss=0.18056
+lstm h=60s epoch=3 train_loss=0.175687
+lstm h=60s epoch=4 train_loss=0.163722
+lstm h=60s epoch=5 train_loss=0.136543
+lstm h=60s epoch=6 train_loss=0.11576
+lstm h=60s epoch=7 train_loss=0.101058
+lstm h=60s epoch=8 train_loss=0.0910727
+lstm h=60s epoch=9 train_loss=0.0824679
+lstm h=60s epoch=10 train_loss=0.0776098
+lstm fold4 h=60s {'RMSE': 25.69663767265654, 'MAE': 15.858431307673305, 'R2': 0.9792380185511689, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.23280480206399745, 'r2_os_vs_e0': -0.5198076799920519, 'e0_gain_status': 'defined'}
+fold4 lstm h=120s train=75100 val=25130
+lstm h=120s epoch=1 train_loss=0.168732
+lstm h=120s epoch=2 train_loss=0.165339
+lstm h=120s epoch=3 train_loss=0.161777
+lstm h=120s epoch=4 train_loss=0.151347
+lstm h=120s epoch=5 train_loss=0.133621
+lstm h=120s epoch=6 train_loss=0.111318
+lstm h=120s epoch=7 train_loss=0.0936198
+lstm h=120s epoch=8 train_loss=0.0784587
+lstm h=120s epoch=9 train_loss=0.0671051
+lstm h=120s epoch=10 train_loss=0.0590567
+lstm fold4 h=120s {'RMSE': 49.389667219173575, 'MAE': 26.142486120183925, 'R2': 0.9227498367424714, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.8206187320300797, 'r2_os_vs_e0': -2.314652567418815, 'e0_gain_status': 'defined'}
+fold4 lstm h=180s train=75100 val=25130
+lstm h=180s epoch=1 train_loss=0.158777
+lstm h=180s epoch=2 train_loss=0.156855
+lstm h=180s epoch=3 train_loss=0.146316
+lstm h=180s epoch=4 train_loss=0.132838
+lstm h=180s epoch=5 train_loss=0.112566
+lstm h=180s epoch=6 train_loss=0.0911309
+lstm h=180s epoch=7 train_loss=0.0763793
+lstm h=180s epoch=8 train_loss=0.063838
+lstm h=180s epoch=9 train_loss=0.0570364
+lstm h=180s epoch=10 train_loss=0.0490941
+lstm fold4 h=180s {'RMSE': 45.71489851159519, 'MAE': 27.979141584981146, 'R2': 0.933393869744803, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.45049345467433083, 'r2_os_vs_e0': -1.103931262053075, 'e0_gain_status': 'defined'}
+fold4 autots h=60s train=75100 val=25130
+Data frequency is: min, used frequency is: 60s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.01 in 5.99s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.01 in 6.14s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.01 in 5.99s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.01 in 6.00s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.01 in 5.99s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.01 in 0.88s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.01 in 0.88s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.01 in 0.88s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.01 in 0.88s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.02 in 0.62s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.02 in 0.62s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.01 in 0.59s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.01 in 1.99s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.01 in 1.99s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.01 in 0.39s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.01 in 0.33s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.03 in 0.26s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.07 in 0.39s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.07 in 0.59s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.07 in 0.39s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.07 in 0.40s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.58 in 0.86s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.58 in 0.38s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 1.14 in 0.46s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 1.43 in 1.51s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 61.59 in 0.74s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 76.6 in 0.84s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.03 in 4.12s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.03 in 4.12s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.03 in 4.13s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.03 in 4.12s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.03 in 4.12s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+📈 6 - WindowRegression with avg smape 0.02 in 0.85s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.02 in 0.85s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.02 in 0.85s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.02 in 0.85s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.04 in 0.60s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.04 in 0.60s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.02 in 0.56s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.05 in 1.89s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.05 in 1.89s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.03 in 0.30s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.13 in 0.25s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.14 in 0.37s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.14 in 0.70s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.17 in 0.38s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.15 in 0.38s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 1.08 in 0.83s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 1.08 in 0.36s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 2.19 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 2.66 in 1.48s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 200.0 in 0.81s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 76.23 in 0.82s: 
+autots fold4 h=60s {'RMSE': 65.46894793430842, 'MAE': 44.41344566864317, 'R2': 0.8652319573462433, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -2.1408947126719298, 'r2_os_vs_e0': -8.865219596090483, 'e0_gain_status': 'defined'}
+fold4 autots h=120s train=75100 val=25130
+Data frequency is: 2min, used frequency is: 120s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.02 in 3.13s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.02 in 3.12s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.02 in 3.12s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.02 in 3.27s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.02 in 0.60s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.02 in 0.60s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+📈 7 - WindowRegression with avg smape 0.01 in 0.84s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.01 in 0.83s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.01 in 0.83s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.02 in 0.38s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 0.02 in 0.38s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.01 in 0.38s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.02 in 1.68s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.02 in 6.92s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.04 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.08 in 0.38s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.07 in 0.40s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.08 in 0.38s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.07 in 0.38s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.09 in 0.23s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.6 in 0.82s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.6 in 0.36s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.55 in 0.29s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 1.22 in 0.51s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 1.2 in 0.31s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 2.78 in 0.49s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.56s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.04 in 2.15s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.04 in 2.15s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.04 in 2.15s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.04 in 2.15s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.05 in 0.58s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.05 in 0.58s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.04 in 0.82s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+📈 10 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.04 in 1.68s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.03 in 6.97s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.06 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.13 in 0.37s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.12 in 0.40s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.12 in 0.38s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.14 in 0.38s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.21 in 0.23s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 1.08 in 0.81s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 1.07 in 0.35s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 1.05 in 0.29s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 2.17 in 0.62s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 2.17 in 0.30s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 2.65 in 0.32s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.61s: 
+autots fold4 h=120s {'RMSE': 66.31606586602275, 'MAE': 47.77177759057527, 'R2': 0.8607277106838224, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -1.4445654030110682, 'r2_os_vs_e0': -4.975900009598667, 'e0_gain_status': 'defined'}
+fold4 autots h=180s train=75100 val=25130
+Data frequency is: 3min, used frequency is: 180s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 0.03 in 0.82s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 0.03 in 0.82s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 0.03 in 0.82s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 0.03 in 0.83s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 0.03 in 0.81s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 0.03 in 0.82s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 0.03 in 2.14s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 0.03 in 2.14s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 0.03 in 1.53s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 0.03 in 1.53s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+📈 11 - WindowRegression with avg smape 0.02 in 0.53s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 0.03 in 1.49s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 0.03 in 0.52s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 0.04 in 0.27s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 0.03 in 0.59s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 0.08 in 0.37s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 0.08 in 0.54s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 0.05 in 0.25s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 0.08 in 0.37s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 0.08 in 0.37s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 0.61 in 0.80s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 0.61 in 0.35s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 1.21 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 1.5 in 1.44s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 76.57 in 0.79s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.48s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.05 in 0.80s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.05 in 0.81s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.05 in 0.81s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.05 in 0.81s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.05 in 0.81s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.05 in 0.81s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.05 in 1.51s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.05 in 1.51s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+📈 9 - WindowRegression with avg smape 0.04 in 1.53s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.04 in 1.68s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.04 in 0.52s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.05 in 1.10s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.05 in 0.37s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.08 in 0.26s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.08 in 0.57s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.13 in 0.36s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.13 in 0.53s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.04 in 0.25s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.12 in 0.37s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.15 in 0.37s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 1.14 in 0.78s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 1.08 in 0.35s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 2.22 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 2.72 in 1.41s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 76.24 in 0.78s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.52s: 
+autots fold4 h=180s {'RMSE': 100.27411668354104, 'MAE': 76.61266528498422, 'R2': 0.6795381228104558, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -2.181609380273152, 'r2_os_vs_e0': -9.12263824864211, 'e0_gain_status': 'defined'}
+fold4 tfm_zero_shot h=60s train=75100 val=25130
+tfm_zero_shot fold4 h=60s {'RMSE': 21.353894004088005, 'MAE': 13.655636785924866, 'R2': 0.985662601311015, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.02446021951804167, 'r2_os_vs_e0': -0.049518741374954045, 'e0_gain_status': 'defined'}
+fold4 tfm_zero_shot h=120s train=75100 val=25130
+tfm_zero_shot fold4 h=120s {'RMSE': 27.702203314257865, 'MAE': 18.624945699701552, 'R2': 0.975697226981103, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.02116805218853912, 'r2_os_vs_e0': -0.04278419081053486, 'e0_gain_status': 'defined'}
+fold4 tfm_zero_shot h=180s train=75100 val=25130
+tfm_zero_shot fold4 h=180s {'RMSE': 32.398782933871246, 'MAE': 22.213345028669526, 'R2': 0.9665453820399814, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.027984838970493975, 'r2_os_vs_e0': -0.05675282915319246, 'e0_gain_status': 'defined'}
+fold4 tfm_lora h=60s train=75100 val=25130
+tfm_lora h=60s epoch=1 train_loss=0.408712
+tfm_lora h=60s epoch=2 train_loss=0.137535
+tfm_lora h=60s epoch=3 train_loss=0.0861385
+tfm_lora h=60s epoch=4 train_loss=0.0669245
+tfm_lora h=60s epoch=5 train_loss=0.0501012
+tfm_lora fold4 h=60s {'RMSE': 23.829354870044092, 'MAE': 15.960810670548247, 'R2': 0.9821457847390009, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.14322128397121348, 'r2_os_vs_e0': -0.3069549041247899, 'e0_gain_status': 'defined'}
+fold4 tfm_lora h=120s train=75100 val=25130
+tfm_lora h=120s epoch=1 train_loss=0.253669
+tfm_lora h=120s epoch=2 train_loss=0.0721065
+tfm_lora h=120s epoch=3 train_loss=0.0442337
+tfm_lora h=120s epoch=4 train_loss=0.0335096
+tfm_lora h=120s epoch=5 train_loss=0.0273628
+tfm_lora fold4 h=120s {'RMSE': 33.66813891828891, 'MAE': 22.97988787147772, 'R2': 0.9641023989319588, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.24108640204467036, 'r2_os_vs_e0': -0.5402954573401852, 'e0_gain_status': 'defined'}
+fold4 tfm_lora h=180s train=75100 val=25130
+tfm_lora h=180s epoch=1 train_loss=0.203103
+tfm_lora h=180s epoch=2 train_loss=0.0452053
+tfm_lora h=180s epoch=3 train_loss=0.0274942
+tfm_lora h=180s epoch=4 train_loss=0.0215685
+tfm_lora h=180s epoch=5 train_loss=0.0186855
+tfm_lora fold4 h=180s {'RMSE': 41.25134706389923, 'MAE': 28.44541241957935, 'R2': 0.9457655859411149, 'n': 25130, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.30886889965441866, 'r2_os_vs_e0': -0.7131377964825687, 'e0_gain_status': 'defined'}
+fold5 lgbm h=60s train=79968 val=31388
+lgbm fold5 h=60s {'RMSE': 27.567991853245065, 'MAE': 17.83386542769453, 'R2': 0.9933720767046574, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.10310152894485469, 'r2_os_vs_e0': -0.21683298316047606, 'e0_gain_status': 'defined'}
+fold5 lgbm h=120s train=79968 val=31388
+lgbm fold5 h=120s {'RMSE': 39.74342545476414, 'MAE': 25.45983507455469, 'R2': 0.986167192320493, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.2352685485789412, 'r2_os_vs_e0': -0.525888387108324, 'e0_gain_status': 'defined'}
+fold5 lgbm h=180s train=79968 val=31388
+lgbm fold5 h=180s {'RMSE': 56.675346096241555, 'MAE': 32.827563184473206, 'R2': 0.9717835567190501, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.41368106431485563, 'r2_os_vs_e0': -0.9984941516023831, 'e0_gain_status': 'defined'}
+fold5 xgb h=60s train=79968 val=31388
+xgb fold5 h=60s {'RMSE': 29.649314865740998, 'MAE': 18.83138425353032, 'R2': 0.9923335106885923, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.18638327864698703, 'r2_os_vs_e0': -0.4075052838531743, 'e0_gain_status': 'defined'}
+fold5 xgb h=120s train=79968 val=31388
+xgb fold5 h=120s {'RMSE': 49.61698495612427, 'MAE': 28.05204237866981, 'R2': 0.9784404104961455, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.5421494320205298, 'r2_os_vs_e0': -1.3782248706812426, 'e0_gain_status': 'defined'}
+fold5 xgb h=180s train=79968 val=31388
+xgb fold5 h=180s {'RMSE': 55.2863522061067, 'MAE': 33.43481187074222, 'R2': 0.973149660585703, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.3790347057800838, 'r2_os_vs_e0': -0.9017367197459623, 'e0_gain_status': 'defined'}
+fold5 cat h=60s train=79968 val=31388
+cat fold5 h=60s {'RMSE': 26.294589458595155, 'MAE': 17.386871916162946, 'R2': 0.9939702403786278, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.05214779477451459, 'r2_os_vs_e0': -0.10701498204887416, 'e0_gain_status': 'defined'}
+fold5 cat h=120s train=79968 val=31388
+cat fold5 h=120s {'RMSE': 35.134199522346535, 'MAE': 23.87426691704494, 'R2': 0.9891896470482344, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.09200883297917774, 'r2_os_vs_e0': -0.19248329130454578, 'e0_gain_status': 'defined'}
+fold5 cat h=180s train=79968 val=31388
+cat fold5 h=180s {'RMSE': 44.73089764596582, 'MAE': 29.989470352662952, 'R2': 0.9824236320854404, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.115744805237304, 'r2_os_vs_e0': -0.24488647041402944, 'e0_gain_status': 'defined'}
+fold5 xgbrf h=60s train=79968 val=31388
+xgbrf fold5 h=60s {'RMSE': 26.092359629588692, 'MAE': 16.92687286006111, 'R2': 0.9940626326260926, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.04405580045143043, 'r2_os_vs_e0': -0.09005251445627716, 'e0_gain_status': 'defined'}
+fold5 xgbrf h=120s train=79968 val=31388
+xgbrf fold5 h=120s {'RMSE': 36.35611214603313, 'MAE': 24.009778496583408, 'R2': 0.988424637088882, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.12998719583744722, 'r2_os_vs_e0': -0.27687106275657736, 'e0_gain_status': 'defined'}
+fold5 xgbrf h=180s train=79968 val=31388
+xgbrf fold5 h=180s {'RMSE': 45.95229881949671, 'MAE': 30.152858414732243, 'R2': 0.9814506629569342, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.14621081612006903, 'r2_os_vs_e0': -0.31379923499063467, 'e0_gain_status': 'defined'}
+fold5 lstm h=60s train=79968 val=31388
+lstm h=60s epoch=1 train_loss=0.187471
+lstm h=60s epoch=2 train_loss=0.186217
+lstm h=60s epoch=3 train_loss=0.181878
+lstm h=60s epoch=4 train_loss=0.171112
+lstm h=60s epoch=5 train_loss=0.147464
+lstm h=60s epoch=6 train_loss=0.128809
+lstm h=60s epoch=7 train_loss=0.1143
+lstm h=60s epoch=8 train_loss=0.103457
+lstm h=60s epoch=9 train_loss=0.0919632
+lstm h=60s epoch=10 train_loss=0.0850097
+lstm fold5 h=60s {'RMSE': 31.339854672004968, 'MAE': 20.948650601067428, 'R2': 0.9914343333951285, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.2540282872119619, 'r2_os_vs_e0': -0.5725869451277668, 'e0_gain_status': 'defined'}
+fold5 lstm h=120s train=79968 val=31388
+lstm h=120s epoch=1 train_loss=0.172654
+lstm h=120s epoch=2 train_loss=0.171511
+lstm h=120s epoch=3 train_loss=0.165698
+lstm h=120s epoch=4 train_loss=0.159817
+lstm h=120s epoch=5 train_loss=0.150073
+lstm h=120s epoch=6 train_loss=0.129718
+lstm h=120s epoch=7 train_loss=0.109974
+lstm h=120s epoch=8 train_loss=0.0885413
+lstm h=120s epoch=9 train_loss=0.0740592
+lstm h=120s epoch=10 train_loss=0.0649503
+lstm fold5 h=120s {'RMSE': 50.72854919098773, 'MAE': 33.30940295375629, 'R2': 0.9774635954042411, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.5766980478819101, 'r2_os_vs_e0': -1.4859767341946264, 'e0_gain_status': 'defined'}
+fold5 lstm h=180s train=79968 val=31388
+lstm h=180s epoch=1 train_loss=0.162445
+lstm h=180s epoch=2 train_loss=0.158465
+lstm h=180s epoch=3 train_loss=0.148635
+lstm h=180s epoch=4 train_loss=0.124052
+lstm h=180s epoch=5 train_loss=0.106595
+lstm h=180s epoch=6 train_loss=0.0884025
+lstm h=180s epoch=7 train_loss=0.0727524
+lstm h=180s epoch=8 train_loss=0.058468
+lstm h=180s epoch=9 train_loss=0.0516815
+lstm h=180s epoch=10 train_loss=0.0466367
+lstm fold5 h=180s {'RMSE': 73.72311120123346, 'MAE': 40.54424012127849, 'R2': 0.9522557344424334, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.8389118635567299, 'r2_os_vs_e0': -2.381596841929685, 'e0_gain_status': 'defined'}
+fold5 autots h=60s train=79968 val=31388
+Data frequency is: min, used frequency is: 60s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 2.83 in 0.59s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 2.88 in 0.39s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 2.88 in 0.39s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 2.88 in 0.39s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 2.85 in 2.05s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 2.85 in 2.05s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 2.85 in 2.21s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+📈 8 - WindowRegression with avg smape 2.81 in 0.87s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 2.81 in 0.87s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 2.81 in 0.87s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 2.81 in 0.59s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 2.86 in 4.41s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+📈 13 - WindowRegression with avg smape 2.8 in 6.03s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 2.8 in 6.03s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 2.86 in 0.61s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 2.95 in 0.26s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 3.01 in 0.39s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 3.0 in 0.39s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 2.99 in 0.39s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 2.99 in 0.57s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 3.84 in 0.58s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 3.84 in 0.38s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 3.84 in 0.57s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 3.79 in 0.86s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 4.67 in 0.24s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 4.77 in 0.31s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.77s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.01 in 0.56s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.01 in 0.38s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.01 in 0.54s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.01 in 0.38s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.01 in 1.89s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.01 in 1.89s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.01 in 1.89s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.01 in 0.85s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.01 in 0.85s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.01 in 0.85s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.01 in 0.56s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.01 in 4.25s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.01 in 4.12s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.01 in 4.13s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.02 in 0.60s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.01 in 0.25s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.02 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.02 in 0.39s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.02 in 0.38s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.02 in 0.57s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.23 in 0.58s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.23 in 0.37s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.23 in 0.57s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 0.23 in 0.83s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.44 in 0.45s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 0.44 in 0.30s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.65s: 
+autots fold5 h=60s {'RMSE': 945.387803899216, 'MAE': 885.2561353954524, 'R2': -6.794480965867894, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -36.82860708457034, 'r2_os_vs_e0': -1430.0035139588056, 'e0_gain_status': 'defined'}
+fold5 autots h=120s train=79968 val=31388
+Data frequency is: 2min, used frequency is: 120s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 2.79 in 0.38s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 2.79 in 0.38s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 2.79 in 0.38s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 2.79 in 1.75s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 2.79 in 1.75s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 2.79 in 1.75s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+7 - WindowRegression with avg smape 2.79 in 0.55s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 2.79 in 0.55s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+📈 9 - WindowRegression with avg smape 2.77 in 0.83s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 2.77 in 1.02s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 2.77 in 0.83s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 2.77 in 3.13s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 2.77 in 3.14s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+14 - WindowRegression with avg smape 2.77 in 0.59s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 2.9 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 3.08 in 0.23s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 2.95 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 2.96 in 0.38s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 2.91 in 0.37s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 2.91 in 0.55s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 3.72 in 0.81s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 3.77 in 0.36s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 4.6 in 0.23s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 4.7 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 5.08 in 1.46s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 200.0 in 0.61s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 80.03 in 0.81s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.01 in 0.38s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.01 in 0.38s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.01 in 0.38s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.02 in 1.61s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.02 in 1.61s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.02 in 1.60s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.01 in 0.53s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.01 in 0.53s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.01 in 0.82s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.01 in 0.97s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.01 in 0.82s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.02 in 2.15s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.02 in 2.15s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.02 in 0.59s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.02 in 0.25s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.08 in 0.23s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.03 in 0.55s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.25 in 0.80s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.25 in 0.36s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.48 in 0.23s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 0.49 in 0.30s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.63 in 1.44s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 200.0 in 0.49s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 76.82 in 0.79s: 
+autots fold5 h=120s {'RMSE': 975.5471251958278, 'MAE': 916.4582842691674, 'R2': -7.334436729655973, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -29.32105732261574, 'r2_os_vs_e0': -918.3665171613494, 'e0_gain_status': 'defined'}
+fold5 autots h=180s train=79968 val=31388
+Data frequency is: 3min, used frequency is: 180s
+Model Number: 1 with model WindowRegression in generation 0 of 3
+Model Number: 2 with model WindowRegression in generation 0 of 3
+Model Number: 3 with model WindowRegression in generation 0 of 3
+Model Number: 4 with model WindowRegression in generation 0 of 3
+Model Number: 5 with model WindowRegression in generation 0 of 3
+Model Number: 6 with model WindowRegression in generation 0 of 3
+Model Number: 7 with model WindowRegression in generation 0 of 3
+Model Number: 8 with model WindowRegression in generation 0 of 3
+Model Number: 9 with model WindowRegression in generation 0 of 3
+Model Number: 10 with model WindowRegression in generation 0 of 3
+Model Number: 11 with model WindowRegression in generation 0 of 3
+Model Number: 12 with model WindowRegression in generation 0 of 3
+New Generation: 1 of 3
+Model Number: 13 with model WindowRegression in generation 1 of 3
+Model Number: 14 with model WindowRegression in generation 1 of 3
+Model Number: 15 with model WindowRegression in generation 1 of 3
+Model Number: 16 with model WindowRegression in generation 1 of 3
+Model Number: 17 with model WindowRegression in generation 1 of 3
+New Generation: 2 of 3
+Model Number: 18 with model WindowRegression in generation 2 of 3
+Model Number: 19 with model WindowRegression in generation 2 of 3
+Model Number: 20 with model WindowRegression in generation 2 of 3
+Model Number: 21 with model WindowRegression in generation 2 of 3
+Model Number: 22 with model WindowRegression in generation 2 of 3
+New Generation: 3 of 3
+Model Number: 23 with model WindowRegression in generation 3 of 3
+Model Number: 24 with model WindowRegression in generation 3 of 3
+Model Number: 25 with model WindowRegression in generation 3 of 3
+Model Number: 26 with model WindowRegression in generation 3 of 3
+Model Number: 27 with model WindowRegression in generation 3 of 3
+Validation Round: 1
+Model Number: 1 of 27 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 2.71 in 0.37s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 2.71 in 0.37s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 1
+3 - WindowRegression with avg smape 2.71 in 0.37s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 1
+4 - WindowRegression with avg smape 2.72 in 1.55s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 1
+5 - WindowRegression with avg smape 2.72 in 1.54s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 1
+6 - WindowRegression with avg smape 2.72 in 1.54s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 1
+📈 7 - WindowRegression with avg smape 2.7 in 0.38s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 1
+8 - WindowRegression with avg smape 2.7 in 0.38s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 1
+9 - WindowRegression with avg smape 2.71 in 0.57s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 1
+10 - WindowRegression with avg smape 2.71 in 0.58s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 1
+11 - WindowRegression with avg smape 2.7 in 2.15s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 1
+12 - WindowRegression with avg smape 2.7 in 2.15s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 1
+13 - WindowRegression with avg smape 2.81 in 0.25s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 1
+📈 14 - WindowRegression with avg smape 2.69 in 0.82s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 1
+15 - WindowRegression with avg smape 2.7 in 0.53s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 1
+16 - WindowRegression with avg smape 2.7 in 0.77s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 1
+17 - WindowRegression with avg smape 2.87 in 0.38s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 1
+18 - WindowRegression with avg smape 2.84 in 0.36s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 1
+19 - WindowRegression with avg smape 2.88 in 0.37s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 1
+20 - WindowRegression with avg smape 3.01 in 0.38s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 1
+21 - WindowRegression with avg smape 2.92 in 3.24s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 1
+22 - WindowRegression with avg smape 3.63 in 0.80s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 1
+23 - WindowRegression with avg smape 3.69 in 0.36s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 1
+24 - WindowRegression with avg smape 4.23 in 0.88s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 1
+25 - WindowRegression with avg smape 4.61 in 0.30s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 1
+26 - WindowRegression with avg smape 4.78 in 0.24s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 1
+27 - WindowRegression with avg smape 200.0 in 0.53s: 
+Validation Round: 2
+Model Number: 1 of 27 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 0.02 in 0.37s: 
+Model Number: 2 of 27 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 0.02 in 0.37s: 
+Model Number: 3 of 27 with model WindowRegression for Validation 2
+3 - WindowRegression with avg smape 0.02 in 0.37s: 
+Model Number: 4 of 27 with model WindowRegression for Validation 2
+4 - WindowRegression with avg smape 0.03 in 1.40s: 
+Model Number: 5 of 27 with model WindowRegression for Validation 2
+5 - WindowRegression with avg smape 0.03 in 1.40s: 
+Model Number: 6 of 27 with model WindowRegression for Validation 2
+6 - WindowRegression with avg smape 0.03 in 1.40s: 
+Model Number: 7 of 27 with model WindowRegression for Validation 2
+7 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 8 of 27 with model WindowRegression for Validation 2
+8 - WindowRegression with avg smape 0.03 in 0.38s: 
+Model Number: 9 of 27 with model WindowRegression for Validation 2
+9 - WindowRegression with avg smape 0.03 in 0.58s: 
+Model Number: 10 of 27 with model WindowRegression for Validation 2
+10 - WindowRegression with avg smape 0.03 in 0.58s: 
+Model Number: 11 of 27 with model WindowRegression for Validation 2
+11 - WindowRegression with avg smape 0.03 in 1.51s: 
+Model Number: 12 of 27 with model WindowRegression for Validation 2
+12 - WindowRegression with avg smape 0.03 in 1.51s: 
+Model Number: 13 of 27 with model WindowRegression for Validation 2
+13 - WindowRegression with avg smape 0.03 in 0.25s: 
+Model Number: 14 of 27 with model WindowRegression for Validation 2
+14 - WindowRegression with avg smape 0.03 in 0.81s: 
+Model Number: 15 of 27 with model WindowRegression for Validation 2
+15 - WindowRegression with avg smape 0.04 in 0.52s: 
+Model Number: 16 of 27 with model WindowRegression for Validation 2
+16 - WindowRegression with avg smape 0.05 in 0.76s: 
+Model Number: 17 of 27 with model WindowRegression for Validation 2
+17 - WindowRegression with avg smape 0.03 in 0.37s: 
+Model Number: 18 of 27 with model WindowRegression for Validation 2
+18 - WindowRegression with avg smape 0.04 in 0.52s: 
+Model Number: 19 of 27 with model WindowRegression for Validation 2
+19 - WindowRegression with avg smape 0.04 in 0.37s: 
+Model Number: 20 of 27 with model WindowRegression for Validation 2
+20 - WindowRegression with avg smape 0.07 in 0.22s: 
+Model Number: 21 of 27 with model WindowRegression for Validation 2
+21 - WindowRegression with avg smape 0.05 in 3.17s: 
+Model Number: 22 of 27 with model WindowRegression for Validation 2
+22 - WindowRegression with avg smape 0.25 in 0.78s: 
+Model Number: 23 of 27 with model WindowRegression for Validation 2
+23 - WindowRegression with avg smape 0.26 in 0.35s: 
+Model Number: 24 of 27 with model WindowRegression for Validation 2
+24 - WindowRegression with avg smape 0.41 in 0.86s: 
+Model Number: 25 of 27 with model WindowRegression for Validation 2
+25 - WindowRegression with avg smape 0.49 in 0.30s: 
+Model Number: 26 of 27 with model WindowRegression for Validation 2
+26 - WindowRegression with avg smape 0.55 in 0.24s: 
+Model Number: 27 of 27 with model WindowRegression for Validation 2
+27 - WindowRegression with avg smape 200.0 in 0.44s: 
+autots fold5 h=180s {'RMSE': 983.686217655527, 'MAE': 925.6565767893981, 'R2': -7.5001596135498385, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -23.536569688797, 'r2_os_vs_e0': -601.043252093192, 'e0_gain_status': 'defined'}
+fold5 tfm_zero_shot h=60s train=79968 val=31388
+tfm_zero_shot fold5 h=60s {'RMSE': 25.916338081011272, 'MAE': 17.34625019396754, 'R2': 0.9941424705117206, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.03701250036643944, 'r2_os_vs_e0': -0.07539492591625452, 'e0_gain_status': 'defined'}
+fold5 tfm_zero_shot h=120s train=79968 val=31388
+tfm_zero_shot fold5 h=120s {'RMSE': 34.23311616022369, 'MAE': 23.795956046650353, 'R2': 0.9897370405113096, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.06400218976355898, 'r2_os_vs_e0': -0.13210065982164854, 'e0_gain_status': 'defined'}
+fold5 tfm_zero_shot h=180s train=79968 val=31388
+tfm_zero_shot fold5 h=180s {'RMSE': 43.91638428902559, 'MAE': 30.705563414271534, 'R2': 0.9830579070098969, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.09542799751313759, 'r2_os_vs_e0': -0.19996249773564245, 'e0_gain_status': 'defined'}
+fold5 tfm_lora h=60s train=79968 val=31388
+tfm_lora h=60s epoch=1 train_loss=0.408211
+tfm_lora h=60s epoch=2 train_loss=0.143825
+tfm_lora h=60s epoch=3 train_loss=0.0890619
+tfm_lora h=60s epoch=4 train_loss=0.0680383
+tfm_lora h=60s epoch=5 train_loss=0.0527301
+tfm_lora fold5 h=60s {'RMSE': 31.99881784289888, 'MAE': 21.576533872547262, 'R2': 0.9910703368094714, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.2803959415990138, 'r2_os_vs_e0': -0.6394137672632252, 'e0_gain_status': 'defined'}
+fold5 tfm_lora h=120s train=79968 val=31388
+tfm_lora h=120s epoch=1 train_loss=0.261808
+tfm_lora h=120s epoch=2 train_loss=0.0728978
+tfm_lora h=120s epoch=3 train_loss=0.0458704
+tfm_lora h=120s epoch=4 train_loss=0.0341771
+tfm_lora h=120s epoch=5 train_loss=0.0288858
+tfm_lora fold5 h=120s {'RMSE': 42.93678621242919, 'MAE': 30.55400537838394, 'R2': 0.9838549714815489, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.3345216467473327, 'r2_os_vs_e0': -0.7809480256372126, 'e0_gain_status': 'defined'}
+fold5 tfm_lora h=180s train=79968 val=31388
+tfm_lora h=180s epoch=1 train_loss=0.205829
+tfm_lora h=180s epoch=2 train_loss=0.0532307
+tfm_lora h=180s epoch=3 train_loss=0.0303303
+tfm_lora h=180s epoch=4 train_loss=0.0243152
+tfm_lora h=180s epoch=5 train_loss=0.0206815
+tfm_lora fold5 h=180s {'RMSE': 64.51959512183979, 'MAE': 45.5517511737062, 'R2': 0.9634323396442258, 'n': 31388, 'price_unit': 'USDT', 'rmse_gain_vs_e0': -0.609344030226481, 'r2_os_vs_e0': -1.5899882076256127, 'e0_gain_status': 'defined'}
+TRAIN_EXIT=0 2026-09-11T16:18:14Z

@@ -1,0 +1,39 @@
+{
+  "family": "WindowRegression",
+  "parameters": {
+    "window_size": 10,
+    "input_dim": "univariate",
+    "output_dim": "forecast_length",
+    "normalize_window": false,
+    "max_windows": 200000,
+    "fourier_encoding_components": null,
+    "scale": false,
+    "datepart_method": null,
+    "regression_type": "User",
+    "regression_model": {
+      "model": "xgboost",
+      "model_params": {
+        "booster": "gbtree",
+        "colsample_bylevel": 0.54,
+        "learning_rate": 0.025,
+        "max_depth": 11,
+        "min_child_weight": 0.0127,
+        "n_estimators": 240,
+        "tree_method": "hist",
+        "objective": "reg:squarederror",
+        "device": "cuda"
+      }
+    }
+  },
+  "search": {
+    "max_window_size": 90,
+    "max_windows": 200000,
+    "initial_candidates": 12,
+    "max_generations": 3,
+    "num_validations": 2,
+    "validation_points": 64
+  },
+  "score": "raw_price_RMSE",
+  "gap_days": 1,
+  "regressor": "OF/OFI and elapsed at origin only"
+}
