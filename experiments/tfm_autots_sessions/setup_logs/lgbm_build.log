@@ -1,0 +1,658 @@
+Collecting lightgbm==4.7.0
+  Downloading lightgbm-4.7.0.tar.gz (1.8 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 1.2 MB/s  0:00:02
+  Installing build dependencies: started
+  Running command installing build dependencies for lightgbm
+  Using pip 26.2.1 from /home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pip (python 3.11)
+  Collecting scikit-build-core>=0.11.0
+    Obtaining dependency information for scikit-build-core>=0.11.0 from https://files.pythonhosted.org/packages/b7/b0/7ad8fa9aebb0835b2e20afebf1483cbe175d1612fe01e85042ce9ced8755/scikit_build_core-1.0.3-py3-none-any.whl.metadata
+    Using cached scikit_build_core-1.0.3-py3-none-any.whl.metadata (19 kB)
+  Collecting packaging>=23.2 (from scikit-build-core>=0.11.0)
+    Obtaining dependency information for packaging>=23.2 from https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl.metadata
+    Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+  Collecting pathspec>=0.12.0 (from scikit-build-core>=0.11.0)
+    Obtaining dependency information for pathspec>=0.12.0 from https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl.metadata
+    Using cached pathspec-1.1.1-py3-none-any.whl.metadata (14 kB)
+  Using cached scikit_build_core-1.0.3-py3-none-any.whl (278 kB)
+  Using cached packaging-26.3-py3-none-any.whl (129 kB)
+  Using cached pathspec-1.1.1-py3-none-any.whl (57 kB)
+  Installing collected packages: pathspec, packaging, scikit-build-core
+    Creating /tmp/pip-build-env-sttz_clf/overlay/bin
+    changing mode of /tmp/pip-build-env-sttz_clf/overlay/bin/scikit-build to 775
+    changing mode of /tmp/pip-build-env-sttz_clf/overlay/bin/scikit-build-core to 775
+
+  Successfully installed packaging-26.3 pathspec-1.1.1 scikit-build-core-1.0.3
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Running command Getting requirements to build wheel
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Running command Preparing metadata (pyproject.toml)
+  2026-09-11 18:44:45,459 - scikit_build_core - INFO - RUN: /usr/bin/cmake -E capabilities
+  2026-09-11 18:44:45,472 - scikit_build_core - INFO - CMake version: 3.28.3
+  *** scikit-build-core 1.0.3 using CMake 3.28.3 (metadata_wheel)
+  2026-09-11 18:44:45,473 - scikit_build_core - INFO - Implementation: cpython linux on x86_64
+  2026-09-11 18:44:45,475 - scikit_build_core - INFO - Build directory: /tmp/tmpq6d9r_7m/build
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: lightgbm
+  Building wheel for lightgbm (pyproject.toml): started
+  Running command Building wheel for lightgbm (pyproject.toml)
+  2026-09-11 18:44:45,705 - scikit_build_core - INFO - RUN: /usr/bin/cmake -E capabilities
+  2026-09-11 18:44:45,717 - scikit_build_core - INFO - CMake version: 3.28.3
+  *** scikit-build-core 1.0.3 using CMake 3.28.3 (wheel)
+  2026-09-11 18:44:45,717 - scikit_build_core - INFO - Implementation: cpython linux on x86_64
+  2026-09-11 18:44:45,720 - scikit_build_core - INFO - Build directory: /tmp/tmp9d7eaad2/build
+  *** Configuring CMake...
+  2026-09-11 18:44:45,735 - scikit_build_core - INFO - RUN: /usr/bin/ninja --version
+  2026-09-11 18:44:45,738 - scikit_build_core - INFO - Ninja version: 1.11.1
+  2026-09-11 18:44:45,739 - scikit_build_core - INFO - RUN: /usr/bin/cmake -S. -B/tmp/tmp9d7eaad2/build -DCMAKE_BUILD_TYPE:STRING=Release -C/tmp/tmp9d7eaad2/build/CMakeInit.txt -DCMAKE_INSTALL_PREFIX=/tmp/tmp9d7eaad2/wheel/platlib -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja -D__BUILD_FOR_PYTHON=ON -DUSE_CUDA=ON -DBUILD_WITH_SHARED_NCCL=ON -DCMAKE_CUDA_ARCHITECTURES=86
+  loading initial cache file /tmp/tmp9d7eaad2/build/CMakeInit.txt
+  -- The C compiler identification is GNU 13.3.0
+  -- The CXX compiler identification is GNU 13.3.0
+  -- Detecting C compiler ABI info
+  -- Detecting C compiler ABI info - done
+  -- Check for working C compiler: /usr/bin/cc - skipped
+  -- Detecting C compile features
+  -- Detecting C compile features - done
+  -- Detecting CXX compiler ABI info
+  -- Detecting CXX compiler ABI info - done
+  -- Check for working CXX compiler: /usr/bin/c++ - skipped
+  -- Detecting CXX compile features
+  -- Detecting CXX compile features - done
+  -- Building using CMake version: 3.28.3
+  -- Found CUDAToolkit: /usr/local/cuda/targets/x86_64-linux/include (found suitable version "12.8.93", minimum required is "11.8")
+  -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+  -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+  -- Found Threads: TRUE
+  -- The CUDA compiler identification is NVIDIA 12.8.93
+  -- Detecting CUDA compiler ABI info
+  -- Detecting CUDA compiler ABI info - done
+  -- Check for working CUDA compiler: /usr/local/cuda/bin/nvcc - skipped
+  -- Detecting CUDA compile features
+  -- Detecting CUDA compile features - done
+  -- Found OpenMP_C: -fopenmp (found version "4.5")
+  -- Found OpenMP_CXX: -fopenmp (found version "4.5")
+  -- Found OpenMP: TRUE (found version "4.5")
+  -- Using nccl library: /usr/lib/x86_64-linux-gnu/libnccl.so
+  -- Found NCCL: /usr/include
+  -- CMAKE_CUDA_FLAGS:  -Xcompiler=-fopenmp -Xcompiler=-fPIC -Xcompiler=-Wall -O3 -lineinfo
+  -- Performing Test MM_PREFETCH
+  -- Performing Test MM_PREFETCH - Success
+  -- Using _mm_prefetch
+  -- Performing Test MM_MALLOC
+  -- Performing Test MM_MALLOC - Success
+  -- Using _mm_malloc
+  -- Configuring done (5.0s)
+  -- Generating done (0.0s)
+  -- Build files have been written to: /tmp/tmp9d7eaad2/build
+  *** Building project with Ninja...
+  2026-09-11 18:44:50,825 - scikit_build_core - INFO - RUN: /usr/bin/cmake --build /tmp/tmp9d7eaad2/build --target _lightgbm
+  [1/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/network/linkers_mpi.cpp.o
+  [2/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/gpu_tree_learner.cpp.o
+  [3/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/utils/openmp_wrapper.cpp.o
+  [4/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/file_io.cpp.o
+  [5/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/boosting/prediction_early_stop.cpp.o
+  [6/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/network/linker_topo.cpp.o
+  [7/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/metric/cuda/cuda_pointwise_metric.cpp.o
+  [8/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/boosting/gbdt_prediction.cpp.o
+  [9/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/network/linkers_socket.cpp.o
+  [10/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/json11.cpp.o
+  [11/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/network/network.cpp.o
+  [12/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/train_share_states.cpp.o
+  [13/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/metric/dcg_calculator.cpp.o
+  [14/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/boosting/cuda/cuda_score_updater.cpp.o
+  [15/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/boosting/sample_strategy.cpp.o
+  [16/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/objective/cuda/cuda_binary_objective.cpp.o
+  [17/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/metric/cuda/cuda_binary_metric.cpp.o
+  [18/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/feature_parallel_tree_learner.cpp.o
+  [19/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/config.cpp.o
+  [20/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/metric/cuda/cuda_regression_metric.cpp.o
+  [21/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/config_auto.cpp.o
+  [22/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/objective/cuda/cuda_multiclass_objective.cpp.o
+  [23/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/parser.cpp.o
+  [24/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_leaf_splits.cpp.o
+  [25/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/tree_learner.cpp.o
+  [26/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/objective/cuda/cuda_rank_objective.cpp.o
+  [27/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/boosting/gbdt_model_text.cpp.o
+  [28/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_data_partition.cpp.o
+  [29/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_best_split_finder.cpp.o
+  [30/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_histogram_constructor.cpp.o
+  [31/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/boosting/gbdt.cpp.o
+  [32/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/cuda/cuda_metadata.cpp.o
+  [33/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/data_parallel_tree_learner.cpp.o
+  [34/76] Building C object external_libs/nanoarrow/CMakeFiles/nanoarrow_static.dir/src/nanoarrow/common/array_stream.c.o
+  [35/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/boosting/boosting.cpp.o
+  [36/76] Building C object external_libs/nanoarrow/CMakeFiles/nanoarrow_static.dir/src/nanoarrow/common/utils.c.o
+  [37/76] Building C object external_libs/nanoarrow/CMakeFiles/nanoarrow_static.dir/src/nanoarrow/common/schema.c.o
+  [38/76] Building C object external_libs/nanoarrow/CMakeFiles/nanoarrow_static.dir/src/nanoarrow/common/array.c.o
+  [39/76] Linking C static library external_libs/nanoarrow/libnanoarrow_static.a
+  [40/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/gradient_discretizer.cpp.o
+  [41/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/cuda/cuda_utils.cpp.o
+  [42/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/metadata.cpp.o
+  [43/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/dataset.cpp.o
+  [44/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/cuda/cuda_column_data.cpp.o
+  [45/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/metric/cuda/cuda_pointwise_metric.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [46/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/objective/cuda/cuda_regression_objective.cpp.o
+  [47/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/dataset_loader.cpp.o
+  [48/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/boosting/cuda/cuda_score_updater.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [49/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/cuda/cuda_tree.cpp.o
+  [50/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/boosting/cuda/nccl_gbdt.cpp.o
+  [51/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/objective/cuda/cuda_binary_objective.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [52/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/objective/objective_function.cpp.o
+  [53/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/tree.cpp.o
+  [54/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/objective/cuda/cuda_multiclass_objective.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [55/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_leaf_splits.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [56/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/metric/metric.cpp.o
+  [57/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/io/cuda/cuda_column_data.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [58/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/cuda/cuda_row_data.cpp.o
+  [59/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/linear_tree_learner.cpp.o
+  [60/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_single_gpu_tree_learner.cpp.o
+  [61/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/io/cuda/cuda_tree.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp(54): warning #20014-D: calling a __host__ function from a __host__ __device__ function is not allowed
+            { gpuAssert((cudaFree(cat_threshold)), "/tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp", 54); };
+                       ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp(57): warning #20014-D: calling a __host__ function from a __host__ __device__ function is not allowed
+            { gpuAssert((cudaFree(cat_threshold_real)), "/tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp", 57); };
+                       ^
+
+  [62/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/cuda/cuda_algorithms.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [63/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/objective/cuda/cuda_regression_objective.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [64/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/objective/cuda/cuda_rank_objective.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [65/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/io/bin.cpp.o
+  [66/76] Building CXX object CMakeFiles/lightgbm_capi_objs.dir/src/c_api.cpp.o
+  [67/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_gradient_discretizer.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [68/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_histogram_constructor.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  [69/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_single_gpu_tree_learner.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp(54): warning #20014-D: calling a __host__ function from a __host__ __device__ function is not allowed
+            { gpuAssert((cudaFree(cat_threshold)), "/tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp", 54); };
+                       ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp(57): warning #20014-D: calling a __host__ function from a __host__ __device__ function is not allowed
+            { gpuAssert((cudaFree(cat_threshold_real)), "/tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp", 57); };
+                       ^
+
+  [70/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_data_partition.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp(54): warning #20014-D: calling a __host__ function from a __host__ __device__ function is not allowed
+            { gpuAssert((cudaFree(cat_threshold)), "/tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp", 54); };
+                       ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp(57): warning #20014-D: calling a __host__ function from a __host__ __device__ function is not allowed
+            { gpuAssert((cudaFree(cat_threshold_real)), "/tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp", 57); };
+                       ^
+
+  [71/76] Building CUDA object CMakeFiles/lightgbm_objs.dir/src/treelearner/cuda/cuda_best_split_finder.cu.o
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/base.h(472): warning #128-D: loop is not reachable
+      for (; n != 0; ++s1, ++s2, --n) {
+      ^
+            detected during:
+              instantiation of "auto fmt::v11::detail::compare(const Char *, const Char *, std::size_t)->int [with Char=char]" at line 591
+              instantiation of "auto fmt::v11::basic_string_view<Char>::compare(fmt::v11::basic_string_view<Char>) const->int [with Char=char]" at line 598
+              instantiation of class "fmt::v11::basic_string_view<Char> [with Char=char]" at line 2612
+              instantiation of "auto fmt::v11::basic_format_args<Context>::get_id(fmt::v11::basic_string_view<Char>) const->int [with Context=fmt::v11::context, Char=char]" at line 2655
+
+  Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/external_libs/fmt/include/fmt/format.h(2594): warning #2417-D: constexpr constructor calls non-constexpr function "fmt::v11::basic_memory_buffer<T, SIZE, Allocator>::basic_memory_buffer(const Allocator &) [with T=fmt::v11::detail::bigint::bigit, SIZE=32UL, Allocator=fmt::v11::detail::allocator<fmt::v11::detail::bigint::bigit>]"
+      constexpr bigint() : exp_(0) {}
+                                   ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp(54): warning #20014-D: calling a __host__ function from a __host__ __device__ function is not allowed
+            { gpuAssert((cudaFree(cat_threshold)), "/tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp", 54); };
+                       ^
+
+  /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp(57): warning #20014-D: calling a __host__ function from a __host__ __device__ function is not allowed
+            { gpuAssert((cudaFree(cat_threshold_real)), "/tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/include/LightGBM/cuda/cuda_split_info.hpp", 57); };
+                       ^
+
+  [72/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/voting_parallel_tree_learner.cpp.o
+  [73/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/feature_histogram.cpp.o
+  [74/76] Building CXX object CMakeFiles/lightgbm_objs.dir/src/treelearner/serial_tree_learner.cpp.o
+  [75/76] Linking CXX shared library CMakeFiles/_lightgbm.dir/cmake_device_link.o
+  [76/76] Linking CXX shared library /tmp/pip-wheel-3f8zc1lg/lightgbm_189aedf2b405447aabf552fd1f42c44a/lib_lightgbm.so
+  *** Installing project into wheel...
+  2026-09-11 18:47:09,113 - scikit_build_core - INFO - RUN: /usr/bin/cmake --install /tmp/tmp9d7eaad2/build --prefix /tmp/tmp9d7eaad2/wheel/platlib --strip
+  -- Install configuration: "Release"
+  -- Installing: /tmp/tmp9d7eaad2/wheel/platlib/lightgbm/lib/lib_lightgbm.so
+  *** Making wheel...
+  *** Created lightgbm-4.7.0-py3-none-linux_x86_64.whl
+  Building wheel for lightgbm (pyproject.toml): finished with status 'done'
+  Created wheel for lightgbm: filename=lightgbm-4.7.0-py3-none-linux_x86_64.whl size=11488550 sha256=db0b5f3c397f6e15d9412b20d0e99828b42db2069dbf7eecc8184193cde5f45c
+  Stored in directory: /tmp/pip-ephem-wheel-cache-0obd8j90/wheels/ad/b1/9b/a07fed0658ea3a5c400c8cbdd9bfb0471bfc6172a0a0cc5bd6
+Successfully built lightgbm
+EXIT=0

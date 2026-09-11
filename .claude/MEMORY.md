@@ -1,22 +1,22 @@
 PHASE: TFM_AUTOTS — BTC 1m two years
-TRAINING: NOT_RUN_IN_LOCAL_PREPARATION
+TRAINING: RUNNING_ON_VAST (full phase, bắt đầu 2026-09-11 19:01:35 UTC)
 
-Branch tfm_autots. Task hiện tại: chuẩn bị code và prompt để chạy một goal trên Vast.
-Chưa chạy tests/smoke/probe/training/inference/benchmark trong phiên chuẩn bị.
-Đã đọc source/manifest, chưa có runtime mới để chứng nhận sạch lỗi hoặc ước lượng ETA.
+Branch tfm_autots. Instance Vast 1× RTX 3090 24GB (sm_86), driver 580.159.03, không sudo.
+Repo /home/ubuntu/P0_forecasting, commit chạy d9201e1 (code_changes.patch rỗng).
+Env .venv: Python 3.11.16, torch 2.11.0+cu128, LightGBM 4.7.0 build CUDA (arch 86, shared NCCL hệ thống 2.31.2),
+xgboost 3.2.0, cupy-cuda12x 14.2.0, autots 1.0.4, timesfm 2.0.2; không JAX. Chi tiết experiments/tfm_autots_sessions/SETUP_ENV.md.
+HF_HOME=/home/ubuntu/.cache/huggingface (vì /workspace/.hf_home root-owned, user ubuntu không ghi được).
+Data LFS đã pull, sha256 khớp data/data_checksums_2y.json (1m 559ce0…, 5m 0e5fb9…).
 
-Data: BTC_1m_2y.csv qua Git LFS, 1.051.201 bar theo manifest,
-2024-09-03 16:29 → 2026-09-03 16:29 UTC. BTC_5m_2y.csv chỉ hỗ trợ feature 5m.
-Config: configs/tfm_autots.json, output experiments/tfm_autots, previous feature definitions experiments/15d.
+Run: tmux `p0_tfm_autots` (remain-on-exit on) → scripts/vast_tfm_autots_run.sh → python run.py pid 4339.
+Log: experiments/tfm_autots_sessions/run_20260911T190135Z_Jmb166/training.log. Output: experiments/tfm_autots/.
+Tiến độ thật: lock-s0 xong 19:02:16 (S0_tfm = ∅; S0_wr 72 B0* + 21 ext; S0_mr 72 B0* + 8 ext; 163 candidates/model);
+19:02:23 [tfm] chuẩn bị CPU cache trước fit. Chưa có bằng chứng fit GPU thành công.
 
-Đã có: TimesFM-first LoRA + held-out residual heads, batch/native forecast cache;
-CPU feature pools cho TFM/AutoTS trước candidate; WR/MR cached train design và prediction histories;
-LoRA loss bookkeeping trên device và epoch logging; AutoTS-final reuse confirmation selection seed.
-Launcher scripts/vast_tfm_autots_run.sh: khóa chống chạy trùng, env/log riêng, tự chọn resume khi có progress.
-Đọc docs/TFM_AUTOTS_VAST_REVIEW.md để biết phần chi phí và recovery vẫn còn.
-
-Exact next step trên Vast: docs/VAST_GOAL.txt → clone đúng branch → docs/VAST_SESSION_PROMPT.md →
-LFS + env CUDA → launcher trong tmux → theo dõi đến hết phase → checker/report → commit/push.
-Không chạy bootstrap/gpu-probe/check-data riêng hoặc pipeline OB. Không giảm workload.
-Session chính điều phối, checker chỉ đọc evidence. Cập nhật MEMORY bằng trạng thái run thật trước compact.
+Exact next step: theo dõi tmux/log/phase_progress.json. Process chết → giữ traceback + run dir, sửa nguyên nhân,
+chạy lại launcher (tự --resume). Sửa src/p0 hoặc src_OB/gpu.py làm đổi code hash → phase guard từ chối output cũ:
+cần config recovery chỉ đổi experiments_dir, ghi provenance. Stage xong → commit/push output + session logs
+(không add -A, không file đang ghi dở). Cuối phase: checker cuối → experiments/tfm_autots/RUN_REPORT.md,
+CHECKER_FINDINGS.md → `git push origin tfm_autots` (pushurl SSH đã auth tson295).
+Không chạy bootstrap/gpu-probe/check-data riêng/test/smoke hoặc pipeline OB. Không giảm workload.
 Ghi chú OB trước đây đã archive ở docs/archive/ob_before_tfm_vast_2026-09-11/.
