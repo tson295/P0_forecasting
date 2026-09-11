@@ -9,8 +9,8 @@ export CUDA_VISIBLE_DEVICES=0
 export HF_HOME=/home/ubuntu/.cache/huggingface
 LOG=experiments/orderbook_zenodo/logs
 CFG=configs/orderbook_zenodo.json
-echo "train start $(date -u +%FT%TZ)" | tee -a "$LOG/train.log"
-/home/ubuntu/venv-ob/bin/python -m src_OB train --config "$CFG" 2>&1 | tee -a "$LOG/train.log"
+echo "train start $(date -u +%FT%TZ) args: $*" | tee -a "$LOG/train.log"
+/home/ubuntu/venv-ob/bin/python -m src_OB train --config "$CFG" "$@" 2>&1 | tee -a "$LOG/train.log"
 status=${PIPESTATUS[0]}
 echo "TRAIN_EXIT=$status $(date -u +%FT%TZ)" | tee -a "$LOG/train.log"
 if [ "$status" -eq 0 ]; then

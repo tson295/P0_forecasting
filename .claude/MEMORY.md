@@ -1,53 +1,42 @@
-PHASE: OB — Vast 2026-09-10: HF pinned BLOCKED; tìm nguồn thay thế ~46 phút (3 vòng, 27 nhóm) không có nguồn phù hợp; replay v2 (W1) đã sửa
-TRAINING: NOT_STARTED — BLOCKED_BY_DATA (0 cell); chờ user quyết định nguồn data/phương pháp
+PHASE: OB — Vast 2026-09-11: HF pinned BLOCKED; user chọn Zenodo 20046390 (21 ngày) + fold FIT9/gap1/VAL2/step2
+TRAINING: RUNNING — Zenodo FULL train bắt đầu 2026-09-11T02:46:25Z, tmux `ob:ztrain`, kỳ vọng 5×8×3 = 120 cell
 
 ## Current task
 
-Goal tiếp nối (`docs/VAST_SESSION_PROMPT.md` bản 109cbc2, `docs/VAST_GOAL.txt`): lưu việc → sửa W1 → tìm data thay thế
-→ prepare/train. Đã làm hết phần được phép; kết thúc BLOCKED vì không có nguồn Binance Spot L2 miễn phí/đã có quyền nào
-đáp ứng phương pháp cố định (instance/repo cũng không có credential nhà cung cấp dữ liệu nào). Không train. Không
-smoke/canary/test/trial fit.
+Goal tiếp nối (`docs/VAST_SESSION_PROMPT.md`, `docs/VAST_GOAL.txt`) + quyết định user 2026-09-11 trong session:
+dùng Zenodo (OF giữa snapshot ~1,24 s; nghiên cứu phi thương mại), FIT 9 d / gap 1 d / VAL 2 d / step 2 d / 5 fold
+(gap chỉ cần > horizon dài nhất 180 s). Việc còn lại: train xong → `summarize` (launcher tự chạy khi train exit 0) →
+checker cuối run → `experiments/orderbook_zenodo/{RUN_REPORT,CHECKER_FINDINGS,BACKUP_STATUS}.md` → MEMORY → commit/push
+scope OB (LFS predictions/checkpoints) → `git ls-remote` xác minh. Không smoke/canary/test/trial fit.
 
-## Trạng thái có bằng chứng (Vast C.50503596, RTX 3090 24 GB, driver 595.84, image CUDA 12.8)
+## Run Zenodo (có bằng chứng)
 
-- Instance KHÔNG có volume. Venv `/home/ubuntu/venv-ob` (`experiments/orderbook_hf/run_meta/install_env.sh`,
-  LightGBM 4.7.0 CUDA cần `BUILD_WITH_SHARED_NCCL=ON`). GPU env đã cài, chưa có fit nào.
-- Backup: SSH key `~/.ssh/id_ed25519` push được `origin/OB` (`remote.origin.pushurl` = SSH). Mọi commit của lượt tiếp nối đã
-  push kèm LFS; commit mới nhất xem `git ls-remote origin refs/heads/OB` và `experiments/orderbook_hf/BACKUP_STATUS.md`.
-- HF `873f31e7…`: depth 1.392 run ≈300 s (5 phút/giờ, lỗi flush-overwrite collector v1), 1/38 snapshot nối được;
-  prepared `data/orderbook/prepared_hf/` (schema v3, replay v1): segment tốt nhất 300,6 s, 0 origin FIT/VAL.
-  Raw Parquet không commit (tải lại được).
-- Replay v2 (`src_OB/reconstruct.py`, `REPLAY_VERSION = 2`): buffer bridge trước snapshot, không neo lại snapshot cũ khi
-  book sống (redundant chỉ khi message kế tiếp được chấp nhận), buffer sống qua anchor lỗi, ID check trước timestamp, hard
-  gap theo `known_hard_gaps_utc` trong config và không bridge qua hard gap, mỗi timestamp snapshot chỉ thử neo một lần (bản mới
-  nhất trước). Manifest prepared ghi `code_commit`/`code_uncommitted_paths`/`config_sha256` (F-02); `Data` cho train từ
-  chối prepared có `replay_version` khác replay hiện tại hoặc thiếu `code_commit` (R6-W1/R7-I3) ⇒ `prepared_hf` (replay v1)
-  không train được; prepare mới phải chạy trong git checkout. **Chưa có prepare thật nào dùng
-  v2**; prepared HF v3 giữ nguyên (checker suy luận từ evidence, chưa chạy thật: trên HF v2 chỉ đổi nhãn reset). Các lượt
-  checker không có ERROR. Còn mở trước prepare v2 thật đầu tiên: R3-I1, R3-I2 (xem CHECKER_FINDINGS).
-- Nguồn đã xét: `experiments/orderbook_hf/SOURCE_REPORT.md` (27 nhóm, evidence trong `run_meta/source_search/`). Gần nhất:
-  HF `predict-quant/binance-spot-orderbook` @bf8ffb20… (Spot diff 100 ms, run dài nhất 22,64 h < 25,6 h, VAL ≤ 7,5 h,
-  không license), Zenodo 20046390 (Spot 5 s, 21 ngày < 30, phi thương mại), HF `Lazy108/binance-polymarket-orderflow`
-  (gated manual, 22 ngày). Tardis không key chỉ ngày đầu tháng.
-- Reports: `experiments/orderbook_hf/{DATA_REPORT,RUN_REPORT,SOURCE_REPORT,CHECKER_FINDINGS,BACKUP_STATUS}.md`.
+- Config `configs/orderbook_zenodo.json`; raw `data/orderbook/zenodo_20046390/` (tar md5 `58507a0f…`, không commit);
+  prepared `data/orderbook/prepared_zenodo_20046390/` (replay_version 2, code_commit c68fc45, LFS, đã push);
+  output `experiments/orderbook_zenodo/`. Adapter `src_OB/snapshots.py` (SNAPSHOT_ADAPTER_VERSION 1).
+- DATA_REPORT READY: 2 segment (chính: 2023-10-01 00:00:06.9 → 10-21 23:59:59.9), 1.439.157 state, 237.648 origin;
+  5 fold VAL 10-11→10-21; train/val origins 83671/17447, 80438/7621, 66173/31161, 75100/25130, 79968/31388.
+- Launcher `experiments/orderbook_zenodo/run_meta/run_train.sh` (P0_OB_VAST=1, CUDA_VISIBLE_DEVICES=0,
+  HF_HOME=/home/ubuntu/.cache/huggingface vì /etc/environment trỏ /workspace/.hf_home của root). Log `logs/train.log`,
+  `logs/summarize.log`. Train code = commit d8797c5 (tree sạch lúc start; không sửa `src_OB/*.py` khi đang chạy).
+- Checker trước train: không ERROR; Z-W1 (docs luật gap cũ) đã sửa; Z-I1…I8 cần ghi vào RUN_REPORT (cadence thật
+  ~1,24 s khác datacite 5 s, timestamp là đồng hồ collector; ngày 10-01 bất thường nhưng ngoài mọi fold; FIT hiệu dụng
+  ~7,9 d do context TimesFM h180; fold2 VAL ít origin → nêu mean-fold và pooled; 2 định nghĩa config sha).
+- Recovery: `train.py` `mkdir(exist_ok=False)` + dừng cả run khi một cell lỗi; CLI chưa có `--resume`. Nếu lỗi: lưu
+  traceback, sửa + commit, thêm skip cell completed / lưu attempt mới có provenance, chạy phần còn lại bằng
+  `--models/--folds` với cùng launcher env (HF_HOME!). Không ghi đè cell completed.
 
-## Quyết định còn cần từ user (danh sách chuẩn: RUN_REPORT §5)
+## HF (đóng, BLOCKED — chỉ tham khảo)
 
-1. Nguồn Binance Spot L2 có khóa/trả phí hoặc quyền truy cập (Tardis key, Binance historical data access, Crypto Lake/Kaiko,
-   duyệt dataset gated…) ≥ 30–58 ngày liên tục; hoặc
-2. đổi phương pháp tường minh (vd. FIT ngắn hơn cho bộ Zenodo 21 ngày, hoặc context TimesFM/h180 khác cho predict-quant);
-   hoặc
-3. thu thập mới ≥ 30 ngày (1 fold) / ≥ 58 ngày (5 fold) bằng collector liên tục.
-
-## Exact next step khi có quyết định
-
-Đóng R3-I1/R3-I2 → config riêng cho nguồn mới (`dataset_*`, `raw_dir`, `prepared_dir`, `output_dir` mới;
-`known_hard_gaps_utc` chỉ khi nguồn công bố) + downloader/adapter nếu schema khác → download → prepare (replay v2) →
-`data-report` → checker → nếu READY: `P0_OB_VAST=1 CUDA_VISIBLE_DEVICES=0 python -m src_OB train --config <cfg>` trong tmux
-→ `summarize` → checker → báo cáo. CLI vẫn chưa có `--resume`/`--horizons`.
+- Instance Vast C.50503596, RTX 3090 24 GB, không volume. Venv `/home/ubuntu/venv-ob`
+  (`experiments/orderbook_hf/run_meta/install_env.sh`, LightGBM 4.7.0 CUDA cần `BUILD_WITH_SHARED_NCCL=ON`).
+- Backup: SSH key push `origin/OB` (`remote.origin.pushurl` = SSH); identity -c user.name/user.email mỗi commit.
+- HF `873f31e7…`: depth ≈300 s/giờ (collector v1 lỗi), segment tốt nhất 300,6 s, 0 origin. Replay v2 đã sửa (W1),
+  chưa prepare thật trên HF; R3-I1/R3-I2 còn mở (chỉ diff replay). Reports `experiments/orderbook_hf/*.md`,
+  nguồn đã xét `SOURCE_REPORT.md` (27 nhóm).
 
 ## Nguồn đang có hiệu lực
 
-`src_OB/README.md`, `configs/orderbook.json`, `.claude/CLAUDE.md`, `.claude/AGENT.md`,
-`.claude/agents/checker.md`, `docs/VAST_SESSION_PROMPT.md`, `docs/VAST_GOAL.txt`. `docs/IDEA.md` cung cấp ý tưởng,
-không thay yêu cầu Direct hiện tại. Memory/agent/prompt OHLCV cũ nằm trong `docs/archive/claude_legacy_2026-09-10/`.
+`src_OB/README.md`, `configs/orderbook_zenodo.json` (run hiện tại), `configs/orderbook.json` (HF), `.claude/CLAUDE.md`,
+`.claude/AGENT.md`, `.claude/agents/checker.md`, `docs/VAST_SESSION_PROMPT.md`, `docs/VAST_GOAL.txt`.
+Memory/agent/prompt OHLCV cũ nằm trong `docs/archive/claude_legacy_2026-09-10/`.

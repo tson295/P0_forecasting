@@ -11,6 +11,8 @@ def main():
     parser.add_argument("--config", default=str(ROOT / "configs/orderbook.json"))
     parser.add_argument("--models", help="Comma-separated families; one model per horizon")
     parser.add_argument("--folds", help="Comma-separated fold names, e.g. fold1,fold2")
+    parser.add_argument("--resume", action="store_true",
+                        help="Skip cells completed with this exact config/revision; move unfinished attempts to attempts/")
     args = parser.parse_args()
     cfg = load(args.config)
     if args.command == "download":
@@ -28,7 +30,7 @@ def main():
     else:
         from .train import train
         train(cfg, args.models.split(",") if args.models else None,
-              args.folds.split(",") if args.folds else None)
+              args.folds.split(",") if args.folds else None, resume=args.resume)
 
 
 if __name__ == "__main__":

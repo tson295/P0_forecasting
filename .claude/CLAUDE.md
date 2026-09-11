@@ -28,7 +28,10 @@ Khi mâu thuẫn, yêu cầu mới nhất của user thắng. Không tự thêm 
 - Một mid-price `(bestBid + bestAsk)/2`. OF theo price/quantity giữa state liên tiếp; OFI = bidOF − askOF.
   Tính và cộng flow trước khi drop same-mid. Raw timestamp/mid timeline được giữ riêng trước khi lọc.
 - Direct: một model/adapter mỗi fold/horizon; h = 60/120/180 giây. Label và context as-of `timestamp <= query`,
-  trong cùng segment. Gap train/VAL > 5 ngày. Scaler/fit/search chỉ dùng FIT, không chọn tham số bằng outer VAL.
+  trong cùng segment. Gap train/VAL theo config: HF 6 ngày; Zenodo 21 ngày dùng FIT 9d/gap 1d/VAL 2d/step 2d
+  (user quyết định 2026-09-11; gap phải > horizon dài nhất). Scaler/fit/search chỉ dùng FIT, không chọn tham số bằng outer VAL.
+- Nguồn đang chạy (user chọn 2026-09-11 sau khi HF bị chặn): Zenodo 20046390, `configs/orderbook_zenodo.json`,
+  full snapshot REST ~1,24 s (`src_OB/snapshots.py`), OF là flow giữa snapshot liên tiếp; nghiên cứu phi thương mại.
 - Baseline chỉ OF/OFI + timing, không distance, không DeepLOB-inspired. Các family: lgbm, xgb, cat, xgbrf,
   lstm, autots, tfm_zero_shot, tfm_lora. AutoTS search trong GPU allowlist; không feature subset search.
   TimesFM zero-shot chỉ chuỗi mid-price; LoRA + OF head cùng optimizer, không XReg.
@@ -52,9 +55,9 @@ Khi mâu thuẫn, yêu cầu mới nhất của user thắng. Không tự thêm 
 
 - Không xóa/sửa raw archive đã tải để làm nó có vẻ liên tục. Tạo prepared version mới khi sửa replay.
   Hai CSV OHLCV canonical, checksum cũ, `experiments/15d/` và `Baseline_LGBM.py` giữ nguyên.
-- Không ignore metric/prediction/checkpoint/log/figure. Không ghi đè cell đã hoàn tất; CLI hiện chưa có resume
-  hoàn chỉnh theo cell. Khi cần recovery, session chính bổ sung skip/select cell đúng config/revision hoặc lưu
-  attempt mới có provenance, không tuyên bố CLI đã có `--resume` khi chưa thêm.
+- Không ignore metric/prediction/checkpoint/log/figure. Không ghi đè cell đã hoàn tất. Recovery: `train --resume`
+  (thêm 2026-09-11) bỏ qua cell completed đúng config/revision (khác thì dừng), chuyển attempt dở dang kèm
+  run/failed sang `<output>/attempts/<fold>/<model>/<h>/attemptN`; cell mới ghi `prior_attempts` và `train_code`.
 - Commit/push phần việc OB và artifact được phép, stage theo scope; không dùng `git add -A` kéo thay đổi ngoài run.
   Không force push, reset --hard, xóa kết quả hoặc commit secret/checkpoint pretrained gốc.
 - `.claude/MEMORY.md` ghi trạng thái thật, không kế thừa PASS từ vòng OHLCV. Context compact không kết thúc goal;

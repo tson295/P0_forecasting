@@ -22,7 +22,10 @@ Session chính chạy data/training và lưu báo cáo; checker trả finding đ
 - ID/timestamp gap và hard gap 2026-07-05 20:56–21:39 UTC tách segment, chờ snapshot tiếp. Không forward-fill
   hoặc tạo ghost levels. Đọc counts/reset reasons, nêu giới hạn missing updates của collector.
 - OF trước dedup, flow được cộng đến mid-change; OFI = bidOF − askOF. Raw timeline trước dedup tồn tại riêng.
-- Nhãn as-of <= t+h, h60/120/180; feature/context/label không vượt segment. Không giảm gap train/VAL dưới >5 ngày.
+- Nguồn full snapshot (Zenodo, `snapshots.py`): không replay diff; segment đóng khi bước > max_feed_gap, timestamp/nonce
+  không tăng hoặc book/dòng hỏng; OF là flow quan sát giữa snapshot liên tiếp.
+- Nhãn as-of <= t+h, h60/120/180; feature/context/label không vượt segment. Gap train/VAL đúng config (HF 6 ngày;
+  Zenodo 1 ngày theo quyết định user 2026-09-11) và luôn > horizon dài nhất; không giảm dưới mức config.
 - Coverage/fold/context khả dụng thật, đặc biệt TimesFM 512 × spacing h và common origin mask. Không báo PASS
   chỉ vì có 2 file tháng; ghi chưa xác định nếu chưa có evidence về eligible samples.
 - Scaler và AutoTS fit/search chỉ lấy FIT. AutoTS window được tách tại gap; zero-shot univariate mid;

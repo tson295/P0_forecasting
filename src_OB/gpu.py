@@ -2,9 +2,21 @@
 from __future__ import annotations
 
 import json
+import re
 import warnings
 
 import numpy as np
+
+# LightGBM 4.7.0 CUDA limits (src/io/config.cpp, objective/objective_function.cpp, boosting/goss.hpp): linear trees
+# silently switch the whole fit to CPU, these objectives compute gradients on CPU, GOSS reads an unallocated CUDA buffer.
+LGBM_CPU_OBJECTIVES = {"cross_entropy", "cross_entropy_lambda", "mape", "gamma", "tweedie"}
+
+
+def lightgbm_effective_config(estimator):
+    """Config LightGBM actually trained with, after its own conflict checks (parameters block of the model text)."""
+    text = estimator.booster_.model_to_string(num_iteration=1)
+    section = text.split("\nparameters:\n", 1)[1].split("\nend of parameters", 1)[0]
+    return dict(re.findall(r"^\[([^:\]]+): ?(.*)\]$", section, re.M))
 
 
 class GPUOnlyError(SystemExit):
@@ -38,6 +50,9 @@ class GPURegressor:
         elif self.family == "lgbm":
             if params.get("device_type") not in ("gpu", "cuda"):
                 raise GPUOnlyError("LightGBM must use a GPU backend.")
+            if (params.get("linear_tree") or "goss" in (params.get("boosting_type"), params.get("data_sample_strategy"))
+                    or params.get("objective") in LGBM_CPU_OBJECTIVES):
+                raise GPUOnlyError("LightGBM option outside its CUDA backend (linear_tree/GOSS/CPU objective).")
         elif self.family == "cat":
             if params.get("task_type") != "GPU":
                 raise GPUOnlyError("CatBoost must use task_type=GPU.")
@@ -55,6 +70,12 @@ class GPURegressor:
             state = json.loads(self.estimator.get_booster().save_config())
             if not state["learner"]["generic_param"]["device"].startswith("cuda"):
                 raise GPUOnlyError("XGBoost did not retain its required CUDA device.")
+        elif self.family == "lgbm":
+            used = lightgbm_effective_config(self.estimator)
+            if (used.get("device_type") not in ("gpu", "cuda") or used.get("linear_tree") != "0"
+                    or used.get("data_sample_strategy") == "goss" or used.get("objective") in LGBM_CPU_OBJECTIVES):
+                raise GPUOnlyError("LightGBM did not train on its CUDA backend: " + str(
+                    {k: used.get(k) for k in ("device_type", "linear_tree", "data_sample_strategy", "objective")}))
         return self
 
     def predict(self, x, **kwargs):

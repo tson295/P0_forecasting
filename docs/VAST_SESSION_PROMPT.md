@@ -93,6 +93,8 @@ Không có nguồn/access/tài nguyên phù hợp: làm hết W1/report/backup c
   đến mid-change; giữ raw timestamp/mid timeline trước drop. Baseline OF/OFI + timing, không distances.
 - Direct h60/120/180 giây, một model/adapter mỗi fold/horizon. Label log(MP(t+h)/MP(t)), quote cuối <=t+h,
   age guard theo config; feature/window/label cùng segment. FIT21d/gap6d (>5)/VAL3d/step7d, tối đa5 fold.
+  > Cập nhật 2026-09-11 (user quyết định trong session): nguồn Zenodo 21 ngày dùng FIT 9d/gap 1d/VAL 2d/step 2d,
+  > tối đa 5 fold; gap chỉ cần > horizon dài nhất (180 s). Config HF giữ FIT21d/gap6d.
 - Common origins đủ mọi family/horizon. TimesFM512 tại h180 cần 25h33 context liên tục trước origin,
   cộng label. Không giảm context/gap/batch/epoch/search budget, đổi seed/split/target/h để ép data chạy được.
 - Đủ lgbm,xgb,cat,xgbrf,lstm,autots,tfm_zero_shot,tfm_lora. Không thêm DeepLOB hoặc feature search.

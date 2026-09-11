@@ -1,6 +1,7 @@
 """One model per (family, fold, horizon); Vast-only entrypoint, no feature selection."""
 from __future__ import annotations
 
+import json
 import os
 import time
 from dataclasses import asdict
@@ -16,7 +17,26 @@ from .results import gains_vs_e0, atomic_csv, refresh_summaries
 FAMILIES = ("lgbm", "xgb", "cat", "xgbrf", "lstm", "autots", "tfm_zero_shot", "tfm_lora")
 
 
-def train(cfg, models=None, fold_names=None):
+def resume_cell(cfg, data, output, out):
+    """--resume: True for a cell completed with this exact config/revision (kept and skipped). An unfinished
+    attempt is moved with its run/failed files to <output>/attempts/<fold>/<model>/<h>/attemptN, never deleted."""
+    run = json.loads((out / "run.json").read_text()) if (out / "run.json").is_file() else {}
+    if (out / "completed.json").is_file():
+        if (run.get("config") != json.loads(json.dumps(cfg))
+                or run.get("dataset_revision") != data.meta["dataset_revision"]):
+            raise ValueError(f"{out}: completed cell thuộc config/revision khác; không trộn run.")
+        return True
+    base = output / "attempts" / out.relative_to(output)
+    base.mkdir(parents=True, exist_ok=True)
+    n = 1
+    while (base / f"attempt{n}").exists():
+        n += 1
+    out.rename(base / f"attempt{n}")
+    print(f"moved unfinished attempt {out} -> {base / f'attempt{n}'}", flush=True)
+    return False
+
+
+def train(cfg, models=None, fold_names=None, resume=False):
     # Explicit remote opt-in plus CUDA availability; no fallback or local CPU training.
     if os.environ.get("P0_OB_VAST") != "1":
         raise RuntimeError("Training chỉ trên Vast: đặt P0_OB_VAST=1 trong máy Vast.")
@@ -55,7 +75,12 @@ def train(cfg, models=None, fold_names=None):
                 x_train = matrix(data, train_ids)
             for horizon in cfg["horizons_seconds"]:
                 out = output / fold.name / model / f"h{horizon}s"
+                if resume and out.exists() and resume_cell(cfg, data, output, out):
+                    print(f"{fold.name} {model} h={horizon}s completed with this config; skipped (--resume)", flush=True)
+                    continue
                 out.mkdir(parents=True, exist_ok=False)  # protect prior model/prediction artifacts
+                prior = sorted(p.relative_to(output).as_posix()
+                               for p in (output / "attempts" / out.relative_to(output)).glob("attempt*"))
                 started = time.time()
                 print(f"{fold.name} {model} h={horizon}s train={len(train_ids)} val={len(val_ids)}", flush=True)
                 write_json(out / "run.json", {"status": "started", "config": cfg, "fold": asdict(fold),
@@ -64,7 +89,7 @@ def train(cfg, models=None, fold_names=None):
                            # Provenance of the prepared data (replay/code/config) and of the training code.
                            "prepared": {k: data.meta.get(k) for k in
                                         ("replay_version", "code_commit", "code_uncommitted_paths", "config_sha256")},
-                           "train_code": train_code,
+                           "train_code": train_code, "prior_attempts": prior,
                            "created_at": started, "n_train": len(train_ids), "n_val": len(val_ids)})
                 y_train, _ = data.target(train_ids, horizon)
                 actual, e0 = evaluation[horizon]

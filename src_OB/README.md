@@ -120,6 +120,10 @@ Không thêm DeepLOB/DeepLOB-inspired vì không có model này trong `src/p0`.
 AutoTS không có bảo đảm GPU cho toàn bộ catalogue. Các implementation sklearn như RandomForest,
 ExtraTrees, KNN, SVM, ElasticNet chạy CPU; những model thống kê cũng không tự chuyển sang GPU.
 Vì vậy search hiện giới hạn `WindowRegression` với **hai backend GPU** LightGBM/XGBoost, không mở toàn catalogue.
+Trong hai backend, option không chạy trên CUDA bị loại giống XGBoost `gblinear` → `gbtree`: LightGBM 4.7.0 CUDA tự
+chuyển `linear_tree` sang CPU (`config.cpp`) và lỗi với GOSS (`goss.hpp` không cấp phát buffer CUDA), nên adapter đặt
+`linear_tree=False` và đổi GOSS thành `gbdt`. Sau mỗi fit LightGBM, `GPURegressor` đọc config hiệu lực trong model text
+và dừng job nếu device không phải CUDA, còn linear tree/GOSS, hoặc objective tính gradient trên CPU.
 Không fix sẵn backend thắng, số cây, learning rate hay window. Default: 12 candidate ban đầu, 3 generation,
 2 vòng validation bổ sung. AutoTS sinh/chấm/chọn tham số; không search subset feature hoặc learned transform.
 
@@ -128,7 +132,8 @@ và dùng native window maker riêng trong từng segment liên tục rồi fit 
 Không nối cuối segment trước với đầu segment sau để tạo window; gap trên regular grid để thiếu, không fill.
 Training matrix luôn lấy lại từ raw timeline, không sử dụng giá bị AutoTS nội suy ở bước làm sạch bảng.
 Regressor mang nhãn thời gian `t+h` nhưng giá trị luôn là feature đã biết tại `t`, không lấy OF tương lai.
-Search dùng các block 64 origin nằm trong outer FIT, mỗi block cách cutoff fit ít nhất 6 ngày;
+Search dùng các block 64 điểm lưới trong outer FIT (kết thúc ở cuối FIT, lùi từng `val_days`); dữ liệu fit của mỗi
+split dừng trước block ít nhất `gap_days` (HF 6 ngày, Zenodo 1 ngày);
 mỗi origin vẫn được dự báo direct một bước, context được cập nhật bằng quan sát lịch sử, không refit ở gap/VAL.
 Model thắng được refit trên outer FIT; outer VAL không tham gia chọn model. Lưu toàn bộ bảng kết quả search.
 
@@ -155,13 +160,14 @@ chỉ import các hàm đó, không gọi training/search harness cũ.
 
 ## Walk-forward
 
-Default cho archive ngắn: rolling FIT **21 ngày**, **gap 6 ngày**, VAL **3 ngày**; tối đa 5 fold,
-bước 7 ngày. Điểm kết thúc lấy từ state cuối reconstruct được. Pipeline chỉ tạo số fold vừa coverage
+Default HF (`configs/orderbook.json`): rolling FIT **21 ngày**, **gap 6 ngày**, VAL **3 ngày**; tối đa 5 fold,
+bước 7 ngày. Zenodo 21 ngày (`configs/orderbook_zenodo.json`, user quyết định 2026-09-11): FIT 9 / gap 1 / VAL 2,
+bước 2 ngày, tối đa 5 fold. Điểm kết thúc lấy từ state cuối reconstruct được. Pipeline chỉ tạo số fold vừa coverage
 thực tế và ghi coverage/revision vào run metadata; không đủ một fold thì dừng, không pad hoặc tạo lịch sử.
 Nhãn cuối cùng của training phải nằm trước train_end. Window training không bắt đầu trước train_start.
 Không early-stop/tune trên outer VAL; số cây/epoch của các model ngoài AutoTS khóa trong config.
 AutoTS chọn tham số bằng validation nội bộ FIT. Scaler và target scale chỉ lấy từ FIT.
-Gap 6 ngày tuân theo yêu cầu; nhãn dài tối đa 3 phút tự nó không đòi gap 5 ngày.
+`config.py` chỉ bắt buộc gap > horizon dài nhất; nhãn dài tối đa 3 phút tự nó không đòi gap 5 ngày.
 
 Tất cả model chấm trên cùng origin mask được quyết định bởi danh sách `models` trong config, kể cả khi tách job bằng `--models`.
 Calendar coverage không đồng nghĩa liên tục. Window của LSTM, TimesFM và AutoTS cùng nhãn phải nằm trong
@@ -240,7 +246,9 @@ P0_OB_VAST=1 CUDA_VISIBLE_DEVICES=1 python -m src_OB train --folds fold4,fold5
 
 `--models lgbm,xgb,lstm` chọn subset để chạy, không chọn feature. Checkpoint và predictions ghi ở
 `experiments/orderbook_hf/foldN/model/h60s` (tương tự h120s/h180s), gồm model, prediction giá, metric và config.
-Thư mục kết quả đã tồn tại sẽ không bị ghi đè. Dùng `output_dir` mới nếu chạy lại; không có tự động resume training dở.
+Thư mục kết quả đã tồn tại sẽ không bị ghi đè. `train --resume` bỏ qua cell đã completed đúng config/revision (khác thì
+dừng) và chuyển attempt dở dang kèm `run.json`/`failed.json` sang `<output_dir>/attempts/<fold>/<model>/<h>/attemptN`;
+cell chạy lại ghi `prior_attempts` và `train_code` (commit của lần chạy) trong `run.json`.
 Tree matrix nằm trong RAM host; cửa sổ neural chỉ chuyển batch lên GPU. Nhu cầu đĩa/RAM và thời gian chạy thực tế chưa đo.
 
 ## Kết quả và inference latency
