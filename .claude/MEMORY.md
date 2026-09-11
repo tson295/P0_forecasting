@@ -4,6 +4,10 @@ TRAINING: NOT_RUN_IN_THIS_SESSION
 Branch `tfm_autots`: chỉ `tfm`, `autots_wr`, `autots_mr`; hai nhánh AutoTS gộp thành AutoTS-final.
 TimesFM forecast trước, residual heads học trên held-out suffix của FIT với features + forecast vector.
 WR/MR predict batch; xem `docs/TFM_AUTOTS_PHASE.md`. Không tests/smoke/probe/benchmark/training local.
+WR/MR đã thêm CPU preprocessing cache trước calibration/candidate loop: toàn feature pool, scaler FIT-only,
+training matrices/targets, seed row selectors và VAL contexts. Candidate chọn cột rồi GPU fit; MR recursive
+steps 2–3 vẫn cập nhật từ prediction riêng. Native final template bake-off giữ preprocessing của nó.
+Cache và timing mới chỉ được viết code; chưa có bằng chứng runtime hoặc số đo tăng tốc.
 Lệnh cho lượt chạy thật sau này trên Vast: `P0_TFM_AUTOTS_VAST=1 python run.py tfm-autots`.
 Output riêng `experiments/tfm_autots`; không reuse kết quả residual-first cũ.
 Các ghi chú OB dưới đây là lịch sử của nhánh trước, không phải next step của phase này.

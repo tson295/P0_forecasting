@@ -36,13 +36,14 @@ class SeriesBatch:
     cov: np.ndarray | None = None  # (n_grid, k)
     cov_names: tuple[str, ...] = ()
     perm: dict[int, np.ndarray] | None = None  # cột j lấy giá trị của origin perm[j][k]
+    prepared: object | None = None  # immutable AutoTS fold cache; preserved through PI and slicing
 
     def slice(self, a: int, b: int) -> "SeriesBatch":
         perm = None if not self.perm else {j: np.asarray(v)[a:b] for j, v in self.perm.items()}
-        return SeriesBatch(self.ts, self.r1, self.idx[a:b], self.cov, self.cov_names, perm)
+        return SeriesBatch(self.ts, self.r1, self.idx[a:b], self.cov, self.cov_names, perm, self.prepared)
 
     def with_perm(self, perm: dict[int, np.ndarray]) -> "SeriesBatch":
-        return SeriesBatch(self.ts, self.r1, self.idx, self.cov, self.cov_names, perm)
+        return SeriesBatch(self.ts, self.r1, self.idx, self.cov, self.cov_names, perm, self.prepared)
 
 
 @dataclass

@@ -58,13 +58,15 @@ class AutoTSModel:
     def __init__(self, kind: str = "wr", device: str = "cuda", allow_cpu: bool = False, window_size: int = 60,
                  regression_model: dict | None = None, max_windows: int = 200_000, tail_bars: int = TAIL_BARS,
                  n_jobs: int = 1, frequency: str = "min", model_cls=None, frozen: tuple[str, dict] | None = None,
-                 predict_batch_size: int = 256, artifact_dir: str | None = None):
+                 predict_batch_size: int = 256, artifact_dir: str | None = None,
+                 preprocess_cache_dir: str | None = None):
         # frozen = (tên model AutoTS, params đã search) → chạy lại nguyên trạng bằng ModelMonster (giai đoạn iii)
         self.frozen = None if frozen is None else (str(frozen[0]), dict(frozen[1]))
         self.predict_batch_size = int(predict_batch_size)
         if self.predict_batch_size < 1:
             raise ValueError("AutoTS predict_batch_size must be positive")
         self.artifact_dir = Path(artifact_dir) if artifact_dir else None
+        self.preprocess_cache_dir = preprocess_cache_dir
         self.use_es = frozen is not None  # template freeze: refit trên đúng dữ liệu bake-off (FIT+ES)
         if self.frozen is not None:
             kind = "wr" if self.frozen[0] == "WindowRegression" else "mr"
@@ -150,12 +152,22 @@ class AutoTSModel:
 
         started = time.perf_counter()
         lo, hi = self.fit_range(X_fit, X_es)  # lát liên tục trên lưới (đã kiểm không gap §1.1), kết thúc trước purge
-        df_fit, R_fit = self.frames(X_fit, lo, hi)
         m = self._make(seed)
+        cached = X_fit.prepared is not None
+        if self.preprocess_cache_dir and self.frozen is None and not cached:
+            raise ValueError("AutoTS feature search requires CACHE READY before fitting")
+        if not cached:
+            df_fit, R_fit = self.frames(X_fit, lo, hi)
         frames_seconds = time.perf_counter() - started
         started = time.perf_counter()
-        with gpu_regressors():
-            m.fit(df_fit, future_regressor=R_fit)
+        prepared_timing = None
+        if cached:
+            from .autots_cache import fit_prepared
+
+            prepared_timing = fit_prepared(self, m, X_fit, seed)
+        else:
+            with gpu_regressors():
+                m.fit(df_fit, future_regressor=R_fit)
         import torch
 
         torch.cuda.synchronize()
@@ -184,6 +196,9 @@ class AutoTSModel:
                 "frames_seconds": frames_seconds, "fit_seconds": fit_seconds,
                 "prediction_seconds": prediction_seconds, "predict_batch_size": self.predict_batch_size,
                 "prediction_batches": predictor.timings,
+                "preprocess_cache": str(X_fit.prepared.path) if cached else None,
+                "prepared_fit": prepared_timing,
+                "fit_timing_scope": "column/seed-row selection plus GPU fit" if cached else "native preprocessing plus GPU fit",
                 "prediction_contract": "independent_origins_batched_v1",
             }, indent=2), encoding="utf-8")
         return FitResult(prediction, (0, 0, 0), [predictor], is_logret=True)

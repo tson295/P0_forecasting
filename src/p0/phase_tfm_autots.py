@@ -37,7 +37,7 @@ def run_phase(cfg, args):
         if any(cfg.exp_dir.iterdir()):
             raise ValueError("Nonempty phase output without a provenance contract; choose a new experiments_dir")
         contract.write_text(json.dumps({"config_hash": cfg.hash(), "code_hash": code_hash, "config": cfg.to_dict(),
-                                        "method": "tfm-first-heldout-residual-v1/autots-batch-v1"}, indent=2), encoding="utf-8")
+                                        "method": "tfm-first-heldout-residual-v1/autots-batch-v1/autots-cpu-pool-v1"}, indent=2), encoding="utf-8")
     ns = argparse.Namespace(smoke=False, allow_cpu=False, resume=bool(args.resume),
                             no_standalone=True, max_candidates=None, latency_origins=None,
                             data_config=None, max_rows=None, config=args.config)
@@ -78,6 +78,8 @@ def run_phase(cfg, args):
             "See tfm_autots_per_fold_horizon.csv and tfm_autots_summary.csv for results.\n"
             "LoRA uses a FIT prefix and inner early stopping; residual heads use a later held-out FIT suffix.\n"
             "AutoTS WR/MR rolling predictions are batched across independent origins.\n"
+            "AutoTS feature-search folds use CPU caches prepared before calibration and candidate fits.\n"
+            "MR later recursive steps and native final template bake-off retain their required preprocessing.\n"
             "Native forecast cache timing and real batch timing are stored separately from fit timing.\n"
             "No smoke/tests/probe fits/warmup/benchmark pass or other model families were run by this command.\n"
             "The final TEST holdout was not evaluated in this phase.\n"

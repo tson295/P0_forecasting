@@ -107,14 +107,18 @@ def predict_wr(m, seq, batch_size, timings=None):
         raise ValueError("Insufficient WR context")
     out = np.empty((len(seq.idx), horizon), dtype=np.float64)
     future = covariates(seq)
+    cached_rows = seq.prepared.prediction_rows(seq.idx) if seq.prepared is not None else None
     for start in range(0, len(seq.idx), batch_size):
         torch.cuda.synchronize()
         started = time.perf_counter()
         idx = seq.idx[start:start + batch_size]
-        positions = idx[:, None] - np.arange(width - 1, -1, -1)
-        if not np.all(seq.ts[positions] == seq.ts[idx, None] - np.arange(width - 1, -1, -1) * 60):
-            raise ValueError("WR context crosses a timestamp gap")
-        windows = np.asarray(seq.r1[positions], dtype=np.float64)
+        if cached_rows is not None:
+            windows = np.asarray(seq.prepared.array("histories")[cached_rows[start:start + len(idx)]])
+        else:
+            positions = idx[:, None] - np.arange(width - 1, -1, -1)
+            if not np.all(seq.ts[positions] == seq.ts[idx, None] - np.arange(width - 1, -1, -1) * 60):
+                raise ValueError("WR context crosses a timestamp gap")
+            windows = np.asarray(seq.r1[positions], dtype=np.float64)
         if m.normalize_window:
             windows = windows / windows.sum(axis=1, keepdims=True)
         x = np.column_stack((windows, future[start:start + batch_size]))
@@ -150,27 +154,36 @@ def predict_mr(m, seq, batch_size, tail_bars, timings=None):
         "window", "rolling_skew_periods", "diff_periods", "rolling_range_periods")}
     future = covariates(seq)
     out = np.empty((len(seq.idx), horizon), dtype=np.float64)
+    cached_rows = seq.prepared.prediction_rows(seq.idx) if seq.prepared is not None else None
     for start in range(0, len(seq.idx), batch_size):
         torch.cuda.synchronize()
         started = time.perf_counter()
         idx = seq.idx[start:start + batch_size]
         count = len(idx)
         positions = idx[:, None] - np.arange(width - 1, -1, -1)
-        if not np.all(seq.ts[positions] == seq.ts[idx, None] - np.arange(width - 1, -1, -1) * 60):
-            raise ValueError("MR context crosses a timestamp gap")
-        histories = np.asarray(seq.r1[positions], dtype=float).T
+        if cached_rows is not None:
+            cache_part = cached_rows[start:start + count]
+            histories = np.asarray(seq.prepared.array("histories")[cache_part]).T
+        else:
+            if not np.all(seq.ts[positions] == seq.ts[idx, None] - np.arange(width - 1, -1, -1) * 60):
+                raise ValueError("MR context crosses a timestamp gap")
+            histories = np.asarray(seq.r1[positions], dtype=float).T
         # Time-dependent features are prohibited above. This aligned index only
         # gives pandas a minute frequency; each column contains its own history.
         index = pd.to_datetime(seq.ts[positions[0]], unit="s")
         for step in range(horizon):
-            frame = pd.DataFrame(histories, index=index)
-            features = rolling_x_regressor(frame, **params)
-            # Every enabled feature contributes count columns, in feature-major
-            # order. No polynomial/cointegration/date features may mix columns.
-            last = features.iloc[-1].to_numpy(dtype=float)
-            if len(last) % count:
-                raise ValueError("AutoTS rolling feature layout changed")
-            x = np.column_stack((last.reshape(-1, count).T, future[start:start + count]))
+            if step == 0 and cached_rows is not None:
+                base = np.asarray(seq.prepared.array("first_step")[cache_part])
+            else:
+                # Later steps depend on this candidate's predictions, so only
+                # their recursive feature update remains in the fit/predict loop.
+                frame = pd.DataFrame(histories, index=index)
+                features = rolling_x_regressor(frame, **params)
+                last = features.iloc[-1].to_numpy(dtype=float)
+                if len(last) % count:
+                    raise ValueError("AutoTS rolling feature layout changed")
+                base = last.reshape(-1, count).T
+            x = np.column_stack((base, future[start:start + count]))
             if m.series_hash:
                 hashed = int(hashlib.sha256(str(m.column_names[0]).encode()).hexdigest(), 16) % 10**16
                 x = np.column_stack((x, np.full(count, hashed)))

@@ -283,36 +283,47 @@ def run_config(store: Store, model: TabularModel, colset: ColSet, folds: list[Fo
     best = np.zeros((F, 3), dtype=int)
     used, states, aux = [], [], []
     kind = getattr(model, "input_kind", "tabular")
+    cached_autots = (kind == "series" and bool(getattr(model, "preprocess_cache_dir", None))
+                     and getattr(model, "frozen", None) is None)
     feats_all = names = None
     if kind == "sequence":
         feats_all, names = store.fine_matrix(colset)
-    elif kind == "series":  # covariate/regressor thô theo phút (chuẩn hoá train-only, NaN → 0 như plan §2.3)
+    elif kind == "series" and not cached_autots:  # cached AutoTS selects from its fold pool instead
         cov_cols = tuple(colset.names) if getattr(model, "series_covariates", "ext") == "all" else tuple(colset.ext)
         if cov_cols:
             feats_all = store.grid_matrix(ColSet(tuple(c for c in cov_cols if c in store._b0_pos),
                                                  tuple(c for c in cov_cols if c not in store._b0_pos)))
             names = cov_cols
     for i, fold in enumerate(folds):
-        idx_fit = fold.fit.origins(store.ts, store.eligible)
-        idx_es = fold.es.origins(store.ts, store.eligible)
-        idx_val = fold.val.origins(store.ts, store.eligible)
+        if cached_autots:
+            from .autots_cache import sequences
+
+            X_fit, X_es, X_val = sequences(model, store, fold, colset.names)
+            idx_fit, idx_es, idx_val = X_fit.idx, X_es.idx, X_val.idx
+        else:
+            idx_fit = fold.fit.origins(store.ts, store.eligible)
+            idx_es = fold.es.origins(store.ts, store.eligible)
+            idx_val = fold.val.origins(store.ts, store.eligible)
         if min(len(idx_fit), len(idx_es), len(idx_val)) == 0:
             raise ValueError(f"{fold.name}: partition rỗng (fit={len(idx_fit)}, es={len(idx_es)}, val={len(idx_val)})")
-        transform = TargetTransform.fit(store.fd.target, store.fd.rv60, idx_fit)
-        z_fit = transform.encode(store.fd.target, store.fd.rv60, idx_fit)
-        z_es = transform.encode(store.fd.target, store.fd.rv60, idx_es)
+        if cached_autots:
+            transform = z_fit = z_es = None  # AutoTS directly returns log-return, never consumes z-space
+        else:
+            transform = TargetTransform.fit(store.fd.target, store.fd.rv60, idx_fit)
+            z_fit = transform.encode(store.fd.target, store.fd.rv60, idx_fit)
+            z_es = transform.encode(store.fd.target, store.fd.rv60, idx_es)
         fold_rounds = _resolve_rounds(rounds, fold.name, getattr(model, "supports_rounds", True))
         if kind == "sequence":
             from .models_lstm import SeqBatch
 
             feats = _standardize_fit(feats_all, idx_fit)
             X_fit, X_es, X_val = SeqBatch(feats, idx_fit), SeqBatch(feats, idx_es), SeqBatch(feats, idx_val)
-        elif kind == "series":
+        elif kind == "series" and not cached_autots:
             from .models import SeriesBatch
 
             cov = _standardize_fit(feats_all, idx_fit) if feats_all is not None else None
             X_fit, X_es, X_val = (SeriesBatch(store.ts, store.r1, i, cov, tuple(names or ())) for i in (idx_fit, idx_es, idx_val))
-        else:
+        elif not cached_autots:
             X_fit, X_es, X_val = store.matrix(idx_fit, colset), store.matrix(idx_es, colset), store.matrix(idx_val, colset)
         res = model.fit_predict(X_fit, z_fit, X_es, z_es, X_val, fold_rounds, seed)
         # TimesFM/AutoTS trả thẳng log-return (§6.7); tree/LSTM trả z-space của B0 → decode với rv60 của đúng origin

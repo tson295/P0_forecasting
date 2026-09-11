@@ -229,6 +229,8 @@ def model_for(cfg: RunConfig, name: str, allow_cpu: bool):
         params["adapter_dir"] = str(cfg.exp_dir / "lora")  # adapter LoRA đã freeze: artifact versioned (LFS)
     if name in ("autots_wr", "autots_mr") and "artifact_dir" not in params:
         params["artifact_dir"] = str(cfg.exp_dir / "autots_fits" / name)
+    if cfg.phase == "tfm_autots" and name in ("autots_wr", "autots_mr"):
+        params.setdefault("preprocess_cache_dir", str(cfg.exp_dir / "autots_preprocess" / name))
     m = make_model(name, params, allow_cpu=allow_cpu)
     # đánh dấu: model này dựng lại được Y HỆT trong worker GPU từ (cfg, name, allow_cpu) → được phép đi qua scheduler.
     # Model mang state riêng (AutoTS frozen template, stub trong test) KHÔNG có dấu này và luôn chạy trong process gọi.
@@ -641,6 +643,12 @@ def cmd_loop(cfg: RunConfig, args) -> None:
     if args.max_candidates:
         cands = cands[: args.max_candidates]
     model = model_for(cfg, args.model, args.allow_cpu)
+    if getattr(model, "preprocess_cache_dir", None):
+        from .autots_cache import prepare_cache
+
+        say(f"[{mname}] preparing CPU cache for all candidate columns/folds before any fit")
+        cache_report = prepare_cache(cfg, store, folds, model, base, cands, log=say)
+        say(f"[{mname}] CACHE READY: {cache_report['path']} (reuse={cache_report['cache_hit']})")
     nw = fold_parallel.configure(cfg, model, mname, args.allow_cpu)
     if nw > 1:
         devs, slots, _ = gpu.worker_slots(cfg)

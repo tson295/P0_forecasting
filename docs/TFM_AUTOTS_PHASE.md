@@ -53,10 +53,43 @@ Baseline không có covariates vẫn chỉ dùng native TimesFM. Các metrics gi
 dùng residual backcast trong context, còn ở đây học lỗi forecast theo horizon trên các origins đã biết nhãn
 ở training-side. Không refit beta theo mỗi origin VAL và không pooled fit qua các origins tương lai.
 
+## AutoTS: CPU cache trước feature search
+
+`loop autots_wr` và `loop autots_mr` tự gọi `autots_cache.prepare_cache()` trước calibration và candidate
+đầu tiên. Mỗi nhánh chuẩn bị toàn bộ pool S0 + các cột của 163 candidates theo cấu hình, cho mọi fold/seed.
+Không cần chạy thêm lệnh prepare riêng.
+
+```text
+CPU: extract feature pool → scaler FIT-only → training X/Y + prediction contexts
+                                      │
+                                CACHE READY
+                                      │
+                 candidate → chọn cột/seed rows → GPU fit → batch predict → metric
+```
+
+- Cache dùng `.npy` mở read-only bằng memory map trong `autots_preprocess/autots_wr|autots_mr/`.
+  Scaler, covariates theo phút và masks FIT/ES/VAL được chuẩn bị một lần mỗi fold; candidate không dựng
+  lại full-grid feature matrix hoặc chuẩn hoá lại. Calibration, add-one, PI, pruning và confirmation dùng chung.
+- WR cache windows, targets và bootstrap row selectors theo seed, giữ cách lấy mẫu có hoàn lại của
+  AutoTS 1.0.4, kể cả khi `max_windows` lớn hơn số windows. Khi fit chỉ lấy đúng rows/columns đã chọn.
+- MR cache rolling training features, next-return targets và thống kê lọc cột. Mask cuối vẫn xét đúng
+  tập cột và thứ tự của candidate; không loại toàn cục một cột chỉ vì nó trùng với cột ngoài candidate.
+- Cache VAL histories cho cả WR/MR và rolling features bước đầu cho MR. Bước 2–3 của MR vẫn phải cập nhật
+  features từ prediction của chính candidate đó; không thể dùng chung chúng giữa các model đã fit khác nhau.
+- Chỉ publish `READY.json` sau khi tất cả fold đã chuẩn bị xong. Key gồm code, data, dependency versions,
+  preprocessing recipe, feature pool, origin masks và seeds. Giữ thư mục `.building.*` khi bị ngắt; không coi
+  cache dở là ready. Worker mở cache trên disk, không nhận bản sao toàn pool qua mỗi task.
+
+Cache này phục vụ feature search WR/MR. Bước `autots-search` cuối vẫn dùng native template bake-off và
+refit trên FIT+ES với các internal validation windows riêng. Nó không dùng nhầm cache FIT của search.
+CPU vẫn thực hiện chọn/copy cột, chuyển dữ liệu vào estimator, metrics và recursive features cần thiết;
+GPU-only áp dụng cho training, không có CPU training fallback.
+
 ## AutoTS predict theo batch
 
 Đã đọc source wheel AutoTS 1.0.4 từ PyPI, không cài/import/chạy thư viện trong phiên sửa code.
-Training vẫn gọi native WR/MR và framework template search. Chỉ rolling outer prediction thay đường thực thi:
+Feature search fit estimator native từ ma trận đã cache; template bake-off vẫn gọi framework AutoTS.
+Rolling outer prediction dùng đường thực thi theo batch:
 
 - WR: dựng các windows và origin covariates thành ma trận; estimator predict cả batch cho ba bước.
 - MR: mỗi origin là một cột history riêng khi gọi rolling feature generator. Chuyển feature cuối thành
@@ -73,7 +106,9 @@ Training vẫn gọi native WR/MR và framework template search. Chỉ rolling o
 - `lora/`: adapter, forecast_cache, residual_heads có coefficients/scaler/features/partition metadata,
   runtime records tách adapter/cache, calibration forecast/cache, residual fit và prediction/cache.
 - `autots_fits/`: estimator và inference state đã fit; không serialize lại toàn bộ FIT/X/Y cho mỗi candidate.
-  JSON ghi frame-building time, native fit time, batched prediction time và trace các batches thật.
+  JSON ghi cache path, frame-building time, fit time, batched prediction time và trace các batches thật.
+  Với cache, `prepared_fit` tách `selection_seconds` và `gpu_fit_seconds` (thời gian gọi fit thật, gồm
+  transfer/backend setup; không phải CUDA kernel time thuần). `READY.json` ghi preprocessing time và dung lượng.
 - `wins/`, feature-search logs và predictions dùng định dạng cũ; hai bảng `tfm_autots_*` tổng hợp hai family.
   RMSE gain dùng mean-seed RMSE; R² OS dùng mean của seed-specific MSE chia cùng E0 MSE, không bình phương
   mean-seed RMSE rồi gọi là mean MSE. Aggregation được ghi rõ, không gọi mean-fold là pooled.
