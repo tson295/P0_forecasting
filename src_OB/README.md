@@ -127,6 +127,9 @@ bin 16-bit/global memory của CUDA và làm process segfault, exit 139). Sau m�
 và dừng job nếu device không phải CUDA, còn linear tree/GOSS, hoặc objective tính gradient trên CPU.
 Không fix sẵn backend thắng, số cây, learning rate hay window. Default: 12 candidate ban đầu, 3 generation,
 2 vòng validation bổ sung. AutoTS sinh/chấm/chọn tham số; không search subset feature hoặc learned transform.
+pandas 3.0.5 (`core/sample.py:154`) từ chối lần rút có trọng số không hoàn lại mà `NewGeneticTemplate` của AutoTS 1.0.4
+dùng khi sinh generation mới. Trong scope search, adapter trả lại đúng cách rút của pandas cũ (`random_state.choice`
+với p) cho riêng trường hợp đó; budget, trọng số và mọi lần rút khác giữ nguyên.
 
 Adapter trong `autots_native.py` giữ GPU allowlist, căn feature quan sát được theo window của candidate,
 và dùng native window maker riêng trong từng segment liên tục rồi fit chung một GPU estimator.

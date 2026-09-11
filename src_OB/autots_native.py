@@ -199,15 +199,30 @@ def gpu_search_space(cfg, data, horizon):
         estimator = original_retrieve(spec, *args, **kwargs)
         return GPURegressor(estimator, "lgbm" if spec["model"] == "LightGBM" else "xgb")
 
+    import pandas.core.sample as pandas_sample
+    original_sample = pandas_sample.sample
+
+    def legacy_weighted_sample(obj_len, size, replace, weights, random_state):
+        # pandas 3.0.5 (core/sample.py:154) refuses a weighted draw without replacement when size * max(p) > 1,
+        # which AutoTS 1.0.4 NewGeneticTemplate reaches (fold3/autots/h120s crashed). Only that case gets the draw
+        # older pandas made (random_state.choice with p); every other call keeps pandas' own path unchanged.
+        if weights is not None and not replace and weights.sum() != 0:
+            p = weights / weights.sum()
+            if size * p.max() > 1:
+                return random_state.choice(obj_len, size=size, replace=False, p=p).astype(np.intp, copy=False)
+        return original_sample(obj_len, size, replace, weights, random_state)
+
     # Scoped integration for pinned AutoTS. No edits to library files or src/p0.
     native.WindowRegression = factory.WindowRegression = ObservedOrderBookRegression
     native.retrieve_regressor = retrieve
+    pandas_sample.sample = legacy_weighted_sample
     try:
         yield ObservedOrderBookRegression
     finally:
         native.WindowRegression = original_class
         factory.WindowRegression = original_factory_class
         native.retrieve_regressor = original_retrieve
+        pandas_sample.sample = original_sample
 
 
 def run(cfg, data, fold, val_ids, horizon, out):
