@@ -16,6 +16,9 @@ duyệt); checker ZF + ZA không ERROR. Không còn quyết định mở.
   `train --resume` có từ 688fefd; attempts ở `experiments/orderbook_zenodo/attempts/`.
 - Train code theo cell: d8797c5 (15), 2a5a1c3 (90 non-AutoTS), 37aae35 (7 AutoTS v2), 6108a1d (8 AutoTS v2).
 - Backup: toàn bộ push `origin/OB` (xem `experiments/orderbook_zenodo/BACKUP_STATUS.md`).
+- Figures hậu kỳ: `python -m src_OB visualize --config configs/orderbook_zenodo.json` → `experiments/orderbook_zenodo/figures/`
+  (30 ảnh path TimesFM ZS/LoRA + AutoTS v2, 2 heatmap). `docs/visualize.txt` không tồn tại trong repo lúc làm (2026-09-11);
+  làm theo yêu cầu session + quy ước RESEARCH_PLAN §7.3 (RUN_REPORT §8).
 
 ## Nếu có việc tiếp theo
 

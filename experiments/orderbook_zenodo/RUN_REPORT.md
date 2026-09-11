@@ -227,3 +227,24 @@ Không còn. Quyết định về target AutoTS đã được user duyệt và t
   `CHECKER_FINDINGS.md`, `BACKUP_STATUS.md`.
 - Toàn bộ đã push lên `origin/OB` (LFS cho parquet/joblib/pt); chi tiết commit trong `BACKUP_STATUS.md`. Raw tar và
   checkpoint pretrained TimesFM không commit (tải lại được theo md5/revision đã pin).
+
+## 8. Figures (hậu kỳ, 2026-09-11)
+
+- User yêu cầu đọc `docs/visualize.txt`, nhưng file này không có trong repo (không có ở nhánh `origin/OB`, trong lịch sử
+  git hay trên đĩa). Figure được làm theo yêu cầu trong session: khoảng 30 ảnh chồng TimesFM và AutoTS, mỗi ảnh đủ
+  t → t+1 → t+2 → t+3, heatmap nếu đủ số liệu, chỉ dùng artifact đã lưu. Quy ước lấy từ `docs/RESEARCH_PLAN.md` §7.3:
+  actual đen, E0 xám nét đứt, màu/marker cố định cho mỗi model, heatmap diverging dùng chung một thang.
+- Lệnh: `python -m src_OB visualize --config configs/orderbook_zenodo.json` (`src_OB/visualize.py`). Lệnh không train,
+  không inference, không dùng GPU, và dừng nếu origin/actual/E0 khác nhau giữa các family.
+- `figures/paths/`: 30 ảnh, mỗi ảnh một origin. Mỗi ngày trong 10 ngày VAL lấy origin chung đầu tiên trong các giờ
+  04:00/12:00/20:00 UTC. Mỗi ảnh chồng TimesFM zero-shot, TimesFM LoRA, AutoTS v2, actual, E0 và mid thô giữa các mốc;
+  nhãn ghi lỗi tuyệt đối theo từng horizon.
+- `figures/heatmap_fold_horizon.png` (5 fold × 3 h, lấy từ summary) và `figures/heatmap_day_horizon.png` (10 ngày
+  VAL × 3 h; mỗi ngày có 2.999–20.427 origin, tính lại từ predictions). Kèm `figures/index.md`, `origins.csv`,
+  `day_gains.csv`.
+- Những gì thấy trên figure (chỉ để nhìn, kết luận vẫn theo metric §5):
+  - AutoTS v2 gần như trùng đường E0, vì model dự báo return xấp xỉ 0 (ZA-I2). Nó chỉ kém rõ ở 10-20 và 10-21 tại
+    h120/h180 (fold5, ZA-I3).
+  - TimesFM zero-shot dao động quanh E0: dương ở 10-16 (cả ba horizon) và 10-12 (h60/h120), âm rõ ở 10-13, 10-15
+    và 10-20.
+  - TimesFM LoRA đỏ đậm ở mọi ô.

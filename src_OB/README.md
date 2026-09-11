@@ -188,6 +188,18 @@ Calendar coverage không đồng nghĩa liên tục. Window của LSTM, TimesFM 
 segment hợp lệ. Nếu các segment quá ngắn cho context cấu hình (TimesFM hiện 512 điểm), tập origin có thể
 rỗng; pipeline báo thiếu dữ liệu, không giảm context ngầm hoặc nối qua gap để đủ sample.
 
+## Visualize hậu kỳ
+
+`python -m src_OB visualize --config <config>` (`src_OB/visualize.py`) chỉ đọc artifact đã lưu: `predictions.parquet`
+của cell completed, `summary/per_fold_per_horizon.csv` và timeline mid thô đã prepare. Không train, không inference,
+không cần GPU. Output ở `<output_dir>/figures/`:
+- `paths/`: mỗi ảnh là một origin, trục x t → t+1 → t+2 → t+3 (h60/h120/h180), trục y là thay đổi giá so với mid tại t.
+  Chồng TimesFM zero-shot, TimesFM LoRA, AutoTS; actual đen (mid as-of t+h), E0 xám nét đứt, mid thô giữa các mốc
+  xám nhạt. Origin theo quy tắc cố định: origin chung đầu tiên trong 04:00/12:00/20:00 UTC của mỗi ngày VAL.
+- `heatmap_fold_horizon.png`, `heatmap_day_horizon.png`: gain RMSE so với E0, thang diverging chung cắt ở ±0,1, số thật
+  trong ô; `origins.csv`, `day_gains.csv`, `index.md`.
+Lệnh dừng nếu origin/actual/E0 khác nhau giữa các family (không vẽ trên tập không chung).
+
 ## Dùng trên Vast
 
 Từ root repo, dùng image Vast CUDA 12, cài CUDA-enabled PyTorch và GPU-enabled LightGBM trước, rồi:
