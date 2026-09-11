@@ -16,7 +16,13 @@ lớn (`data/orderbook/**/*.bin`, `experiments/**/*.parquet|.pt|.joblib`) đi qu
 
 | e171d03 | RUN_REPORT COMPLETE, CHECKER_FINDINGS lượt ZF, BACKUP_STATUS, MEMORY | `ls-remote` = e171d03180a1bc1e76c085767d5bb2e9de1bc227 |
 
-Commit chứa bản cập nhật file này nằm ngay sau e171d03 và cũng được kiểm tra bằng `git ls-remote origin refs/heads/OB`.
+| ecfc67d | evidence quét Zenodo theo ngày + BACKUP_STATUS | `ls-remote` = ecfc67dbf06c174ec28c7134bd2cd5ce78bd05e1 |
+| e8ca931 | AutoTS adapter v2 (log-return quanh origin) + README | push cùng 37aae35 |
+| 37aae35 | `git mv` 15 cell AutoTS v1 → `superseded/autots_raw_price/` + README | `ls-remote` = 37aae35970bc9c50ebdd396af628baa03e1d5c97 |
+| 6108a1d | shim pandas weighted sample cho AutoTS 1.0.4 | `ls-remote` = 6108a1de91de8a3f5bc6ff77c8da93d2dee4e021 |
+| 749712b | 15 cell AutoTS v2, attempt fold3/autots/h120s, summary sinh lại, log; 30 object LFS | `ls-remote` = 749712bb4324b6a7819621699b2742e2ab476722 |
+
+Commit báo cáo cuối của lượt AutoTS v2 nằm ngay sau 749712b và được kiểm tra bằng `git ls-remote origin refs/heads/OB`.
 
 Không nằm trong git (có chủ đích):
 - Raw `data/orderbook/zenodo_20046390/btcusdt_lob_oct2023.tar.gz` (308.618.431 B): tải lại được từ Zenodo record 20046390,

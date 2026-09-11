@@ -50,3 +50,25 @@ Kết luận: **không ERROR**. Checker chỉ đọc; load checkpoint/memmap v�
 | ZF-I4 | INFO | LoRA train loss 0,019–0,078 nhưng thua E0 và zero-shot 15/15; LSTM tương tự; target các origin chồng lấp | ghi RUN_REPORT §5; không tune bằng outer VAL |
 | ZF-I5 | INFO | `verbosity=-1` che cảnh báo C++ của LightGBM; bằng chứng GPU là config hiệu lực (ZF-P6); CPU fit của attempt1 suy từ replay seed | ghi RUN_REPORT §3 |
 | ZF-I6 | INFO | zero-shot không tự ghi repo/revision trong artifact cell; truy qua commit 2a5a1c3 và log tải checkpoint | ghi RUN_REPORT §4 |
+
+## Lượt ZA — chạy lại AutoTS adapter v2 (sau TRAIN_EXIT=0 18:29:34Z, 2026-09-11)
+
+Kết luận: **không ERROR**. Checker chỉ đọc; load model.joblib với `CUDA_VISIBLE_DEVICES=""`, không fit/predict.
+
+| ID | Mức | Nội dung (evidence) | Xử lý |
+|---|---|---|---|
+| ZA-P1 | PASS | `CenteredLogReturn` (autots_native.py:53-72): X = log(window) − log(giá mới nhất), y = log(y) − log(origin), dự báo origin·exp(ŷ), center từng hàng, regressor giữ nguyên; cột W−1 là origin cả lúc fit (`window_functions.py:129-139`, regressor gắn đầu cửa sổ + `shift(-W)`) lẫn predict (`last_window`, `sklearn.py:2424-2447`); không lookahead; guard contract mở rộng; float32 giống nhau fit/predict; selection vẫn raw-price RMSE (`metric_weighting` chỉ rmse); diff 2a5a1c3→HEAD trong code chỉ `autots_native.py` + README | — |
+| ZA-P2 | PASS | shim pandas trùng khít điều kiện raise (`pandas/core/sample.py:146-159`), nhánh thay thế là lời gọi cũ của pandas cùng `rs`; mọi lời gọi khác đi hàm gốc, không tiêu thụ RNG thêm; khôi phục trong `finally`; chỉ `auto_model.py:3054` có thể chạm; 7 cell trên 37aae35 hoàn tất nên đi cùng đường search như 6108a1d | — |
+| ZA-P3 | PASS | 15/15 cell đủ artifact, 0 failed; run.json config/revision/prepared đúng, train_code 37aae35 (7) và 6108a1d (8), tree sạch, prior_attempts đúng; `target`/`adapter_version` trong selected_model.json và model.joblib; estimator `CenteredLogReturn`→`GPURegressor`; LightGBM cuda, `linear_tree 0`, `max_bin 255`; XGBoost `grow_gpu_hist`/`cuda:0`; metric tính lại sai lệch 0; origin/actual/E0 giống hệt 7 family khác | — |
+| ZA-P4 | PASS | 27 candidate × 3 vòng (fold5 h180: 26 do loại trùng), 0 exception, 0 vi phạm allowlist, window ≤ 90; chọn = argmin RMSE nội bộ 15/15; split tái lập 45/45 khớp, target cuối ≤ 23:59 ngày train_end, purge ~24 h; outer VAL chỉ dùng trong `infer` | — |
+| ZA-P5 | PASS | superseded: 15 × 10 blob giống hệt 40b4c45 (150 rename), README đúng, ngoài glob summary; `attempts/fold1/autots/h60s` không đổi; 105 cell family khác: `git diff 40b4c45 HEAD` rỗng | — |
+| ZA-P6 | PASS | summary 120 + 24 hàng khớp per-cell; AutoTS là v2, không lẫn v1/attempt | — |
+| ZA-P7 | PASS | latency batch 1 mỗi origin, 1.024 request mẫu, CUDA sync; p95 2,73/2,74/2,78 ms; max `observed_max_not_hard_bound` | — |
+| ZA-P8 | PASS | log v2 không có CPU/fallback/GPUOnly; chỉ traceback pandas (đã sửa ở 6108a1d) | — |
+| ZA-W1 | WARN | RUN_REPORT/MEMORY/CHECKER_FINDINGS/BACKUP_STATUS còn mô tả v1 (có câu sai với v2: "10 XGBoost + 5 LightGBM", "không cell nào chọn dart") | **Đã sửa**: RUN_REPORT §0/§1/§3/§3b/§4/§5/§6/§7 viết lại cho v2, MEMORY và BACKUP_STATUS cập nhật, lượt này được ghi |
+| ZA-I1 | INFO | v2 chọn 7 XGBoost + 8 LightGBM, 5 dart (fold3 h120, fold4 h60/h120/h180, fold5 h60); dart cuda, điểm cùng khoảng gbdt | ghi RUN_REPORT §3b |
+| ZA-I2 | INFO | nhiều model được chọn gần hằng số (std dự báo 2e-8…1,6e-4 so với thực 3,6e-4…3,8e-3; corr −0,05…+0,10); candidate XGBoost `base_score 0.5` lệch hằng +1,4% bị loại; hệ quả target không scale theo thiết kế đã duyệt | ghi RUN_REPORT §3b/§5 |
+| ZA-I3 | INFO | fold5 h120 gain −0,334: 279 dự báo |ŷ| > 0,5% dồn 10-20 08:00, đúng dấu 40%, 73% SSE vượt E0; variance XGBoost W=5, không phải lỗi code | ghi RUN_REPORT §5 |
+| ZA-I4 | INFO | đột biến `fillna` không đổi dự báo (adapter đọc giá từ raw timeline) → tốn budget, không rò rỉ; `fake_date` chỉ cắt đầu split | ghi RUN_REPORT §3b |
+| ZA-I5 | INFO | P_origin trong model là float32, sai số ≤ 0,001 USDT so với E0 | không đáng kể |
+| ZA-I6 | INFO | prior_attempts của fold1/autots/h60s v2 trỏ tới hai attempt thời v1 | ghi RUN_REPORT §4 và README superseded |
