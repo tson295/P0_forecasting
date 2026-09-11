@@ -1,0 +1,4 @@
+{
+  "error": "GPU fit failed; no CPU retry: [CUDA] invalid argument /tmp/.tmpd3EroI/sdists-v9/pypi/lightgbm/4.7.0/7lt84pBZReOOdD6o/src/src/boosting/goss.hpp 66\n",
+  "type": "GPUOnlyError"
+}

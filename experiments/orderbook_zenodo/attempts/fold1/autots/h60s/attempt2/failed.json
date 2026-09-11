@@ -1,0 +1,6 @@
+{
+  "error": "process killed by SIGSEGV (launcher TRAIN_EXIT=139 at 2026-09-11T02:58:49Z) during AutoTS generation 0, Model Number 9: LightGBM gbdt, device_type cuda, max_bin 1000, lambda_l1 1, min_data_in_leaf 30, learning_rate 0.01, window 10 (parameters from the seeded template replay); no Python traceback because PYTHONFAULTHANDLER was off",
+  "type": "SIGSEGV",
+  "train_code": "688fefd307c18b076d37e8eda086cabc0e2142bb",
+  "recorded": "post hoc by the main session from logs/train.log; the crashed process could not write this file"
+}

@@ -1,0 +1,109 @@
+{
+  "status": "started",
+  "config": {
+    "provider": "zenodo",
+    "symbol": "BTCUSDT",
+    "exchange": "binance",
+    "dataset_repo": "zenodo:20046390",
+    "dataset_revision": "58507a0fe055f0f2d3a498c15fc7d8d2",
+    "zenodo_record": "20046390",
+    "zenodo_file": "btcusdt_lob_oct2023.tar.gz",
+    "source_license": "CC-BY-4.0 / CC-BY-NC-4.0; record disclaimer: academic peer review, reproducibility and non-commercial research only (user confirmed non-commercial research use on 2026-09-11)",
+    "raw_dir": "/home/ubuntu/P0_forecasting/data/orderbook/zenodo_20046390",
+    "prepared_dir": "/home/ubuntu/P0_forecasting/data/orderbook/prepared_zenodo_20046390",
+    "output_dir": "/home/ubuntu/P0_forecasting/experiments/orderbook_zenodo",
+    "levels": 10,
+    "book_max_depth": 1000,
+    "include_distances": false,
+    "horizons_seconds": [
+      60,
+      120,
+      180
+    ],
+    "context": 100,
+    "max_feed_gap_seconds": 10,
+    "max_price_age_seconds": 10,
+    "known_hard_gaps_utc": [],
+    "chunk_rows": 100000,
+    "train_days": 9,
+    "gap_days": 1,
+    "val_days": 2,
+    "step_days": 2,
+    "n_folds": 5,
+    "seed": 8587,
+    "inference": {
+      "batch_size": 32,
+      "single_origin_samples": 1024
+    },
+    "models": [
+      "lgbm",
+      "xgb",
+      "cat",
+      "xgbrf",
+      "lstm",
+      "autots",
+      "tfm_zero_shot",
+      "tfm_lora"
+    ],
+    "tree": {
+      "n_estimators": 400,
+      "max_depth": 6,
+      "learning_rate": 0.03,
+      "lightgbm_device": "cuda"
+    },
+    "neural": {
+      "hidden": 64,
+      "epochs": 10,
+      "batch_size": 256,
+      "lr": 0.001
+    },
+    "tfm": {
+      "context": 512,
+      "batch_size": 32,
+      "epochs": 5,
+      "lr": 0.0001,
+      "rank": 8,
+      "alpha": 16
+    },
+    "autots": {
+      "max_window_size": 90,
+      "max_windows": 200000,
+      "initial_candidates": 12,
+      "max_generations": 3,
+      "num_validations": 2,
+      "validation_points": 64
+    }
+  },
+  "fold": {
+    "name": "fold1",
+    "train_start": 1696204799893001,
+    "train_end": 1696982399893001,
+    "val_start": 1697068799893001,
+    "val_end": 1697241599893001
+  },
+  "model": "xgb",
+  "horizon_seconds": 180,
+  "strategy": "direct",
+  "observed_coverage": {
+    "start_inclusive_us": 1696118404385000,
+    "end_exclusive_us": 1697932799893001,
+    "valid_segment_microseconds": 1814394242002,
+    "source_first_observed_us": 1696118401449000,
+    "source_last_observed_us": 1697932799893000
+  },
+  "dataset_revision": "58507a0fe055f0f2d3a498c15fc7d8d2",
+  "prepared": {
+    "replay_version": 2,
+    "code_commit": "c68fc452378172cba9f10af04d85d1f39fce9eb1",
+    "code_uncommitted_paths": [],
+    "config_sha256": "78aa19aa43d3560403d43394e8003fae6da3eeaf61a4de35eabcd9e0c4890ac7"
+  },
+  "train_code": {
+    "code_commit": "d8797c56248b5ec40974b782f8a5b0f2f1e6101b",
+    "code_uncommitted_paths": [],
+    "config_sha256": "78aa19aa43d3560403d43394e8003fae6da3eeaf61a4de35eabcd9e0c4890ac7"
+  },
+  "created_at": 1789094826.3295817,
+  "n_train": 83671,
+  "n_val": 17447
+}
