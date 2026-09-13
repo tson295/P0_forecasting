@@ -48,6 +48,24 @@ Artifact: wins/tfm.json, wins/tfm_lora_baseline{,_seed0..2}, wins/tfm_lora_xreg{
 keepdrop_tfm.csv, prune_tfm.csv, prune_pi_tfm.csv, calib/tfm_base.json, lora/.
 03:55:37 → loop:autots_wr: CPU cache 256 cột × 5 fold (1.1-1.3 s/fold), add-one ~3.8 phút/candidate,
 123/163 lúc 11:53 → add-one dự kiến xong ~14:20, rồi prune PI + confirmation 3 seed.
+GIT: commit stage TFM = 32b1bb3 (2092 file: wins/, lora/, calib/tfm_base.json, 4 CSV tfm, champion_log.csv,
+runs/*loop_tfm_*, MEMORY; 0 file experiments/15d). PUSH LẦN 1 HỎNG: LFS Put lên github-cloud S3 bị "i/o timeout"
+(lỗi mạng, KHÔNG phải quota/auth; SSH auth OK, remote vẫn là ancestor). Đã set local lfs.concurrenttransfers=3,
+activitytimeout=300, dialtimeout=60, tlstimeout=60 rồi retry → PUSH THÀNH CÔNG 12:56 (76 LFS object, 294 MB,
+`02fe142..32b1bb3`, xác nhận bằng git log origin/tfm_autots). Băng thông upload thật ~455 KB/s ≈ 1.6 GB/giờ
+→ PHẢI push theo từng stage, không dồn vào commit cuối (autots_fits 925 MB + autots_preprocess 2.0 GB + MR sắp tới).
+Giữ nguyên 4 config lfs.* local này cho các lần push sau.
+BẰNG CHỨNG GPU AutoTS (autots_fits/autots_wr/*.json): prepared_fit.gpu_fit_seconds ≈ 29.5 s tách khỏi
+selection_seconds 0.14 s; train_rows 172735, train_columns 153; predict batch 256 origins × 3 steps ~0.016-0.018 s.
+autots_fits 925 MB / 1282 file (json+joblib), autots_preprocess 2.0 GB, READY.json preprocessing 36.8 s, 60 base cột/fold.
+GPU 0 % ở một lần đọc nvidia-smi là bình thường (xen kẽ CPU chọn cột/metric), không kết luận CPU fallback từ đó.
+2026-09-13 16:14:37: loop:autots_wr XONG (44336.1 s = 12.3 h) → loop:autots_mr bắt đầu.
+KẾT QUẢ WR: F*_raw 162 KEEP / 1 DROP, MedianGain vs baseline S0 = +0.1193 pp (WR HƠN S0, khác TFM);
+prune PI giữ 90/162 cột mới (+21 ext khoá, 72 B0 khoá); F_win = prune (confirmation F_raw vs F_pruned
+MedianGain +0.0683 pp, ε = 0.1690) → F_best = 90 cột mới + 21 ext khoá.
+Artifact WR: wins/autots_wr.json + autots_wr_seed0..2.npz, keepdrop_autots_wr.csv, prune_autots_wr.csv,
+prune_pi_autots_wr.csv, calib/autots_wr_base.json, runs/*autots_wr* (169), autots_fits/autots_wr (1.3 GB, 1740 file),
+autots_preprocess/autots_wr (2.0 GB). Chiến lược push: commit kết quả nhỏ TRƯỚC, khối nặng commit/push riêng sau.
 I1 (NCCL) CHỐT: process map cả hai bản — torch nvidia/nccl 2.28.9 và hệ thống 2.31.2 — lib_lightgbm.so đã nạp;
 single-GPU nên LightGBM không init NCCL collectives. Disk: output 3.8 GB, còn 29 GB.
 Khi loop:tfm xong: commit/push stage (keepdrop_tfm.csv, prune_pi_tfm.csv, wins/tfm*, lora/, log CSV) bằng path tường minh,
