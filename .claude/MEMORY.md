@@ -66,6 +66,31 @@ MedianGain +0.0683 pp, ε = 0.1690) → F_best = 90 cột mới + 21 ext khoá.
 Artifact WR: wins/autots_wr.json + autots_wr_seed0..2.npz, keepdrop_autots_wr.csv, prune_autots_wr.csv,
 prune_pi_autots_wr.csv, calib/autots_wr_base.json, runs/*autots_wr* (169), autots_fits/autots_wr (1.3 GB, 1740 file),
 autots_preprocess/autots_wr (2.0 GB). Chiến lược push: commit kết quả nhỏ TRƯỚC, khối nặng commit/push riêng sau.
+16:14:35 → loop:autots_mr: CACHE READY 16:15:37; add-one nhanh hơn WR NHIỀU vì fit MR rẻ thật, không phải CPU fallback:
+autots_fits/autots_mr/*.json có gpu_fit_seconds ≈ 1.34 s (WR ≈ 29.5 s), train_rows 172796, 80 cột,
+prediction 3.13 s cho 4317 origins (recursive 3 bước), GPU 75 %, VRAM 8.2 GB.
+17:06: MR 143/163 candidate, KEEP 30 / DROP 113 (ngược WR vốn gần như KEEP hết).
+Dung lượng MR: autots_fits/autots_mr 314 MB, autots_preprocess/autots_mr 2.5 GB. Disk còn 23 GB
+(LFS giữ thêm bản sao trong .git/lfs → mỗi GB commit tốn gấp đôi; nếu <10 GB thì xoá ~/.cache/pip 3.5 GB).
+17:38:13: loop:autots_mr XONG (5026.5 s = 1.4 h). KẾT QUẢ MR: F*_raw 33 KEEP / 130 DROP,
+MedianGain vs baseline S0 = +0.3597 pp (TỐT NHẤT trong ba nhánh); prune PI giữ 21/33 (+8 ext khoá, 72 B0 khoá);
+F_win = prune (confirmation MedianGain +0.0137 pp, ε = 0.0050) → F_best = 21 cột mới + 8 ext khoá.
+17:38:20: stage CUỐI `autots-search` chạy: bake-off 4 template / 2 nhóm shift ['wr:60','mr'], num_validations=10,
+2 frozen set × 5 fold. Sau đó summarize_phase ghi tfm_autots_per_fold_horizon.csv + tfm_autots_summary.csv + PHASE_REPORT.md.
+GIT: 1105a38 (kết quả WR nhỏ) đã push. 80554b6 (khối nặng WR 3.3 GB) đang push nền từ 16:20.
+QUY TẮC: KHÔNG chạy git add/commit khi tiến trình push nền còn sống (tranh index.lock) — chờ nó xong rồi mới commit stage MR.
+BĂNG THÔNG (đo 19:07-19:09 trên /proc/38694/io): push LFS còn sống nhưng chỉ ~64 KB/s (7 MB/120 s), đã truyền ~1.8/3.3 GB
+(lúc đầu đo 455 KB/s). Không phải quota/auth. ƯU TIÊN PUSH: (1) kết quả nhỏ + report + checker (vài MB, luôn đẩy được),
+(2) khối estimator/cache nhiều GB xếp sau; nếu không kịp thì giữ commit + LFS object local và ghi PUSH_PENDING
+đúng từng path kèm số đo, KHÔNG nói đã push/backup ngoài máy.
+19:15: đã ghi BẢN NHÁP experiments/tfm_autots/RUN_REPORT.md với toàn bộ evidence đã xác minh (data coverage, provenance
+env/checkpoint, stage+runtime thật, kết quả TFM/WR/MR, lỗi đã sửa, hạn chế, bảng trạng thái git). CÒN THIẾU (đánh dấu `CHỜ`):
+runtime + kết quả `autots-search`, hai bảng tfm_autots_per_fold_horizon.csv và tfm_autots_summary.csv, mục summary,
+và dòng push của các commit MR/summary. Cuối phase chỉ cần điền các mục CHỜ đó rồi commit/push.
+21:10 bake-off evidence: 5 fit record có frozen_template (5 fold của đơn vị F_WR_best|wr:60), fit_timing_scope
+"native preprocessing plus GPU fit", fit 5.6-56.1 s, predict 0.32 s, prepared_fit=null → KHÔNG có gpu_fit_seconds
+tách riêng cho đường native; ghi đúng vậy, không trích số GPU thuần không tồn tại. Không record nào có dấu CPU fallback.
+Disk 21:04: còn 23 GB, output 7.0 GB, .git/lfs 3.6 GB, ~/.cache/pip 4.1 GB (chỉ xoá khi disk < 10 GB).
 I1 (NCCL) CHỐT: process map cả hai bản — torch nvidia/nccl 2.28.9 và hệ thống 2.31.2 — lib_lightgbm.so đã nạp;
 single-GPU nên LightGBM không init NCCL collectives. Disk: output 3.8 GB, còn 29 GB.
 Khi loop:tfm xong: commit/push stage (keepdrop_tfm.csv, prune_pi_tfm.csv, wins/tfm*, lora/, log CSV) bằng path tường minh,
