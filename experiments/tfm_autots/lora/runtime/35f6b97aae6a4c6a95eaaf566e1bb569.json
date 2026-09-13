@@ -1,0 +1,31 @@
+{
+  "adapter": "tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_es_6e8bd73839922f9deae2",
+  "residual_head": null,
+  "features": [],
+  "split": {
+    "contract": "tfm-first-heldout-residual-v1",
+    "purge_seconds": 3600,
+    "partitions": {
+      "lora_fit": {
+        "first_origin": 1725418800,
+        "last_origin": 1734915180,
+        "n": 158230
+      },
+      "lora_es": {
+        "first_origin": 1734919020,
+        "last_origin": 1735350780,
+        "n": 7197
+      },
+      "residual_fit": {
+        "first_origin": 1735354620,
+        "last_origin": 1735786380,
+        "n": 7197
+      }
+    }
+  },
+  "lora_or_cache_seconds": 0.004572188947349787,
+  "calibration_forecast_or_cache_seconds": 0.0,
+  "residual_fit_seconds": 0.0,
+  "prediction_or_cache_seconds": 0.00012701191008090973,
+  "n_predict": 4317
+}

@@ -1,0 +1,110 @@
+{
+  "contract": {
+    "adapter": "f0db004f567a568276cf635cd9064cac00e2e6d0f3c7714e23217e9eef4c08a5",
+    "adapter_key": "tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_ep1_b355371ca8ebbeb9979b",
+    "contract": "tfm-first-heldout-residual-v1",
+    "data": "a57630d0aa7d95c4299c18293f0df0318270562086c1d9558159d64bf9a77e28",
+    "forecast": {
+      "force_flip_invariance": true,
+      "infer_is_positive": false,
+      "max_context": 512,
+      "max_horizon": 128,
+      "normalize_inputs": true,
+      "per_core_batch_size": 256,
+      "return_backcast": false
+    },
+    "mean_head": true,
+    "origins": "43b050d8ae25908fe88b28ce0e6ac3aab9f6b6a3a256fdd3029cb47535040cc5",
+    "repo": "google/timesfm-2.5-200m-pytorch",
+    "revision": "1d952420fba87f3c6dee4f240de0f1a0fbc790e3"
+  },
+  "batches": [
+    {
+      "start": 0,
+      "origins": 256,
+      "seconds": 0.6671558648813516
+    },
+    {
+      "start": 256,
+      "origins": 256,
+      "seconds": 0.717067597899586
+    },
+    {
+      "start": 512,
+      "origins": 256,
+      "seconds": 0.7077736691571772
+    },
+    {
+      "start": 768,
+      "origins": 256,
+      "seconds": 0.691806087968871
+    },
+    {
+      "start": 1024,
+      "origins": 256,
+      "seconds": 0.6950972839258611
+    },
+    {
+      "start": 1280,
+      "origins": 256,
+      "seconds": 0.7072846929077059
+    },
+    {
+      "start": 1536,
+      "origins": 256,
+      "seconds": 0.697625330882147
+    },
+    {
+      "start": 1792,
+      "origins": 256,
+      "seconds": 0.6951418379321694
+    },
+    {
+      "start": 2048,
+      "origins": 256,
+      "seconds": 0.7067812529858202
+    },
+    {
+      "start": 2304,
+      "origins": 256,
+      "seconds": 0.6970313731580973
+    },
+    {
+      "start": 2560,
+      "origins": 256,
+      "seconds": 0.6951786710415035
+    },
+    {
+      "start": 2816,
+      "origins": 256,
+      "seconds": 0.7007301151752472
+    },
+    {
+      "start": 3072,
+      "origins": 256,
+      "seconds": 0.6977062139194459
+    },
+    {
+      "start": 3328,
+      "origins": 256,
+      "seconds": 0.6992572569288313
+    },
+    {
+      "start": 3584,
+      "origins": 256,
+      "seconds": 0.7003095750696957
+    },
+    {
+      "start": 3840,
+      "origins": 256,
+      "seconds": 0.699999026954174
+    },
+    {
+      "start": 4096,
+      "origins": 221,
+      "seconds": 0.6895297220908105
+    }
+  ],
+  "cache_hit": false,
+  "timing_scope": "real native forecast batches, no warmup"
+}

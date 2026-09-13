@@ -1,0 +1,371 @@
+{
+ "model": "tfm_lora_baseline",
+ "colset": {
+  "b0": [],
+  "ext": [],
+  "locked_b0": [],
+  "locked_ext": []
+ },
+ "rmse_mean": [
+  [
+   73.20657717457716,
+   102.04531556125319,
+   125.24715225605975
+  ],
+  [
+   47.71188832268606,
+   68.42123205370378,
+   82.37607013285404
+  ],
+  [
+   78.19538992572967,
+   110.18314074402497,
+   135.68731631255488
+  ],
+  [
+   46.039932233460725,
+   66.13727717493593,
+   81.05670976742395
+  ],
+  [
+   25.27884427209499,
+   35.78666888524038,
+   43.502988779312226
+  ]
+ ],
+ "e0": [
+  [
+   73.088929789322,
+   101.79853648464048,
+   124.67308166898866
+  ],
+  [
+   47.703468603224756,
+   68.35523248430447,
+   82.1496112451706
+  ],
+  [
+   77.7121588887322,
+   108.93836980236009,
+   133.66494505420908
+  ],
+  [
+   45.93481574241685,
+   65.86993983257041,
+   80.56711274063696
+  ],
+  [
+   25.256956491416414,
+   35.74012664147736,
+   43.41365554405294
+  ]
+ ],
+ "eps": 0.35905329429797056,
+ "best_iters_by_seed": [
+  [
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ]
+  ],
+  [
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ]
+  ],
+  [
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ],
+   [
+    1,
+    1,
+    1
+   ]
+  ]
+ ],
+ "eval_seeds": [
+  8587,
+  8588,
+  8589
+ ],
+ "which": "baseline",
+ "folds": [
+  "fold1_2025-01-07",
+  "fold2_2025-05-30",
+  "fold3_2025-10-19",
+  "fold4_2026-03-11",
+  "fold5_2026-08-01"
+ ],
+ "seed_rmse": [
+  [
+   [
+    73.17779513767296,
+    101.99884896728494,
+    125.15377792944975
+   ],
+   [
+    47.77939753790341,
+    68.49110662394921,
+    82.44907811775514
+   ],
+   [
+    78.08717424159559,
+    109.62661136395808,
+    134.6695273606379
+   ],
+   [
+    46.08670111558074,
+    66.2262322181284,
+    81.16489982913991
+   ],
+   [
+    25.28053354324367,
+    35.806854114844896,
+    43.554570553294916
+   ]
+  ],
+  [
+   [
+    73.22506279920755,
+    101.98927703445031,
+    125.08147836666446
+   ],
+   [
+    47.68072227054662,
+    68.33699554576627,
+    82.23206912701669
+   ],
+   [
+    78.54115088428831,
+    111.37527996652535,
+    137.7331571623721
+   ],
+   [
+    46.00717017292716,
+    66.09808816419081,
+    80.97143644594289
+   ],
+   [
+    25.26446848869894,
+    35.74814932065582,
+    43.430601383604944
+   ]
+  ],
+  [
+   [
+    73.21687358685097,
+    102.14782068202433,
+    125.50620047206506
+   ],
+   [
+    47.675545159608134,
+    68.43559399139585,
+    82.44706315379031
+   ],
+   [
+    77.9578446513051,
+    109.54753090159144,
+    134.65926441465464
+   ],
+   [
+    46.02592541187428,
+    66.08751114248854,
+    81.03379302718905
+   ],
+   [
+    25.291530784342363,
+    35.80500322022045,
+    43.52379440103681
+   ]
+  ]
+ ],
+ "median_gain_vs_e0": -0.24241908099527087,
+ "lora_adapters": [
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_es_6e8bd73839922f9deae2",
+   "sha256": "ee54725204cfdb3b35d7ea7ade2b803d9c4a5281df2ebd01d132952a1d1e529a",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_es_6e8bd73839922f9deae2",
+   "sha256": "a5df350f1b02a6766fb0f7c60099b186966168cf18463040d68661ed65230f5e",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_es_6e8bd73839922f9deae2",
+   "sha256": "3a1cc7b5d3070b525fcba39d4cd51fac7a9dbb0589d9973f79e96ac8da2b42f7",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_es_0812bef241613f8cfc4c",
+   "sha256": "2de3cacc95a0e8c2187c699f0c7fa85965e75bbaa1524348935e96289126f51f",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_es_0812bef241613f8cfc4c",
+   "sha256": "ffb08ae0582deece0f4d8cc95fd79dc1d468e26467a7fc60e1d80b1bb5e0f656",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_es_0812bef241613f8cfc4c",
+   "sha256": "f3b4395f3964dcba13d3a647b353b93e5addf414f8c9d3952d61a621a1b35b97",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_es_889d01d973471efaf947",
+   "sha256": "4e544e4e0699348ddeb323af8e60667ce3d0ef3a4392158bf130b3c23f488748",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_es_889d01d973471efaf947",
+   "sha256": "e4f881e6128eb059e9cf036b91119ff50913bfe21f610b9be3fb7cce1554b70b",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_es_889d01d973471efaf947",
+   "sha256": "0caa96cb3df052d24839056e7fd41756dfd98608ec7f09dca6d6b364c9be1134",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_es_b355371ca8ebbeb9979b",
+   "sha256": "eb0a60a67f68b94cd29cd1fddc44bd5945e6bb42cec5bc589f140fe1d6e17e8e",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_es_b355371ca8ebbeb9979b",
+   "sha256": "f0db004f567a568276cf635cd9064cac00e2e6d0f3c7714e23217e9eef4c08a5",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_es_b355371ca8ebbeb9979b",
+   "sha256": "37a3dce9eefe9e9e05eb351a231c3f55ef064cabf6df56873fea699d24450633",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_es_4437784af1ff72cfb899",
+   "sha256": "6c526aabb0cfdd5e6b9f49f56b1106ac1b5b61f2fa8820febe0ed6eaa602fd6e",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_es_4437784af1ff72cfb899",
+   "sha256": "c988dae06516e6fe96142937117d15edce4ae6af5e16fe39f471a1e3239e2881",
+   "best_epoch": 1,
+   "mode": "es"
+  },
+  {
+   "key": "tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_es_4437784af1ff72cfb899",
+   "sha256": "bec6bcf00d91e546378b334d32564d4ebe8618f06cb5ceda20e768a4759ba823",
+   "best_epoch": 1,
+   "mode": "es"
+  }
+ ],
+ "role": "hệ thống A = TimesFM-LoRA baseline (LoRA fine-tune, 0 feature, 0 B0*, 0 XReg)",
+ "configuration": "tfm_lora_baseline",
+ "system": "A",
+ "feature_set": "∅",
+ "built_after": "confirmation F_raw vs F_pruned → F_win",
+ "backbone": "timesfm-2.5-200m",
+ "repo_id": "google/timesfm-2.5-200m-pytorch",
+ "revision": "1d952420fba87f3c6dee4f240de0f1a0fbc790e3",
+ "finetuned": true,
+ "finetune_method": "LoRA",
+ "lora": {
+  "r": 8,
+  "alpha": 16,
+  "dropout": 0.0,
+  "lr": 0.0001,
+  "weight_decay": 0.01,
+  "batch_size": 64,
+  "max_epochs": 20,
+  "patience": 5,
+  "train_stride": 1,
+  "targets": [
+   "attn.qkv_proj",
+   "attn.out",
+   "ff0",
+   "ff1"
+  ]
+ },
+ "native": true,
+ "covariates": [],
+ "input_series": "btc_1m_log_return",
+ "context": 512,
+ "forecast_horizon": 3,
+ "target": "cumulative_log_return_y1_y2_y3",
+ "xreg": null,
+ "calibration": "Chronological FIT prefix LoRA / inner ES / held-out residual suffix; outer ES unused"
+}

@@ -1,0 +1,170 @@
+{
+  "contract": {
+    "adapter": "4e544e4e0699348ddeb323af8e60667ce3d0ef3a4392158bf130b3c23f488748",
+    "adapter_key": "tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_es_889d01d973471efaf947",
+    "contract": "tfm-first-heldout-residual-v1",
+    "data": "a57630d0aa7d95c4299c18293f0df0318270562086c1d9558159d64bf9a77e28",
+    "forecast": {
+      "force_flip_invariance": true,
+      "infer_is_positive": false,
+      "max_context": 512,
+      "max_horizon": 128,
+      "normalize_inputs": true,
+      "per_core_batch_size": 256,
+      "return_backcast": false
+    },
+    "mean_head": true,
+    "origins": "ec52d05655ce28cbd8a90b83d75d3523d080a9e842ed6906711a42e8130321d6",
+    "repo": "google/timesfm-2.5-200m-pytorch",
+    "revision": "1d952420fba87f3c6dee4f240de0f1a0fbc790e3"
+  },
+  "batches": [
+    {
+      "start": 0,
+      "origins": 256,
+      "seconds": 0.6761193489655852
+    },
+    {
+      "start": 256,
+      "origins": 256,
+      "seconds": 0.7085561179555953
+    },
+    {
+      "start": 512,
+      "origins": 256,
+      "seconds": 0.7031747030559927
+    },
+    {
+      "start": 768,
+      "origins": 256,
+      "seconds": 0.687216981081292
+    },
+    {
+      "start": 1024,
+      "origins": 256,
+      "seconds": 0.6911581789609045
+    },
+    {
+      "start": 1280,
+      "origins": 256,
+      "seconds": 0.7011594029609114
+    },
+    {
+      "start": 1536,
+      "origins": 256,
+      "seconds": 0.6939710099250078
+    },
+    {
+      "start": 1792,
+      "origins": 256,
+      "seconds": 0.6871440908871591
+    },
+    {
+      "start": 2048,
+      "origins": 256,
+      "seconds": 0.6949108899571002
+    },
+    {
+      "start": 2304,
+      "origins": 256,
+      "seconds": 0.6928013251163065
+    },
+    {
+      "start": 2560,
+      "origins": 256,
+      "seconds": 0.6897037199232727
+    },
+    {
+      "start": 2816,
+      "origins": 256,
+      "seconds": 0.698174691060558
+    },
+    {
+      "start": 3072,
+      "origins": 256,
+      "seconds": 0.6979734480846673
+    },
+    {
+      "start": 3328,
+      "origins": 256,
+      "seconds": 0.6912209698930383
+    },
+    {
+      "start": 3584,
+      "origins": 256,
+      "seconds": 0.6960686999373138
+    },
+    {
+      "start": 3840,
+      "origins": 256,
+      "seconds": 0.697965141851455
+    },
+    {
+      "start": 4096,
+      "origins": 256,
+      "seconds": 0.6959860459901392
+    },
+    {
+      "start": 4352,
+      "origins": 256,
+      "seconds": 0.6931848439853638
+    },
+    {
+      "start": 4608,
+      "origins": 256,
+      "seconds": 0.6951000720728189
+    },
+    {
+      "start": 4864,
+      "origins": 256,
+      "seconds": 0.6944451280869544
+    },
+    {
+      "start": 5120,
+      "origins": 256,
+      "seconds": 0.6965722509194165
+    },
+    {
+      "start": 5376,
+      "origins": 256,
+      "seconds": 0.6966195551212877
+    },
+    {
+      "start": 5632,
+      "origins": 256,
+      "seconds": 0.6921456078998744
+    },
+    {
+      "start": 5888,
+      "origins": 256,
+      "seconds": 0.6930053781252354
+    },
+    {
+      "start": 6144,
+      "origins": 256,
+      "seconds": 0.6970479809679091
+    },
+    {
+      "start": 6400,
+      "origins": 256,
+      "seconds": 0.6957009409088641
+    },
+    {
+      "start": 6656,
+      "origins": 256,
+      "seconds": 0.6906368210911751
+    },
+    {
+      "start": 6912,
+      "origins": 256,
+      "seconds": 0.6944590241182595
+    },
+    {
+      "start": 7168,
+      "origins": 29,
+      "seconds": 0.6484147058799863
+    }
+  ],
+  "cache_hit": false,
+  "timing_scope": "real native forecast batches, no warmup"
+}

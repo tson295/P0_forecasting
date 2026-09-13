@@ -1,0 +1,55 @@
+{
+  "adapter": "tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_ep1_6e8bd73839922f9deae2",
+  "residual_head": "a2f040e5ebaf13d50a45bfe97bf3b28b761ebbb41045623041866b9fa0816e6c",
+  "features": [
+    "vwap_amt_gap_2",
+    "vwap_amt_gap_3",
+    "vwap_amt_gap_4",
+    "vwap_amt_gap_5",
+    "vwap_amt_gap_8",
+    "vwap_amt_gap_10",
+    "ret_1",
+    "ret_2",
+    "ret_3",
+    "ret_4",
+    "ret_5",
+    "ret_8",
+    "ret_10",
+    "ret_15",
+    "log_rv2_rv60",
+    "log_rv3_rv60",
+    "log_rv4_rv60",
+    "log_rv5_rv60",
+    "log_rv8_rv60",
+    "log_rv10_rv60",
+    "log_rv15_rv60",
+    "log_c_ema2",
+    "log_c_ema3"
+  ],
+  "split": {
+    "contract": "tfm-first-heldout-residual-v1",
+    "purge_seconds": 3600,
+    "partitions": {
+      "lora_fit": {
+        "first_origin": 1725418800,
+        "last_origin": 1734915180,
+        "n": 158230
+      },
+      "lora_es": {
+        "first_origin": 1734919020,
+        "last_origin": 1735350780,
+        "n": 7197
+      },
+      "residual_fit": {
+        "first_origin": 1735354620,
+        "last_origin": 1735786380,
+        "n": 7197
+      }
+    }
+  },
+  "lora_or_cache_seconds": 0.004693576134741306,
+  "calibration_forecast_or_cache_seconds": 0.00017217895947396755,
+  "residual_fit_seconds": 0.00828696321696043,
+  "prediction_or_cache_seconds": 0.0057006648276001215,
+  "n_predict": 4317
+}

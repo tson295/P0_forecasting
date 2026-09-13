@@ -1,0 +1,36 @@
+{
+  "adapter": "tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_ep1_b355371ca8ebbeb9979b",
+  "residual_head": "59f3a683a9593892c3ed51c7d70782d86c240aa673b3b5d2ded12221928ccbd3",
+  "features": [
+    "vwap_amt_gap_2",
+    "vwap_amt_gap_3",
+    "vwap_amt_gap_4",
+    "vwap_amt_gap_5"
+  ],
+  "split": {
+    "contract": "tfm-first-heldout-residual-v1",
+    "purge_seconds": 3600,
+    "partitions": {
+      "lora_fit": {
+        "first_origin": 1762456080,
+        "last_origin": 1771952460,
+        "n": 158031
+      },
+      "lora_es": {
+        "first_origin": 1771956300,
+        "last_origin": 1772388060,
+        "n": 7197
+      },
+      "residual_fit": {
+        "first_origin": 1772391900,
+        "last_origin": 1772823660,
+        "n": 7197
+      }
+    }
+  },
+  "lora_or_cache_seconds": 0.004916728939861059,
+  "calibration_forecast_or_cache_seconds": 0.00019741407595574856,
+  "residual_fit_seconds": 0.00457516685128212,
+  "prediction_or_cache_seconds": 0.004258004017174244,
+  "n_predict": 4317
+}

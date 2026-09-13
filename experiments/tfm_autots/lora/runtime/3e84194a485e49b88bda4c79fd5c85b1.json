@@ -1,0 +1,62 @@
+{
+  "adapter": "tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_ep1_6e8bd73839922f9deae2",
+  "residual_head": "cdf93f792604bb7b95b82c21e9514484d5416a4cc5739316987970a0571ab511",
+  "features": [
+    "vwap_amt_gap_2",
+    "vwap_amt_gap_3",
+    "vwap_amt_gap_4",
+    "vwap_amt_gap_5",
+    "vwap_amt_gap_8",
+    "vwap_amt_gap_10",
+    "ret_1",
+    "ret_2",
+    "ret_3",
+    "ret_4",
+    "ret_5",
+    "ret_8",
+    "ret_10",
+    "ret_15",
+    "log_rv2_rv60",
+    "log_rv3_rv60",
+    "log_rv4_rv60",
+    "log_rv5_rv60",
+    "log_rv8_rv60",
+    "log_rv10_rv60",
+    "log_rv15_rv60",
+    "log_c_ema2",
+    "log_c_ema3",
+    "log_c_ema4",
+    "log_c_ema5",
+    "log_c_ema8",
+    "log_c_ema10",
+    "log_c_ema15",
+    "log_ema2_ema5",
+    "log_ema2_ema8"
+  ],
+  "split": {
+    "contract": "tfm-first-heldout-residual-v1",
+    "purge_seconds": 3600,
+    "partitions": {
+      "lora_fit": {
+        "first_origin": 1725418800,
+        "last_origin": 1734915180,
+        "n": 158230
+      },
+      "lora_es": {
+        "first_origin": 1734919020,
+        "last_origin": 1735350780,
+        "n": 7197
+      },
+      "residual_fit": {
+        "first_origin": 1735354620,
+        "last_origin": 1735786380,
+        "n": 7197
+      }
+    }
+  },
+  "lora_or_cache_seconds": 0.0046415061224251986,
+  "calibration_forecast_or_cache_seconds": 0.00016288505867123604,
+  "residual_fit_seconds": 0.014219120144844055,
+  "prediction_or_cache_seconds": 0.007070705993101001,
+  "n_predict": 4317
+}

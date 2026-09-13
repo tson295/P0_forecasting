@@ -1,0 +1,39 @@
+{
+  "adapter": "tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_ep1_4437784af1ff72cfb899",
+  "residual_head": "8e7f980bd32bd0d43ec62087cb7912e4cdcb82f5a5acd584daab38ca31b38d13",
+  "features": [
+    "vwap_amt_gap_2",
+    "vwap_amt_gap_3",
+    "vwap_amt_gap_4",
+    "vwap_amt_gap_5",
+    "vwap_amt_gap_8",
+    "vwap_amt_gap_10",
+    "ret_1"
+  ],
+  "split": {
+    "contract": "tfm-first-heldout-residual-v1",
+    "purge_seconds": 3600,
+    "partitions": {
+      "lora_fit": {
+        "first_origin": 1774801800,
+        "last_origin": 1784298180,
+        "n": 158208
+      },
+      "lora_es": {
+        "first_origin": 1784302020,
+        "last_origin": 1784733780,
+        "n": 7197
+      },
+      "residual_fit": {
+        "first_origin": 1784737620,
+        "last_origin": 1785169380,
+        "n": 7169
+      }
+    }
+  },
+  "lora_or_cache_seconds": 0.004939120961353183,
+  "calibration_forecast_or_cache_seconds": 0.0001764779444783926,
+  "residual_fit_seconds": 0.005245204083621502,
+  "prediction_or_cache_seconds": 0.0046687000431120396,
+  "n_predict": 4300
+}
