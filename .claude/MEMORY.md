@@ -91,6 +91,39 @@ và dòng push của các commit MR/summary. Cuối phase chỉ cần điền c�
 "native preprocessing plus GPU fit", fit 5.6-56.1 s, predict 0.32 s, prepared_fit=null → KHÔNG có gpu_fit_seconds
 tách riêng cho đường native; ghi đúng vậy, không trích số GPU thuần không tồn tại. Không record nào có dấu CPU fallback.
 Disk 21:04: còn 23 GB, output 7.0 GB, .git/lfs 3.6 GB, ~/.cache/pip 4.1 GB (chỉ xoá khi disk < 10 GB).
+GIT 22:13-22:15: 80554b6 (khối nặng WR 3.4 GB / 919 LFS object) PUSH XONG sau 2 attempt (attempt 1 upload đủ rồi bị
+remote đóng kết nối lúc update ref, exit 141; attempt 2 chỉ cần update ref). 8e00a56 (kết quả MR + RUN_REPORT nháp
++ MEMORY) PUSH XONG. Remote hiện ở 8e00a56.
+BAKE-OFF 22:15: xong 3/4 đơn vị. F_WR_best|wr:60 (template thắng WindowRegression cả 5 fold),
+F_WR_best|mr, F_MR_best|wr:60 (outer VAL @ selection_seed 8587: MedianGain vs E0 = -0.5551 pp). Đơn vị cuối
+F_MR_best|mr bắt đầu 21:59:53, dự kiến xong ~00:00. autots_templates đã có 30 file.
+CÒN LẠI SAU KHI PHASE DỪNG GHI (commit cuối): autots_fits/* (cả record bake-off mới trong autots_wr),
+autots_preprocess/autots_mr 2.5 GB, series_preprocess 581 MB, autots_templates, log.csv, phase_progress.json,
+checker_log.jsonl, hai bảng summary, PHASE_REPORT.md, session training.log + exit_code.txt,
+RUN_REPORT hoàn chỉnh, CHECKER_FINDINGS mốc cuối. Khoảng 3.4 GB → push nền nhiều giờ, ưu tiên file nhỏ trước.
+=== PHASE XONG 2026-09-14 00:26:23 UTC, exit_code=0, phase_progress.status=completed, đủ 6 stage ===
+autots-search 24489.9 s (6.8 h). Tổng wall 19:01:35 (09-11) → 00:26:46 (09-14) ≈ 53h25m trên 1× RTX 3090.
+Code hash 03d7a4a8e4b34ff25f89cc51f397e898604e5eee0cf42fe96c99532e42c8cec2, config hash 822935ae5e8f.
+BAKE-OFF (autots_search.csv, MedianGain vs E0 @ selection_seed 8587, đơn vị pp):
+F_WR_best|wr:60 -0.3343 (WindowRegression) | F_WR_best|mr -0.2185 (MultivariateRegression) = FINAL |
+F_MR_best|wr:60 -0.5551 | F_MR_best|mr -0.3447. AutoTS-final = F_WR_best|mr, 111 cột ext,
+confirmation 3 seed: MedianGain vs E0 = -0.2185 pp, ε = 0.0050; reuse selection predictions cho seed 8587.
+SUMMARY (tfm_autots_summary.csv — CHÚ Ý: rmse_gain_vs_e0 và r2_os là PHÂN SỐ, không phải pp):
+autots h1/h2/h3: RMSE 54.0196/77.5051/96.4471 vs E0 53.9393/76.1404/92.8937 → gain -0.00101/-0.01322/-0.02801,
+R²_OS -0.00203/-0.02684/-0.05788. tfm h1/h2/h3: RMSE 54.0865/76.5147/93.5740 → gain -0.00223/-0.00404/-0.00613,
+R²_OS -0.00448/-0.00811/-0.01233. KẾT LUẬN THẬT: KHÔNG family nào thắng E0 ở giá thô trên VAL.
+CHECKER MỐC CUỐI XONG: PASS C1-C6 (stages/split/seeds, 35 adapter + 845 residual head + 1740 fit record + 30 native
+record + 3 READY.json không còn .building, R² OS đúng công thức, causality FIT/ES/VAL, 0 record device cpu,
+0 file experiments/15d trong 02fe142..HEAD). ERROR/WARN đã SỬA HẾT trong RUN_REPORT + CHECKER_FINDINGS:
+E1 AutoTS seed dispersion = 0 do template ghim random_state 8587 (npz 3 seed trùng sha256) → không gọi là mean 3 seed;
+E2 summary là mean theo fold, không pooled, đơn vị phân số; E3 thay số mẫu đơn lẻ bằng dải thật (WR gpu_fit 29.09-71.05 s
+/153-315 cột, MR 0.585-1.403 s/80-116 cột, bake-off 30 record fit 4.24-74.76 s, ES fit 5079.4-5313.7 s, fixed 836.6-865.0 s);
+E4 bỏ stage "summary" không tồn tại; E6 KHÔNG có MAE cho đại diện cuối và KHÔNG có latency; E7 Worst -179.23 do fold4 bung;
+E9 utilisation GPU không kiểm được từ artifact (chỉ device cuda + gpu_fit_seconds), nvidia-smi chỉ là quan sát session.
+02:24: dde5539 (1909 file: autots_fits/*, autots_preprocess/autots_mr, series_preprocess) PUSH XONG —
+937 LFS object ~4.0 GB, hai attempt (attempt 1 upload đủ rồi remote đóng kết nối lúc update ref, exit 141;
+attempt 2 update ref). origin/tfm_autots = dde5539. KHÔNG còn path nào PUSH_PENDING. Disk 19 GB.
+CÒN LẠI: commit/push cuối (RUN_REPORT + CHECKER_FINDINGS mốc 2 + MEMORY) rồi xác minh origin chứa commit đó.
 I1 (NCCL) CHỐT: process map cả hai bản — torch nvidia/nccl 2.28.9 và hệ thống 2.31.2 — lib_lightgbm.so đã nạp;
 single-GPU nên LightGBM không init NCCL collectives. Disk: output 3.8 GB, còn 29 GB.
 Khi loop:tfm xong: commit/push stage (keepdrop_tfm.csv, prune_pi_tfm.csv, wins/tfm*, lora/, log CSV) bằng path tường minh,

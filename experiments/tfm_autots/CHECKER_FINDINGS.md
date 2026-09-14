@@ -24,3 +24,33 @@ Result: no ERROR. GPU fits were UNVERIFIED at that time (only `torch.cuda.is_ava
 | I3 | INFO | `phase_config.json` has default `es_hours: 23`, only used by legacy `make_folds`; rolling_spread uses `es_days=5` | No effect |
 | I4 | INFO | at check time: lock-s0 done (37 s), `loop:tfm` in CPU cache stage, GPU idle | Superseded: at 19:04:58 the first LoRA fit was running (GPU 91 %, 5.2 GB, 209 W); completion evidence in later milestones |
 | I5 | INFO | tmux name / `pip check` / cache disk sizing not verified by checker | Main session: tmux `p0_tfm_autots` listed by `tmux ls`; `pip check` output "No broken requirements found." in session; disk 33 GB free at 19:09 |
+
+## Milestone 2 — cuối phase (2026-09-14, sau khi run kết thúc exit 0)
+
+Checker đọc artifact cuối, read-only, không train/infer/test và không chạy lệnh git ghi trạng thái.
+
+### PASS có bằng chứng
+
+| ID | Evidence |
+|---|---|
+| C1 | `phase_progress.json` đủ 6 stage + `stage_seconds`, khớp từng mốc trong `training.log`: lock-s0 19:01:39→19:02:16 (37,0 s), loop:tfm →09-13 03:55:31 (118.394,6 s), tfm-final 0,006 s, WR →16:14:27 (44.336,1 s), MR →17:38:13 (5.026,5 s), autots-search →09-14 00:26:23 (24.489,9 s); `exit_code.txt` = 0 |
+| C2 | 163 candidate/model sau S0 collision handling (`checker_log.jsonl` CANDIDATE_M, `s0/candidates_*.json`, 163 dòng mỗi `keepdrop_*.csv`); 5 fold với FIT 172.797 bar, inner ES 7.197, residual suffix 7.197, purge 3.600 s, VAL 4.300–4.317 origin; không có artifact TEST; seeds 8586/8587-8589/8587 đúng ở `lora/*.json`, `autots_fits/*`, `log.csv`; `runs/` = 510 = 163×3 + 21 confirmation |
+| C3 | 35 `lora/*.pt` = 5 ES@8586 + 15 `_ep1_` + 15 ES confirmation; 845 residual_heads, 885 runtime, 55 forecast_cache; 1.740 fit record đường search + 30 record native; 3 `READY.json` (key gồm code/data/dependencies/recipe/schema/columns/fold_indices/seeds; 256/243/163 cột), **không còn `.building.*`**; 40 template JSON |
+| C4 | Cả 30 ô R² OS đúng `1 − mean(MSE theo seed)/E0²` (`phase_tfm_autots.py:120`), không phải bình phương mean-seed RMSE; hai bảng suy ra bit-đối-bit từ `wins/tfm.json` và `wins/autots.json` |
+| C5 | Chuỗi `lora_fit → inner_es → residual_fit` nối nhau với purge 3.600 s và kết thúc đúng cuối FIT; outer ES chỉ vào refit của bake-off native (179.937 bar = FIT+ES); VAL không bao giờ được fit; không jax, không `forecast_with_covariates`, `wins/tfm.json:"xreg": null`; 0 record `device: cpu`/fallback; log không có traceback/OOM |
+| C6 | `origin/tfm_autots` = `cbb9cb6`; mọi path output trên đĩa đều có trong HEAD; **0 file `experiments/15d`** trong `02fe142..HEAD`; không venv/secret/checkpoint pretrained; `.pt/.npz/.npy/.joblib` đều là LFS pointer |
+
+### Findings và xử lý
+
+| ID | Mức | Nội dung | Xử lý |
+|---|---|---|---|
+| E1 | ERROR | `wins/autots.json` có `seed_rmse` giống hệt ở 3 eval seed và `autots_seed{0,1,2}.npz` trùng SHA256; nguyên nhân: template đông lạnh ghim `random_state: 8587` và MR không bootstrap, nên 10 refit confirmation tái tạo đúng cùng một fit | RUN_REPORT §4.5 nêu rõ độ phân tán seed của AutoTS bằng 0 do cấu trúc, không gọi là trung bình 3 seed độc lập; TFM và WR khác biệt thật theo seed |
+| E2 | WARN | `tfm_autots_summary.csv` là groupby-mean của các ô per-fold (`phase_tfm_autots.py:126-128`), không recompute; thiếu cột `aggregation`/`e0_status` | §4.5 ghi "trung bình không trọng số theo fold", không gọi pooled, và nói rõ đơn vị là phân số |
+| E3 | ERROR | Bản nháp trích mẫu đơn lẻ: WR "29,5 s/153 cột", MR "1,34 s/80 cột", batch "0,016–0,018 s", bake-off "5 record", fixed-epoch/ES thiếu dải | Thay bằng dải thật: WR 29,09–71,05 s (trung vị 48,4) và 153–315 cột, batch 0,0123–0,0566 s; MR 0,585–1,403 s, 80–116 cột, batch 0,117–2,95 s; bake-off 30 record, fit 4,24–74,76 s, predict 0,129–4,009 s; ES fit 5.079,4–5.313,7 s (20 fit), fixed 836,6–865,0 s |
+| E4 | ERROR | §3 có dòng stage "summary" không tồn tại; `autots-search` chưa điền; §7 nói `80554b6` đang push | §3 bỏ dòng đó và ghi `summarize_phase` chạy trong `autots-search` (24.489,9 s); §7 cập nhật đúng trạng thái push |
+| E5 | must-add | Thiếu bảng bake-off và kết luận đối chiếu E0 | §4.4 thêm bảng 4 đơn vị; §4.5 nêu thẳng không family nào thắng E0 |
+| E6 | WARN | Không có MAE cho đại diện cuối; không có latency nào | §6 liệt kê rõ là chưa xuất, kèm cảnh báo batch ≠ p95 single-request |
+| E7 | INFO | Worst −179,23 của hệ B do fold4 bung (RMSE 128,6/183,0 vs E0 45,9/65,9) | §4.1 mô tả đúng là một fold bung, không phải suy giảm đều |
+| E8 | WARN | `CHECKER_FINDINGS.md` mới có mốc 1 | Chính mục này |
+| E9 | INFO | 30 record native có `prepared_fit: null`; utilisation GPU không kiểm được từ artifact | §4.4 giữ nguyên cách diễn đạt; §6 tách rõ quan sát `nvidia-smi` của session với bằng chứng artifact |
+
