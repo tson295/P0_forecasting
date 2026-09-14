@@ -1,0 +1,21 @@
+{
+ "completed": [
+  "lock-s0",
+  "loop:tfm",
+  "tfm-final",
+  "loop:autots_wr",
+  "loop:autots_mr",
+  "autots-search"
+ ],
+ "status": "completed",
+ "active": null,
+ "active_started_at": 1789321093.6346586,
+ "stage_seconds": {
+  "lock-s0": 37.02272820472717,
+  "loop:tfm": 118394.55253744125,
+  "tfm-final": 0.005822658538818359,
+  "loop:autots_wr": 44336.10520482063,
+  "loop:autots_mr": 5026.489369392395,
+  "autots-search": 24489.932668685913
+ }
+}

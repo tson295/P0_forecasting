@@ -1,0 +1,1846 @@
+[p0 19:01:39] S0_tfm: locked_b0 = 0 cột B0* + locked_ext = 0 cột ext thắng cũ (toàn bộ S0 khoá) — TimesFM: S0 = ∅ (baseline = TimesFM-LoRA native, không B0*)
+[p0 19:01:39] S0_autots_wr: locked_b0 = 72 cột B0* + locked_ext = 21 cột ext thắng cũ (toàn bộ S0 khoá)
+[p0 19:01:39] S0_autots_mr: locked_b0 = 72 cột B0* + locked_ext = 8 cột ext thắng cũ (toàn bộ S0 khoá)
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 19:01:47] overlap audit bằng số trên data 'btc_1min_2y_2024-09-03_2026-09-03': Candidate_m = C_short (163 cột) \ overlap(C_short, S0_m) — chỉ trừ cột đã có trong S0 của CHÍNH model (trùng tên / giá trị giống hệt cùng timestamp); tương quan cao chỉ báo cáo
+[p0 19:02:16] C_short 163 cột | trùng giá trị nội bộ C_short (chỉ báo, không bỏ): 0 | near nội bộ |ρ| ≥ 0.995: 27
+[p0 19:02:16] Candidate_tfm: 163 = 163 − 0 overlap S0_tfm | near vs S0 (chỉ báo): 0
+[p0 19:02:16] Candidate_autots_wr: 163 = 163 − 0 overlap S0_autots_wr | near vs S0 (chỉ báo): 7
+[p0 19:02:16] Candidate_autots_mr: 163 = 163 − 0 overlap S0_autots_mr | near vs S0 (chỉ báo): 3
+[p0 19:02:16] → /home/ubuntu/P0_forecasting/experiments/tfm_autots/s0: <model>.json (locked_b0/locked_ext), candidates_<model>.json, collisions.json, short_pool.json
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 19:02:23] [tfm] preparing CPU cache for all candidate columns/folds before any fit
+[p0 19:02:51] [tfm] CPU cache: fold1_2025-01-07, 163 covariate columns
+[p0 19:02:51] [tfm] CPU cache: fold1_2025-01-07 prepared in 0.6s
+[p0 19:02:51] [tfm] CPU cache: fold2_2025-05-30, 163 covariate columns
+[p0 19:02:52] [tfm] CPU cache: fold2_2025-05-30 prepared in 0.5s
+[p0 19:02:52] [tfm] CPU cache: fold3_2025-10-19, 163 covariate columns
+[p0 19:02:53] [tfm] CPU cache: fold3_2025-10-19 prepared in 0.5s
+[p0 19:02:53] [tfm] CPU cache: fold4_2026-03-11, 163 covariate columns
+[p0 19:02:53] [tfm] CPU cache: fold4_2026-03-11 prepared in 0.5s
+[p0 19:02:53] [tfm] CPU cache: fold5_2026-08-01, 163 covariate columns
+[p0 19:02:54] [tfm] CPU cache: fold5_2026-08-01 prepared in 0.5s
+[p0 19:02:54] [tfm] CACHE READY: /home/ubuntu/P0_forecasting/experiments/tfm_autots/series_preprocess/tfm/791313b2cd9e03f89a62e73edf2f67b5e16e34672c79807bb21bc820c49f3bca (reuse=False)
+[p0 19:02:54] [tfm] champion HOÃN (defer_champion): branch chỉ ghi artifact đại diện; so champion ở `champion-replay`
+[p0 19:02:54] [tfm] calibrate trên ∅ — hệ thống A = TimesFM-LoRA baseline (LoRA fine-tune trên r1, 0 covariate, KHÔNG B0*) — ES với calib_seed 8586; 163 candidate (Candidate_tfm)
+[p0 19:02:54] [tfm] calibrate = LoRA FIT + ES chọn epoch (calib_seed) → fixed_epoch_TFM → adapter cho eval_seeds (ε) → adapter selection_seed FREEZE cho toàn bộ add-one/prune (thêm candidate = fit lại XReg, không train lại LoRA)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8586_es_6e8bd73839922f9deae2] LoRA real fit: 158230 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8586_es_6e8bd73839922f9deae2] epoch 1: train_mse=2.009e+00, es_mse=2.158e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8586_es_6e8bd73839922f9deae2] epoch 2: train_mse=1.975e+00, es_mse=2.178e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8586_es_6e8bd73839922f9deae2] epoch 3: train_mse=1.887e+00, es_mse=2.232e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8586_es_6e8bd73839922f9deae2] epoch 4: train_mse=1.731e+00, es_mse=2.320e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8586_es_6e8bd73839922f9deae2] epoch 5: train_mse=1.507e+00, es_mse=2.482e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8586_es_0812bef241613f8cfc4c] LoRA real fit: 158212 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8586_es_0812bef241613f8cfc4c] epoch 1: train_mse=1.999e+00, es_mse=9.071e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8586_es_0812bef241613f8cfc4c] epoch 2: train_mse=1.970e+00, es_mse=9.118e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8586_es_0812bef241613f8cfc4c] epoch 3: train_mse=1.872e+00, es_mse=9.486e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8586_es_0812bef241613f8cfc4c] epoch 4: train_mse=1.698e+00, es_mse=9.602e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8586_es_0812bef241613f8cfc4c] epoch 5: train_mse=1.494e+00, es_mse=1.036e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8586_es_889d01d973471efaf947] LoRA real fit: 157886 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8586_es_889d01d973471efaf947] epoch 1: train_mse=2.012e+00, es_mse=2.547e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8586_es_889d01d973471efaf947] epoch 2: train_mse=1.964e+00, es_mse=2.574e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8586_es_889d01d973471efaf947] epoch 3: train_mse=1.839e+00, es_mse=2.709e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8586_es_889d01d973471efaf947] epoch 4: train_mse=1.600e+00, es_mse=2.823e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8586_es_889d01d973471efaf947] epoch 5: train_mse=1.366e+00, es_mse=3.055e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8586_es_b355371ca8ebbeb9979b] LoRA real fit: 158031 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8586_es_b355371ca8ebbeb9979b] epoch 1: train_mse=1.972e+00, es_mse=2.835e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8586_es_b355371ca8ebbeb9979b] epoch 2: train_mse=1.932e+00, es_mse=2.933e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8586_es_b355371ca8ebbeb9979b] epoch 3: train_mse=1.769e+00, es_mse=3.120e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8586_es_b355371ca8ebbeb9979b] epoch 4: train_mse=1.511e+00, es_mse=3.221e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8586_es_b355371ca8ebbeb9979b] epoch 5: train_mse=1.279e+00, es_mse=3.433e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8586_es_4437784af1ff72cfb899] LoRA real fit: 158208 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8586_es_4437784af1ff72cfb899] epoch 1: train_mse=2.008e+00, es_mse=9.929e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8586_es_4437784af1ff72cfb899] epoch 2: train_mse=1.980e+00, es_mse=1.004e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8586_es_4437784af1ff72cfb899] epoch 3: train_mse=1.880e+00, es_mse=1.048e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8586_es_4437784af1ff72cfb899] epoch 4: train_mse=1.668e+00, es_mse=1.098e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8586_es_4437784af1ff72cfb899] epoch 5: train_mse=1.431e+00, es_mse=1.222e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_ep1_6e8bd73839922f9deae2] LoRA real fit: 158230 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_ep1_6e8bd73839922f9deae2] epoch 1: train_mse=2.012e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_ep1_0812bef241613f8cfc4c] LoRA real fit: 158212 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_ep1_0812bef241613f8cfc4c] epoch 1: train_mse=2.001e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_ep1_889d01d973471efaf947] LoRA real fit: 157886 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_ep1_889d01d973471efaf947] epoch 1: train_mse=2.010e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_ep1_b355371ca8ebbeb9979b] LoRA real fit: 158031 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_ep1_b355371ca8ebbeb9979b] epoch 1: train_mse=1.971e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_ep1_4437784af1ff72cfb899] LoRA real fit: 158208 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_ep1_4437784af1ff72cfb899] epoch 1: train_mse=2.010e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_ep1_6e8bd73839922f9deae2] LoRA real fit: 158230 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_ep1_6e8bd73839922f9deae2] epoch 1: train_mse=2.009e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_ep1_0812bef241613f8cfc4c] LoRA real fit: 158212 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_ep1_0812bef241613f8cfc4c] epoch 1: train_mse=2.001e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_ep1_889d01d973471efaf947] LoRA real fit: 157886 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_ep1_889d01d973471efaf947] epoch 1: train_mse=2.018e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_ep1_b355371ca8ebbeb9979b] LoRA real fit: 158031 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_ep1_b355371ca8ebbeb9979b] epoch 1: train_mse=1.972e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_ep1_4437784af1ff72cfb899] LoRA real fit: 158208 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_ep1_4437784af1ff72cfb899] epoch 1: train_mse=2.003e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_ep1_6e8bd73839922f9deae2] LoRA real fit: 158230 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_ep1_6e8bd73839922f9deae2] epoch 1: train_mse=2.009e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_ep1_0812bef241613f8cfc4c] LoRA real fit: 158212 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_ep1_0812bef241613f8cfc4c] epoch 1: train_mse=2.000e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_ep1_889d01d973471efaf947] LoRA real fit: 157886 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_ep1_889d01d973471efaf947] epoch 1: train_mse=2.010e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_ep1_b355371ca8ebbeb9979b] LoRA real fit: 158031 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_ep1_b355371ca8ebbeb9979b] epoch 1: train_mse=1.970e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_ep1_4437784af1ff72cfb899] LoRA real fit: 158208 windows, batch=64, epochs=1
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_ep1_4437784af1ff72cfb899] epoch 1: train_mse=2.010e+00
+[p0 05:56:37] [tfm] rounds={'fold1_2025-01-07': (1, 1, 1), 'fold2_2025-05-30': (1, 1, 1), 'fold3_2025-10-19': (1, 1, 1), 'fold4_2026-03-11': (1, 1, 1), 'fold5_2026-08-01': (1, 1, 1)} ε=0.3591 pp; base MedianGain vs E0 = -0.3307
+[p0 05:58:19] [tfm] 001 vwap_amt_gap_2               Median +0.2570 → KEEP (|S|=1)
+[p0 05:58:19] [tfm] 002 vwap_amt_gap_3               Median -0.0162 → KEEP (|S|=2)
+[p0 05:58:19] [tfm] 003 vwap_amt_gap_4               Median -0.0553 → KEEP (|S|=3)
+[p0 05:58:19] [tfm] 004 vwap_amt_gap_5               Median -0.0057 → KEEP (|S|=4)
+[p0 05:58:19] [tfm] 005 vwap_amt_gap_8               Median -0.0074 → KEEP (|S|=5)
+[p0 05:58:20] [tfm] 006 vwap_amt_gap_10              Median -0.0190 → KEEP (|S|=6)
+[p0 05:58:20] [tfm] 007 ret_1                        Median +0.0121 → KEEP (|S|=7)
+[p0 05:58:20] [tfm] 008 ret_2                        Median -0.0247 → KEEP (|S|=8)
+[p0 05:58:20] [tfm] 009 ret_3                        Median -0.0734 → KEEP (|S|=9)
+[p0 05:58:20] [tfm] 010 ret_4                        Median -0.0075 → KEEP (|S|=10)
+[p0 05:58:20] [tfm] 011 ret_5                        Median -0.0085 → KEEP (|S|=11)
+[p0 05:58:20] [tfm] 012 ret_8                        Median -0.0207 → KEEP (|S|=12)
+[p0 05:58:20] [tfm] 013 ret_10                       Median -0.0314 → KEEP (|S|=13)
+[p0 05:58:21] [tfm] 014 ret_15                       Median -0.0577 → KEEP (|S|=14)
+[p0 05:58:21] [tfm] 015 log_rv2_rv60                 Median -0.0108 → KEEP (|S|=15)
+[p0 05:58:21] [tfm] 016 log_rv3_rv60                 Median -0.0089 → KEEP (|S|=16)
+[p0 05:58:21] [tfm] 017 log_rv4_rv60                 Median -0.0103 → KEEP (|S|=17)
+[p0 05:58:21] [tfm] 018 log_rv5_rv60                 Median +0.0010 → KEEP (|S|=18)
+[p0 05:58:21] [tfm] 019 log_rv8_rv60                 Median +0.0000 → KEEP (|S|=19)
+[p0 05:58:21] [tfm] 020 log_rv10_rv60                Median -0.0049 → KEEP (|S|=20)
+[p0 05:58:21] [tfm] 021 log_rv15_rv60                Median -0.0014 → KEEP (|S|=21)
+[p0 05:58:22] [tfm] 022 log_c_ema2                   Median -0.0839 → KEEP (|S|=22)
+[p0 05:58:22] [tfm] 023 log_c_ema3                   Median -0.0021 → KEEP (|S|=23)
+[p0 05:58:22] [tfm] 024 log_c_ema4                   Median -0.0050 → KEEP (|S|=24)
+[p0 05:58:22] [tfm] 025 log_c_ema5                   Median -0.0285 → KEEP (|S|=25)
+[p0 05:58:22] [tfm] 026 log_c_ema8                   Median -0.0162 → KEEP (|S|=26)
+[p0 05:58:22] [tfm] 027 log_c_ema10                  Median -0.0128 → KEEP (|S|=27)
+[p0 05:58:23] [tfm] 028 log_c_ema15                  Median -0.0391 → KEEP (|S|=28)
+[p0 05:58:23] [tfm] 029 log_ema2_ema5                Median -0.0114 → KEEP (|S|=29)
+[p0 05:58:23] [tfm] 030 log_ema2_ema8                Median -0.0313 → KEEP (|S|=30)
+[p0 05:58:23] [tfm] 031 log_ema3_ema10               Median -0.0046 → KEEP (|S|=31)
+[p0 05:58:23] [tfm] 032 log_ema4_ema10               Median -0.0017 → KEEP (|S|=32)
+[p0 05:58:23] [tfm] 033 log_ema5_ema15               Median -0.0052 → KEEP (|S|=33)
+[p0 05:58:24] [tfm] 034 rsi1_centered                Median -0.0000 → KEEP (|S|=34)
+[p0 05:58:24] [tfm] 035 rsi2_centered                Median +0.0204 → KEEP (|S|=35)
+[p0 05:58:24] [tfm] 036 rsi3_centered                Median -0.0259 → KEEP (|S|=36)
+[p0 05:58:24] [tfm] 037 rsi4_centered                Median -0.0034 → KEEP (|S|=37)
+[p0 05:58:25] [tfm] 038 rsi5_centered                Median -0.0154 → KEEP (|S|=38)
+[p0 05:58:25] [tfm] 039 rsi8_centered                Median -0.0014 → KEEP (|S|=39)
+[p0 05:58:25] [tfm] 040 rsi10_centered               Median +0.0076 → KEEP (|S|=40)
+[p0 05:58:25] [tfm] 041 rsi15_centered               Median +0.0045 → KEEP (|S|=41)
+[p0 05:58:25] [tfm] 042 bb_pctb_2                    Median -0.0042 → KEEP (|S|=42)
+[p0 05:58:26] [tfm] 043 bb_pctb_3                    Median -0.0014 → KEEP (|S|=43)
+[p0 05:58:26] [tfm] 044 bb_pctb_4                    Median -0.0044 → KEEP (|S|=44)
+[p0 05:58:26] [tfm] 045 bb_pctb_5                    Median -0.0184 → KEEP (|S|=45)
+[p0 05:58:26] [tfm] 046 bb_pctb_8                    Median +0.0090 → KEEP (|S|=46)
+[p0 05:58:27] [tfm] 047 bb_pctb_10                   Median -0.0219 → KEEP (|S|=47)
+[p0 05:58:27] [tfm] 048 bb_pctb_15                   Median -0.0000 → KEEP (|S|=48)
+[p0 05:58:27] [tfm] 049 bb_logbw_3                   Median -0.0024 → KEEP (|S|=49)
+[p0 05:58:27] [tfm] 050 bb_logbw_4                   Median -0.0033 → KEEP (|S|=50)
+[p0 05:58:28] [tfm] 051 bb_logbw_5                   Median -0.0121 → KEEP (|S|=51)
+[p0 05:58:28] [tfm] 052 bb_logbw_8                   Median -0.0062 → KEEP (|S|=52)
+[p0 05:58:28] [tfm] 053 bb_logbw_10                  Median -0.0028 → KEEP (|S|=53)
+[p0 05:58:28] [tfm] 054 bb_logbw_15                  Median -0.0165 → KEEP (|S|=54)
+[p0 05:58:29] [tfm] 055 log_atr1_c                   Median -0.0035 → KEEP (|S|=55)
+[p0 05:58:29] [tfm] 056 log_atr2_c                   Median -0.0016 → KEEP (|S|=56)
+[p0 05:58:29] [tfm] 057 log_atr3_c                   Median +0.0022 → KEEP (|S|=57)
+[p0 05:58:30] [tfm] 058 log_atr4_c                   Median +0.0027 → KEEP (|S|=58)
+[p0 05:58:30] [tfm] 059 log_atr5_c                   Median +0.0003 → KEEP (|S|=59)
+[p0 05:58:30] [tfm] 060 log_atr8_c                   Median -0.0192 → KEEP (|S|=60)
+[p0 05:58:30] [tfm] 061 log_atr10_c                  Median -0.0447 → KEEP (|S|=61)
+[p0 05:58:31] [tfm] 062 log_atr15_c                  Median +0.0020 → KEEP (|S|=62)
+[p0 05:58:31] [tfm] 063 log_atr2_rv2                 Median +0.0037 → KEEP (|S|=63)
+[p0 05:58:31] [tfm] 064 log_atr3_rv3                 Median -0.0099 → KEEP (|S|=64)
+[p0 05:58:32] [tfm] 065 log_atr4_rv4                 Median -0.0012 → KEEP (|S|=65)
+[p0 05:58:32] [tfm] 066 log_atr5_rv5                 Median -0.0158 → KEEP (|S|=66)
+[p0 05:58:33] [tfm] 067 log_atr8_rv8                 Median -0.0024 → KEEP (|S|=67)
+[p0 05:58:33] [tfm] 068 log_atr10_rv10               Median +0.0000 → KEEP (|S|=68)
+[p0 05:58:33] [tfm] 069 log_atr15_rv15               Median -0.0015 → KEEP (|S|=69)
+[p0 05:58:34] [tfm] 070 kcw_2                        Median -0.0424 → KEEP (|S|=70)
+[p0 05:58:34] [tfm] 071 kcw_3                        Median -0.0189 → KEEP (|S|=71)
+[p0 05:58:34] [tfm] 072 kcw_4                        Median +0.0074 → KEEP (|S|=72)
+[p0 05:58:35] [tfm] 073 kcw_5                        Median +0.0026 → KEEP (|S|=73)
+[p0 05:58:35] [tfm] 074 kcw_8                        Median +0.0308 → KEEP (|S|=74)
+[p0 05:58:36] [tfm] 075 kcw_10                       Median +0.0213 → KEEP (|S|=75)
+[p0 05:58:36] [tfm] 076 kcw_15                       Median +0.0023 → KEEP (|S|=76)
+[p0 05:58:36] [tfm] 077 mfi1_centered                Median -0.0002 → KEEP (|S|=77)
+[p0 05:58:37] [tfm] 078 mfi2_centered                Median +0.0016 → KEEP (|S|=78)
+[p0 05:58:37] [tfm] 079 mfi3_centered                Median +0.0029 → KEEP (|S|=79)
+[p0 05:58:38] [tfm] 080 mfi4_centered                Median -0.0006 → KEEP (|S|=80)
+[p0 05:58:38] [tfm] 081 mfi5_centered                Median +0.0002 → KEEP (|S|=81)
+[p0 05:58:38] [tfm] 082 mfi8_centered                Median -0.0063 → KEEP (|S|=82)
+[p0 05:58:39] [tfm] 083 mfi10_centered               Median +0.0026 → KEEP (|S|=83)
+[p0 05:58:39] [tfm] 084 mfi15_centered               Median -0.0051 → KEEP (|S|=84)
+[p0 05:58:40] [tfm] 085 ad_vwclv_1                   Median +0.0005 → KEEP (|S|=85)
+[p0 05:58:40] [tfm] 086 ad_vwclv_2                   Median -0.0186 → KEEP (|S|=86)
+[p0 05:58:41] [tfm] 087 ad_vwclv_3                   Median -0.0033 → KEEP (|S|=87)
+[p0 05:58:41] [tfm] 088 ad_vwclv_4                   Median -0.0012 → KEEP (|S|=88)
+[p0 05:58:41] [tfm] 089 ad_vwclv_8                   Median -0.0001 → KEEP (|S|=89)
+[p0 05:58:42] [tfm] 090 ad_vwclv_10                  Median -0.0002 → KEEP (|S|=90)
+[p0 05:58:42] [tfm] 091 dd_2                         Median -0.0048 → KEEP (|S|=91)
+[p0 05:58:43] [tfm] 092 dd_3                         Median -0.0205 → KEEP (|S|=92)
+[p0 05:58:43] [tfm] 093 dd_4                         Median +0.0137 → KEEP (|S|=93)
+[p0 05:58:44] [tfm] 094 dd_5                         Median -0.0054 → KEEP (|S|=94)
+[p0 05:58:44] [tfm] 095 dd_8                         Median +0.0265 → KEEP (|S|=95)
+[p0 05:58:45] [tfm] 096 dd_10                        Median +0.0074 → KEEP (|S|=96)
+[p0 05:58:45] [tfm] 097 dd_15                        Median -0.0653 → KEEP (|S|=97)
+[p0 05:58:46] [tfm] 098 ru_2                         Median -0.0132 → KEEP (|S|=98)
+[p0 05:58:46] [tfm] 099 ru_3                         Median -0.0417 → KEEP (|S|=99)
+[p0 05:58:47] [tfm] 100 ru_4                         Median +0.0006 → KEEP (|S|=100)
+[p0 05:58:47] [tfm] 101 ru_5                         Median -0.0024 → KEEP (|S|=101)
+[p0 05:58:48] [tfm] 102 ru_8                         Median -0.0544 → KEEP (|S|=102)
+[p0 05:58:49] [tfm] 103 ru_10                        Median +0.0010 → KEEP (|S|=103)
+[p0 05:58:49] [tfm] 104 ru_15                        Median -0.0208 → KEEP (|S|=104)
+[p0 05:58:50] [tfm] 105 log_range_1                  Median -0.0026 → KEEP (|S|=105)
+[p0 05:58:50] [tfm] 106 log_range_2                  Median -0.0011 → KEEP (|S|=106)
+[p0 05:58:51] [tfm] 107 log_range_3                  Median -0.0053 → KEEP (|S|=107)
+[p0 05:58:51] [tfm] 108 log_range_4                  Median -0.0002 → KEEP (|S|=108)
+[p0 05:58:52] [tfm] 109 log_range_5                  Median +0.0002 → KEEP (|S|=109)
+[p0 05:58:52] [tfm] 110 log_range_8                  Median +0.0002 → KEEP (|S|=110)
+[p0 05:58:53] [tfm] 111 log_range_10                 Median -0.0034 → KEEP (|S|=111)
+[p0 05:58:54] [tfm] 112 log_range_15                 Median +0.0046 → KEEP (|S|=112)
+[p0 05:58:54] [tfm] 113 ret_skew_3                   Median -0.0011 → KEEP (|S|=113)
+[p0 05:58:55] [tfm] 114 ret_skew_4                   Median -0.0012 → KEEP (|S|=114)
+[p0 05:58:55] [tfm] 115 ret_skew_5                   Median +0.0027 → KEEP (|S|=115)
+[p0 05:58:56] [tfm] 116 ret_skew_8                   Median +0.0013 → KEEP (|S|=116)
+[p0 05:58:57] [tfm] 117 ret_skew_10                  Median -0.0151 → KEEP (|S|=117)
+[p0 05:58:57] [tfm] 118 ret_skew_15                  Median -0.0005 → KEEP (|S|=118)
+[p0 05:58:58] [tfm] 119 hma_slope1_volnorm           Median +0.0050 → KEEP (|S|=119)
+[p0 05:58:58] [tfm] 120 hma_slope2_volnorm           Median +0.0005 → KEEP (|S|=120)
+[p0 05:58:59] [tfm] 121 hma_slope3_volnorm           Median +0.0429 → KEEP (|S|=121)
+[p0 05:58:59] [tfm] 122 hma_slope4_volnorm           Median -0.0143 → KEEP (|S|=122)
+[p0 05:59:00] [tfm] 123 hma_slope5_volnorm           Median +0.0062 → KEEP (|S|=123)
+[p0 05:59:01] [tfm] 124 hma_slope8_volnorm           Median -0.0107 → KEEP (|S|=124)
+[p0 05:59:01] [tfm] 125 hma_slope10_volnorm          Median -0.0064 → KEEP (|S|=125)
+[p0 05:59:02] [tfm] 126 hma_slope15_volnorm          Median +0.0033 → KEEP (|S|=126)
+[p0 05:59:03] [tfm] 127 macd_hist_2_5_2_volnorm      Median -0.0059 → KEEP (|S|=127)
+[p0 05:59:04] [tfm] 128 macd_hist_2_8_3_volnorm      Median +0.0004 → KEEP (|S|=128)
+[p0 05:59:04] [tfm] 129 macd_hist_3_10_3_volnorm     Median -0.0004 → KEEP (|S|=129)
+[p0 05:59:05] [tfm] 130 macd_hist_4_10_4_volnorm     Median -0.0102 → KEEP (|S|=130)
+[p0 05:59:06] [tfm] 131 macd_hist_5_15_5_volnorm     Median +0.0229 → KEEP (|S|=131)
+[p0 05:59:07] [tfm] 132 psar_dir_2                   Median -0.0043 → KEEP (|S|=132)
+[p0 05:59:07] [tfm] 133 psar_dir_3                   Median +0.0004 → KEEP (|S|=133)
+[p0 05:59:08] [tfm] 134 psar_dir_4                   Median -0.0014 → KEEP (|S|=134)
+[p0 05:59:09] [tfm] 135 psar_dir_5                   Median +0.0022 → KEEP (|S|=135)
+[p0 05:59:10] [tfm] 136 psar_dir_8                   Median -0.0002 → KEEP (|S|=136)
+[p0 05:59:10] [tfm] 137 psar_dir_10                  Median -0.0070 → KEEP (|S|=137)
+[p0 05:59:11] [tfm] 138 psar_dir_15                  Median -0.0212 → KEEP (|S|=138)
+[p0 05:59:12] [tfm] 139 psar_logdist_2               Median -0.0106 → KEEP (|S|=139)
+[p0 05:59:13] [tfm] 140 psar_logdist_3               Median -0.0253 → KEEP (|S|=140)
+[p0 05:59:14] [tfm] 141 psar_logdist_4               Median +0.0032 → KEEP (|S|=141)
+[p0 05:59:14] [tfm] 142 psar_logdist_5               Median -0.0175 → KEEP (|S|=142)
+[p0 05:59:15] [tfm] 143 psar_logdist_8               Median -0.0327 → KEEP (|S|=143)
+[p0 05:59:16] [tfm] 144 psar_logdist_10              Median -0.0149 → KEEP (|S|=144)
+[p0 05:59:17] [tfm] 145 psar_logdist_15              Median -0.0075 → KEEP (|S|=145)
+[p0 05:59:17] [tfm] 146 psar_age_log_2               Median +0.0049 → KEEP (|S|=146)
+[p0 05:59:18] [tfm] 147 psar_age_log_3               Median +0.0025 → KEEP (|S|=147)
+[p0 05:59:19] [tfm] 148 psar_age_log_4               Median -0.0010 → KEEP (|S|=148)
+[p0 05:59:20] [tfm] 149 psar_age_log_5               Median -0.0038 → KEEP (|S|=149)
+[p0 05:59:21] [tfm] 150 psar_age_log_8               Median -0.0034 → KEEP (|S|=150)
+[p0 05:59:21] [tfm] 151 psar_age_log_10              Median -0.0002 → KEEP (|S|=151)
+[p0 05:59:22] [tfm] 152 psar_age_log_15              Median -0.0082 → KEEP (|S|=152)
+[p0 05:59:23] [tfm] 153 log_rv2_med2d                Median -0.0071 → KEEP (|S|=153)
+[p0 05:59:24] [tfm] 154 log_rv3_med2d                Median -0.0009 → KEEP (|S|=154)
+[p0 05:59:25] [tfm] 155 log_rv4_med2d                Median +0.0199 → KEEP (|S|=155)
+[p0 05:59:25] [tfm] 156 log_rv5_med2d                Median -0.0345 → KEEP (|S|=156)
+[p0 05:59:26] [tfm] 157 log_rv8_med2d                Median +0.0152 → KEEP (|S|=157)
+[p0 05:59:27] [tfm] 158 log_rv10_med2d               Median -0.0605 → KEEP (|S|=158)
+[p0 05:59:28] [tfm] 159 log_rv15_med2d               Median -0.0375 → KEEP (|S|=159)
+[p0 05:59:29] [tfm] 160 r5_2                         Median -0.0017 → KEEP (|S|=160)
+[p0 05:59:30] [tfm] 161 r5_3                         Median +0.0005 → KEEP (|S|=161)
+[p0 05:59:31] [tfm] 162 log_c5_ema5_2                Median +0.0060 → KEEP (|S|=162)
+[p0 05:59:32] [tfm] 163 log_c5_ema5_3                Median -0.0023 → KEEP (|S|=163)
+[p0 05:59:32] [tfm] F*_raw: 163 KEEP / 0 DROP → /home/ubuntu/P0_forecasting/experiments/tfm_autots/keepdrop_tfm.csv
+[p0 05:59:32] [tfm] F*_raw vs baseline S0: MedianGain = -3.4233 pp
+/home/ubuntu/P0_forecasting/src/p0/metrics.py:17: RuntimeWarning: overflow encountered in exp
+  return c_t[:, None] * np.exp(yhat)
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/numpy/_core/_methods.py:188: RuntimeWarning: invalid value encountered in subtract
+  x = um.subtract(arr, arrmean, out=...)
+[p0 06:00:10] [tfm] prune PI (chỉ cột mới): giữ 160/163 → F_pruned (+0 ext khoá, 0 B0 khoá)
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_es_6e8bd73839922f9deae2] LoRA real fit: 158230 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_es_6e8bd73839922f9deae2] epoch 1: train_mse=2.012e+00, es_mse=2.161e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_es_6e8bd73839922f9deae2] epoch 2: train_mse=1.972e+00, es_mse=2.180e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_es_6e8bd73839922f9deae2] epoch 3: train_mse=1.892e+00, es_mse=2.203e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_es_6e8bd73839922f9deae2] epoch 4: train_mse=1.746e+00, es_mse=2.378e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8587_es_6e8bd73839922f9deae2] epoch 5: train_mse=1.558e+00, es_mse=2.458e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_es_0812bef241613f8cfc4c] LoRA real fit: 158212 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_es_0812bef241613f8cfc4c] epoch 1: train_mse=2.001e+00, es_mse=9.135e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_es_0812bef241613f8cfc4c] epoch 2: train_mse=1.969e+00, es_mse=9.353e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_es_0812bef241613f8cfc4c] epoch 3: train_mse=1.854e+00, es_mse=9.481e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_es_0812bef241613f8cfc4c] epoch 4: train_mse=1.646e+00, es_mse=9.853e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8587_es_0812bef241613f8cfc4c] epoch 5: train_mse=1.433e+00, es_mse=1.043e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_es_889d01d973471efaf947] LoRA real fit: 157886 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_es_889d01d973471efaf947] epoch 1: train_mse=2.010e+00, es_mse=2.550e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_es_889d01d973471efaf947] epoch 2: train_mse=1.958e+00, es_mse=2.604e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_es_889d01d973471efaf947] epoch 3: train_mse=1.801e+00, es_mse=2.764e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_es_889d01d973471efaf947] epoch 4: train_mse=1.566e+00, es_mse=2.903e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8587_es_889d01d973471efaf947] epoch 5: train_mse=1.335e+00, es_mse=3.197e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_es_b355371ca8ebbeb9979b] LoRA real fit: 158031 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_es_b355371ca8ebbeb9979b] epoch 1: train_mse=1.971e+00, es_mse=2.840e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_es_b355371ca8ebbeb9979b] epoch 2: train_mse=1.912e+00, es_mse=2.929e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_es_b355371ca8ebbeb9979b] epoch 3: train_mse=1.723e+00, es_mse=3.071e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_es_b355371ca8ebbeb9979b] epoch 4: train_mse=1.473e+00, es_mse=3.248e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8587_es_b355371ca8ebbeb9979b] epoch 5: train_mse=1.258e+00, es_mse=3.411e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_es_4437784af1ff72cfb899] LoRA real fit: 158208 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_es_4437784af1ff72cfb899] epoch 1: train_mse=2.010e+00, es_mse=9.936e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_es_4437784af1ff72cfb899] epoch 2: train_mse=1.995e+00, es_mse=9.963e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_es_4437784af1ff72cfb899] epoch 3: train_mse=1.918e+00, es_mse=1.019e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_es_4437784af1ff72cfb899] epoch 4: train_mse=1.757e+00, es_mse=1.062e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8587_es_4437784af1ff72cfb899] epoch 5: train_mse=1.510e+00, es_mse=1.172e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_es_6e8bd73839922f9deae2] LoRA real fit: 158230 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_es_6e8bd73839922f9deae2] epoch 1: train_mse=2.009e+00, es_mse=2.157e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_es_6e8bd73839922f9deae2] epoch 2: train_mse=1.975e+00, es_mse=2.172e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_es_6e8bd73839922f9deae2] epoch 3: train_mse=1.902e+00, es_mse=2.201e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_es_6e8bd73839922f9deae2] epoch 4: train_mse=1.729e+00, es_mse=2.321e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8588_es_6e8bd73839922f9deae2] epoch 5: train_mse=1.527e+00, es_mse=2.477e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_es_0812bef241613f8cfc4c] LoRA real fit: 158212 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_es_0812bef241613f8cfc4c] epoch 1: train_mse=2.001e+00, es_mse=9.074e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_es_0812bef241613f8cfc4c] epoch 2: train_mse=1.962e+00, es_mse=9.215e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_es_0812bef241613f8cfc4c] epoch 3: train_mse=1.824e+00, es_mse=9.369e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_es_0812bef241613f8cfc4c] epoch 4: train_mse=1.612e+00, es_mse=9.472e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8588_es_0812bef241613f8cfc4c] epoch 5: train_mse=1.400e+00, es_mse=1.011e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_es_889d01d973471efaf947] LoRA real fit: 157886 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_es_889d01d973471efaf947] epoch 1: train_mse=2.018e+00, es_mse=2.578e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_es_889d01d973471efaf947] epoch 2: train_mse=1.963e+00, es_mse=2.591e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_es_889d01d973471efaf947] epoch 3: train_mse=1.827e+00, es_mse=2.627e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_es_889d01d973471efaf947] epoch 4: train_mse=1.597e+00, es_mse=2.880e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8588_es_889d01d973471efaf947] epoch 5: train_mse=1.360e+00, es_mse=2.935e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_es_b355371ca8ebbeb9979b] LoRA real fit: 158031 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_es_b355371ca8ebbeb9979b] epoch 1: train_mse=1.972e+00, es_mse=2.837e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_es_b355371ca8ebbeb9979b] epoch 2: train_mse=1.939e+00, es_mse=2.865e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_es_b355371ca8ebbeb9979b] epoch 3: train_mse=1.817e+00, es_mse=3.079e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_es_b355371ca8ebbeb9979b] epoch 4: train_mse=1.580e+00, es_mse=3.200e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8588_es_b355371ca8ebbeb9979b] epoch 5: train_mse=1.347e+00, es_mse=3.380e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_es_4437784af1ff72cfb899] LoRA real fit: 158208 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_es_4437784af1ff72cfb899] epoch 1: train_mse=2.003e+00, es_mse=9.940e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_es_4437784af1ff72cfb899] epoch 2: train_mse=1.968e+00, es_mse=1.004e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_es_4437784af1ff72cfb899] epoch 3: train_mse=1.836e+00, es_mse=1.063e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_es_4437784af1ff72cfb899] epoch 4: train_mse=1.588e+00, es_mse=1.127e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8588_es_4437784af1ff72cfb899] epoch 5: train_mse=1.349e+00, es_mse=1.167e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_es_6e8bd73839922f9deae2] LoRA real fit: 158230 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_es_6e8bd73839922f9deae2] epoch 1: train_mse=2.009e+00, es_mse=2.159e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_es_6e8bd73839922f9deae2] epoch 2: train_mse=1.991e+00, es_mse=2.182e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_es_6e8bd73839922f9deae2] epoch 3: train_mse=1.946e+00, es_mse=2.177e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_es_6e8bd73839922f9deae2] epoch 4: train_mse=1.829e+00, es_mse=2.261e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20240904T0300-20241223T0053_es20241223T0157-20241228T0153_seed8589_es_6e8bd73839922f9deae2] epoch 5: train_mse=1.637e+00, es_mse=2.421e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_es_0812bef241613f8cfc4c] LoRA real fit: 158212 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_es_0812bef241613f8cfc4c] epoch 1: train_mse=2.000e+00, es_mse=9.059e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_es_0812bef241613f8cfc4c] epoch 2: train_mse=1.953e+00, es_mse=9.137e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_es_0812bef241613f8cfc4c] epoch 3: train_mse=1.808e+00, es_mse=9.491e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_es_0812bef241613f8cfc4c] epoch 4: train_mse=1.583e+00, es_mse=1.012e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250125T0022-20250514T2215_es20250514T2319-20250519T2315_seed8589_es_0812bef241613f8cfc4c] epoch 5: train_mse=1.367e+00, es_mse=1.071e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_es_889d01d973471efaf947] LoRA real fit: 157886 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_es_889d01d973471efaf947] epoch 1: train_mse=2.010e+00, es_mse=2.547e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_es_889d01d973471efaf947] epoch 2: train_mse=1.956e+00, es_mse=2.573e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_es_889d01d973471efaf947] epoch 3: train_mse=1.810e+00, es_mse=2.743e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_es_889d01d973471efaf947] epoch 4: train_mse=1.570e+00, es_mse=2.987e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20250616T2145-20251004T1938_es20251004T2042-20251009T2038_seed8589_es_889d01d973471efaf947] epoch 5: train_mse=1.335e+00, es_mse=2.997e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_es_b355371ca8ebbeb9979b] LoRA real fit: 158031 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_es_b355371ca8ebbeb9979b] epoch 1: train_mse=1.970e+00, es_mse=2.834e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_es_b355371ca8ebbeb9979b] epoch 2: train_mse=1.911e+00, es_mse=2.922e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_es_b355371ca8ebbeb9979b] epoch 3: train_mse=1.716e+00, es_mse=3.033e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_es_b355371ca8ebbeb9979b] epoch 4: train_mse=1.462e+00, es_mse=3.197e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20251106T1908-20260224T1701_es20260224T1805-20260301T1801_seed8589_es_b355371ca8ebbeb9979b] epoch 5: train_mse=1.253e+00, es_mse=3.382e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_es_4437784af1ff72cfb899] LoRA real fit: 158208 windows, batch=64, epochs=20
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_es_4437784af1ff72cfb899] epoch 1: train_mse=2.010e+00, es_mse=9.907e-01
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_es_4437784af1ff72cfb899] epoch 2: train_mse=1.984e+00, es_mse=1.000e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_es_4437784af1ff72cfb899] epoch 3: train_mse=1.891e+00, es_mse=1.027e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_es_4437784af1ff72cfb899] epoch 4: train_mse=1.678e+00, es_mse=1.090e+00
+[tfm|tfm-first-heldout-residual-v1_tfm_lora_fit20260329T1630-20260717T1423_es20260717T1527-20260722T1523_seed8589_es_4437784af1ff72cfb899] epoch 5: train_mse=1.442e+00, es_mse=1.158e+00
+[p0 03:55:30] [tfm] F_win = prune (confirmation F_raw vs F_pruned: MedianGain +0.0058, ε=0.3591) → 160 cột mới
+[p0 03:55:31] [tfm] A = TimesFM-LoRA baseline (feature-free): MedianGain vs E0 = -0.2424 pp; B = TimesFM-LoRA + XReg(F_win, 160 cột) = -3.5278 pp → chạy `tfm-final` (so A vs B)
+[p0 03:55:31] [tfm] feature-search xong (F_best: 160 cột mới + 0 ext khoá) — không so champion; chạy `tfm-final` để có model đại diện
+[p0 03:55:31] TimesFM-final = hệ thống A (tfm_lora_baseline): B {TimesFM-LoRA + XReg(F_win)} vs A {TimesFM-LoRA baseline, feature-free} MedianGain -3.4279 pp (ε_TFM 0.3591) → không đủ → giữ A
+[p0 03:55:31] TimesFM-final đã lưu (wins/tfm.json) — champion so ở `champion-replay` theo thứ tự cố định
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 03:55:37] [autots_wr] preparing CPU cache for all candidate columns/folds before any fit
+[p0 03:56:08] [autots_wr] CPU cache: fold1_2025-01-07, 256 covariate columns
+[p0 03:56:10] [autots_wr] CPU cache: fold1_2025-01-07 prepared in 1.1s
+[p0 03:56:10] [autots_wr] CPU cache: fold2_2025-05-30, 256 covariate columns
+[p0 03:56:11] [autots_wr] CPU cache: fold2_2025-05-30 prepared in 1.3s
+[p0 03:56:11] [autots_wr] CPU cache: fold3_2025-10-19, 256 covariate columns
+[p0 03:56:12] [autots_wr] CPU cache: fold3_2025-10-19 prepared in 1.1s
+[p0 03:56:12] [autots_wr] CPU cache: fold4_2026-03-11, 256 covariate columns
+[p0 03:56:13] [autots_wr] CPU cache: fold4_2026-03-11 prepared in 1.3s
+[p0 03:56:13] [autots_wr] CPU cache: fold5_2026-08-01, 256 covariate columns
+[p0 03:56:14] [autots_wr] CPU cache: fold5_2026-08-01 prepared in 1.1s
+[p0 03:56:14] [autots_wr] CACHE READY: /home/ubuntu/P0_forecasting/experiments/tfm_autots/autots_preprocess/autots_wr/590eb2ee31606fd9830c0da05ec8b1b06d37ae9dd810a86de17c01f6ad3ac61e (reuse=False)
+[p0 03:56:14] [autots_wr] champion HOÃN (defer_champion): branch chỉ ghi artifact đại diện; so champion ở `champion-replay`
+[p0 03:56:14] [autots_wr] calibrate trên S0_autots_wr = 72 B0* khoá + 21 ext khoá — ES với calib_seed 8586; 163 candidate (Candidate_autots_wr)
+[p0 04:06:16] [autots_wr] rounds=None ε=0.1690 pp; base MedianGain vs E0 = -0.3463
+[p0 04:08:47] [autots_wr] 001 vwap_amt_gap_2               Median +0.0090 → KEEP (|S|=94)
+[p0 04:11:20] [autots_wr] 002 vwap_amt_gap_3               Median +0.0235 → KEEP (|S|=95)
+[p0 04:13:55] [autots_wr] 003 vwap_amt_gap_4               Median -0.0507 → KEEP (|S|=96)
+[p0 04:16:33] [autots_wr] 004 vwap_amt_gap_5               Median -0.0300 → KEEP (|S|=97)
+[p0 04:19:08] [autots_wr] 005 vwap_amt_gap_8               Median +0.0516 → KEEP (|S|=98)
+[p0 04:21:42] [autots_wr] 006 vwap_amt_gap_10              Median +0.0000 → KEEP (|S|=99)
+[p0 04:24:16] [autots_wr] 007 ret_1                        Median -0.0080 → KEEP (|S|=100)
+[p0 04:26:53] [autots_wr] 008 ret_2                        Median -0.0184 → KEEP (|S|=101)
+[p0 04:29:30] [autots_wr] 009 ret_3                        Median -0.0494 → KEEP (|S|=102)
+[p0 04:32:08] [autots_wr] 010 ret_4                        Median +0.0005 → KEEP (|S|=103)
+[p0 04:34:47] [autots_wr] 011 ret_5                        Median -0.0421 → KEEP (|S|=104)
+[p0 04:37:37] [autots_wr] 012 ret_8                        Median -0.0203 → KEEP (|S|=105)
+[p0 04:40:35] [autots_wr] 013 ret_10                       Median +0.0233 → KEEP (|S|=106)
+[p0 04:43:35] [autots_wr] 014 ret_15                       Median -0.0251 → KEEP (|S|=107)
+[p0 04:46:37] [autots_wr] 015 log_rv2_rv60                 Median +0.0221 → KEEP (|S|=108)
+[p0 04:49:40] [autots_wr] 016 log_rv3_rv60                 Median +0.0552 → KEEP (|S|=109)
+[p0 04:52:46] [autots_wr] 017 log_rv4_rv60                 Median -0.0257 → KEEP (|S|=110)
+[p0 04:55:50] [autots_wr] 018 log_rv5_rv60                 Median +0.0887 → KEEP (|S|=111)
+[p0 04:58:55] [autots_wr] 019 log_rv8_rv60                 Median -0.0451 → KEEP (|S|=112)
+[p0 05:02:02] [autots_wr] 020 log_rv10_rv60                Median +0.0696 → KEEP (|S|=113)
+[p0 05:05:03] [autots_wr] 021 log_rv15_rv60                Median +0.0719 → KEEP (|S|=114)
+[p0 05:08:05] [autots_wr] 022 log_c_ema2                   Median -0.1030 → KEEP (|S|=115)
+[p0 05:11:10] [autots_wr] 023 log_c_ema3                   Median -0.0362 → KEEP (|S|=116)
+[p0 05:14:16] [autots_wr] 024 log_c_ema4                   Median +0.2023 → KEEP (|S|=117)
+[p0 05:17:25] [autots_wr] 025 log_c_ema5                   Median -0.2151 → DROP (|S|=117)
+[p0 05:20:29] [autots_wr] 026 log_c_ema8                   Median -0.0873 → KEEP (|S|=118)
+[p0 05:23:33] [autots_wr] 027 log_c_ema10                  Median -0.0150 → KEEP (|S|=119)
+[p0 05:26:43] [autots_wr] 028 log_c_ema15                  Median -0.0204 → KEEP (|S|=120)
+[p0 05:29:57] [autots_wr] 029 log_ema2_ema5                Median -0.0721 → KEEP (|S|=121)
+[p0 05:33:08] [autots_wr] 030 log_ema2_ema8                Median -0.0226 → KEEP (|S|=122)
+[p0 05:36:19] [autots_wr] 031 log_ema3_ema10               Median +0.1059 → KEEP (|S|=123)
+[p0 05:39:30] [autots_wr] 032 log_ema4_ema10               Median +0.0281 → KEEP (|S|=124)
+[p0 05:42:39] [autots_wr] 033 log_ema5_ema15               Median +0.0282 → KEEP (|S|=125)
+[p0 05:45:50] [autots_wr] 034 rsi1_centered                Median -0.0008 → KEEP (|S|=126)
+[p0 05:49:04] [autots_wr] 035 rsi2_centered                Median -0.1269 → KEEP (|S|=127)
+[p0 05:52:19] [autots_wr] 036 rsi3_centered                Median +0.1091 → KEEP (|S|=128)
+[p0 05:55:34] [autots_wr] 037 rsi4_centered                Median -0.0796 → KEEP (|S|=129)
+[p0 05:58:51] [autots_wr] 038 rsi5_centered                Median +0.1473 → KEEP (|S|=130)
+[p0 06:02:07] [autots_wr] 039 rsi8_centered                Median -0.1441 → KEEP (|S|=131)
+[p0 06:05:23] [autots_wr] 040 rsi10_centered               Median +0.0868 → KEEP (|S|=132)
+[p0 06:08:40] [autots_wr] 041 rsi15_centered               Median -0.0926 → KEEP (|S|=133)
+[p0 06:12:01] [autots_wr] 042 bb_pctb_2                    Median +0.0247 → KEEP (|S|=134)
+[p0 06:15:22] [autots_wr] 043 bb_pctb_3                    Median +0.0302 → KEEP (|S|=135)
+[p0 06:18:46] [autots_wr] 044 bb_pctb_4                    Median +0.1066 → KEEP (|S|=136)
+[p0 06:22:10] [autots_wr] 045 bb_pctb_5                    Median -0.1393 → KEEP (|S|=137)
+[p0 06:25:34] [autots_wr] 046 bb_pctb_8                    Median +0.0077 → KEEP (|S|=138)
+[p0 06:29:00] [autots_wr] 047 bb_pctb_10                   Median -0.0255 → KEEP (|S|=139)
+[p0 06:32:30] [autots_wr] 048 bb_pctb_15                   Median -0.0027 → KEEP (|S|=140)
+[p0 06:35:58] [autots_wr] 049 bb_logbw_3                   Median -0.0371 → KEEP (|S|=141)
+[p0 06:39:26] [autots_wr] 050 bb_logbw_4                   Median +0.0047 → KEEP (|S|=142)
+[p0 06:42:57] [autots_wr] 051 bb_logbw_5                   Median +0.0270 → KEEP (|S|=143)
+[p0 06:46:28] [autots_wr] 052 bb_logbw_8                   Median -0.1262 → KEEP (|S|=144)
+[p0 06:49:59] [autots_wr] 053 bb_logbw_10                  Median -0.0119 → KEEP (|S|=145)
+[p0 06:53:30] [autots_wr] 054 bb_logbw_15                  Median -0.0591 → KEEP (|S|=146)
+[p0 06:57:05] [autots_wr] 055 log_atr1_c                   Median +0.0318 → KEEP (|S|=147)
+[p0 07:00:40] [autots_wr] 056 log_atr2_c                   Median -0.0400 → KEEP (|S|=148)
+[p0 07:04:14] [autots_wr] 057 log_atr3_c                   Median -0.0231 → KEEP (|S|=149)
+[p0 07:07:49] [autots_wr] 058 log_atr4_c                   Median -0.0674 → KEEP (|S|=150)
+[p0 07:11:27] [autots_wr] 059 log_atr5_c                   Median +0.0456 → KEEP (|S|=151)
+[p0 07:15:05] [autots_wr] 060 log_atr8_c                   Median -0.0326 → KEEP (|S|=152)
+[p0 07:18:44] [autots_wr] 061 log_atr10_c                  Median +0.0295 → KEEP (|S|=153)
+[p0 07:22:25] [autots_wr] 062 log_atr15_c                  Median -0.0355 → KEEP (|S|=154)
+[p0 07:26:07] [autots_wr] 063 log_atr2_rv2                 Median +0.0833 → KEEP (|S|=155)
+[p0 07:29:50] [autots_wr] 064 log_atr3_rv3                 Median -0.0306 → KEEP (|S|=156)
+[p0 07:33:36] [autots_wr] 065 log_atr4_rv4                 Median -0.1041 → KEEP (|S|=157)
+[p0 07:37:21] [autots_wr] 066 log_atr5_rv5                 Median +0.0600 → KEEP (|S|=158)
+[p0 07:41:09] [autots_wr] 067 log_atr8_rv8                 Median -0.0281 → KEEP (|S|=159)
+[p0 07:44:56] [autots_wr] 068 log_atr10_rv10               Median -0.0316 → KEEP (|S|=160)
+[p0 07:48:45] [autots_wr] 069 log_atr15_rv15               Median -0.0011 → KEEP (|S|=161)
+[p0 07:52:37] [autots_wr] 070 kcw_2                        Median +0.0180 → KEEP (|S|=162)
+[p0 07:56:32] [autots_wr] 071 kcw_3                        Median +0.0246 → KEEP (|S|=163)
+[p0 08:00:29] [autots_wr] 072 kcw_4                        Median -0.0319 → KEEP (|S|=164)
+[p0 08:04:25] [autots_wr] 073 kcw_5                        Median -0.0029 → KEEP (|S|=165)
+[p0 08:08:21] [autots_wr] 074 kcw_8                        Median -0.1055 → KEEP (|S|=166)
+[p0 08:12:17] [autots_wr] 075 kcw_10                       Median +0.0302 → KEEP (|S|=167)
+[p0 08:16:14] [autots_wr] 076 kcw_15                       Median +0.0288 → KEEP (|S|=168)
+[p0 08:20:11] [autots_wr] 077 mfi1_centered                Median +0.0001 → KEEP (|S|=169)
+[p0 08:24:11] [autots_wr] 078 mfi2_centered                Median -0.0238 → KEEP (|S|=170)
+[p0 08:28:11] [autots_wr] 079 mfi3_centered                Median +0.0236 → KEEP (|S|=171)
+[p0 08:32:12] [autots_wr] 080 mfi4_centered                Median +0.0316 → KEEP (|S|=172)
+[p0 08:36:15] [autots_wr] 081 mfi5_centered                Median -0.0045 → KEEP (|S|=173)
+[p0 08:40:21] [autots_wr] 082 mfi8_centered                Median -0.0004 → KEEP (|S|=174)
+[p0 08:44:28] [autots_wr] 083 mfi10_centered               Median +0.0330 → KEEP (|S|=175)
+[p0 08:48:38] [autots_wr] 084 mfi15_centered               Median -0.0048 → KEEP (|S|=176)
+[p0 08:52:46] [autots_wr] 085 ad_vwclv_1                   Median -0.0382 → KEEP (|S|=177)
+[p0 08:56:50] [autots_wr] 086 ad_vwclv_2                   Median +0.0158 → KEEP (|S|=178)
+[p0 09:00:59] [autots_wr] 087 ad_vwclv_3                   Median -0.0530 → KEEP (|S|=179)
+[p0 09:05:13] [autots_wr] 088 ad_vwclv_4                   Median -0.0093 → KEEP (|S|=180)
+[p0 09:09:36] [autots_wr] 089 ad_vwclv_8                   Median +0.1065 → KEEP (|S|=181)
+[p0 09:13:56] [autots_wr] 090 ad_vwclv_10                  Median -0.0336 → KEEP (|S|=182)
+[p0 09:18:23] [autots_wr] 091 dd_2                         Median +0.0051 → KEEP (|S|=183)
+[p0 09:22:53] [autots_wr] 092 dd_3                         Median -0.0283 → KEEP (|S|=184)
+[p0 09:27:23] [autots_wr] 093 dd_4                         Median +0.0250 → KEEP (|S|=185)
+[p0 09:31:56] [autots_wr] 094 dd_5                         Median -0.0316 → KEEP (|S|=186)
+[p0 09:36:30] [autots_wr] 095 dd_8                         Median +0.0536 → KEEP (|S|=187)
+[p0 09:41:07] [autots_wr] 096 dd_10                        Median +0.0368 → KEEP (|S|=188)
+[p0 09:45:46] [autots_wr] 097 dd_15                        Median -0.0567 → KEEP (|S|=189)
+[p0 09:50:27] [autots_wr] 098 ru_2                         Median -0.0386 → KEEP (|S|=190)
+[p0 09:55:10] [autots_wr] 099 ru_3                         Median +0.1091 → KEEP (|S|=191)
+[p0 09:59:53] [autots_wr] 100 ru_4                         Median +0.0206 → KEEP (|S|=192)
+[p0 10:04:36] [autots_wr] 101 ru_5                         Median +0.0236 → KEEP (|S|=193)
+[p0 10:09:18] [autots_wr] 102 ru_8                         Median +0.0500 → KEEP (|S|=194)
+[p0 10:14:01] [autots_wr] 103 ru_10                        Median -0.1601 → KEEP (|S|=195)
+[p0 10:18:48] [autots_wr] 104 ru_15                        Median -0.0627 → KEEP (|S|=196)
+[p0 10:23:34] [autots_wr] 105 log_range_1                  Median +0.0027 → KEEP (|S|=197)
+[p0 10:28:20] [autots_wr] 106 log_range_2                  Median +0.0282 → KEEP (|S|=198)
+[p0 10:33:08] [autots_wr] 107 log_range_3                  Median -0.1263 → KEEP (|S|=199)
+[p0 10:37:59] [autots_wr] 108 log_range_4                  Median +0.1198 → KEEP (|S|=200)
+[p0 10:42:53] [autots_wr] 109 log_range_5                  Median -0.0445 → KEEP (|S|=201)
+[p0 10:47:47] [autots_wr] 110 log_range_8                  Median +0.0587 → KEEP (|S|=202)
+[p0 10:52:43] [autots_wr] 111 log_range_10                 Median -0.0097 → KEEP (|S|=203)
+[p0 10:57:36] [autots_wr] 112 log_range_15                 Median +0.0188 → KEEP (|S|=204)
+[p0 11:02:29] [autots_wr] 113 ret_skew_3                   Median +0.0050 → KEEP (|S|=205)
+[p0 11:07:26] [autots_wr] 114 ret_skew_4                   Median +0.0243 → KEEP (|S|=206)
+[p0 11:12:24] [autots_wr] 115 ret_skew_5                   Median -0.0345 → KEEP (|S|=207)
+[p0 11:17:25] [autots_wr] 116 ret_skew_8                   Median -0.0402 → KEEP (|S|=208)
+[p0 11:22:36] [autots_wr] 117 ret_skew_10                  Median +0.0370 → KEEP (|S|=209)
+[p0 11:27:45] [autots_wr] 118 ret_skew_15                  Median +0.0068 → KEEP (|S|=210)
+[p0 11:32:49] [autots_wr] 119 hma_slope1_volnorm           Median +0.0533 → KEEP (|S|=211)
+[p0 11:37:52] [autots_wr] 120 hma_slope2_volnorm           Median -0.0134 → KEEP (|S|=212)
+[p0 11:42:58] [autots_wr] 121 hma_slope3_volnorm           Median +0.0480 → KEEP (|S|=213)
+[p0 11:48:04] [autots_wr] 122 hma_slope4_volnorm           Median -0.0214 → KEEP (|S|=214)
+[p0 11:53:16] [autots_wr] 123 hma_slope5_volnorm           Median +0.1058 → KEEP (|S|=215)
+[p0 11:58:25] [autots_wr] 124 hma_slope8_volnorm           Median -0.0117 → KEEP (|S|=216)
+[p0 12:03:40] [autots_wr] 125 hma_slope10_volnorm          Median -0.0203 → KEEP (|S|=217)
+[p0 12:08:54] [autots_wr] 126 hma_slope15_volnorm          Median +0.0160 → KEEP (|S|=218)
+[p0 12:14:07] [autots_wr] 127 macd_hist_2_5_2_volnorm      Median -0.0140 → KEEP (|S|=219)
+[p0 12:19:24] [autots_wr] 128 macd_hist_2_8_3_volnorm      Median +0.0430 → KEEP (|S|=220)
+[p0 12:24:38] [autots_wr] 129 macd_hist_3_10_3_volnorm     Median -0.0147 → KEEP (|S|=221)
+[p0 12:29:59] [autots_wr] 130 macd_hist_4_10_4_volnorm     Median +0.0671 → KEEP (|S|=222)
+[p0 12:35:19] [autots_wr] 131 macd_hist_5_15_5_volnorm     Median -0.1068 → KEEP (|S|=223)
+[p0 12:40:30] [autots_wr] 132 psar_dir_2                   Median +0.0060 → KEEP (|S|=224)
+[p0 12:45:33] [autots_wr] 133 psar_dir_3                   Median +0.0176 → KEEP (|S|=225)
+[p0 12:50:35] [autots_wr] 134 psar_dir_4                   Median +0.0303 → KEEP (|S|=226)
+[p0 12:55:35] [autots_wr] 135 psar_dir_5                   Median -0.0119 → KEEP (|S|=227)
+[p0 13:00:33] [autots_wr] 136 psar_dir_8                   Median +0.0027 → KEEP (|S|=228)
+[p0 13:05:27] [autots_wr] 137 psar_dir_10                  Median -0.0041 → KEEP (|S|=229)
+[p0 13:10:18] [autots_wr] 138 psar_dir_15                  Median +0.0034 → KEEP (|S|=230)
+[p0 13:15:12] [autots_wr] 139 psar_logdist_2               Median +0.0681 → KEEP (|S|=231)
+[p0 13:20:06] [autots_wr] 140 psar_logdist_3               Median +0.0459 → KEEP (|S|=232)
+[p0 13:25:00] [autots_wr] 141 psar_logdist_4               Median +0.0202 → KEEP (|S|=233)
+[p0 13:30:03] [autots_wr] 142 psar_logdist_5               Median -0.1237 → KEEP (|S|=234)
+[p0 13:34:57] [autots_wr] 143 psar_logdist_8               Median -0.0072 → KEEP (|S|=235)
+[p0 13:39:52] [autots_wr] 144 psar_logdist_10              Median +0.0600 → KEEP (|S|=236)
+[p0 13:44:47] [autots_wr] 145 psar_logdist_15              Median +0.0447 → KEEP (|S|=237)
+[p0 13:49:42] [autots_wr] 146 psar_age_log_2               Median -0.1050 → KEEP (|S|=238)
+[p0 13:54:33] [autots_wr] 147 psar_age_log_3               Median +0.0336 → KEEP (|S|=239)
+[p0 13:59:26] [autots_wr] 148 psar_age_log_4               Median +0.0980 → KEEP (|S|=240)
+[p0 14:04:24] [autots_wr] 149 psar_age_log_5               Median -0.0394 → KEEP (|S|=241)
+[p0 14:09:35] [autots_wr] 150 psar_age_log_8               Median +0.0302 → KEEP (|S|=242)
+[p0 14:14:50] [autots_wr] 151 psar_age_log_10              Median -0.0164 → KEEP (|S|=243)
+[p0 14:20:04] [autots_wr] 152 psar_age_log_15              Median +0.0088 → KEEP (|S|=244)
+[p0 14:25:29] [autots_wr] 153 log_rv2_med2d                Median -0.0551 → KEEP (|S|=245)
+[p0 14:31:00] [autots_wr] 154 log_rv3_med2d                Median +0.0584 → KEEP (|S|=246)
+[p0 14:36:32] [autots_wr] 155 log_rv4_med2d                Median +0.0376 → KEEP (|S|=247)
+[p0 14:42:06] [autots_wr] 156 log_rv5_med2d                Median +0.0540 → KEEP (|S|=248)
+[p0 14:47:44] [autots_wr] 157 log_rv8_med2d                Median -0.0433 → KEEP (|S|=249)
+[p0 14:53:22] [autots_wr] 158 log_rv10_med2d               Median +0.0634 → KEEP (|S|=250)
+[p0 14:59:03] [autots_wr] 159 log_rv15_med2d               Median -0.1076 → KEEP (|S|=251)
+[p0 15:04:48] [autots_wr] 160 r5_2                         Median +0.0963 → KEEP (|S|=252)
+[p0 15:10:38] [autots_wr] 161 r5_3                         Median -0.0072 → KEEP (|S|=253)
+[p0 15:16:23] [autots_wr] 162 log_c5_ema5_2                Median +0.0205 → KEEP (|S|=254)
+[p0 15:22:17] [autots_wr] 163 log_c5_ema5_3                Median -0.0601 → KEEP (|S|=255)
+[p0 15:22:17] [autots_wr] F*_raw: 162 KEEP / 1 DROP → /home/ubuntu/P0_forecasting/experiments/tfm_autots/keepdrop_autots_wr.csv
+[p0 15:22:17] [autots_wr] F*_raw vs baseline S0: MedianGain = +0.1193 pp
+[p0 15:42:50] [autots_wr] prune PI (chỉ cột mới): giữ 90/162 → F_pruned (+21 ext khoá, 72 B0 khoá)
+[p0 16:14:27] [autots_wr] F_win = prune (confirmation F_raw vs F_pruned: MedianGain +0.0683, ε=0.1690) → 90 cột mới
+[p0 16:14:27] [autots_wr] feature-search xong (F_best: 90 cột mới + 21 ext khoá) — không so champion; chạy `autots-search` để có model đại diện
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 16:14:35] [autots_mr] preparing CPU cache for all candidate columns/folds before any fit
+[p0 16:15:09] [autots_mr] CPU cache: fold1_2025-01-07, 243 covariate columns
+[p0 16:15:15] [autots_mr] CPU cache: fold1_2025-01-07 prepared in 5.8s
+[p0 16:15:15] [autots_mr] CPU cache: fold2_2025-05-30, 243 covariate columns
+[p0 16:15:20] [autots_mr] CPU cache: fold2_2025-05-30 prepared in 5.4s
+[p0 16:15:20] [autots_mr] CPU cache: fold3_2025-10-19, 243 covariate columns
+[p0 16:15:26] [autots_mr] CPU cache: fold3_2025-10-19 prepared in 5.5s
+[p0 16:15:26] [autots_mr] CPU cache: fold4_2026-03-11, 243 covariate columns
+[p0 16:15:31] [autots_mr] CPU cache: fold4_2026-03-11 prepared in 5.5s
+[p0 16:15:31] [autots_mr] CPU cache: fold5_2026-08-01, 243 covariate columns
+[p0 16:15:37] [autots_mr] CPU cache: fold5_2026-08-01 prepared in 5.6s
+[p0 16:15:37] [autots_mr] CACHE READY: /home/ubuntu/P0_forecasting/experiments/tfm_autots/autots_preprocess/autots_mr/ab1ba4f0d0408015fdd9be515e3bc5f92af5f6da337a232b035675e207bf1625 (reuse=False)
+[p0 16:15:37] [autots_mr] champion HOÃN (defer_champion): branch chỉ ghi artifact đại diện; so champion ở `champion-replay`
+[p0 16:15:37] [autots_mr] calibrate trên S0_autots_mr = 72 B0* khoá + 8 ext khoá — ES với calib_seed 8586; 163 candidate (Candidate_autots_mr)
+[p0 16:16:56] [autots_mr] rounds=None ε=0.0050 pp; base MedianGain vs E0 = -0.5015
+[p0 16:17:15] [autots_mr] 001 vwap_amt_gap_2               Median -0.2392 → DROP (|S|=80)
+[p0 16:17:34] [autots_mr] 002 vwap_amt_gap_3               Median -0.2005 → DROP (|S|=80)
+[p0 16:17:53] [autots_mr] 003 vwap_amt_gap_4               Median -0.1307 → DROP (|S|=80)
+[p0 16:18:12] [autots_mr] 004 vwap_amt_gap_5               Median +0.0444 → KEEP (|S|=81)
+[p0 16:18:31] [autots_mr] 005 vwap_amt_gap_8               Median +0.2391 → KEEP (|S|=82)
+[p0 16:18:51] [autots_mr] 006 vwap_amt_gap_10              Median -0.0289 → DROP (|S|=82)
+[p0 16:19:10] [autots_mr] 007 ret_1                        Median +0.0000 → KEEP (|S|=83)
+[p0 16:19:29] [autots_mr] 008 ret_2                        Median +0.0661 → KEEP (|S|=84)
+[p0 16:19:49] [autots_mr] 009 ret_3                        Median +0.0143 → KEEP (|S|=85)
+[p0 16:20:10] [autots_mr] 010 ret_4                        Median +0.0206 → KEEP (|S|=86)
+[p0 16:20:30] [autots_mr] 011 ret_5                        Median -0.1105 → DROP (|S|=86)
+[p0 16:20:50] [autots_mr] 012 ret_8                        Median -0.0330 → DROP (|S|=86)
+[p0 16:21:10] [autots_mr] 013 ret_10                       Median -0.0575 → DROP (|S|=86)
+[p0 16:21:29] [autots_mr] 014 ret_15                       Median +0.0002 → KEEP (|S|=87)
+[p0 16:21:49] [autots_mr] 015 log_rv2_rv60                 Median +0.0025 → KEEP (|S|=88)
+[p0 16:22:09] [autots_mr] 016 log_rv3_rv60                 Median +0.0737 → KEEP (|S|=89)
+[p0 16:22:29] [autots_mr] 017 log_rv4_rv60                 Median -0.0261 → DROP (|S|=89)
+[p0 16:22:49] [autots_mr] 018 log_rv5_rv60                 Median -0.0081 → DROP (|S|=89)
+[p0 16:23:08] [autots_mr] 019 log_rv8_rv60                 Median -0.0380 → DROP (|S|=89)
+[p0 16:23:27] [autots_mr] 020 log_rv10_rv60                Median -0.0596 → DROP (|S|=89)
+[p0 16:23:47] [autots_mr] 021 log_rv15_rv60                Median -0.0267 → DROP (|S|=89)
+[p0 16:24:07] [autots_mr] 022 log_c_ema2                   Median -0.0905 → DROP (|S|=89)
+[p0 16:24:27] [autots_mr] 023 log_c_ema3                   Median +0.0000 → KEEP (|S|=90)
+[p0 16:24:46] [autots_mr] 024 log_c_ema4                   Median +0.0627 → KEEP (|S|=91)
+[p0 16:25:06] [autots_mr] 025 log_c_ema5                   Median -0.1986 → DROP (|S|=91)
+[p0 16:25:26] [autots_mr] 026 log_c_ema8                   Median +0.0011 → KEEP (|S|=92)
+[p0 16:25:46] [autots_mr] 027 log_c_ema10                  Median -0.1728 → DROP (|S|=92)
+[p0 16:26:06] [autots_mr] 028 log_c_ema15                  Median +0.0700 → KEEP (|S|=93)
+[p0 16:26:26] [autots_mr] 029 log_ema2_ema5                Median -0.0936 → DROP (|S|=93)
+[p0 16:26:46] [autots_mr] 030 log_ema2_ema8                Median +0.0066 → KEEP (|S|=94)
+[p0 16:27:06] [autots_mr] 031 log_ema3_ema10               Median +0.0521 → KEEP (|S|=95)
+[p0 16:27:26] [autots_mr] 032 log_ema4_ema10               Median -0.0480 → DROP (|S|=95)
+[p0 16:27:46] [autots_mr] 033 log_ema5_ema15               Median -0.1663 → DROP (|S|=95)
+[p0 16:28:08] [autots_mr] 034 rsi1_centered                Median +0.0000 → KEEP (|S|=96)
+[p0 16:28:28] [autots_mr] 035 rsi2_centered                Median -0.1455 → DROP (|S|=96)
+[p0 16:28:48] [autots_mr] 036 rsi3_centered                Median -0.1035 → DROP (|S|=96)
+[p0 16:29:08] [autots_mr] 037 rsi4_centered                Median +0.0286 → KEEP (|S|=97)
+[p0 16:29:28] [autots_mr] 038 rsi5_centered                Median -0.1186 → DROP (|S|=97)
+[p0 16:29:48] [autots_mr] 039 rsi8_centered                Median -0.0475 → DROP (|S|=97)
+[p0 16:30:08] [autots_mr] 040 rsi10_centered               Median -0.0921 → DROP (|S|=97)
+[p0 16:30:28] [autots_mr] 041 rsi15_centered               Median -0.0596 → DROP (|S|=97)
+[p0 16:30:48] [autots_mr] 042 bb_pctb_2                    Median -0.1515 → DROP (|S|=97)
+[p0 16:31:08] [autots_mr] 043 bb_pctb_3                    Median -0.0437 → DROP (|S|=97)
+[p0 16:31:28] [autots_mr] 044 bb_pctb_4                    Median -0.0972 → DROP (|S|=97)
+[p0 16:31:48] [autots_mr] 045 bb_pctb_5                    Median -0.1488 → DROP (|S|=97)
+[p0 16:32:08] [autots_mr] 046 bb_pctb_8                    Median -0.1542 → DROP (|S|=97)
+[p0 16:32:29] [autots_mr] 047 bb_pctb_10                   Median -0.1008 → DROP (|S|=97)
+[p0 16:32:49] [autots_mr] 048 bb_pctb_15                   Median -0.1025 → DROP (|S|=97)
+[p0 16:33:09] [autots_mr] 049 bb_logbw_3                   Median -0.0467 → DROP (|S|=97)
+[p0 16:33:28] [autots_mr] 050 bb_logbw_4                   Median -0.1940 → DROP (|S|=97)
+[p0 16:33:48] [autots_mr] 051 bb_logbw_5                   Median -0.1926 → DROP (|S|=97)
+[p0 16:34:08] [autots_mr] 052 bb_logbw_8                   Median -0.0795 → DROP (|S|=97)
+[p0 16:34:28] [autots_mr] 053 bb_logbw_10                  Median -0.1368 → DROP (|S|=97)
+[p0 16:34:48] [autots_mr] 054 bb_logbw_15                  Median +0.0600 → KEEP (|S|=98)
+[p0 16:35:08] [autots_mr] 055 log_atr1_c                   Median -0.0709 → DROP (|S|=98)
+[p0 16:35:28] [autots_mr] 056 log_atr2_c                   Median -0.1347 → DROP (|S|=98)
+[p0 16:35:49] [autots_mr] 057 log_atr3_c                   Median -0.0557 → DROP (|S|=98)
+[p0 16:36:09] [autots_mr] 058 log_atr4_c                   Median -0.1612 → DROP (|S|=98)
+[p0 16:36:30] [autots_mr] 059 log_atr5_c                   Median -0.1297 → DROP (|S|=98)
+[p0 16:36:50] [autots_mr] 060 log_atr8_c                   Median -0.0377 → DROP (|S|=98)
+[p0 16:37:09] [autots_mr] 061 log_atr10_c                  Median -0.0538 → DROP (|S|=98)
+[p0 16:37:30] [autots_mr] 062 log_atr15_c                  Median -0.0358 → DROP (|S|=98)
+[p0 16:37:49] [autots_mr] 063 log_atr2_rv2                 Median -0.1759 → DROP (|S|=98)
+[p0 16:38:10] [autots_mr] 064 log_atr3_rv3                 Median -0.1287 → DROP (|S|=98)
+[p0 16:38:30] [autots_mr] 065 log_atr4_rv4                 Median -0.0284 → DROP (|S|=98)
+[p0 16:38:51] [autots_mr] 066 log_atr5_rv5                 Median -0.0477 → DROP (|S|=98)
+[p0 16:39:12] [autots_mr] 067 log_atr8_rv8                 Median -0.1155 → DROP (|S|=98)
+[p0 16:39:32] [autots_mr] 068 log_atr10_rv10               Median -0.0326 → DROP (|S|=98)
+[p0 16:39:52] [autots_mr] 069 log_atr15_rv15               Median -0.0275 → DROP (|S|=98)
+[p0 16:40:12] [autots_mr] 070 kcw_2                        Median -0.0671 → DROP (|S|=98)
+[p0 16:40:32] [autots_mr] 071 kcw_3                        Median +0.0051 → KEEP (|S|=99)
+[p0 16:40:52] [autots_mr] 072 kcw_4                        Median -0.2172 → DROP (|S|=99)
+[p0 16:41:13] [autots_mr] 073 kcw_5                        Median -0.0908 → DROP (|S|=99)
+[p0 16:41:33] [autots_mr] 074 kcw_8                        Median -0.0976 → DROP (|S|=99)
+[p0 16:41:53] [autots_mr] 075 kcw_10                       Median -0.1551 → DROP (|S|=99)
+[p0 16:42:13] [autots_mr] 076 kcw_15                       Median -0.1363 → DROP (|S|=99)
+[p0 16:42:33] [autots_mr] 077 mfi1_centered                Median -0.0932 → DROP (|S|=99)
+[p0 16:42:53] [autots_mr] 078 mfi2_centered                Median -0.0908 → DROP (|S|=99)
+[p0 16:43:14] [autots_mr] 079 mfi3_centered                Median -0.0845 → DROP (|S|=99)
+[p0 16:43:34] [autots_mr] 080 mfi4_centered                Median -0.0555 → DROP (|S|=99)
+[p0 16:43:55] [autots_mr] 081 mfi5_centered                Median -0.0578 → DROP (|S|=99)
+[p0 16:44:16] [autots_mr] 082 mfi8_centered                Median -0.0934 → DROP (|S|=99)
+[p0 16:44:36] [autots_mr] 083 mfi10_centered               Median -0.0526 → DROP (|S|=99)
+[p0 16:44:57] [autots_mr] 084 mfi15_centered               Median -0.0386 → DROP (|S|=99)
+[p0 16:45:17] [autots_mr] 085 ad_vwclv_1                   Median -0.0211 → DROP (|S|=99)
+[p0 16:45:38] [autots_mr] 086 ad_vwclv_2                   Median -0.1001 → DROP (|S|=99)
+[p0 16:45:58] [autots_mr] 087 ad_vwclv_3                   Median -0.2047 → DROP (|S|=99)
+[p0 16:46:19] [autots_mr] 088 ad_vwclv_4                   Median -0.1381 → DROP (|S|=99)
+[p0 16:46:39] [autots_mr] 089 ad_vwclv_8                   Median -0.1017 → DROP (|S|=99)
+[p0 16:46:59] [autots_mr] 090 ad_vwclv_10                  Median -0.0519 → DROP (|S|=99)
+[p0 16:47:19] [autots_mr] 091 dd_2                         Median -0.0409 → DROP (|S|=99)
+[p0 16:47:39] [autots_mr] 092 dd_3                         Median -0.1630 → DROP (|S|=99)
+[p0 16:47:59] [autots_mr] 093 dd_4                         Median -0.0546 → DROP (|S|=99)
+[p0 16:48:19] [autots_mr] 094 dd_5                         Median -0.0869 → DROP (|S|=99)
+[p0 16:48:39] [autots_mr] 095 dd_8                         Median -0.1504 → DROP (|S|=99)
+[p0 16:49:00] [autots_mr] 096 dd_10                        Median -0.0859 → DROP (|S|=99)
+[p0 16:49:21] [autots_mr] 097 dd_15                        Median -0.2672 → DROP (|S|=99)
+[p0 16:49:41] [autots_mr] 098 ru_2                         Median -0.1888 → DROP (|S|=99)
+[p0 16:50:01] [autots_mr] 099 ru_3                         Median -0.0580 → DROP (|S|=99)
+[p0 16:50:22] [autots_mr] 100 ru_4                         Median -0.1050 → DROP (|S|=99)
+[p0 16:50:42] [autots_mr] 101 ru_5                         Median -0.1989 → DROP (|S|=99)
+[p0 16:51:02] [autots_mr] 102 ru_8                         Median -0.1615 → DROP (|S|=99)
+[p0 16:51:22] [autots_mr] 103 ru_10                        Median -0.1102 → DROP (|S|=99)
+[p0 16:51:42] [autots_mr] 104 ru_15                        Median +0.0392 → KEEP (|S|=100)
+[p0 16:52:02] [autots_mr] 105 log_range_1                  Median -0.0055 → DROP (|S|=100)
+[p0 16:52:23] [autots_mr] 106 log_range_2                  Median -0.0636 → DROP (|S|=100)
+[p0 16:52:43] [autots_mr] 107 log_range_3                  Median -0.1055 → DROP (|S|=100)
+[p0 16:53:03] [autots_mr] 108 log_range_4                  Median -0.0177 → DROP (|S|=100)
+[p0 16:53:23] [autots_mr] 109 log_range_5                  Median -0.0660 → DROP (|S|=100)
+[p0 16:53:44] [autots_mr] 110 log_range_8                  Median +0.0223 → KEEP (|S|=101)
+[p0 16:54:05] [autots_mr] 111 log_range_10                 Median -0.0543 → DROP (|S|=101)
+[p0 16:54:25] [autots_mr] 112 log_range_15                 Median -0.0122 → DROP (|S|=101)
+[p0 16:54:44] [autots_mr] 113 ret_skew_3                   Median -0.0386 → DROP (|S|=101)
+[p0 16:55:04] [autots_mr] 114 ret_skew_4                   Median +0.0476 → KEEP (|S|=102)
+[p0 16:55:25] [autots_mr] 115 ret_skew_5                   Median +0.0173 → KEEP (|S|=103)
+[p0 16:55:45] [autots_mr] 116 ret_skew_8                   Median -0.1087 → DROP (|S|=103)
+[p0 16:56:05] [autots_mr] 117 ret_skew_10                  Median +0.0086 → KEEP (|S|=104)
+[p0 16:56:26] [autots_mr] 118 ret_skew_15                  Median -0.1781 → DROP (|S|=104)
+[p0 16:56:46] [autots_mr] 119 hma_slope1_volnorm           Median -0.0697 → DROP (|S|=104)
+[p0 16:57:07] [autots_mr] 120 hma_slope2_volnorm           Median -0.0411 → DROP (|S|=104)
+[p0 16:57:27] [autots_mr] 121 hma_slope3_volnorm           Median -0.2020 → DROP (|S|=104)
+[p0 16:57:48] [autots_mr] 122 hma_slope4_volnorm           Median -0.0734 → DROP (|S|=104)
+[p0 16:58:08] [autots_mr] 123 hma_slope5_volnorm           Median -0.0920 → DROP (|S|=104)
+[p0 16:58:28] [autots_mr] 124 hma_slope8_volnorm           Median -0.1420 → DROP (|S|=104)
+[p0 16:58:48] [autots_mr] 125 hma_slope10_volnorm          Median -0.0224 → DROP (|S|=104)
+[p0 16:59:09] [autots_mr] 126 hma_slope15_volnorm          Median -0.1003 → DROP (|S|=104)
+[p0 16:59:29] [autots_mr] 127 macd_hist_2_5_2_volnorm      Median -0.0874 → DROP (|S|=104)
+[p0 16:59:49] [autots_mr] 128 macd_hist_2_8_3_volnorm      Median +0.0131 → KEEP (|S|=105)
+[p0 17:00:10] [autots_mr] 129 macd_hist_3_10_3_volnorm     Median +0.0302 → KEEP (|S|=106)
+[p0 17:00:34] [autots_mr] 130 macd_hist_4_10_4_volnorm     Median -0.0429 → DROP (|S|=106)
+[p0 17:00:54] [autots_mr] 131 macd_hist_5_15_5_volnorm     Median -0.1714 → DROP (|S|=106)
+[p0 17:01:15] [autots_mr] 132 psar_dir_2                   Median -0.0483 → DROP (|S|=106)
+[p0 17:01:35] [autots_mr] 133 psar_dir_3                   Median +0.0352 → KEEP (|S|=107)
+[p0 17:01:55] [autots_mr] 134 psar_dir_4                   Median -0.1173 → DROP (|S|=107)
+[p0 17:02:15] [autots_mr] 135 psar_dir_5                   Median -0.0365 → DROP (|S|=107)
+[p0 17:02:35] [autots_mr] 136 psar_dir_8                   Median +0.0000 → KEEP (|S|=108)
+[p0 17:02:56] [autots_mr] 137 psar_dir_10                  Median +0.0000 → KEEP (|S|=109)
+[p0 17:03:17] [autots_mr] 138 psar_dir_15                  Median +0.0000 → KEEP (|S|=110)
+[p0 17:03:38] [autots_mr] 139 psar_logdist_2               Median -0.1822 → DROP (|S|=110)
+[p0 17:03:59] [autots_mr] 140 psar_logdist_3               Median -0.1236 → DROP (|S|=110)
+[p0 17:04:20] [autots_mr] 141 psar_logdist_4               Median -0.1235 → DROP (|S|=110)
+[p0 17:04:41] [autots_mr] 142 psar_logdist_5               Median -0.0869 → DROP (|S|=110)
+[p0 17:05:02] [autots_mr] 143 psar_logdist_8               Median -0.0407 → DROP (|S|=110)
+[p0 17:05:23] [autots_mr] 144 psar_logdist_10              Median +0.0137 → KEEP (|S|=111)
+[p0 17:05:45] [autots_mr] 145 psar_logdist_15              Median -0.0600 → DROP (|S|=111)
+[p0 17:06:06] [autots_mr] 146 psar_age_log_2               Median -0.0016 → KEEP (|S|=112)
+[p0 17:06:27] [autots_mr] 147 psar_age_log_3               Median -0.0947 → DROP (|S|=112)
+[p0 17:06:48] [autots_mr] 148 psar_age_log_4               Median -0.0584 → DROP (|S|=112)
+[p0 17:07:08] [autots_mr] 149 psar_age_log_5               Median -0.0282 → DROP (|S|=112)
+[p0 17:07:29] [autots_mr] 150 psar_age_log_8               Median -0.0378 → DROP (|S|=112)
+[p0 17:07:49] [autots_mr] 151 psar_age_log_10              Median -0.0627 → DROP (|S|=112)
+[p0 17:08:10] [autots_mr] 152 psar_age_log_15              Median -0.1505 → DROP (|S|=112)
+[p0 17:08:31] [autots_mr] 153 log_rv2_med2d                Median -0.1523 → DROP (|S|=112)
+[p0 17:08:51] [autots_mr] 154 log_rv3_med2d                Median -0.1762 → DROP (|S|=112)
+[p0 17:09:12] [autots_mr] 155 log_rv4_med2d                Median -0.2017 → DROP (|S|=112)
+[p0 17:09:33] [autots_mr] 156 log_rv5_med2d                Median -0.0704 → DROP (|S|=112)
+[p0 17:09:54] [autots_mr] 157 log_rv8_med2d                Median -0.1624 → DROP (|S|=112)
+[p0 17:10:16] [autots_mr] 158 log_rv10_med2d               Median +0.0335 → KEEP (|S|=113)
+[p0 17:10:37] [autots_mr] 159 log_rv15_med2d               Median -0.1019 → DROP (|S|=113)
+[p0 17:10:59] [autots_mr] 160 r5_2                         Median -0.1181 → DROP (|S|=113)
+[p0 17:11:20] [autots_mr] 161 r5_3                         Median -0.2450 → DROP (|S|=113)
+[p0 17:11:40] [autots_mr] 162 log_c5_ema5_2                Median -0.2071 → DROP (|S|=113)
+[p0 17:12:01] [autots_mr] 163 log_c5_ema5_3                Median -0.2326 → DROP (|S|=113)
+[p0 17:12:01] [autots_mr] F*_raw: 33 KEEP / 130 DROP → /home/ubuntu/P0_forecasting/experiments/tfm_autots/keepdrop_autots_mr.csv
+[p0 17:12:01] [autots_mr] F*_raw vs baseline S0: MedianGain = +0.3597 pp
+[p0 17:36:11] [autots_mr] prune PI (chỉ cột mới): giữ 21/33 → F_pruned (+8 ext khoá, 72 B0 khoá)
+[p0 17:38:13] [autots_mr] F_win = prune (confirmation F_raw vs F_pruned: MedianGain +0.0137, ε=0.0050) → 21 cột mới
+[p0 17:38:13] [autots_mr] feature-search xong (F_best: 21 cột mới + 8 ext khoá) — không so champion; chạy `autots-search` để có model đại diện
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+/home/ubuntu/P0_forecasting/.venv/lib/python3.11/site-packages/pandas/core/arraylike.py:402: RuntimeWarning: divide by zero encountered in log
+  result = getattr(ufunc, method)(*inputs, **kwargs)
+[p0 17:38:20] bake-off: 4 template / 2 nhóm shift ['wr:60', 'mr'], num_validations=10, 2 frozen set × 5 fold
+[p0 17:38:50] [fold1_2025-01-07|wr:60] search trên 179937 bar (đến 2025-01-07 01:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 197.35 in 56.53s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 175.1 in 5.63s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 161.02 in 56.54s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 148.18 in 5.72s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 200.0 in 55.74s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 200.0 in 5.69s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 168.81 in 55.33s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+📈 2 - WindowRegression with avg smape 137.03 in 5.68s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 188.07 in 55.92s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+📈 2 - WindowRegression with avg smape 178.02 in 5.67s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 188.23 in 56.64s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 189.55 in 5.82s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 200.0 in 56.19s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 200.0 in 5.81s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 173.78 in 57.04s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 182.18 in 6.00s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 183.2 in 56.65s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 163.99 in 5.79s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 194.18 in 57.02s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 199.09 in 5.82s: 
+[p0 17:50:26] [fold2_2025-05-30|wr:60] search trên 179937 bar (đến 2025-05-29 23:18:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 188.67 in 56.85s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 200.0 in 5.78s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 200.0 in 56.50s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 200.0 in 5.79s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 163.86 in 54.20s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 161.7 in 5.62s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 199.81 in 53.82s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+📈 2 - WindowRegression with avg smape 181.11 in 5.70s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 200.0 in 54.02s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 200.0 in 5.82s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 180.35 in 53.51s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+📈 2 - WindowRegression with avg smape 169.7 in 5.77s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 196.24 in 53.63s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 196.39 in 5.68s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 164.5 in 54.00s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 175.47 in 5.70s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 182.84 in 59.87s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 199.65 in 5.75s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 191.52 in 56.92s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 191.42 in 5.73s: 
+[p0 18:01:52] [fold3_2025-10-19|wr:60] search trên 179937 bar (đến 2025-10-19 20:41:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 151.65 in 56.10s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 141.71 in 5.23s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 197.22 in 55.85s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 193.38 in 5.09s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 198.48 in 56.67s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 195.27 in 5.14s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 156.96 in 56.23s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 159.96 in 4.92s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 190.8 in 55.38s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+📈 2 - WindowRegression with avg smape 171.37 in 5.09s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 153.52 in 56.71s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 197.28 in 5.07s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 195.89 in 56.68s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 194.74 in 5.02s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 200.0 in 56.42s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+📈 2 - WindowRegression with avg smape 199.88 in 4.87s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 192.12 in 56.90s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 183.15 in 5.13s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 196.56 in 55.86s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 192.4 in 5.05s: 
+[p0 18:13:19] [fold4_2026-03-11|wr:60] search trên 179937 bar (đến 2026-03-11 18:04:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 126.67 in 5.81s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 164.62 in 56.07s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 189.91 in 5.84s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+📈 2 - WindowRegression with avg smape 182.44 in 57.75s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 200.0 in 5.88s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 198.1 in 57.59s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 162.07 in 6.26s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 173.07 in 57.46s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 139.27 in 5.89s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 176.97 in 62.61s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 173.94 in 6.23s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 200.0 in 59.08s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 200.0 in 6.08s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 129.78 in 59.61s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 191.43 in 8.42s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 197.44 in 57.96s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 200.0 in 6.63s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 162.29 in 57.96s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 200.0 in 5.85s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 199.28 in 58.67s: 
+[p0 18:25:26] [fold5_2026-08-01|wr:60] search trên 179937 bar (đến 2026-08-01 15:26:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 181.92 in 60.06s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 200.0 in 5.76s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 199.37 in 58.67s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 199.9 in 5.73s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 200.0 in 58.55s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 200.0 in 5.78s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 198.68 in 57.63s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+📈 2 - WindowRegression with avg smape 182.54 in 5.82s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 200.0 in 58.08s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+📈 2 - WindowRegression with avg smape 196.01 in 6.23s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 200.0 in 57.48s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 200.0 in 5.75s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 159.19 in 58.06s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 200.0 in 5.90s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 200.0 in 58.87s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+📈 2 - WindowRegression with avg smape 185.44 in 5.93s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 194.6 in 58.45s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 191.82 in 5.67s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 196.66 in 58.03s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 193.59 in 5.77s: 
+[p0 18:37:20] [F_WR_best|wr:60|fold1_2025-01-07] template thắng: WindowRegression
+[p0 18:37:20] [F_WR_best|wr:60|fold2_2025-05-30] template thắng: WindowRegression
+[p0 18:37:20] [F_WR_best|wr:60|fold3_2025-10-19] template thắng: WindowRegression
+[p0 18:37:20] [F_WR_best|wr:60|fold4_2026-03-11] template thắng: WindowRegression
+[p0 18:37:20] [F_WR_best|wr:60|fold5_2026-08-01] template thắng: WindowRegression
+[p0 18:42:35] [F_WR_best|wr:60] outer VAL @ selection_seed 8587: MedianGain vs E0 = -0.3343 pp
+[p0 18:42:38] [fold1_2025-01-07|mr] search trên 179937 bar (đến 2025-01-07 01:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 173.04 in 80.04s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 185.45 in 89.78s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 49.97 in 76.95s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 61.62 in 90.59s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 190.31 in 77.33s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 191.69 in 90.16s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 200.0 in 77.78s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 200.0 in 88.95s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 130.91 in 79.24s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 161.75 in 91.44s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 197.69 in 77.59s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 198.88 in 89.59s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 200.0 in 78.78s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 200.0 in 89.49s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 180.08 in 77.22s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 179.11 in 88.98s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 183.76 in 78.61s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 181.39 in 88.84s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 198.44 in 76.35s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 199.02 in 88.43s: 
+[p0 19:13:34] [fold2_2025-05-30|mr] search trên 179937 bar (đến 2025-05-29 23:18:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 187.79 in 86.25s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+📈 2 - MultivariateRegression with avg smape 181.86 in 76.35s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 197.95 in 89.62s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+📈 2 - MultivariateRegression with avg smape 196.39 in 74.94s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 139.54 in 88.16s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+📈 2 - MultivariateRegression with avg smape 139.11 in 78.37s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 200.0 in 89.43s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 200.0 in 77.41s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 181.49 in 87.95s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 179.11 in 74.14s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 197.66 in 86.36s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 199.69 in 76.83s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 192.15 in 87.85s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 191.11 in 76.34s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 174.53 in 88.79s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 171.85 in 76.13s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 193.98 in 88.49s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 193.53 in 75.99s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 191.81 in 86.80s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+📈 2 - MultivariateRegression with avg smape 188.21 in 77.09s: 
+[p0 19:43:55] [fold3_2025-10-19|mr] search trên 179937 bar (đến 2025-10-19 20:41:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 182.26 in 75.46s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 182.67 in 86.86s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 200.0 in 73.57s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+📈 2 - MultivariateRegression with avg smape 199.73 in 86.46s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 191.85 in 75.74s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 200.0 in 86.93s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 139.69 in 76.93s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 153.5 in 89.96s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 156.46 in 75.44s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 155.44 in 89.67s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 194.04 in 76.93s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 194.34 in 87.91s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 186.88 in 75.02s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 169.65 in 88.69s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 179.2 in 77.08s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 176.74 in 86.74s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 171.26 in 75.11s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+2 - MultivariateRegression with avg smape 184.48 in 86.62s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 192.3 in 74.59s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+📈 2 - MultivariateRegression with avg smape 191.68 in 87.10s: 
+[p0 20:14:04] [fold4_2026-03-11|mr] search trên 179937 bar (đến 2026-03-11 18:04:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 193.16 in 86.28s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 197.7 in 77.01s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 157.98 in 89.51s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 169.08 in 78.81s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 198.55 in 90.27s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 200.0 in 75.40s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 186.85 in 86.93s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+📈 2 - MultivariateRegression with avg smape 178.21 in 76.20s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 200.0 in 87.05s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+📈 2 - MultivariateRegression with avg smape 189.77 in 77.31s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 194.74 in 88.67s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+📈 2 - MultivariateRegression with avg smape 151.19 in 78.30s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 185.71 in 90.47s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 170.91 in 78.39s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 200.0 in 89.23s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 195.54 in 77.45s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 198.86 in 89.37s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 184.57 in 77.92s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 198.34 in 90.01s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+📈 2 - MultivariateRegression with avg smape 186.14 in 77.25s: 
+[p0 20:44:44] [fold5_2026-08-01|mr] search trên 179937 bar (đến 2026-08-01 15:26:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 200.0 in 89.02s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 200.0 in 76.33s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 199.95 in 89.22s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 200.0 in 78.32s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 136.66 in 90.38s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 142.55 in 76.33s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 200.0 in 87.24s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 200.0 in 77.56s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 200.0 in 88.92s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 200.0 in 77.62s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 185.95 in 91.19s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 188.03 in 78.14s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 200.0 in 90.40s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 200.0 in 74.38s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 200.0 in 83.83s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 200.0 in 73.42s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 199.12 in 84.34s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 198.93 in 73.05s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 185.45 in 82.58s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 186.72 in 72.98s: 
+[p0 21:14:55] [F_WR_best|mr|fold1_2025-01-07] template thắng: MultivariateRegression
+[p0 21:14:55] [F_WR_best|mr|fold2_2025-05-30] template thắng: MultivariateRegression
+[p0 21:14:55] [F_WR_best|mr|fold3_2025-10-19] template thắng: MultivariateRegression
+[p0 21:14:55] [F_WR_best|mr|fold4_2026-03-11] template thắng: MultivariateRegression
+[p0 21:14:55] [F_WR_best|mr|fold5_2026-08-01] template thắng: MultivariateRegression
+[p0 21:22:07] [F_WR_best|mr] outer VAL @ selection_seed 8587: MedianGain vs E0 = -0.2185 pp
+[p0 21:22:18] [fold1_2025-01-07|wr:60] search trên 179937 bar (đến 2025-01-07 01:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 167.64 in 4.29s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 194.4 in 31.96s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 145.05 in 4.33s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 191.59 in 31.88s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 200.0 in 4.32s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 200.0 in 31.97s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 104.22 in 4.29s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 164.71 in 32.04s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 152.38 in 4.24s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 167.47 in 31.93s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 167.57 in 4.43s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 193.11 in 32.10s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 199.21 in 4.27s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 197.73 in 32.10s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 176.91 in 4.44s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 188.09 in 32.00s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 184.42 in 4.22s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+📈 2 - WindowRegression with avg smape 174.15 in 32.00s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 198.06 in 4.30s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 190.11 in 31.92s: 
+[p0 21:29:06] [fold2_2025-05-30|wr:60] search trên 179937 bar (đến 2025-05-29 23:18:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 172.28 in 4.36s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 183.79 in 32.00s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 199.96 in 4.38s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 200.0 in 31.96s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 161.21 in 4.21s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 175.58 in 32.72s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 189.25 in 4.39s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 200.0 in 31.94s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 198.89 in 4.37s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 200.0 in 31.88s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 134.47 in 4.36s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+2 - WindowRegression with avg smape 176.28 in 31.93s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 195.8 in 4.30s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 196.29 in 32.08s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 196.71 in 4.35s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+📈 2 - WindowRegression with avg smape 184.35 in 31.93s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 187.05 in 4.30s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 200.0 in 32.48s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 191.85 in 4.34s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 186.78 in 31.91s: 
+[p0 21:35:56] [fold3_2025-10-19|wr:60] search trên 179937 bar (đến 2025-10-19 20:41:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 192.39 in 3.93s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 164.6 in 31.78s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 192.67 in 3.84s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 193.05 in 31.80s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 198.8 in 3.86s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 198.89 in 31.70s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 175.51 in 3.72s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+📈 2 - WindowRegression with avg smape 172.97 in 31.80s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 177.27 in 3.86s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 191.03 in 31.88s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 200.0 in 3.83s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+📈 2 - WindowRegression with avg smape 178.85 in 31.83s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 179.98 in 3.77s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 174.39 in 31.94s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 184.67 in 3.63s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 197.04 in 31.83s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 171.41 in 3.82s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 194.38 in 31.72s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 194.32 in 3.85s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+2 - WindowRegression with avg smape 197.26 in 31.65s: 
+[p0 21:42:36] [fold4_2026-03-11|wr:60] search trên 179937 bar (đến 2026-03-11 18:04:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 171.5 in 31.81s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+📈 2 - WindowRegression with avg smape 147.15 in 4.40s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 200.0 in 31.75s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 200.0 in 4.37s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 198.08 in 32.65s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+📈 2 - WindowRegression with avg smape 193.99 in 4.47s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 170.9 in 33.74s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 200.0 in 4.48s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 164.7 in 34.74s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+📈 2 - WindowRegression with avg smape 138.11 in 4.42s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 193.65 in 34.51s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+📈 2 - WindowRegression with avg smape 189.23 in 4.37s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 200.0 in 34.59s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+2 - WindowRegression with avg smape 200.0 in 4.44s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 200.0 in 34.10s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+📈 2 - WindowRegression with avg smape 190.96 in 4.45s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 179.97 in 33.92s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 200.0 in 4.50s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 198.32 in 34.83s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 188.36 in 4.47s: 
+[p0 21:49:43] [fold5_2026-08-01|wr:60] search trên 179937 bar (đến 2026-08-01 15:26:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model WindowRegression in generation 0 of 0
+Model Number: 2 with model WindowRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model WindowRegression for Validation 1
+📈 1 - WindowRegression with avg smape 171.95 in 33.74s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 1
+2 - WindowRegression with avg smape 200.0 in 4.26s: 
+Validation Round: 2
+Model Number: 1 of 2 with model WindowRegression for Validation 2
+📈 1 - WindowRegression with avg smape 200.0 in 34.35s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 2
+2 - WindowRegression with avg smape 200.0 in 4.32s: 
+Validation Round: 3
+Model Number: 1 of 2 with model WindowRegression for Validation 3
+📈 1 - WindowRegression with avg smape 200.0 in 34.36s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 3
+2 - WindowRegression with avg smape 200.0 in 4.36s: 
+Validation Round: 4
+Model Number: 1 of 2 with model WindowRegression for Validation 4
+📈 1 - WindowRegression with avg smape 178.3 in 33.88s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 4
+2 - WindowRegression with avg smape 196.7 in 4.40s: 
+Validation Round: 5
+Model Number: 1 of 2 with model WindowRegression for Validation 5
+📈 1 - WindowRegression with avg smape 200.0 in 34.22s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 5
+2 - WindowRegression with avg smape 200.0 in 4.44s: 
+Validation Round: 6
+Model Number: 1 of 2 with model WindowRegression for Validation 6
+📈 1 - WindowRegression with avg smape 200.0 in 33.93s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 6
+📈 2 - WindowRegression with avg smape 172.01 in 4.31s: 
+Validation Round: 7
+Model Number: 1 of 2 with model WindowRegression for Validation 7
+📈 1 - WindowRegression with avg smape 200.0 in 33.89s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 7
+📈 2 - WindowRegression with avg smape 182.7 in 4.39s: 
+Validation Round: 8
+Model Number: 1 of 2 with model WindowRegression for Validation 8
+📈 1 - WindowRegression with avg smape 172.72 in 35.00s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 8
+2 - WindowRegression with avg smape 174.91 in 4.41s: 
+Validation Round: 9
+Model Number: 1 of 2 with model WindowRegression for Validation 9
+📈 1 - WindowRegression with avg smape 180.63 in 34.58s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 9
+2 - WindowRegression with avg smape 192.39 in 4.35s: 
+Validation Round: 10
+Model Number: 1 of 2 with model WindowRegression for Validation 10
+📈 1 - WindowRegression with avg smape 197.03 in 34.00s: 
+Model Number: 2 of 2 with model WindowRegression for Validation 10
+📈 2 - WindowRegression with avg smape 194.69 in 4.32s: 
+[p0 21:56:56] [F_MR_best|wr:60|fold1_2025-01-07] template thắng: WindowRegression
+[p0 21:56:56] [F_MR_best|wr:60|fold2_2025-05-30] template thắng: WindowRegression
+[p0 21:56:56] [F_MR_best|wr:60|fold3_2025-10-19] template thắng: WindowRegression
+[p0 21:56:56] [F_MR_best|wr:60|fold4_2026-03-11] template thắng: WindowRegression
+[p0 21:56:56] [F_MR_best|wr:60|fold5_2026-08-01] template thắng: WindowRegression
+[p0 21:59:51] [F_MR_best|wr:60] outer VAL @ selection_seed 8587: MedianGain vs E0 = -0.5551 pp
+[p0 21:59:53] [fold1_2025-01-07|mr] search trên 179937 bar (đến 2025-01-07 01:56:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 157.76 in 65.59s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 161.31 in 69.70s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 52.68 in 66.76s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 67.44 in 76.53s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 188.8 in 74.75s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 191.78 in 71.98s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 200.0 in 66.39s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 200.0 in 73.53s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 137.45 in 67.42s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 152.67 in 75.71s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 194.55 in 70.48s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+📈 2 - MultivariateRegression with avg smape 193.35 in 75.84s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 199.8 in 67.92s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 193.49 in 74.78s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 188.12 in 68.35s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 191.56 in 76.06s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 200.0 in 69.22s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 198.85 in 72.76s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 195.07 in 68.51s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 197.04 in 73.40s: 
+[p0 22:26:04] [fold2_2025-05-30|mr] search trên 179937 bar (đến 2025-05-29 23:18:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 187.43 in 64.28s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 199.89 in 75.15s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 194.09 in 68.81s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 195.34 in 77.52s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 145.01 in 64.60s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+📈 2 - MultivariateRegression with avg smape 144.64 in 75.23s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 200.0 in 67.75s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 200.0 in 73.91s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 192.87 in 67.07s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 195.16 in 74.90s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 200.0 in 72.44s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 200.0 in 72.91s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 187.05 in 63.78s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 191.13 in 69.43s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 177.99 in 63.46s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 183.48 in 69.93s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 193.71 in 63.34s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+2 - MultivariateRegression with avg smape 195.36 in 70.53s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 166.72 in 64.27s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+📈 2 - MultivariateRegression with avg smape 155.27 in 70.16s: 
+[p0 22:51:45] [fold3_2025-10-19|mr] search trên 179937 bar (đến 2025-10-19 20:41:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 191.06 in 71.35s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+📈 2 - MultivariateRegression with avg smape 190.53 in 63.15s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 200.0 in 70.64s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 200.0 in 65.97s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 194.17 in 72.09s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+2 - MultivariateRegression with avg smape 194.23 in 66.13s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 157.21 in 71.97s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 188.98 in 65.18s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 176.32 in 70.28s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 179.22 in 63.75s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 195.95 in 69.53s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+📈 2 - MultivariateRegression with avg smape 194.55 in 62.55s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 165.96 in 68.97s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 169.16 in 62.72s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 163.53 in 69.74s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+📈 2 - MultivariateRegression with avg smape 163.09 in 64.72s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 165.02 in 71.48s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+2 - MultivariateRegression with avg smape 165.52 in 63.76s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 186.6 in 69.83s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+📈 2 - MultivariateRegression with avg smape 185.8 in 63.40s: 
+[p0 23:16:36] [fold4_2026-03-11|mr] search trên 179937 bar (đến 2026-03-11 18:04:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 196.62 in 64.54s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+📈 2 - MultivariateRegression with avg smape 178.26 in 70.64s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 198.99 in 64.20s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+📈 2 - MultivariateRegression with avg smape 191.6 in 70.64s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 192.84 in 64.59s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+📈 2 - MultivariateRegression with avg smape 190.99 in 70.69s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 189.06 in 64.10s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 192.12 in 69.68s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 193.89 in 63.36s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 200.0 in 69.96s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 139.57 in 63.95s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+2 - MultivariateRegression with avg smape 182.52 in 70.18s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 155.24 in 63.94s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+📈 2 - MultivariateRegression with avg smape 111.03 in 69.90s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 200.0 in 63.84s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 200.0 in 70.16s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 191.49 in 64.25s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+2 - MultivariateRegression with avg smape 198.9 in 70.28s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 187.35 in 64.36s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 200.0 in 70.07s: 
+[p0 23:41:26] [fold5_2026-08-01|mr] search trên 179937 bar (đến 2026-08-01 15:26:00), 2 template × 10 validation
+Data frequency is: min, used frequency is: min
+Model Number: 1 with model MultivariateRegression in generation 0 of 0
+Model Number: 2 with model MultivariateRegression in generation 0 of 0
+Validation Round: 1
+Model Number: 1 of 2 with model MultivariateRegression for Validation 1
+📈 1 - MultivariateRegression with avg smape 199.92 in 72.03s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 1
+2 - MultivariateRegression with avg smape 200.0 in 65.55s: 
+Validation Round: 2
+Model Number: 1 of 2 with model MultivariateRegression for Validation 2
+📈 1 - MultivariateRegression with avg smape 197.64 in 72.20s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 2
+2 - MultivariateRegression with avg smape 200.0 in 65.76s: 
+Validation Round: 3
+Model Number: 1 of 2 with model MultivariateRegression for Validation 3
+📈 1 - MultivariateRegression with avg smape 149.4 in 71.05s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 3
+📈 2 - MultivariateRegression with avg smape 147.45 in 63.40s: 
+Validation Round: 4
+Model Number: 1 of 2 with model MultivariateRegression for Validation 4
+📈 1 - MultivariateRegression with avg smape 200.0 in 69.73s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 4
+2 - MultivariateRegression with avg smape 200.0 in 64.00s: 
+Validation Round: 5
+Model Number: 1 of 2 with model MultivariateRegression for Validation 5
+📈 1 - MultivariateRegression with avg smape 200.0 in 69.98s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 5
+2 - MultivariateRegression with avg smape 200.0 in 63.57s: 
+Validation Round: 6
+Model Number: 1 of 2 with model MultivariateRegression for Validation 6
+📈 1 - MultivariateRegression with avg smape 174.42 in 70.23s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 6
+📈 2 - MultivariateRegression with avg smape 172.36 in 64.02s: 
+Validation Round: 7
+Model Number: 1 of 2 with model MultivariateRegression for Validation 7
+📈 1 - MultivariateRegression with avg smape 191.47 in 70.21s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 7
+2 - MultivariateRegression with avg smape 192.03 in 63.92s: 
+Validation Round: 8
+Model Number: 1 of 2 with model MultivariateRegression for Validation 8
+📈 1 - MultivariateRegression with avg smape 162.66 in 70.58s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 8
+2 - MultivariateRegression with avg smape 173.93 in 63.62s: 
+Validation Round: 9
+Model Number: 1 of 2 with model MultivariateRegression for Validation 9
+📈 1 - MultivariateRegression with avg smape 196.07 in 68.36s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 9
+📈 2 - MultivariateRegression with avg smape 194.2 in 61.73s: 
+Validation Round: 10
+Model Number: 1 of 2 with model MultivariateRegression for Validation 10
+📈 1 - MultivariateRegression with avg smape 187.69 in 68.12s: 
+Model Number: 2 of 2 with model MultivariateRegression for Validation 10
+2 - MultivariateRegression with avg smape 192.77 in 62.39s: 
+[p0 00:06:12] [F_MR_best|mr|fold1_2025-01-07] template thắng: MultivariateRegression
+[p0 00:06:12] [F_MR_best|mr|fold2_2025-05-30] template thắng: MultivariateRegression
+[p0 00:06:12] [F_MR_best|mr|fold3_2025-10-19] template thắng: MultivariateRegression
+[p0 00:06:12] [F_MR_best|mr|fold4_2026-03-11] template thắng: MultivariateRegression
+[p0 00:06:12] [F_MR_best|mr|fold5_2026-08-01] template thắng: MultivariateRegression
+[p0 00:12:22] [F_MR_best|mr] outer VAL @ selection_seed 8587: MedianGain vs E0 = -0.3447 pp
+[p0 00:12:22] AutoTS-final = F_WR_best|mr (111 cột ext) — chọn ở selection_seed 8587
+[p0 00:12:22] AutoTS-final: reuse completed selection predictions for confirmation seed 8587
+[p0 00:26:23] AutoTS-final confirmation [8587, 8588, 8589]: MedianGain vs E0 = -0.2185 pp, ε = 0.0050 pp
+[p0 00:26:23] AutoTS-final đã lưu (wins/autots.json) — champion so ở `champion-replay` theo thứ tự cố định
