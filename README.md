@@ -102,6 +102,57 @@ Unknown model settings are rejected. No hyperparameter search is implemented.
 See [THIRD_PARTY.md](THIRD_PARTY.md) for source revisions, retained components,
 intentional corrections, and paper/code ambiguities.
 
+## Second experiment: Gate one-year capture (branch `gate-1y`)
+
+A second frozen run on `BTC_L10_gate_1y.csv`, a 365-day L10 capture
+(2025-09-17 -> 2026-09-16) sampled on an exact 10-second grid. The EDA is
+[reports/EDA_GATE_1Y.md](reports/EDA_GATE_1Y.md); the results are
+[reports/FINAL_REPORT_GATE1Y.md](reports/FINAL_REPORT_GATE1Y.md).
+
+What the cadence forced, and nothing else:
+
+- The file arrives out of chronological order (a 7.46-day block prepended, filling
+  the main block's only multi-day hole) with nine duplicated timestamps whose
+  payloads differ. `data.sort_by_timestamp` and `data.duplicate_timestamp_policy`
+  repair this. Both default to off/`error`, so a book is still never reordered or
+  deduplicated silently, and what was repaired is recorded in
+  `split_manifest.source.row_repairs` of every checkpoint.
+- `max_gap_seconds` and `target_tolerance_seconds` move 2.0s -> 10.0s. At 10s
+  cadence the 2.0s rule marks every edge in the file as a gap.
+- `history_seconds` moves 60 -> 490 so it re-resolves to the same
+  `history_rows = 49` and `stride_rows = 8`. 60s would give 6 rows, below
+  PatchTST's and ModernTCN's `patch_length = 16`. Because the window shape is
+  unchanged, all five parameter counts are unchanged.
+
+Architecture, optimizer, loss, batch size, epochs and seed are identical to the
+first run; only the data scales (274,215 / 59,016 / 58,963 samples).
+
+Every tool takes `--suite {oct2023,gate1y}`:
+
+```bash
+python scripts/eda.py --csv BTC_L10_gate_1y.csv --history-seconds 490 --output reports/eda_gate_1y
+python scripts/check_contracts.py --csv BTC_L10_gate_1y.csv --expected contracts/gate1y.json \
+                                  --output reports/contract_check_gate1y.json
+python scripts/profile_gpu.py --mode all --suite gate1y --output-dir reports/vast_gate1y
+python scripts/run_training.py --suite gate1y --csv BTC_L10_gate_1y.csv
+python scripts/upload_hf.py --suite gate1y
+```
+
+### Metrics are reported in raw price
+
+Training is unchanged: the target is still `log(mid[t+h]/mid[t])` and the loss is
+still MSE on that log return. Only the reported space changed. Every
+`*_metrics.json` from this run carries RMSE, MAE, standard R2, RMSE_E0 and RMSE
+gain vs E0 measured on the mid price in quote currency at the top level, computed
+from the exported columns via `pred_mid = origin_mid * exp(pred_return)`, with the
+previous log-return family nested under `log_return` so the two runs stay
+comparable. E0 predicts that the price does not move, so `RMSE_E0 =
+sqrt(mean((target_mid - origin_mid)^2))`.
+
+Standard R2 in price space is near 1 for every model including E0, because
+sigma(target mid) is about 16,600 USD while every error is around 50 USD. It is
+reported for contract completeness; **RMSE gain vs E0 is the column to read**.
+
 ## Base experiment runbook
 
 Run every step from the repository root, in this order. Each step is a hard gate

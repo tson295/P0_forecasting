@@ -1,0 +1,147 @@
+{
+  "finished": "2026-09-20T18:36:43.724115+00:00",
+  "total_seconds": 3716.6725087519735,
+  "schedule": {
+    "created": "2026-09-20T17:34:47.046681+00:00",
+    "suite": "gate1y",
+    "decided_by": "reports/vast_gate1y/concurrency_benchmark.json",
+    "groups": [
+      [
+        "hfformer",
+        "lit",
+        "ofi_lstm"
+      ],
+      [
+        "moderntcn"
+      ],
+      [
+        "patchtst"
+      ]
+    ],
+    "csv": "BTC_L10_gate_1y.csv",
+    "runs": {
+      "ofi_lstm": "ofi_lstm_490s_gate1y",
+      "hfformer": "hfformer_490s_gate1y",
+      "patchtst": "patchtst_490s_gate1y",
+      "moderntcn": "moderntcn_490s_gate1y",
+      "lit": "lit_490s_gate1y"
+    },
+    "extra_train_flags": [],
+    "frozen": {
+      "batch_size": 128,
+      "epochs": 30,
+      "seed": 42,
+      "learning_rate": 0.0001,
+      "weight_decay": 0.0001,
+      "optimizer": "AdamW",
+      "loss": "mse",
+      "scheduler": "CosineAnnealingLR",
+      "gradient_clip": 1.0,
+      "gradient_accumulation": 1,
+      "history_seconds": 490,
+      "history_rows": 49,
+      "stride_rows": 8
+    },
+    "policy": "concurrency selects co-execution only; no run parameter changes"
+  },
+  "jobs": [
+    {
+      "model": "hfformer",
+      "run_name": "hfformer_490s_gate1y",
+      "pid": 78851,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/hfformer_490s_gate1y.json",
+        "--csv",
+        "BTC_L10_gate_1y.csv"
+      ],
+      "log": "runs/logs/hfformer_490s_gate1y.log",
+      "started": "2026-09-20T17:34:47.051969+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T17:39:11.543037+00:00",
+      "seconds": 264.4910808779532
+    },
+    {
+      "model": "lit",
+      "run_name": "lit_490s_gate1y",
+      "pid": 78852,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/lit_490s_gate1y.json",
+        "--csv",
+        "BTC_L10_gate_1y.csv"
+      ],
+      "log": "runs/logs/lit_490s_gate1y.log",
+      "started": "2026-09-20T17:34:47.052276+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T17:40:25.463977+00:00",
+      "seconds": 338.41171387792565
+    },
+    {
+      "model": "ofi_lstm",
+      "run_name": "ofi_lstm_490s_gate1y",
+      "pid": 78853,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/ofi_lstm_490s_gate1y.json",
+        "--csv",
+        "BTC_L10_gate_1y.csv"
+      ],
+      "log": "runs/logs/ofi_lstm_490s_gate1y.log",
+      "started": "2026-09-20T17:34:47.052522+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T17:40:25.464039+00:00",
+      "seconds": 338.411517099943
+    },
+    {
+      "model": "moderntcn",
+      "run_name": "moderntcn_490s_gate1y",
+      "pid": 82281,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/moderntcn_490s_gate1y.json",
+        "--csv",
+        "BTC_L10_gate_1y.csv"
+      ],
+      "log": "runs/logs/moderntcn_490s_gate1y.log",
+      "started": "2026-09-20T17:40:25.464506+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T18:31:23.068511+00:00",
+      "seconds": 3057.6040249189828
+    },
+    {
+      "model": "patchtst",
+      "run_name": "patchtst_490s_gate1y",
+      "pid": 91803,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/patchtst_490s_gate1y.json",
+        "--csv",
+        "BTC_L10_gate_1y.csv"
+      ],
+      "log": "runs/logs/patchtst_490s_gate1y.log",
+      "started": "2026-09-20T18:31:23.069096+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T18:36:43.560518+00:00",
+      "seconds": 320.4914363611024
+    }
+  ],
+  "crashed": [],
+  "resumed": [],
+  "gpu_usage_csv": "reports/vast_gate1y/gpu_usage.csv"
+}
