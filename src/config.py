@@ -1,0 +1,110 @@
+"""Central, JSON-serializable experiment configuration. No tuned parameters."""
+from dataclasses import asdict, dataclass, field
+import json
+from pathlib import Path
+
+MODELS = ("e0", "ofi_lstm", "hfformer", "patchtst", "moderntcn", "lit")
+
+
+@dataclass
+class DataConfig:
+    csv_path: str = "BTCUSDT_L10_oct2023.csv"
+    timestamp_column: str = "timestamp_ms"
+    timestamp_unit: str = "ms"
+    segment_column: str | None = "segment_id"
+    # Canonical name -> actual CSV name; unspecified fields use canonical names.
+    column_mapping: dict = field(default_factory=dict)
+    history_seconds: int = 60
+    history_rows: int | None = None  # Explicit paper-style override, e.g. LiT 64.
+    stride_seconds: float | None = None
+    max_gap_seconds: float = 2.0
+    target_tolerance_seconds: float = 2.0
+    horizons_seconds: tuple = (60, 120, 180)
+    train_fraction: float = 0.70
+    validation_fraction: float = 0.15
+    train_end: str | None = None  # ISO-8601, exclusive UTC boundary.
+    validation_end: str | None = None
+    of_representation: str = "of"
+
+    def validate(self):
+        if self.history_seconds not in (60, 120, 180):
+            raise ValueError("history_seconds must be 60, 120, or 180")
+        if self.history_rows is not None and self.history_rows < 2:
+            raise ValueError("history_rows must be >= 2")
+        if self.stride_seconds is not None and self.stride_seconds <= 0:
+            raise ValueError("stride_seconds must be positive")
+        if self.max_gap_seconds <= 0 or self.target_tolerance_seconds < 0:
+            raise ValueError("Invalid gap/tolerance")
+        if tuple(self.horizons_seconds) != (60, 120, 180):
+            raise ValueError("This task has exactly the 60/120/180-second horizons")
+        if not 0 < self.train_fraction < 1 or not 0 < self.validation_fraction < 1-self.train_fraction:
+            raise ValueError("Invalid chronological split fractions")
+        if bool(self.train_end) != bool(self.validation_end):
+            raise ValueError("Supply both timestamp split boundaries")
+        if self.of_representation not in ("of", "ofi"):
+            raise ValueError("of_representation must be of or ofi")
+
+
+@dataclass
+class TrainConfig:
+    epochs: int = 30
+    batch_size: int = 128
+    learning_rate: float = 1e-4
+    weight_decay: float = 1e-4
+    num_workers: int = 4
+    prefetch_factor: int = 2
+    gradient_accumulation: int = 1
+    gradient_clip: float = 1.0
+    precision: str = "auto"
+    device: str = "auto"
+    compile: bool = False
+    auto_batch_size: bool = False
+    probe_max_batch_size: int = 4096
+    vram_headroom_gb: float = 2.0
+    seed: int = 42
+    loss: str = "mse"
+    quantile: float = 0.5
+    run_name: str = "base"
+    checkpoint_root: str = "checkpoints"
+
+    def validate(self):
+        if min(self.epochs, self.batch_size, self.gradient_accumulation, self.prefetch_factor) < 1:
+            raise ValueError("Epoch, batch, accumulation, prefetch must be positive")
+        if self.num_workers < 0 or self.learning_rate <= 0 or self.weight_decay < 0:
+            raise ValueError("Invalid training parameters")
+        if self.loss not in ("mse", "quantile") or not 0 < self.quantile < 1:
+            raise ValueError("Invalid loss/quantile")
+        if self.precision not in ("auto", "bf16", "fp16", "fp32"):
+            raise ValueError("Unknown precision")
+        if self.vram_headroom_gb < 1.5 or self.probe_max_batch_size < 128:
+            raise ValueError("Probe requires >=1.5 GiB headroom and max batch >=128")
+        if Path(self.run_name).name != self.run_name or self.run_name in ("", ".", ".."):
+            raise ValueError("run_name must be a single directory name")
+
+
+@dataclass
+class Config:
+    model: str = "ofi_lstm"
+    data: DataConfig = field(default_factory=DataConfig)
+    training: TrainConfig = field(default_factory=TrainConfig)
+    model_kwargs: dict = field(default_factory=dict)
+
+    def validate(self):
+        if self.model not in MODELS:
+            raise ValueError(f"Unknown model: {self.model}")
+        self.data.validate()
+        self.training.validate()
+
+    def to_dict(self):
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, obj):
+        return cls(model=obj.get("model", "ofi_lstm"),
+                   data=DataConfig(**obj.get("data", {})),
+                   training=TrainConfig(**obj.get("training", {})),
+                   model_kwargs=obj.get("model_kwargs", {}))
+
+    @classmethod
+    def load(cls, path):
+        return cls.from_dict(json.loads(Path(path).read_text()))

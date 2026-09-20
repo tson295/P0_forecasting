@@ -1,0 +1,26 @@
+{
+  "model": "ofi_lstm",
+  "data": {
+    "csv_path": "BTCUSDT_L10_oct2023.csv",
+    "history_seconds": 60,
+    "stride_seconds": null,
+    "target_tolerance_seconds": 2.0,
+    "max_gap_seconds": 2.0,
+    "train_fraction": 0.7,
+    "validation_fraction": 0.15,
+    "of_representation": "of"
+  },
+  "training": {
+    "epochs": 30,
+    "batch_size": 128,
+    "num_workers": 4,
+    "prefetch_factor": 2,
+    "precision": "auto",
+    "gradient_accumulation": 1,
+    "compile": false,
+    "auto_batch_size": false,
+    "vram_headroom_gb": 2.0,
+    "run_name": "base"
+  },
+  "model_kwargs": {}
+}

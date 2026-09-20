@@ -1,0 +1,1002 @@
+{
+  "training_epochs_run": 0,
+  "optimizer_steps_run": 0,
+  "models": {
+    "e0": {
+      "input_shape": [
+        2,
+        49,
+        40
+      ],
+      "output_shape": [
+        2,
+        3
+      ],
+      "finite": true,
+      "backward": false,
+      "parameters": 0,
+      "architecture": {
+        "name": "e0",
+        "history_rows": 49,
+        "channels": 40
+      },
+      "features": {
+        "model": "e0",
+        "names": [
+          "bid_price_1",
+          "bid_price_2",
+          "bid_price_3",
+          "bid_price_4",
+          "bid_price_5",
+          "bid_price_6",
+          "bid_price_7",
+          "bid_price_8",
+          "bid_price_9",
+          "bid_price_10",
+          "bid_qty_1",
+          "bid_qty_2",
+          "bid_qty_3",
+          "bid_qty_4",
+          "bid_qty_5",
+          "bid_qty_6",
+          "bid_qty_7",
+          "bid_qty_8",
+          "bid_qty_9",
+          "bid_qty_10",
+          "ask_price_1",
+          "ask_price_2",
+          "ask_price_3",
+          "ask_price_4",
+          "ask_price_5",
+          "ask_price_6",
+          "ask_price_7",
+          "ask_price_8",
+          "ask_price_9",
+          "ask_price_10",
+          "ask_qty_1",
+          "ask_qty_2",
+          "ask_qty_3",
+          "ask_qty_4",
+          "ask_qty_5",
+          "ask_qty_6",
+          "ask_qty_7",
+          "ask_qty_8",
+          "ask_qty_9",
+          "ask_qty_10"
+        ],
+        "layout": [
+          "time",
+          "feature"
+        ],
+        "sample_shape": [
+          40
+        ],
+        "normalization": "per-field train-only z-score; no target scaling",
+        "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
+        "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
+      },
+      "safetensors_roundtrip_exact": true
+    },
+    "ofi_lstm": {
+      "input_shape": [
+        2,
+        49,
+        20
+      ],
+      "output_shape": [
+        2,
+        3
+      ],
+      "finite": true,
+      "backward": true,
+      "parameters": 55491,
+      "architecture": {
+        "name": "ofi_lstm",
+        "history_rows": 49,
+        "channels": 20,
+        "hidden_size": 64,
+        "layers": 2,
+        "dropout": 0.1
+      },
+      "features": {
+        "model": "ofi_lstm",
+        "names": [
+          "bid_OF_1",
+          "bid_OF_2",
+          "bid_OF_3",
+          "bid_OF_4",
+          "bid_OF_5",
+          "bid_OF_6",
+          "bid_OF_7",
+          "bid_OF_8",
+          "bid_OF_9",
+          "bid_OF_10",
+          "ask_OF_1",
+          "ask_OF_2",
+          "ask_OF_3",
+          "ask_OF_4",
+          "ask_OF_5",
+          "ask_OF_6",
+          "ask_OF_7",
+          "ask_OF_8",
+          "ask_OF_9",
+          "ask_OF_10"
+        ],
+        "layout": [
+          "time",
+          "feature"
+        ],
+        "sample_shape": [
+          20
+        ],
+        "normalization": "per-field train-only z-score; no target scaling",
+        "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
+        "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
+      },
+      "safetensors_roundtrip_exact": true
+    },
+    "hfformer": {
+      "input_shape": [
+        2,
+        49,
+        38
+      ],
+      "output_shape": [
+        2,
+        3
+      ],
+      "finite": true,
+      "backward": true,
+      "parameters": 22026,
+      "architecture": {
+        "name": "hfformer",
+        "history_rows": 49,
+        "channels": 38,
+        "d_model": 36,
+        "heads": 6,
+        "layers": 2,
+        "ffn_dim": 64,
+        "dropout": 0.3,
+        "causal": true,
+        "spike_dt": 0.001
+      },
+      "features": {
+        "model": "hfformer",
+        "names": [
+          "bid_price_1",
+          "bid_price_2",
+          "bid_price_3",
+          "bid_price_4",
+          "bid_price_5",
+          "bid_price_6",
+          "bid_price_7",
+          "bid_price_8",
+          "bid_price_9",
+          "bid_qty_1",
+          "bid_qty_2",
+          "bid_qty_3",
+          "bid_qty_4",
+          "bid_qty_5",
+          "bid_qty_6",
+          "bid_qty_7",
+          "bid_qty_8",
+          "bid_qty_9",
+          "ask_price_1",
+          "ask_price_2",
+          "ask_price_3",
+          "ask_price_4",
+          "ask_price_5",
+          "ask_price_6",
+          "ask_price_7",
+          "ask_price_8",
+          "ask_price_9",
+          "ask_qty_1",
+          "ask_qty_2",
+          "ask_qty_3",
+          "ask_qty_4",
+          "ask_qty_5",
+          "ask_qty_6",
+          "ask_qty_7",
+          "ask_qty_8",
+          "ask_qty_9",
+          "lagged_log_return_1_snapshot",
+          "weighted_mid_price_L1"
+        ],
+        "layout": [
+          "time",
+          "feature"
+        ],
+        "sample_shape": [
+          38
+        ],
+        "normalization": "per-field train-only z-score; no target scaling",
+        "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
+        "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
+      },
+      "safetensors_roundtrip_exact": true
+    },
+    "patchtst": {
+      "input_shape": [
+        2,
+        49,
+        40
+      ],
+      "output_shape": [
+        2,
+        3
+      ],
+      "finite": true,
+      "backward": true,
+      "parameters": 477059,
+      "architecture": {
+        "name": "patchtst",
+        "history_rows": 49,
+        "channels": 40,
+        "d_model": 128,
+        "heads": 16,
+        "layers": 3,
+        "ffn_dim": 256,
+        "dropout": 0.2,
+        "head_dropout": 0.0,
+        "patch_length": 16,
+        "patch_stride": 8,
+        "scaling": "std"
+      },
+      "features": {
+        "model": "patchtst",
+        "names": [
+          "bid_price_1",
+          "bid_price_2",
+          "bid_price_3",
+          "bid_price_4",
+          "bid_price_5",
+          "bid_price_6",
+          "bid_price_7",
+          "bid_price_8",
+          "bid_price_9",
+          "bid_price_10",
+          "bid_qty_1",
+          "bid_qty_2",
+          "bid_qty_3",
+          "bid_qty_4",
+          "bid_qty_5",
+          "bid_qty_6",
+          "bid_qty_7",
+          "bid_qty_8",
+          "bid_qty_9",
+          "bid_qty_10",
+          "ask_price_1",
+          "ask_price_2",
+          "ask_price_3",
+          "ask_price_4",
+          "ask_price_5",
+          "ask_price_6",
+          "ask_price_7",
+          "ask_price_8",
+          "ask_price_9",
+          "ask_price_10",
+          "ask_qty_1",
+          "ask_qty_2",
+          "ask_qty_3",
+          "ask_qty_4",
+          "ask_qty_5",
+          "ask_qty_6",
+          "ask_qty_7",
+          "ask_qty_8",
+          "ask_qty_9",
+          "ask_qty_10"
+        ],
+        "layout": [
+          "time",
+          "feature"
+        ],
+        "sample_shape": [
+          40
+        ],
+        "normalization": "per-field train-only z-score; no target scaling",
+        "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
+        "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
+      },
+      "safetensors_roundtrip_exact": true
+    },
+    "moderntcn": {
+      "input_shape": [
+        2,
+        49,
+        40
+      ],
+      "output_shape": [
+        2,
+        3
+      ],
+      "finite": true,
+      "backward": true,
+      "parameters": 50568195,
+      "architecture": {
+        "name": "moderntcn",
+        "history_rows": 49,
+        "channels": 40,
+        "dims": [
+          256,
+          256,
+          256,
+          256
+        ],
+        "blocks": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "large_kernels": [
+          31,
+          29,
+          27,
+          13
+        ],
+        "small_kernels": [
+          5,
+          5,
+          5,
+          5
+        ],
+        "ffn_ratio": 2,
+        "patch_length": 16,
+        "patch_stride": 8,
+        "downsample_ratio": 2,
+        "dropout": 0.05,
+        "head_dropout": 0.0,
+        "instance_norm": true
+      },
+      "features": {
+        "model": "moderntcn",
+        "names": [
+          "bid_price_1",
+          "bid_price_2",
+          "bid_price_3",
+          "bid_price_4",
+          "bid_price_5",
+          "bid_price_6",
+          "bid_price_7",
+          "bid_price_8",
+          "bid_price_9",
+          "bid_price_10",
+          "bid_qty_1",
+          "bid_qty_2",
+          "bid_qty_3",
+          "bid_qty_4",
+          "bid_qty_5",
+          "bid_qty_6",
+          "bid_qty_7",
+          "bid_qty_8",
+          "bid_qty_9",
+          "bid_qty_10",
+          "ask_price_1",
+          "ask_price_2",
+          "ask_price_3",
+          "ask_price_4",
+          "ask_price_5",
+          "ask_price_6",
+          "ask_price_7",
+          "ask_price_8",
+          "ask_price_9",
+          "ask_price_10",
+          "ask_qty_1",
+          "ask_qty_2",
+          "ask_qty_3",
+          "ask_qty_4",
+          "ask_qty_5",
+          "ask_qty_6",
+          "ask_qty_7",
+          "ask_qty_8",
+          "ask_qty_9",
+          "ask_qty_10"
+        ],
+        "layout": [
+          "time",
+          "feature"
+        ],
+        "sample_shape": [
+          40
+        ],
+        "normalization": "per-field train-only z-score; no target scaling",
+        "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
+        "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
+      },
+      "safetensors_roundtrip_exact": true
+    },
+    "lit": {
+      "input_shape": [
+        2,
+        49,
+        2,
+        10,
+        2
+      ],
+      "output_shape": [
+        2,
+        3
+      ],
+      "finite": true,
+      "backward": true,
+      "parameters": 121107,
+      "architecture": {
+        "name": "lit",
+        "history_rows": 49,
+        "channels": 40,
+        "d_model": 64,
+        "position_dim": 16,
+        "heads": 4,
+        "layers": 2,
+        "ffn_dim": 128,
+        "dropout": 0.1,
+        "temporal_patch": 4,
+        "lstm_hidden": 64,
+        "lstm_layers": 1
+      },
+      "features": {
+        "model": "lit",
+        "names": [
+          "bid_price_1",
+          "bid_qty_1",
+          "bid_price_2",
+          "bid_qty_2",
+          "bid_price_3",
+          "bid_qty_3",
+          "bid_price_4",
+          "bid_qty_4",
+          "bid_price_5",
+          "bid_qty_5",
+          "bid_price_6",
+          "bid_qty_6",
+          "bid_price_7",
+          "bid_qty_7",
+          "bid_price_8",
+          "bid_qty_8",
+          "bid_price_9",
+          "bid_qty_9",
+          "bid_price_10",
+          "bid_qty_10",
+          "ask_price_1",
+          "ask_qty_1",
+          "ask_price_2",
+          "ask_qty_2",
+          "ask_price_3",
+          "ask_qty_3",
+          "ask_price_4",
+          "ask_qty_4",
+          "ask_price_5",
+          "ask_qty_5",
+          "ask_price_6",
+          "ask_qty_6",
+          "ask_price_7",
+          "ask_qty_7",
+          "ask_price_8",
+          "ask_qty_8",
+          "ask_price_9",
+          "ask_qty_9",
+          "ask_price_10",
+          "ask_qty_10"
+        ],
+        "layout": [
+          "time",
+          "side:bid,ask",
+          "depth:1..10",
+          "field:price,qty"
+        ],
+        "sample_shape": [
+          2,
+          10,
+          2
+        ],
+        "normalization": "per-field train-only z-score; no target scaling",
+        "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
+        "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
+      },
+      "safetensors_roundtrip_exact": true
+    }
+  },
+  "stats": {
+    "rows": 678362,
+    "median_dt_seconds": 1.236,
+    "p99_dt_seconds": 1.683,
+    "max_dt_seconds": 6.221,
+    "gaps_gt_2_seconds": 60,
+    "segment_transitions": 1
+  },
+  "metadata": {
+    "preprocessing": {
+      "standardizer": {
+        "mean": [
+          27636.6460758143,
+          27636.583557587175,
+          27636.521620790463,
+          27636.460610220125,
+          27636.400190991993,
+          27636.34048915667,
+          27636.282346261567,
+          27636.22505168498,
+          27636.16896749924,
+          27636.113842975228,
+          6.793325213001438,
+          0.22621895949598136,
+          0.16159757901108598,
+          0.13087924839536946,
+          0.11049667122885823,
+          0.10247146459939178,
+          0.0968333664367926,
+          0.09457652850820114,
+          0.08828301167897562,
+          0.08769341475094411,
+          27636.658672013495,
+          27636.7184800747,
+          27636.780008959067,
+          27636.84166645554,
+          27636.90261567808,
+          27636.963189763996,
+          27637.022474039393,
+          27637.08078413419,
+          27637.137921004825,
+          27637.194096306288,
+          7.057796183434271,
+          0.23960623640204332,
+          0.17185439583241272,
+          0.1364204438821319,
+          0.11977427453315952,
+          0.10779600778449835,
+          0.10519335056965264,
+          0.10308720232800889,
+          0.09678474143000507,
+          0.0949386797556034
+        ],
+        "scale": [
+          320.34785126783356,
+          320.33332315382944,
+          320.32052177266235,
+          320.3081218928435,
+          320.29660137233486,
+          320.28548632793337,
+          320.2750582743074,
+          320.2653328689097,
+          320.2557635111064,
+          320.24651352603036,
+          5.23464139434684,
+          0.6165722998887161,
+          0.4592117557305017,
+          0.43902621615943405,
+          0.36944857549989857,
+          0.3912613232368543,
+          0.4324224506721416,
+          0.422564031651082,
+          0.337244691032641,
+          0.479648557591788,
+          320.3487873483271,
+          320.3615755313508,
+          320.37412073777745,
+          320.386367301057,
+          320.3983995932511,
+          320.41017284953745,
+          320.4215081454281,
+          320.43259049868243,
+          320.44329502701964,
+          320.45351331236,
+          5.395692733011302,
+          1.0228321716947464,
+          0.7188175085533483,
+          0.42753752259750616,
+          0.46268172038701355,
+          0.3830478664874556,
+          0.3983130706851603,
+          0.46869498250170566,
+          0.42401886646014075,
+          0.44644336442266763
+        ],
+        "fitted_on": "train_only"
+      },
+      "median_train_dt_seconds": 1.235,
+      "history_seconds": 60,
+      "history_rows": 49,
+      "history_rows_override": null,
+      "history_rounding": "ceil(seconds/median_train_continuous_dt)",
+      "stride_seconds": 10.0,
+      "stride_rows": 8,
+      "column_mapping": {
+        "features": {
+          "bid_price_1": "bid_price_1",
+          "bid_price_2": "bid_price_2",
+          "bid_price_3": "bid_price_3",
+          "bid_price_4": "bid_price_4",
+          "bid_price_5": "bid_price_5",
+          "bid_price_6": "bid_price_6",
+          "bid_price_7": "bid_price_7",
+          "bid_price_8": "bid_price_8",
+          "bid_price_9": "bid_price_9",
+          "bid_price_10": "bid_price_10",
+          "bid_qty_1": "bid_qty_1",
+          "bid_qty_2": "bid_qty_2",
+          "bid_qty_3": "bid_qty_3",
+          "bid_qty_4": "bid_qty_4",
+          "bid_qty_5": "bid_qty_5",
+          "bid_qty_6": "bid_qty_6",
+          "bid_qty_7": "bid_qty_7",
+          "bid_qty_8": "bid_qty_8",
+          "bid_qty_9": "bid_qty_9",
+          "bid_qty_10": "bid_qty_10",
+          "ask_price_1": "ask_price_1",
+          "ask_price_2": "ask_price_2",
+          "ask_price_3": "ask_price_3",
+          "ask_price_4": "ask_price_4",
+          "ask_price_5": "ask_price_5",
+          "ask_price_6": "ask_price_6",
+          "ask_price_7": "ask_price_7",
+          "ask_price_8": "ask_price_8",
+          "ask_price_9": "ask_price_9",
+          "ask_price_10": "ask_price_10",
+          "ask_qty_1": "ask_qty_1",
+          "ask_qty_2": "ask_qty_2",
+          "ask_qty_3": "ask_qty_3",
+          "ask_qty_4": "ask_qty_4",
+          "ask_qty_5": "ask_qty_5",
+          "ask_qty_6": "ask_qty_6",
+          "ask_qty_7": "ask_qty_7",
+          "ask_qty_8": "ask_qty_8",
+          "ask_qty_9": "ask_qty_9",
+          "ask_qty_10": "ask_qty_10"
+        },
+        "timestamp": "timestamp_ms",
+        "timestamp_unit": "ms",
+        "segment": "segment_id"
+      }
+    },
+    "feature_schema": {
+      "model": "e0",
+      "names": [
+        "bid_price_1",
+        "bid_price_2",
+        "bid_price_3",
+        "bid_price_4",
+        "bid_price_5",
+        "bid_price_6",
+        "bid_price_7",
+        "bid_price_8",
+        "bid_price_9",
+        "bid_price_10",
+        "bid_qty_1",
+        "bid_qty_2",
+        "bid_qty_3",
+        "bid_qty_4",
+        "bid_qty_5",
+        "bid_qty_6",
+        "bid_qty_7",
+        "bid_qty_8",
+        "bid_qty_9",
+        "bid_qty_10",
+        "ask_price_1",
+        "ask_price_2",
+        "ask_price_3",
+        "ask_price_4",
+        "ask_price_5",
+        "ask_price_6",
+        "ask_price_7",
+        "ask_price_8",
+        "ask_price_9",
+        "ask_price_10",
+        "ask_qty_1",
+        "ask_qty_2",
+        "ask_qty_3",
+        "ask_qty_4",
+        "ask_qty_5",
+        "ask_qty_6",
+        "ask_qty_7",
+        "ask_qty_8",
+        "ask_qty_9",
+        "ask_qty_10"
+      ],
+      "layout": [
+        "time",
+        "feature"
+      ],
+      "sample_shape": [
+        40
+      ],
+      "normalization": "per-field train-only z-score; no target scaling",
+      "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
+      "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
+    },
+    "target_config": {
+      "horizons_seconds": [
+        60,
+        120,
+        180
+      ],
+      "definition": "log(mid[target]/mid[origin]); mid=(best_bid+best_ask)/2",
+      "lookup": "first timestamp >= origin + horizon (searchsorted left)",
+      "tolerance_seconds": 2.0,
+      "max_gap_seconds": 2.0,
+      "segment_boundary_rejection": true
+    },
+    "split_manifest": {
+      "policy": "strict: history, origin, and all targets inside one split",
+      "source": {
+        "path": "/Users/son/Projects/P0_LOB/data/processed/BTCUSDT_L10_oct2023.csv",
+        "sha256": "e42bb29e79bdff68f94540916983b1cba2bbbfd745b30933e755e04ec92a60ab",
+        "size_bytes": 259919778
+      },
+      "boundaries_ns": [
+        1696716082396000000,
+        1696844156255500000
+      ],
+      "ranges": {
+        "train": [
+          0,
+          477086
+        ],
+        "validation": [
+          477086,
+          578798
+        ],
+        "test": [
+          578798,
+          678362
+        ]
+      },
+      "boundaries_utc": [
+        "2023-10-07T22:01:22.396000+00:00",
+        "2023-10-09T09:35:56.255500+00:00"
+      ],
+      "sample_counts": {
+        "train": 58774,
+        "validation": 12427,
+        "test": 12145
+      },
+      "origin_index_sha256": {
+        "train": "026b3e01bd3592128e3f4c570956d256cbc864f46328a7de37cdbba9247a9036",
+        "validation": "574abbb17b828abddca542a43e8ee99d36278c36bc5babe6d2a3818d149b4f2b",
+        "test": "f025882b8f521051b0c42d7b134614c92849fd022ade85f385691b4a3a0e888c"
+      }
+    },
+    "data_stats": {
+      "rows": 678362,
+      "median_dt_seconds": 1.236,
+      "p99_dt_seconds": 1.683,
+      "max_dt_seconds": 6.221,
+      "gaps_gt_2_seconds": 60,
+      "segment_transitions": 1
+    }
+  },
+  "windows": {
+    "train": {
+      "samples": 58774,
+      "all_windows_continuous": true,
+      "max_overshoot_seconds": [
+        1.689,
+        1.7,
+        1.686
+      ],
+      "examples": [
+        {
+          "origin": 56,
+          "origin_ns": 1696118475072000000,
+          "target_ns": [
+            1696118535318000000,
+            1696118595192000000,
+            1696118655877000000
+          ],
+          "target_delay_seconds": [
+            60.246,
+            120.12,
+            180.805
+          ],
+          "returns": [
+            -0.00014095878577791154,
+            -0.0001791694521671161,
+            -0.00017879846564028412
+          ]
+        },
+        {
+          "origin": 238984,
+          "origin_ns": 1696418067867000000,
+          "target_ns": [
+            1696418128535000000,
+            1696418188378000000,
+            1696418249021000000
+          ],
+          "target_delay_seconds": [
+            60.668,
+            120.511,
+            181.154
+          ],
+          "returns": [
+            0.00011105959129054099,
+            0.0004020788474008441,
+            0.0003817610559053719
+          ]
+        },
+        {
+          "origin": 476936,
+          "origin_ns": 1696715896182000000,
+          "target_ns": [
+            1696715957090000000,
+            1696716017014000000,
+            1696716076767000000
+          ],
+          "target_delay_seconds": [
+            60.908,
+            120.832,
+            180.585
+          ],
+          "returns": [
+            0.0,
+            0.00019545629038475454,
+            0.00035973888589069247
+          ]
+        }
+      ]
+    },
+    "validation": {
+      "samples": 12427,
+      "all_windows_continuous": true,
+      "max_overshoot_seconds": [
+        1.798,
+        1.759,
+        1.735
+      ],
+      "examples": [
+        {
+          "origin": 477134,
+          "origin_ns": 1696716142668000000,
+          "target_ns": [
+            1696716203153000000,
+            1696716263679000000,
+            1696716323847000000
+          ],
+          "target_delay_seconds": [
+            60.485,
+            121.011,
+            181.179
+          ],
+          "returns": [
+            3.1493364076595753e-05,
+            3.1493364076595753e-05,
+            0.00016318213602062315
+          ]
+        },
+        {
+          "origin": 527622,
+          "origin_ns": 1696779379859000000,
+          "target_ns": [
+            1696779440560000000,
+            1696779500879000000,
+            1696779560756000000
+          ],
+          "target_delay_seconds": [
+            60.701,
+            121.02,
+            180.897
+          ],
+          "returns": [
+            -0.0002542495494708419,
+            0.0006785189616493881,
+            0.0006785189616493881
+          ]
+        },
+        {
+          "origin": 578654,
+          "origin_ns": 1696843972462000000,
+          "target_ns": [
+            1696844033300000000,
+            1696844093173000000,
+            1696844153232000000
+          ],
+          "target_delay_seconds": [
+            60.838,
+            120.711,
+            180.77
+          ],
+          "returns": [
+            -8.392739982809871e-05,
+            -8.392739982809871e-05,
+            -8.392739982809871e-05
+          ]
+        }
+      ]
+    },
+    "test": {
+      "samples": 12145,
+      "all_windows_continuous": true,
+      "max_overshoot_seconds": [
+        1.842,
+        1.763,
+        1.794
+      ],
+      "examples": [
+        {
+          "origin": 578846,
+          "origin_ns": 1696844218917000000,
+          "target_ns": [
+            1696844279505000000,
+            1696844339539000000,
+            1696844399530000000
+          ],
+          "target_delay_seconds": [
+            60.588,
+            120.622,
+            180.613
+          ],
+          "returns": [
+            -0.0004906838876195252,
+            -0.0007445928058587015,
+            -0.0016077881446108222
+          ]
+        },
+        {
+          "origin": 628382,
+          "origin_ns": 1696907900679000000,
+          "target_ns": [
+            1696907961216000000,
+            1696908021277000000,
+            1696908081844000000
+          ],
+          "target_delay_seconds": [
+            60.537,
+            120.598,
+            181.165
+          ],
+          "returns": [
+            0.0002961481222882867,
+            0.0003521858307067305,
+            -0.00016456464072689414
+          ]
+        },
+        {
+          "origin": 678214,
+          "origin_ns": 1696972042408000000,
+          "target_ns": [
+            1696972102846000000,
+            1696972162709000000,
+            1696972222438000000
+          ],
+          "target_delay_seconds": [
+            60.438,
+            120.301,
+            180.03
+          ],
+          "returns": [
+            7.485571404686198e-05,
+            0.00044430524576455355,
+            0.0010044253431260586
+          ]
+        }
+      ]
+    }
+  },
+  "histories": {
+    "60": {
+      "history_rows": 49,
+      "stride_rows": 8,
+      "samples": {
+        "train": 58774,
+        "validation": 12427,
+        "test": 12145
+      }
+    },
+    "120": {
+      "history_rows": 98,
+      "stride_rows": 16,
+      "samples": {
+        "train": 29278,
+        "validation": 6175,
+        "test": 6039
+      }
+    },
+    "180": {
+      "history_rows": 146,
+      "stride_rows": 24,
+      "samples": {
+        "train": 19447,
+        "validation": 4095,
+        "test": 4004
+      }
+    }
+  }
+}
