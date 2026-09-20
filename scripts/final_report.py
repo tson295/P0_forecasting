@@ -7,13 +7,29 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-RUNS = [("e0", "e0_60s"), ("ofi_lstm", "ofi_lstm_60s_base"), ("hfformer", "hfformer_60s_base"),
-        ("patchtst", "patchtst_60s_base"), ("moderntcn", "moderntcn_60s_base"),
-        ("lit", "lit_60s_base")]
+MODELS = ("e0", "ofi_lstm", "hfformer", "patchtst", "moderntcn", "lit")
 HORIZONS = ("1m", "2m", "3m")
 MISSING = "n/a"
+# split_manifest.source.row_repairs, in the order the loader applies them.
+REPAIR_FIELDS = ("rows_in_file", "rows_used", "sorted_by_timestamp", "rows_moved_by_sort",
+                 "duplicate_timestamp_policy", "duplicate_rows_dropped")
+PRICE_ROWS = (("RMSE (USD)", "rmse"), ("MAE (USD)", "mae"), ("R2", "r2"),
+              ("RMSE gain vs E0", "rmse_gain_vs_e0"))
+RETURN_ROWS = (("RMSE", "rmse"), ("MAE", "mae"), ("R2", "r2"),
+               ("RMSE gain vs E0", "rmse_gain_vs_e0"))
 
-DEVIATIONS = [
+METRIC_SPACE_NOTE = (
+    "**Metric space.** Training is unchanged: the target is still `log(mid[t+h]/mid[t])` and the "
+    "loss is still MSE on that log return. Only the reported space changed -- the same predictions "
+    "are measured on the mid price via `pred_mid = origin_mid*exp(pred_return)`, so RMSE and MAE "
+    "below are in quote currency (USD). E0 predicts that the price does not move, so its predicted "
+    "mid is the origin mid and `RMSE_E0 = sqrt(mean((target_mid-origin_mid)^2))`. Standard R2 is "
+    "near 1 for every model including E0, because sigma(target mid) is about 16,579 USD while every "
+    "error here is around 50 USD; it is reported for contract completeness only, and **RMSE gain vs "
+    "E0** is the column to read. Each price table is followed by the same four families in "
+    "log-return units, so both spaces stay comparable.")
+
+OCT2023_DEVIATIONS = [
     "**HFformer window reduction accumulates in FP64** (section J). The frozen formula, "
     "eps=1e-5, unbiased=False and the per-sample/per-feature/over-time contract are unchanged; "
     "only the reduction's arithmetic precision differs from the literal `x_fp32.mean(dim=1)`. "
@@ -38,6 +54,55 @@ DEVIATIONS = [
     "committed, or embedded in a remote URL.",
 ]
 
+GATE1Y_DEVIATIONS = [
+    "**The file needed an explicit, recorded row repair before anything read it** (sections E, F). "
+    "`BTC_L10_gate_1y.csv` arrives out of order: rows 0..64079 are a 7.46-day block "
+    "(2026-07-01..07-08) prepended in front of the main 2025-09-17..2026-09-16 block, and 9 "
+    "timestamps carry two rows with different payloads, so as delivered the file is neither monotone "
+    "nor unique. The Oct-2023 contract forbids reordering or dropping rows silently, so the repair is "
+    "opt-in and recorded rather than automatic: `data.sort_by_timestamp` still defaults to false and "
+    "`data.duplicate_timestamp_policy` still defaults to `error`, which leaves the Oct-2023 run "
+    "bit-identical and still fails loudly on an unexpected file. This run sets them to true and "
+    "`keep_first`; the sort is stable, so rows sharing a timestamp keep their file order, and exactly "
+    "what was done is written to `split_manifest.source.row_repairs` in every checkpoint and shown in "
+    "the Data repair table above.",
+    "**`max_gap_seconds` and `target_tolerance_seconds` rescaled 2.0 s -> 10.0 s.** The new file sits "
+    "on a perfect 10 s grid: min dt = median dt = 10.0 s, every dt a multiple of it, and 31 gaps "
+    "longer than one slot. The Oct-2023 2.0 s rule measures cleanliness in units of that file's "
+    "~1.2 s cadence; applied here it marks all 3,139,596 edges bad and would leave zero usable "
+    "samples. Both knobs moved together to the measured cadence, so the rule itself -- history, "
+    "origin and every target inside one uninterrupted stretch -- is unchanged; only its unit follows "
+    "the file.",
+    "**`history_seconds` 60 -> 490, chosen so the architectures stay identical** (section K). At 10 s "
+    "cadence 60 s resolves to history_rows=6, below the patch_length=16 that PatchTST and ModernTCN "
+    "require, so the frozen architectures could not be built at all. 490 s re-resolves to "
+    "history_rows=49 and stride_rows=8 -- exactly the Oct-2023 values -- so every model sees the same "
+    "input shape and all five parameter counts are unchanged (ofi_lstm 55,491; hfformer 22,026; "
+    "patchtst 477,059; moderntcn 50,568,195; lit 736,547). Only the wall-clock span of one history "
+    "window differs, because a row is now 10 s instead of ~1.2 s.",
+    "**R2 is reported in price space although it is uninformative there** (sections 28-29). The four "
+    "metric families are frozen, so R2 is reported for completeness; but on the mid price "
+    "sigma(target mid) is about 16,579 USD while every model's error is around 50 USD, which pins R2 "
+    "near 0.9999 for all six models including E0. It is kept as-is rather than replaced by an "
+    "invented metric: the log-return table under each price table preserves the Oct-2023 comparison, "
+    "and RMSE gain vs E0 is what separates the models.",
+]
+
+SUITES = {
+    "oct2023": dict(
+        title="Base experiment final report — BTC L10, 60 s history",
+        runs=(("e0", "e0_60s"), ("ofi_lstm", "ofi_lstm_60s_base"),
+              ("hfformer", "hfformer_60s_base"), ("patchtst", "patchtst_60s_base"),
+              ("moderntcn", "moderntcn_60s_base"), ("lit", "lit_60s_base")),
+        reports_dir="reports/vast", contract_check="reports/contract_check.json",
+        price=False, deviations=OCT2023_DEVIATIONS),
+    "gate1y": dict(
+        title="Gate experiment final report — BTC L10 1 year at 10 s, 490 s history",
+        runs=tuple((model, f"{model}_490s_gate1y") for model in MODELS),
+        reports_dir="reports/vast_gate1y", contract_check="reports/contract_check_gate1y.json",
+        price=True, deviations=GATE1Y_DEVIATIONS),
+}
+
 
 def load(path):
     path = Path(path)
@@ -61,16 +126,13 @@ def number(value, digits=6):
     return f"{value:.{digits}g}" if isinstance(value, float) else str(value)
 
 
-def metric_rows(metrics):
-    """RMSE / MAE / R2 / RMSE gain vs E0, one column per horizon."""
-    if not metrics:
-        return [f"| {name} | {MISSING} | {MISSING} | {MISSING} |"
-                for name in ("RMSE", "MAE", "R2", "RMSE gain vs E0")]
-    rows = []
-    for label, key in (("RMSE", "rmse"), ("MAE", "mae"), ("R2", "r2"),
-                       ("RMSE gain vs E0", "rmse_gain_vs_e0")):
-        rows.append(f"| {label} | " + " | ".join(number(v) for v in metrics[key]) + " |")
-    return rows
+def metric_block(metrics, rows, header):
+    """One table; the header cell names the space the numbers live in."""
+    block = [f"| {header} | " + " | ".join(HORIZONS) + " |", "|---|---:|---:|---:|"]
+    for label, key in rows:
+        values = (metrics or {}).get(key) or [None]*len(HORIZONS)
+        block.append(f"| {label} | " + " | ".join(number(v) for v in values) + " |")
+    return block
 
 
 def bytes_gib(value):
@@ -79,25 +141,32 @@ def bytes_gib(value):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--suite", choices=sorted(SUITES), default="oct2023")
     p.add_argument("--output", default="reports/FINAL_REPORT.md")
     p.add_argument("--artifact-root", default="artifacts")
     p.add_argument("--checkpoint-root", default="checkpoints")
+    p.add_argument("--reports-dir", help="benchmark JSONs; default reports/vast, "
+                                         "reports/vast_gate1y for --suite gate1y")
+    p.add_argument("--contract-check", help="gate output; default reports/contract_check.json, "
+                                            "reports/contract_check_gate1y.json for --suite gate1y")
     p.add_argument("--hf-repo", default="")
     p.add_argument("--training-commit", default="")
     p.add_argument("--initial-commit", default="")
     args = p.parse_args()
 
-    vast = Path("reports/vast")
+    suite = SUITES[args.suite]
+    runs, price = suite["runs"], suite["price"]
+    vast = Path(args.reports_dir or suite["reports_dir"])
     hardware = load(vast/"hardware.json") or {}
     single = load(vast/"single_job_benchmark.json") or {}
     compiled = load(vast/"compile_benchmark.json") or {}
     concurrency = load(vast/"concurrency_benchmark.json") or {}
     schedule = load(vast/"training_schedule.json") or {}
     final = load(vast/"final_training_summary.json") or {}
-    contracts = load("reports/contract_check.json") or {}
+    contracts = load(args.contract_check or suite["contract_check"]) or {}
 
     summaries, histories, trainings = {}, {}, {}
-    for model, run_name in RUNS:
+    for model, run_name in runs:
         summaries[model] = load(Path(args.artifact_root)/model/run_name/"run_summary.json")
         histories[model] = load(Path(args.artifact_root)/model/run_name/"training_history.jsonl")
         trainings[model] = load(Path(args.checkpoint_root)/model/run_name/"training_run.json")
@@ -108,7 +177,7 @@ def main():
     out = []
     w = out.append
 
-    w("# Base experiment final report — BTC L10, 60 s history\n")
+    w(f"# {suite['title']}\n")
     w("## 1-4. Provenance\n")
     w("| Item | Value |")
     w("|---|---|")
@@ -120,6 +189,9 @@ def main():
     w("\n## 5-12. Dataset, split and sampling\n")
     source = manifest.get("source", {})
     pre = (reference.get("normalization"), reference.get("history_rows"), reference.get("stride_rows"))
+    # The gap count is meaningless unless it is labelled with the rule that produced it.
+    max_gap = ((reference.get("experiment") or {}).get("data") or {}).get("max_gap_seconds", 2.0)
+    gaps = stats.get("gaps_gt_max_gap", stats.get("gaps_gt_2_seconds", MISSING))
     w("| Item | Value |")
     w("|---|---|")
     w(f"| Dataset path | `{source.get('path', MISSING)}` |")
@@ -127,19 +199,29 @@ def main():
     w(f"| Rows | {stats.get('rows', MISSING)} |")
     w(f"| Median / p99 / max dt (s) | {stats.get('median_dt_seconds', MISSING)} / "
       f"{stats.get('p99_dt_seconds', MISSING)} / {stats.get('max_dt_seconds', MISSING)} |")
-    w(f"| Gaps > 2 s / segment transitions | {stats.get('gaps_gt_2_seconds', MISSING)} / "
+    w(f"| Gaps > {number(max_gap)} s / segment transitions | {gaps} / "
       f"{stats.get('segment_transitions', MISSING)} |")
     for label, value in zip(("train_end", "validation_end"), manifest.get("boundaries_utc", [])):
         w(f"| Split timestamp {label} | `{value}` |")
     for name, bounds in manifest.get("ranges", {}).items():
         w(f"| Split rows {name} | `[{bounds[0]}, {bounds[1]})` |")
-    w(f"| history_rows | {pre[1]} |")
-    w(f"| stride_rows | {pre[2]} |")
+    w(f"| history_rows | {number(pre[1])} |")
+    w(f"| stride_rows | {number(pre[2])} |")
     for name, count in manifest.get("sample_counts", {}).items():
         w(f"| Samples {name} | {count} |")
     w(f"| Contract gate | {contracts.get('status', MISSING)} "
       f"({len(contracts.get('checks', []))} checks, "
       f"{len(contracts.get('failed', []))} failed) |")
+
+    w("\n### Data repair\n")
+    repairs = source.get("row_repairs")
+    if not repairs:
+        w("none")
+    else:
+        w("| Item | Value |")
+        w("|---|---|")
+        for field in REPAIR_FIELDS:
+            w(f"| {field} | {repairs.get(field, MISSING)} |")
 
     w("\n## 13-17. Hardware, precision and compile\n")
     w("| Item | Value |")
@@ -156,7 +238,7 @@ def main():
     w("\n**torch.compile status per model**\n")
     w("| Model | Compile succeeded | Speedup vs eager | Recommended | Used in training |")
     w("|---|---|---:|---|---|")
-    for model, _ in RUNS[1:]:
+    for model, _ in runs[1:]:
         entry = (compiled.get("models") or {}).get(model, {})
         used = (trainings.get(model) or {}).get("compile")
         w(f"| {model} | {entry.get('compile_succeeded', MISSING)} | "
@@ -167,7 +249,7 @@ def main():
     w("| Model | Parameters | Batch | num_workers | Peak alloc (single) | "
       "Peak reserved (single) | samples/s (single) | Train seconds | Best epoch |")
     w("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
-    for model, _ in RUNS[1:]:
+    for model, _ in runs[1:]:
         bench = (single.get("models") or {}).get(model, {})
         run = trainings.get(model) or {}
         summary = summaries.get(model) or {}
@@ -188,21 +270,26 @@ def main():
           f"accepted={group.get('accepted')}")
 
     w("\n## 28-29. Metrics\n")
+    if price:
+        w(f"\n{METRIC_SPACE_NOTE}\n")
+    rows, header = ((PRICE_ROWS, "price (USD)") if price else (RETURN_ROWS, "log return"))
     for split in ("validation", "test"):
         w(f"\n### {split}\n")
-        for model, _ in RUNS:
+        for model, _ in runs:
             summary = summaries.get(model)
             metrics = (summary or {}).get("metrics", {}).get(split)
             w(f"\n**{model}** ({(metrics or {}).get('samples', MISSING)} samples)\n")
-            w("| Metric | 1m | 2m | 3m |")
-            w("|---|---:|---:|---:|")
-            out.extend(metric_rows(metrics))
+            out.extend(metric_block(metrics, rows, header))
+            nested = (metrics or {}).get("log_return")
+            if nested:
+                w("")
+                out.extend(metric_block(nested, RETURN_ROWS, "log return"))
 
     w("\n## 30-33. Artifact locations\n")
     w("| Model | Local checkpoints | Local predictions | HF prefix |")
     w("|---|---|---|---|")
     repo = args.hf_repo or MISSING
-    for model, run_name in RUNS:
+    for model, run_name in runs:
         checkpoints = (MISSING if model == "e0"
                        else f"`{args.checkpoint_root}/{model}/{run_name}/{{best,last}}`")
         w(f"| {model} | {checkpoints} | `{args.artifact_root}/{model}/{run_name}/"
@@ -210,7 +297,7 @@ def main():
 
     w("\n## 34-36. Incidents and deviations\n")
     w("\n### Experiment-contract deviations\n")
-    for item in DEVIATIONS:
+    for item in suite["deviations"]:
         w(f"- {item}")
     w("")
     crashed = final.get("crashed") or []

@@ -96,7 +96,8 @@ def main(argv=None):
         metrics[split] = split_metrics
         timings[split] = time.time()-split_started
         print(f"{config.model} {split}: {split_metrics['samples']} rows "
-              f"rmse={split_metrics['rmse']} gain={split_metrics['rmse_gain_vs_e0']}", flush=True)
+              f"rmse={[round(v, 4) for v in split_metrics['rmse']]} price "
+              f"gain={[round(v, 6) for v in split_metrics['rmse_gain_vs_e0']]}", flush=True)
 
     history = run/"training_history.jsonl"
     if history.exists():

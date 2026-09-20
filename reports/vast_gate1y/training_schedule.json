@@ -1,7 +1,7 @@
 {
-  "created": "2026-09-20T17:34:42.039345+00:00",
-  "suite": "oct2023",
-  "decided_by": "reports/vast/concurrency_benchmark.json",
+  "created": "2026-09-20T17:34:47.046681+00:00",
+  "suite": "gate1y",
+  "decided_by": "reports/vast_gate1y/concurrency_benchmark.json",
   "groups": [
     [
       "hfformer",
@@ -15,13 +15,13 @@
       "patchtst"
     ]
   ],
-  "csv": "BTCUSDT_L10_oct2023.csv",
+  "csv": "BTC_L10_gate_1y.csv",
   "runs": {
-    "ofi_lstm": "ofi_lstm_60s_base",
-    "hfformer": "hfformer_60s_base",
-    "patchtst": "patchtst_60s_base",
-    "moderntcn": "moderntcn_60s_base",
-    "lit": "lit_60s_base"
+    "ofi_lstm": "ofi_lstm_490s_gate1y",
+    "hfformer": "hfformer_490s_gate1y",
+    "patchtst": "patchtst_490s_gate1y",
+    "moderntcn": "moderntcn_490s_gate1y",
+    "lit": "lit_490s_gate1y"
   },
   "extra_train_flags": [],
   "frozen": {
@@ -35,7 +35,7 @@
     "scheduler": "CosineAnnealingLR",
     "gradient_clip": 1.0,
     "gradient_accumulation": 1,
-    "history_seconds": 60,
+    "history_seconds": 490,
     "history_rows": 49,
     "stride_rows": 8
   },

@@ -17,9 +17,6 @@ from src.training.checkpoint import METADATA_FILES
 from src.utils.metrics import HORIZON_LABELS
 
 ROOT = Path(__file__).resolve().parents[1]
-E0_RUN = ("e0", "e0_60s")
-RUNS = (("ofi_lstm", "ofi_lstm_60s_base"), ("hfformer", "hfformer_60s_base"),
-        ("patchtst", "patchtst_60s_base"), ("moderntcn", "moderntcn_60s_base"), ("lit", "lit_60s_base"))
 SPLITS = ("train", "validation", "test")
 CHECKPOINT_FILES = (("model.safetensors", "config.json", "environment.json",
                      "optimizer.pt", "scheduler.pt", "trainer_state.pt")

@@ -2,6 +2,7 @@
 import argparse
 import gc
 import hashlib
+import json
 import os
 from pathlib import Path
 import sys
@@ -203,11 +204,37 @@ def render(checks):
         print(f"{'PASS' if c['passed'] else 'FAIL'}  {c['name']:<{width}}{detail}", flush=True)
 
 
+# Every frozen number above is the Oct-2023 experiment. A second dataset freezes its own
+# measured values in a JSON so one gate serves both instead of forking the checks.
+EXPECTED_GLOBALS = ("CSV_SHA256", "DATA_STATS", "RANGES", "SAMPLE_COUNTS", "HISTORY_ROWS",
+                    "STRIDE_SECONDS", "STRIDE_ROWS", "HORIZONS", "TOLERANCE_SECONDS",
+                    "MAX_GAP_SECONDS", "HISTORY_SECONDS", "PARAMETERS", "CHANNELS",
+                    "RUN_CONFIGS", "FROZEN_TRAINING", "FROZEN_DATA")
+
+
+def apply_expectations(path):
+    """Rebind the frozen constants; an unknown key is a typo, not a silent no-op."""
+    expected = json.loads(Path(path).read_text())
+    unknown = set(expected)-set(EXPECTED_GLOBALS)
+    if unknown:
+        raise ValueError(f"Unknown expectation keys: {sorted(unknown)}")
+    for key, value in expected.items():
+        globals()[key] = tuple(value) if key == "HORIZONS" else value
+    if "FROZEN_DATA" in expected:
+        frozen = dict(expected["FROZEN_DATA"])
+        frozen["horizons_seconds"] = tuple(frozen["horizons_seconds"])
+        globals()["FROZEN_DATA"] = frozen
+    return expected
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--csv", default=os.environ.get("LOB_CSV") or str(ROOT/"BTCUSDT_L10_oct2023.csv"))
     p.add_argument("--output", default=str(ROOT/"reports/contract_check.json"))
+    p.add_argument("--expected", help="JSON of frozen expectations; default is the Oct-2023 run")
     args = p.parse_args()
+    if args.expected:
+        apply_expectations(args.expected)
     torch.set_num_threads(2)
     seed_everything(42)
     gate, summary, reference = Gate(), {}, None

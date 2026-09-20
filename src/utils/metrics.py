@@ -42,6 +42,42 @@ class ReturnMetrics:
                     mean_mse=float(mse.mean()))
 
 
+def price_metrics(origin_mid, target_mid, predicted_mid):
+    """Same four families, measured on the mid price in quote currency.
+
+    E0 predicts "the price does not move", so its predicted mid IS the origin mid
+    and RMSE_E0 = sqrt(mean((mid_target - mid_origin)^2)) in price units.
+
+    Standard R2 is reported for contract completeness, but in price space it is
+    dominated by the level of the price, not by forecast skill: sigma(target mid)
+    runs to five figures while every error here is around two, so R2 sits near 1
+    for any model including E0. Read rmse_gain_vs_e0 instead.
+    """
+    origin = np.asarray(origin_mid, dtype=np.float64)
+    target = np.asarray(target_mid, dtype=np.float64)
+    predicted = np.asarray(predicted_mid, dtype=np.float64)
+    if origin.shape != target.shape or target.shape != predicted.shape:
+        raise ValueError("origin, target and predicted mids must share a shape")
+    if target.ndim != 2 or target.shape[1] != 3 or not len(target):
+        raise ValueError("Price metrics need non-empty [N, 3] arrays")
+    error, baseline = predicted-target, origin-target
+    mse = (error**2).mean(axis=0)
+    rmse, rmse_e0 = np.sqrt(mse), np.sqrt((baseline**2).mean(axis=0))
+    sst = ((target-target.mean(axis=0))**2).sum(axis=0)
+    sse = (error**2).sum(axis=0)
+    result = dict(samples=int(len(target)), horizons=list(HORIZON_LABELS), units="quote_currency",
+                  mse=mse.tolist(), rmse=rmse.tolist(),
+                  mae=np.abs(error).mean(axis=0).tolist(),
+                  r2=[float(1-sse[i]/sst[i]) if sst[i] > 0 else None for i in range(3)],
+                  rmse_e0=rmse_e0.tolist(),
+                  rmse_gain_vs_e0=_gain(rmse.tolist(), rmse_e0.tolist()),
+                  mae_e0=np.abs(baseline).mean(axis=0).tolist(),
+                  mean_mse=float(mse.mean()))
+    if not all(math.isfinite(v) for v in result["mse"]+result["rmse"]+result["mae"]):
+        raise FloatingPointError("Nonfinite price metrics")
+    return result
+
+
 def metrics_from_arrays(prediction, target):
     """Exact float64 metrics for the exported prediction tables, same contract."""
     p = np.asarray(prediction, dtype=np.float64)

@@ -16,10 +16,26 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.training.checkpoint import write_json
 
-RUNS = {"ofi_lstm": "ofi_lstm_60s_base", "hfformer": "hfformer_60s_base",
-        "patchtst": "patchtst_60s_base", "moderntcn": "moderntcn_60s_base",
-        "lit": "lit_60s_base"}
-REPORTS = Path("reports/vast")
+# --suite selects one frozen experiment: its run names, its reports directory (so two suites never
+# share a schedule, a summary or a gpu_usage.csv) and its book CSV. Nothing else differs.
+SUITES = {"oct2023": dict(runs={"ofi_lstm": "ofi_lstm_60s_base", "hfformer": "hfformer_60s_base",
+                                "patchtst": "patchtst_60s_base", "moderntcn": "moderntcn_60s_base",
+                                "lit": "lit_60s_base"},
+                          reports=Path("reports/vast"), csv="BTCUSDT_L10_oct2023.csv",
+                          history_seconds=60),
+          "gate1y": dict(runs={"ofi_lstm": "ofi_lstm_490s_gate1y", "hfformer": "hfformer_490s_gate1y",
+                               "patchtst": "patchtst_490s_gate1y", "moderntcn": "moderntcn_490s_gate1y",
+                               "lit": "lit_490s_gate1y"},
+                         reports=Path("reports/vast_gate1y"), csv="BTC_L10_gate_1y.csv",
+                         history_seconds=490)}
+RUNS, REPORTS = SUITES["oct2023"]["runs"], SUITES["oct2023"]["reports"]
+
+
+def select_suite(name):
+    """Rebind the frozen run names and the reports directory to one experiment."""
+    suite = SUITES[name]
+    globals()["RUNS"], globals()["REPORTS"] = suite["runs"], suite["reports"]
+    return suite
 
 
 def now():
@@ -34,7 +50,7 @@ def resolve_groups(args):
     else:
         decision = json.loads((REPORTS/"concurrency_benchmark.json").read_text())["decision"]
         groups = decision.get("recommended_groups") or decision["groups"]
-        source = "reports/vast/concurrency_benchmark.json"
+        source = f"{REPORTS}/concurrency_benchmark.json"
     flat = [model for group in groups for model in group]
     if sorted(flat) != sorted(RUNS) or len(flat) != len(set(flat)):
         raise ValueError(f"Schedule must cover each learned model exactly once, got {flat}")
@@ -90,7 +106,9 @@ def run_group(index, group, args, log_directory, records):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--csv", default=os.environ.get("LOB_CSV", "BTCUSDT_L10_oct2023.csv"))
+    p.add_argument("--suite", choices=sorted(SUITES), default="oct2023",
+                   help="Frozen experiment to schedule: run names, reports directory and default CSV")
+    p.add_argument("--csv", help="Default: $LOB_CSV, else the suite's book CSV")
     p.add_argument("--groups", action="append",
                    help="Comma-separated models; repeat per group. Default: benchmark decision.")
     p.add_argument("--log-directory", default="runs/logs")
@@ -100,17 +118,20 @@ def main(argv=None):
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("extra", nargs="*", help="Extra train.py flags, e.g. --num-workers 6")
     args = p.parse_args(argv)
+    suite = select_suite(args.suite)
+    args.csv = args.csv or os.environ.get("LOB_CSV") or suite["csv"]
 
     groups, source = resolve_groups(args)
     log_directory = Path(args.log_directory)
     log_directory.mkdir(parents=True, exist_ok=True)
     REPORTS.mkdir(parents=True, exist_ok=True)
-    schedule = dict(created=now(), decided_by=source, groups=groups, csv=args.csv,
+    schedule = dict(created=now(), suite=args.suite, decided_by=source, groups=groups, csv=args.csv,
                     runs={model: RUNS[model] for model in RUNS}, extra_train_flags=args.extra,
                     frozen=dict(batch_size=128, epochs=30, seed=42, learning_rate=1e-4,
                                 weight_decay=1e-4, optimizer="AdamW", loss="mse",
                                 scheduler="CosineAnnealingLR", gradient_clip=1.0,
-                                gradient_accumulation=1, history_seconds=60, history_rows=49,
+                                gradient_accumulation=1,
+                                history_seconds=suite["history_seconds"], history_rows=49,
                                 stride_rows=8),
                     policy="concurrency selects co-execution only; no run parameter changes")
     write_json(REPORTS/"training_schedule.json", schedule)
@@ -122,7 +143,8 @@ def main(argv=None):
     if not args.no_monitor:
         monitor = subprocess.Popen(
             [sys.executable, "scripts/gpu_monitor.py", "--append",
-             "--interval", str(args.monitor_interval), "--label", "full_training"],
+             "--interval", str(args.monitor_interval), "--label", f"full_training_{args.suite}",
+             "--output", str(REPORTS/"gpu_usage.csv")],
             stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     records, started = [], time.monotonic()
     try:

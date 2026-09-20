@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from src.utils.metrics import HORIZON_LABELS, metrics_from_arrays
+from src.utils.metrics import HORIZON_LABELS, metrics_from_arrays, price_metrics
 
 PREDICTION_COLUMNS = ["origin_index", "origin_timestamp_ns", "origin_mid"] + [
     column.format(h=h) for h in HORIZON_LABELS
@@ -58,12 +58,19 @@ def prediction_frame(dataset, raw, predictions):
     return frame
 
 
+def frame_metrics(frame):
+    """Headline metrics are price-space; the log-return block keeps runs comparable."""
+    columns = lambda prefix: frame[[f"{prefix}_{h}" for h in HORIZON_LABELS]].to_numpy(dtype=np.float64)
+    origin = np.repeat(frame[["origin_mid"]].to_numpy(dtype=np.float64), len(HORIZON_LABELS), axis=1)
+    metrics = price_metrics(origin, columns("target_mid"), columns("pred_mid"))
+    metrics["log_return"] = metrics_from_arrays(columns("pred_return"), columns("true_return"))
+    return metrics
+
+
 def export_split(model, dataset, raw, device, path, batch_size=256, num_workers=0):
     """Writes <split>_predictions.csv.gz and returns metrics from that exact table."""
     frame = prediction_frame(dataset, raw, predict(model, dataset, device, batch_size, num_workers))
     path.parent.mkdir(parents=True, exist_ok=True)
     # mtime=0 keeps the gzip container itself byte-reproducible across reruns.
     frame.to_csv(path, index=False, compression={"method": "gzip", "mtime": 0})
-    truth = frame[[f"true_return_{h}" for h in HORIZON_LABELS]].to_numpy(dtype=np.float64)
-    predicted = frame[[f"pred_return_{h}" for h in HORIZON_LABELS]].to_numpy(dtype=np.float64)
-    return frame, metrics_from_arrays(predicted, truth)
+    return frame, frame_metrics(frame)

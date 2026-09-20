@@ -16,6 +16,10 @@ class DataConfig:
     column_mapping: dict = field(default_factory=dict)
     history_seconds: int = 60
     history_rows: int | None = None  # Explicit paper-style override, e.g. LiT 64.
+    # Opt-in, recorded repairs for a file whose rows are not already in time order.
+    # Defaults keep the original guarantee: never reorder or deduplicate silently.
+    sort_by_timestamp: bool = False
+    duplicate_timestamp_policy: str = "error"  # error | keep_first | keep_last
     stride_seconds: float | None = None
     max_gap_seconds: float = 2.0
     target_tolerance_seconds: float = 2.0
@@ -27,8 +31,12 @@ class DataConfig:
     of_representation: str = "of"
 
     def validate(self):
-        if self.history_seconds not in (60, 120, 180):
-            raise ValueError("history_seconds must be 60, 120, or 180")
+        # The window is resolved from the measured cadence, so the second count is
+        # only required to be positive and to cover at least two snapshots.
+        if self.history_seconds < 1:
+            raise ValueError("history_seconds must be a positive number of seconds")
+        if self.duplicate_timestamp_policy not in ("error", "keep_first", "keep_last"):
+            raise ValueError("duplicate_timestamp_policy must be error, keep_first or keep_last")
         if self.history_rows is not None and self.history_rows < 2:
             raise ValueError("history_rows must be >= 2")
         if self.stride_seconds is not None and self.stride_seconds <= 0:

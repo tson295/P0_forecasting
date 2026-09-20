@@ -1,0 +1,143 @@
+{
+  "batch_size": 8,
+  "history_rows": 49,
+  "precision": "bfloat16",
+  "device": "NVIDIA GeForce RTX 4090",
+  "passed": true,
+  "models": {
+    "e0": {
+      "expected_parameters": 0,
+      "passed": true,
+      "error": null,
+      "parameters": 0,
+      "trainable_tensors": 0,
+      "input_shape": [
+        8,
+        49,
+        40
+      ],
+      "output_shape": [
+        8,
+        3
+      ],
+      "finite": true,
+      "loss": 1.1161136015402917e-08,
+      "backward": false,
+      "gradient_tensors": 0,
+      "peak_allocated_bytes": 66560,
+      "seconds": 0.027425289154052734
+    },
+    "ofi_lstm": {
+      "expected_parameters": 55491,
+      "passed": true,
+      "error": null,
+      "parameters": 55491,
+      "trainable_tensors": 10,
+      "input_shape": [
+        8,
+        49,
+        20
+      ],
+      "output_shape": [
+        8,
+        3
+      ],
+      "finite": true,
+      "loss": 0.0014962861314415932,
+      "backward": true,
+      "gradient_tensors": 10,
+      "peak_allocated_bytes": 24198144,
+      "seconds": 0.14013338088989258
+    },
+    "hfformer": {
+      "expected_parameters": 22026,
+      "passed": true,
+      "error": null,
+      "parameters": 22026,
+      "trainable_tensors": 43,
+      "input_shape": [
+        8,
+        49,
+        38
+      ],
+      "output_shape": [
+        8,
+        3
+      ],
+      "finite": true,
+      "loss": 0.04692976921796799,
+      "backward": true,
+      "gradient_tensors": 43,
+      "peak_allocated_bytes": 24697856,
+      "seconds": 0.03368854522705078
+    },
+    "patchtst": {
+      "expected_parameters": 477059,
+      "passed": true,
+      "error": null,
+      "parameters": 477059,
+      "trainable_tensors": 52,
+      "input_shape": [
+        8,
+        49,
+        40
+      ],
+      "output_shape": [
+        8,
+        3
+      ],
+      "finite": true,
+      "loss": 0.01700863242149353,
+      "backward": true,
+      "gradient_tensors": 52,
+      "peak_allocated_bytes": 54985216,
+      "seconds": 0.042206525802612305
+    },
+    "moderntcn": {
+      "expected_parameters": 50568195,
+      "passed": true,
+      "error": null,
+      "parameters": 50568195,
+      "trainable_tensors": 82,
+      "input_shape": [
+        8,
+        49,
+        40
+      ],
+      "output_shape": [
+        8,
+        3
+      ],
+      "finite": true,
+      "loss": 0.14771166443824768,
+      "backward": true,
+      "gradient_tensors": 82,
+      "peak_allocated_bytes": 465502208,
+      "seconds": 0.11289048194885254
+    },
+    "lit": {
+      "expected_parameters": 736547,
+      "passed": true,
+      "error": null,
+      "parameters": 736547,
+      "trainable_tensors": 73,
+      "input_shape": [
+        8,
+        49,
+        2,
+        10,
+        2
+      ],
+      "output_shape": [
+        8,
+        3
+      ],
+      "finite": true,
+      "loss": 0.017731498926877975,
+      "backward": true,
+      "gradient_tensors": 73,
+      "peak_allocated_bytes": 243428864,
+      "seconds": 0.008109569549560547
+    }
+  }
+}

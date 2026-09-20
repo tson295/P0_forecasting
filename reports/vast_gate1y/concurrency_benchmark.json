@@ -1,0 +1,753 @@
+{
+  "batch_size": 128,
+  "num_workers": 4,
+  "prefetch_factor": 2,
+  "parent_cuda_initialized": false,
+  "groups": [
+    {
+      "models": [
+        "moderntcn"
+      ],
+      "size": 1,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "moderntcn",
+          "pid": 75359,
+          "samples_per_second": 2618.7919848814267,
+          "mean_step_seconds": 0.048877497998679555,
+          "peak_allocated_bytes": 1711629824,
+          "peak_reserved_bytes": 1790967808,
+          "measured_seconds": 8.015909671783447,
+          "measured_start": 1789925489.4465384,
+          "measured_end": 1789925497.4624481,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 2810445824,
+      "min_free_bytes": 22946775040,
+      "average_gpu_utilization_percent": 97.6,
+      "max_gpu_utilization_percent": 99.0,
+      "gpu_samples": 80,
+      "total_samples": 20992,
+      "concurrent_seconds": 8.015909671783447,
+      "sequential_seconds": 7.989468920230866,
+      "aggregate_samples_per_second": 2618.7919848814267,
+      "sequential_samples_per_second": 2627.4587472071184,
+      "speedup_vs_sequential": 0.9967014658803287,
+      "accepted": true,
+      "rejection_reasons": []
+    },
+    {
+      "models": [
+        "ofi_lstm"
+      ],
+      "size": 1,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "ofi_lstm",
+          "pid": 75493,
+          "samples_per_second": 105027.05098301421,
+          "mean_step_seconds": 0.0012187336386384985,
+          "peak_allocated_bytes": 54158848,
+          "peak_reserved_bytes": 65011712,
+          "measured_seconds": 8.000986337661743,
+          "measured_start": 1789925501.1556919,
+          "measured_end": 1789925509.1566782,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 1086586880,
+      "min_free_bytes": 24670633984,
+      "average_gpu_utilization_percent": 35.0,
+      "max_gpu_utilization_percent": 41.0,
+      "gpu_samples": 80,
+      "total_samples": 840320,
+      "concurrent_seconds": 8.000986337661743,
+      "sequential_seconds": 7.921814765194221,
+      "aggregate_samples_per_second": 105027.05098301421,
+      "sequential_samples_per_second": 106076.70400121981,
+      "speedup_vs_sequential": 0.9901047734458874,
+      "accepted": true,
+      "rejection_reasons": []
+    },
+    {
+      "models": [
+        "hfformer"
+      ],
+      "size": 1,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "hfformer",
+          "pid": 75600,
+          "samples_per_second": 36781.323155667,
+          "mean_step_seconds": 0.003480027063144918,
+          "peak_allocated_bytes": 50123776,
+          "peak_reserved_bytes": 67108864,
+          "measured_seconds": 8.000582218170166,
+          "measured_start": 1789925512.6606193,
+          "measured_end": 1789925520.6612015,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 1078198272,
+      "min_free_bytes": 24679022592,
+      "average_gpu_utilization_percent": 47.475,
+      "max_gpu_utilization_percent": 52.0,
+      "gpu_samples": 80,
+      "total_samples": 294272,
+      "concurrent_seconds": 8.000582218170166,
+      "sequential_seconds": 7.949684984398328,
+      "aggregate_samples_per_second": 36781.323155667,
+      "sequential_samples_per_second": 37016.81268849321,
+      "speedup_vs_sequential": 0.993638308765049,
+      "accepted": true,
+      "rejection_reasons": []
+    },
+    {
+      "models": [
+        "patchtst"
+      ],
+      "size": 1,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "patchtst",
+          "pid": 75707,
+          "samples_per_second": 13963.775631474402,
+          "mean_step_seconds": 0.009166575242836724,
+          "peak_allocated_bytes": 505080320,
+          "peak_reserved_bytes": 622854144,
+          "measured_seconds": 8.00242018699646,
+          "measured_start": 1789925524.4784417,
+          "measured_end": 1789925532.480862,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 1638137856,
+      "min_free_bytes": 24119083008,
+      "average_gpu_utilization_percent": 89.425,
+      "max_gpu_utilization_percent": 98.0,
+      "gpu_samples": 80,
+      "total_samples": 111744,
+      "concurrent_seconds": 8.00242018699646,
+      "sequential_seconds": 7.944971778176048,
+      "aggregate_samples_per_second": 13963.775631474402,
+      "sequential_samples_per_second": 14064.744736658262,
+      "speedup_vs_sequential": 0.9928211206762471,
+      "accepted": true,
+      "rejection_reasons": []
+    },
+    {
+      "models": [
+        "lit"
+      ],
+      "size": 1,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "lit",
+          "pid": 75849,
+          "samples_per_second": 35000.47615234593,
+          "mean_step_seconds": 0.003657093104758254,
+          "peak_allocated_bytes": 119416832,
+          "peak_reserved_bytes": 144703488,
+          "measured_seconds": 8.00171971321106,
+          "measured_start": 1789925536.105139,
+          "measured_end": 1789925544.1068587,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 1166278656,
+      "min_free_bytes": 24590942208,
+      "average_gpu_utilization_percent": 53.5625,
+      "max_gpu_utilization_percent": 57.0,
+      "gpu_samples": 80,
+      "total_samples": 280064,
+      "concurrent_seconds": 8.00171971321106,
+      "sequential_seconds": 7.879849690041668,
+      "aggregate_samples_per_second": 35000.47615234593,
+      "sequential_samples_per_second": 35541.79470630474,
+      "speedup_vs_sequential": 0.9847695211107956,
+      "accepted": true,
+      "rejection_reasons": []
+    },
+    {
+      "models": [
+        "ofi_lstm",
+        "hfformer"
+      ],
+      "size": 2,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "ofi_lstm",
+          "pid": 76007,
+          "samples_per_second": 81871.2741146071,
+          "mean_step_seconds": 0.0015634299256271475,
+          "peak_allocated_bytes": 54158848,
+          "peak_reserved_bytes": 65011712,
+          "measured_seconds": 8.001634359359741,
+          "measured_start": 1789925548.095254,
+          "measured_end": 1789925556.0968883,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "hfformer",
+          "pid": 76008,
+          "samples_per_second": 33444.91729011093,
+          "mean_step_seconds": 0.0038271884151989625,
+          "peak_allocated_bytes": 50123776,
+          "peak_reserved_bytes": 67108864,
+          "measured_seconds": 8.00265097618103,
+          "measured_start": 1789925548.1421523,
+          "measured_end": 1789925556.1448033,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 1654194176,
+      "min_free_bytes": 24103026688,
+      "average_gpu_utilization_percent": 89.01234567901234,
+      "max_gpu_utilization_percent": 98.0,
+      "gpu_samples": 81,
+      "total_samples": 922752,
+      "concurrent_seconds": 8.049549341201782,
+      "sequential_seconds": 13.51421535158786,
+      "aggregate_samples_per_second": 114633.9951327306,
+      "sequential_samples_per_second": 68280.10180343772,
+      "speedup_vs_sequential": 1.6788785034728682,
+      "accepted": true,
+      "rejection_reasons": []
+    },
+    {
+      "models": [
+        "moderntcn",
+        "ofi_lstm"
+      ],
+      "size": 2,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "moderntcn",
+          "pid": 76210,
+          "samples_per_second": 1924.2342453040249,
+          "mean_step_seconds": 0.06651996778062552,
+          "peak_allocated_bytes": 1711629824,
+          "peak_reserved_bytes": 1790967808,
+          "measured_seconds": 8.048916101455688,
+          "measured_start": 1789925560.9991698,
+          "measured_end": 1789925569.048086,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "ofi_lstm",
+          "pid": 76211,
+          "samples_per_second": 46402.135130917355,
+          "mean_step_seconds": 0.0027584937554891668,
+          "peak_allocated_bytes": 54158848,
+          "peak_reserved_bytes": 65011712,
+          "measured_seconds": 8.002390384674072,
+          "measured_start": 1789925561.0134008,
+          "measured_end": 1789925569.0157912,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 3386441728,
+      "min_free_bytes": 22370779136,
+      "average_gpu_utilization_percent": 95.85,
+      "max_gpu_utilization_percent": 98.0,
+      "gpu_samples": 80,
+      "total_samples": 386816,
+      "concurrent_seconds": 8.048916101455688,
+      "sequential_seconds": 9.44972354353051,
+      "aggregate_samples_per_second": 48058.14784552697,
+      "sequential_samples_per_second": 40934.10756601687,
+      "speedup_vs_sequential": 1.1740367801599372,
+      "accepted": false,
+      "rejection_reasons": [
+        "GPU utilization 95.8% not above the 97.6% single-job baseline"
+      ]
+    },
+    {
+      "models": [
+        "ofi_lstm",
+        "hfformer",
+        "lit"
+      ],
+      "size": 3,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "ofi_lstm",
+          "pid": 76523,
+          "samples_per_second": 39022.71248873636,
+          "mean_step_seconds": 0.0032801410213845676,
+          "peak_allocated_bytes": 54158848,
+          "peak_reserved_bytes": 65011712,
+          "measured_seconds": 8.003544092178345,
+          "measured_start": 1789925573.5175788,
+          "measured_end": 1789925581.521123,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "hfformer",
+          "pid": 76524,
+          "samples_per_second": 27302.097685788987,
+          "mean_step_seconds": 0.004688284448803553,
+          "peak_allocated_bytes": 50123776,
+          "peak_reserved_bytes": 67108864,
+          "measured_seconds": 8.002901554107666,
+          "measured_start": 1789925573.5431762,
+          "measured_end": 1789925581.5460777,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "lit",
+          "pid": 76525,
+          "samples_per_second": 26142.87261579409,
+          "mean_step_seconds": 0.004896171965534859,
+          "peak_allocated_bytes": 119416832,
+          "peak_reserved_bytes": 144703488,
+          "measured_seconds": 8.00034499168396,
+          "measured_start": 1789925573.522873,
+          "measured_end": 1789925581.523218,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 2309881856,
+      "min_free_bytes": 23447339008,
+      "average_gpu_utilization_percent": 89.39506172839506,
+      "max_gpu_utilization_percent": 97.0,
+      "gpu_samples": 81,
+      "total_samples": 739968,
+      "concurrent_seconds": 8.028498888015747,
+      "sequential_seconds": 14.889806408241299,
+      "aggregate_samples_per_second": 92167.66550277047,
+      "sequential_samples_per_second": 49696.2807784014,
+      "speedup_vs_sequential": 1.8546189787069065,
+      "accepted": true,
+      "rejection_reasons": []
+    },
+    {
+      "models": [
+        "moderntcn",
+        "ofi_lstm",
+        "hfformer"
+      ],
+      "size": 3,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "moderntcn",
+          "pid": 76823,
+          "samples_per_second": 1183.152967316482,
+          "mean_step_seconds": 0.10818550393388078,
+          "peak_allocated_bytes": 1711629824,
+          "peak_reserved_bytes": 1790967808,
+          "measured_seconds": 8.005727291107178,
+          "measured_start": 1789925586.6128352,
+          "measured_end": 1789925594.6185625,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "ofi_lstm",
+          "pid": 76824,
+          "samples_per_second": 29711.224333986145,
+          "mean_step_seconds": 0.004308136162991542,
+          "peak_allocated_bytes": 54158848,
+          "peak_reserved_bytes": 65011712,
+          "measured_seconds": 8.000208854675293,
+          "measured_start": 1789925586.659655,
+          "measured_end": 1789925594.659864,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "hfformer",
+          "pid": 76825,
+          "samples_per_second": 27909.10233203309,
+          "mean_step_seconds": 0.004586317341102228,
+          "peak_allocated_bytes": 50123776,
+          "peak_reserved_bytes": 67108864,
+          "measured_seconds": 8.003123760223389,
+          "measured_start": 1789925586.638536,
+          "measured_end": 1789925594.6416597,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 3954049024,
+      "min_free_bytes": 21803171840,
+      "average_gpu_utilization_percent": 94.37037037037037,
+      "max_gpu_utilization_percent": 99.0,
+      "gpu_samples": 81,
+      "total_samples": 470528,
+      "concurrent_seconds": 8.04702877998352,
+      "sequential_seconds": 11.95277044404186,
+      "aggregate_samples_per_second": 58472.265088750384,
+      "sequential_samples_per_second": 39365.60165719118,
+      "speedup_vs_sequential": 1.4853644457906783,
+      "accepted": false,
+      "rejection_reasons": [
+        "GPU utilization 94.4% not above the 97.6% single-job baseline"
+      ]
+    },
+    {
+      "models": [
+        "ofi_lstm",
+        "hfformer",
+        "lit",
+        "patchtst"
+      ],
+      "size": 4,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "ofi_lstm",
+          "pid": 77214,
+          "samples_per_second": 20845.560987697907,
+          "mean_step_seconds": 0.006140396033262895,
+          "peak_allocated_bytes": 54158848,
+          "peak_reserved_bytes": 65011712,
+          "measured_seconds": 8.000936031341553,
+          "measured_start": 1789925599.6162744,
+          "measured_end": 1789925607.6172104,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "hfformer",
+          "pid": 77215,
+          "samples_per_second": 19914.562351099827,
+          "mean_step_seconds": 0.006427457342186128,
+          "peak_allocated_bytes": 50123776,
+          "peak_reserved_bytes": 67108864,
+          "measured_seconds": 8.002184391021729,
+          "measured_start": 1789925599.6050227,
+          "measured_end": 1789925607.607207,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "lit",
+          "pid": 77216,
+          "samples_per_second": 19856.937351155313,
+          "mean_step_seconds": 0.006446109877692329,
+          "peak_allocated_bytes": 119416832,
+          "peak_reserved_bytes": 144703488,
+          "measured_seconds": 8.006068468093872,
+          "measured_start": 1789925599.5795572,
+          "measured_end": 1789925607.5856256,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "patchtst",
+          "pid": 77217,
+          "samples_per_second": 4019.634816593861,
+          "mean_step_seconds": 0.03184368875291613,
+          "peak_allocated_bytes": 505080320,
+          "peak_reserved_bytes": 622854144,
+          "measured_seconds": 8.024609565734863,
+          "measured_start": 1789925599.5715907,
+          "measured_end": 1789925607.5962002,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 3437428736,
+      "min_free_bytes": 22319792128,
+      "average_gpu_utilization_percent": 89.53086419753086,
+      "max_gpu_utilization_percent": 98.0,
+      "gpu_samples": 81,
+      "total_samples": 517376,
+      "concurrent_seconds": 8.04561972618103,
+      "sequential_seconds": 12.772730222065993,
+      "aggregate_samples_per_second": 64305.301220789865,
+      "sequential_samples_per_second": 40506.29669655031,
+      "speedup_vs_sequential": 1.587538394401441,
+      "accepted": true,
+      "rejection_reasons": []
+    },
+    {
+      "models": [
+        "ofi_lstm",
+        "hfformer",
+        "lit",
+        "patchtst",
+        "moderntcn"
+      ],
+      "size": 5,
+      "warmup_steps": 10,
+      "measured_steps_floor": 60,
+      "measured_seconds_floor": 8.0,
+      "processes": [
+        {
+          "model": "ofi_lstm",
+          "pid": 77617,
+          "samples_per_second": 15879.615440048237,
+          "mean_step_seconds": 0.008060648602181211,
+          "peak_allocated_bytes": 54158848,
+          "peak_reserved_bytes": 65011712,
+          "measured_seconds": 8.004224061965942,
+          "measured_start": 1789925613.4517045,
+          "measured_end": 1789925621.4559286,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "hfformer",
+          "pid": 77618,
+          "samples_per_second": 15070.673237301618,
+          "mean_step_seconds": 0.008493316654440197,
+          "peak_allocated_bytes": 50123776,
+          "peak_reserved_bytes": 67108864,
+          "measured_seconds": 8.000704288482666,
+          "measured_start": 1789925613.4803965,
+          "measured_end": 1789925621.4811008,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "lit",
+          "pid": 77619,
+          "samples_per_second": 13682.9118113072,
+          "mean_step_seconds": 0.009354733975134163,
+          "peak_allocated_bytes": 119416832,
+          "peak_reserved_bytes": 144703488,
+          "measured_seconds": 8.007652282714844,
+          "measured_start": 1789925613.4864144,
+          "measured_end": 1789925621.4940667,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "patchtst",
+          "pid": 77620,
+          "samples_per_second": 3046.5629854327467,
+          "mean_step_seconds": 0.04201455890196156,
+          "peak_allocated_bytes": 505080320,
+          "peak_reserved_bytes": 622854144,
+          "measured_seconds": 8.024780750274658,
+          "measured_start": 1789925613.4812012,
+          "measured_end": 1789925621.505982,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        },
+        {
+          "model": "moderntcn",
+          "pid": 77621,
+          "samples_per_second": 850.3979990619613,
+          "mean_step_seconds": 0.1505177577336629,
+          "peak_allocated_bytes": 1711629824,
+          "peak_reserved_bytes": 1790967808,
+          "measured_seconds": 9.031065464019775,
+          "measured_start": 1789925613.4439192,
+          "measured_end": 1789925622.4749846,
+          "finite": true,
+          "barrier_complete": true,
+          "oom": false,
+          "error": null
+        }
+      ],
+      "oom": false,
+      "failures": [],
+      "peak_memory_used_bytes": 5737349120,
+      "min_free_bytes": 20019871744,
+      "average_gpu_utilization_percent": 98.11111111111111,
+      "max_gpu_utilization_percent": 99.0,
+      "gpu_samples": 90,
+      "total_samples": 389376,
+      "concurrent_seconds": 9.031065464019775,
+      "sequential_seconds": 12.302325445626195,
+      "aggregate_samples_per_second": 43115.17855244144,
+      "sequential_samples_per_second": 31650.60148351331,
+      "speedup_vs_sequential": 1.3622230394231207,
+      "accepted": true,
+      "rejection_reasons": []
+    }
+  ],
+  "decision": {
+    "recommended_groups": [
+      [
+        "hfformer",
+        "lit",
+        "ofi_lstm"
+      ],
+      [
+        "moderntcn"
+      ],
+      [
+        "patchtst"
+      ]
+    ],
+    "baseline_source": "reports/vast_gate1y/single_job_benchmark.json plus single-job groups measured here",
+    "safety_margin_bytes": 3221225472,
+    "epochs": 30,
+    "workload_samples_per_model": 8226450,
+    "estimated_train_step_seconds": 4045.115470183952,
+    "sequential_train_step_seconds": 4267.466248941378,
+    "accepted_groups": [
+      [
+        "moderntcn"
+      ],
+      [
+        "ofi_lstm"
+      ],
+      [
+        "hfformer"
+      ],
+      [
+        "patchtst"
+      ],
+      [
+        "lit"
+      ],
+      [
+        "ofi_lstm",
+        "hfformer"
+      ],
+      [
+        "ofi_lstm",
+        "hfformer",
+        "lit"
+      ],
+      [
+        "ofi_lstm",
+        "hfformer",
+        "lit",
+        "patchtst"
+      ],
+      [
+        "ofi_lstm",
+        "hfformer",
+        "lit",
+        "patchtst",
+        "moderntcn"
+      ]
+    ],
+    "rejected_groups": [
+      {
+        "models": [
+          "moderntcn",
+          "ofi_lstm"
+        ],
+        "reasons": [
+          "GPU utilization 95.8% not above the 97.6% single-job baseline"
+        ]
+      },
+      {
+        "models": [
+          "moderntcn",
+          "ofi_lstm",
+          "hfformer"
+        ],
+        "reasons": [
+          "GPU utilization 94.4% not above the 97.6% single-job baseline"
+        ]
+      }
+    ],
+    "rationale": "Measured, not assumed. ofi_lstm+hfformer+lit: 1.85x aggregate vs sequential, slowest member 26143 samples/s, 89% util, 21.8 GiB free; ofi_lstm+hfformer: 1.68x aggregate vs sequential, slowest member 33445 samples/s, 89% util, 22.4 GiB free; ofi_lstm+hfformer+lit+patchtst: 1.59x aggregate vs sequential, slowest member 4020 samples/s, 90% util, 20.8 GiB free; ofi_lstm+hfformer+lit+patchtst+moderntcn: 1.36x aggregate vs sequential, slowest member 850 samples/s, 98% util, 18.6 GiB free. Schedules are ranked by the wall time to push 8226450 train samples through every model, each group paced by its slowest member: hfformer+lit+ofi_lstm then moderntcn then patchtst costs 4045s of train steps, 5.2% below the 4267s one-job-at-a-time baseline (forward/backward/AdamW only; validation, checkpointing and data-loader startup excluded)."
+  }
+}

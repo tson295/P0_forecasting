@@ -17,8 +17,10 @@ def test_smoke_cannot_reach_fit_or_probe(monkeypatch, tmp_path):
 
 
 def test_config_unknown_options_and_invalid_flags():
-    config = Config(); config.data.history_seconds = 1
-    with pytest.raises(ValueError): config.validate()
+    config = Config(); config.data.history_seconds = 0
+    with pytest.raises(ValueError, match="positive number of seconds"): config.validate()
+    config = Config(); config.data.duplicate_timestamp_policy = "drop_all"
+    with pytest.raises(ValueError, match="duplicate_timestamp_policy"): config.validate()
     args = train.parser().parse_args(["--backward"])
     with pytest.raises(ValueError, match="only valid"):
         train.resolve_config(args)

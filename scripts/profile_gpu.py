@@ -31,12 +31,23 @@ COMPILE_SPEEDUP = 1.10             # Section S: compile is only worth it if thro
 EXPECTED_PARAMETERS = dict(e0=0, ofi_lstm=55491, hfformer=22026, patchtst=477059,
                            moderntcn=50568195, lit=736547)
 EXPECTED_CHANNELS = dict(e0=40, ofi_lstm=20, hfformer=38, patchtst=40, moderntcn=40, lit=40)
+# --suite selects which frozen experiment to profile; the shapes differ, so the
+# measured throughput and the schedule estimate must come from the matching configs.
+SUITES = {"oct2023": ("configs/e0_60s.json", "configs/{model}_60s_base.json", 58774),
+          "gate1y": ("configs/e0_490s_gate1y.json", "configs/{model}_490s_gate1y.json", 274215)}
 CONFIG_PATHS = dict(e0="configs/e0_60s.json") | {m: f"configs/{m}_60s_base.json" for m in LEARNED}
 # (warmup steps, measured-step floor, measured-window floor in seconds); the window floor keeps
 # NVML utilization meaningful and keeps concurrent jobs overlapping instead of finishing in turn.
 DEFAULT_STEPS = dict(single=(20, 80, 3.), compile=(10, 40, 2.), worker=(10, 60, 8.),
                      concurrency=(10, 60, 8.))
 EPOCH_SAMPLES = 58774  # Frozen train-split window count; the workload one model must finish per epoch.
+
+
+def select_suite(name):
+    """Rebind the config paths and the per-epoch workload to one frozen experiment."""
+    e0_path, template, samples = SUITES[name]
+    globals()["CONFIG_PATHS"] = dict(e0=e0_path) | {m: template.format(model=m) for m in LEARNED}
+    globals()["EPOCH_SAMPLES"] = samples
 # Section R: ModernTCN alone first, every model alone as the sequential baseline, then 2 -> 5 jobs.
 # The ModernTCN pairings are the "ModernTCN with one or more light models" case section R allows.
 CONCURRENCY_GROUPS = ([["moderntcn"]]+[[m] for m in LEARNED if m != "moderntcn"]
@@ -642,6 +653,8 @@ def main():
     p.add_argument("--mode", required=True,
                    choices=("hardware", "cuda-smoke", "single", "compile", "worker", "concurrency", "all"))
     p.add_argument("--models", default=",".join(LEARNED), help="Comma list for single/compile/concurrency")
+    p.add_argument("--suite", choices=sorted(SUITES), default="oct2023",
+                   help="Which frozen experiment's configs and epoch workload to profile")
     p.add_argument("--model", choices=LEARNED, help="Worker mode only")
     p.add_argument("--num-workers", type=int, default=4)
     p.add_argument("--prefetch-factor", type=int, default=2)
@@ -655,6 +668,8 @@ def main():
     p.add_argument("--group-timeout", type=float, default=900.)
     p.add_argument("--output-dir", default=str(ROOT/"reports"/"vast"))
     args = p.parse_args()
+    if getattr(args, "suite", None):
+        select_suite(args.suite)
     args.models = [m.strip() for m in args.models.split(",") if m.strip()]
     unknown = set(args.models)-set(LEARNED)
     if not args.models:

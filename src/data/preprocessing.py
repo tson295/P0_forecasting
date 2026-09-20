@@ -42,6 +42,36 @@ class RawBook:
     column_mapping: dict
 
 
+def order_rows(ts, values, segments, config):
+    """Apply the configured, recorded row repairs before anything reads the series.
+
+    A file can arrive with its blocks concatenated out of order, or with two
+    snapshots sharing one timestamp. Both are repaired only when the config asks
+    for it, and what was done is returned so the checkpoint records it.
+    """
+    rows_in_file = int(len(ts))
+    reordered = 0
+    if config.sort_by_timestamp:
+        # Stable, so rows sharing a timestamp keep their original file order.
+        order = np.argsort(ts, kind="stable")
+        reordered = int((order != np.arange(len(order))).sum())
+        ts, values, segments = ts[order], values[order], segments[order]
+    dropped = 0
+    if config.duplicate_timestamp_policy != "error":
+        keep = (np.r_[True, np.diff(ts) > 0] if config.duplicate_timestamp_policy == "keep_first"
+                else np.r_[np.diff(ts) > 0, True])
+        dropped = int((~keep).sum())
+        if dropped:
+            ts, values, segments = ts[keep], values[keep], segments[keep]
+    return (np.ascontiguousarray(ts), np.ascontiguousarray(values),
+            np.ascontiguousarray(segments),
+            dict(rows_in_file=rows_in_file, rows_used=int(len(ts)),
+                 sorted_by_timestamp=bool(config.sort_by_timestamp),
+                 rows_moved_by_sort=reordered,
+                 duplicate_timestamp_policy=config.duplicate_timestamp_policy,
+                 duplicate_rows_dropped=dropped))
+
+
 def load_csv(config):
     path = Path(config.csv_path).expanduser().resolve()
     header = pd.read_csv(path, nrows=0).columns.tolist()
@@ -63,10 +93,14 @@ def load_csv(config):
         parsed = pd.to_datetime(stamp, utc=True)
     # Explicit ns conversion also handles pandas 3's inferred datetime resolution.
     ts = np.ascontiguousarray(parsed.dt.as_unit("ns").astype("int64").to_numpy())
+    values = df[[mapping[c] for c in RAW_COLUMNS]].to_numpy(dtype=np.float64)
+    segments = (pd.factorize(df[segment], sort=False)[0] if segment
+                else np.zeros(len(ts), dtype=np.int64))
+    del df
+    ts, values, segments, repairs = order_rows(ts, values, segments, config)
     dt = np.diff(ts)/1e9
     if np.any(dt <= 0):
         raise ValueError("Timestamps must be strictly increasing; do not silently reorder/deduplicate")
-    values = df[[mapping[c] for c in RAW_COLUMNS]].to_numpy(dtype=np.float64)
     book = np.ascontiguousarray(values.reshape(-1, 2, 2, 10).transpose(0, 1, 3, 2))
     if not np.isfinite(book).all() or np.any(book[..., 0] <= 0) or np.any(book[..., 1] < 0):
         raise ValueError("Prices must be positive; quantities nonnegative; all values finite")
@@ -74,7 +108,6 @@ def load_csv(config):
         raise ValueError("Crossed book detected")
     if np.any(np.diff(book[:, 0, :, 0], axis=1) > 0) or np.any(np.diff(book[:, 1, :, 0], axis=1) < 0):
         raise ValueError("Depth prices are out of order; verify column mapping")
-    segments = pd.factorize(df[segment], sort=False)[0] if segment else np.zeros(len(ts), dtype=np.int64)
     bad = (dt > config.max_gap_seconds) | (segments[1:] != segments[:-1])
     prefix = np.r_[0, np.cumsum(bad, dtype=np.int64)]
     with path.open("rb") as f:
@@ -82,10 +115,13 @@ def load_csv(config):
     stats = dict(rows=len(ts), median_dt_seconds=float(np.median(dt)),
                  p99_dt_seconds=float(np.quantile(dt, .99)), max_dt_seconds=float(dt.max()),
                  gaps_gt_2_seconds=int((dt > 2).sum()),
+                 max_gap_seconds_setting=float(config.max_gap_seconds),
+                 gaps_gt_max_gap=int((dt > config.max_gap_seconds).sum()),
                  segment_transitions=int((segments[1:] != segments[:-1]).sum()))
     return RawBook(ts, book, np.ascontiguousarray(book[:, :, 0, 0].mean(1)),
                    segments, bad, prefix, stats,
-                   dict(path=str(path), sha256=digest, size_bytes=path.stat().st_size),
+                   dict(path=str(path), sha256=digest, size_bytes=path.stat().st_size,
+                        row_repairs=repairs),
                    dict(features=mapping, timestamp=config.timestamp_column,
                         timestamp_unit=config.timestamp_unit, segment=segment))
 
