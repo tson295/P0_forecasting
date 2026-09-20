@@ -1,5 +1,12 @@
 # Bàn giao triển khai prompt.md
 
+> **Trạng thái đã thay đổi.** Tài liệu này mô tả phase chuẩn bị (không train).
+> Base experiment đã được chạy thật sau đó: kết quả, benchmark GPU, checkpoint,
+> prediction artifact và Hugging Face repo nằm ở [FINAL_REPORT.md](FINAL_REPORT.md),
+> [contract_check.json](contract_check.json) và [vast/](vast/). Hai thay đổi
+> architecture bắt buộc của lần chạy đó — HFformer window-local normalization và
+> LiT 736,547 parameters — đã ghi đè phần mô tả tương ứng bên dưới.
+
 Đã implement sáu model và pipeline chuẩn bị train. **Không chạy epoch training,
 không chạy optimizer step, không benchmark GPU, không push Hugging Face.**
 Các backward check chỉ dùng một batch tối đa hai samples/model; unit test dùng

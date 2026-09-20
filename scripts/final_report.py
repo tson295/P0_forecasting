@@ -13,6 +13,31 @@ RUNS = [("e0", "e0_60s"), ("ofi_lstm", "ofi_lstm_60s_base"), ("hfformer", "hffor
 HORIZONS = ("1m", "2m", "3m")
 MISSING = "n/a"
 
+DEVIATIONS = [
+    "**HFformer window reduction accumulates in FP64** (section J). The frozen formula, "
+    "eps=1e-5, unbiased=False and the per-sample/per-feature/over-time contract are unchanged; "
+    "only the reduction's arithmetic precision differs from the literal `x_fp32.mean(dim=1)`. "
+    "At raw L10 price scale (~2.7e4, FP32 ulp ~2e-3) a batched FP32 mean carries a few ulp of "
+    "residue, and dividing that by eps turns a constant window -- whose true z-score is 0 -- into "
+    "about -586; measured on real train windows, 6.2% of (sample, feature) pairs have a near-constant "
+    "history and 1.3% of normalized entries exceeded |z|>10. The FP32 reduction kernel also varies "
+    "with tensor shape, so the value depended on the batch, which section J forbids ('phu thuoc duy "
+    "nhat vao history hien tai cua sample'). With FP64 accumulation the result matches the exact "
+    "formula to 2.4e-7 and is bit-identical across batch sizes 1, 3, 7, 128 and 512.",
+    "**PatchTST exposes four of the six LoRA module names** (sections W vs K3). Sections K2 and K5 "
+    "name q_proj/k_proj/v_proj/out_proj/fc1/fc2 for HFformer and LiT, and both provide all six. "
+    "Section K3 pins PatchTST to the stock `transformers.PatchTSTModel` at exactly 477,059 "
+    "parameters; that module keeps its feed-forward Linears inside an nn.Sequential at ff.0/ff.3. "
+    "Its four attention projections -- the standard LoRA injection points -- are present and "
+    "unmerged. Renaming the upstream feed-forward layers would be the architecture change K3 forbids, "
+    "so the upstream names were kept.",
+    "**Credentials came from the machine, not from GITHUB_TOKEN/HF_TOKEN** (sections A, AC). Neither "
+    "environment variable was set and the GitHub CLI is not installed. GitHub was authenticated with "
+    "the existing SSH key already configured for the `origin` remote, and Hugging Face with the token "
+    "already stored in the local Hugging Face home. No token was printed, written into source, "
+    "committed, or embedded in a remote URL.",
+]
+
 
 def load(path):
     path = Path(path)
@@ -184,6 +209,10 @@ def main():
           f"{{train,validation,test}}_predictions.csv.gz` | `{repo}` -> `{model}/{run_name}/` |")
 
     w("\n## 34-36. Incidents and deviations\n")
+    w("\n### Experiment-contract deviations\n")
+    for item in DEVIATIONS:
+        w(f"- {item}")
+    w("")
     crashed = final.get("crashed") or []
     resumed = final.get("resumed") or []
     w(f"- Crashed jobs: {', '.join(crashed) if crashed else 'none'}")

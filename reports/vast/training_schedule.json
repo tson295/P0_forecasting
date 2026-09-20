@@ -1,11 +1,11 @@
 {
-  "created": "2026-09-20T12:22:50.656275+00:00",
+  "created": "2026-09-20T12:45:09.358828+00:00",
   "decided_by": "reports/vast/concurrency_benchmark.json",
   "groups": [
     [
-      "ofi_lstm",
       "hfformer",
-      "lit"
+      "lit",
+      "ofi_lstm"
     ],
     [
       "moderntcn"

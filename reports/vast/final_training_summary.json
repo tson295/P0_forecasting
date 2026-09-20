@@ -1,0 +1,146 @@
+{
+  "finished": "2026-09-20T12:58:54.720308+00:00",
+  "total_seconds": 825.3611066910671,
+  "schedule": {
+    "created": "2026-09-20T12:45:09.358828+00:00",
+    "decided_by": "reports/vast/concurrency_benchmark.json",
+    "groups": [
+      [
+        "hfformer",
+        "lit",
+        "ofi_lstm"
+      ],
+      [
+        "moderntcn"
+      ],
+      [
+        "patchtst"
+      ]
+    ],
+    "csv": "BTCUSDT_L10_oct2023.csv",
+    "runs": {
+      "ofi_lstm": "ofi_lstm_60s_base",
+      "hfformer": "hfformer_60s_base",
+      "patchtst": "patchtst_60s_base",
+      "moderntcn": "moderntcn_60s_base",
+      "lit": "lit_60s_base"
+    },
+    "extra_train_flags": [],
+    "frozen": {
+      "batch_size": 128,
+      "epochs": 30,
+      "seed": 42,
+      "learning_rate": 0.0001,
+      "weight_decay": 0.0001,
+      "optimizer": "AdamW",
+      "loss": "mse",
+      "scheduler": "CosineAnnealingLR",
+      "gradient_clip": 1.0,
+      "gradient_accumulation": 1,
+      "history_seconds": 60,
+      "history_rows": 49,
+      "stride_rows": 8
+    },
+    "policy": "concurrency selects co-execution only; no run parameter changes"
+  },
+  "jobs": [
+    {
+      "model": "hfformer",
+      "run_name": "hfformer_60s_base",
+      "pid": 47377,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/hfformer_60s_base.json",
+        "--csv",
+        "BTCUSDT_L10_oct2023.csv"
+      ],
+      "log": "runs/logs/hfformer_60s_base.log",
+      "started": "2026-09-20T12:45:09.359483+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T12:46:18.518793+00:00",
+      "seconds": 69.1593215810135
+    },
+    {
+      "model": "lit",
+      "run_name": "lit_60s_base",
+      "pid": 47378,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/lit_60s_base.json",
+        "--csv",
+        "BTCUSDT_L10_oct2023.csv"
+      ],
+      "log": "runs/logs/lit_60s_base.log",
+      "started": "2026-09-20T12:45:09.359720+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T12:46:24.530967+00:00",
+      "seconds": 75.17126571608242
+    },
+    {
+      "model": "ofi_lstm",
+      "run_name": "ofi_lstm_60s_base",
+      "pid": 47379,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/ofi_lstm_60s_base.json",
+        "--csv",
+        "BTCUSDT_L10_oct2023.csv"
+      ],
+      "log": "runs/logs/ofi_lstm_60s_base.log",
+      "started": "2026-09-20T12:45:09.359954+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T12:46:24.531038+00:00",
+      "seconds": 75.17107900697738
+    },
+    {
+      "model": "moderntcn",
+      "run_name": "moderntcn_60s_base",
+      "pid": 48348,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/moderntcn_60s_base.json",
+        "--csv",
+        "BTCUSDT_L10_oct2023.csv"
+      ],
+      "log": "runs/logs/moderntcn_60s_base.log",
+      "started": "2026-09-20T12:46:24.531483+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T12:57:41.127263+00:00",
+      "seconds": 676.5957968659932
+    },
+    {
+      "model": "patchtst",
+      "run_name": "patchtst_60s_base",
+      "pid": 50194,
+      "command": [
+        "/home/ubuntu/Pretrain_Model/.venv/bin/python",
+        "train.py",
+        "--config",
+        "configs/patchtst_60s_base.json",
+        "--csv",
+        "BTCUSDT_L10_oct2023.csv"
+      ],
+      "log": "runs/logs/patchtst_60s_base.log",
+      "started": "2026-09-20T12:57:41.127841+00:00",
+      "resumed_from": null,
+      "returncode": 0,
+      "finished": "2026-09-20T12:58:54.704928+00:00",
+      "seconds": 73.57710546406452
+    }
+  ],
+  "crashed": [],
+  "resumed": [],
+  "gpu_usage_csv": "reports/vast/gpu_usage.csv"
+}
