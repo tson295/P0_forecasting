@@ -25,7 +25,7 @@
     "auto_batch_size": false,
     "seed": 42,
     "loss": "mse",
-    "run_name": "base"
+    "run_name": "ofi_lstm_60s_base"
   },
   "model_kwargs": {}
 }

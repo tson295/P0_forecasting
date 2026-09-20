@@ -1,5 +1,5 @@
 {
-  "model": "ofi_lstm",
+  "model": "e0",
   "data": {
     "csv_path": "BTCUSDT_L10_oct2023.csv",
     "history_seconds": 60,
@@ -25,7 +25,7 @@
     "auto_batch_size": false,
     "seed": 42,
     "loss": "mse",
-    "run_name": "base"
+    "run_name": "e0_60s"
   },
   "model_kwargs": {}
 }

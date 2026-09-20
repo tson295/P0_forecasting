@@ -1,0 +1,42 @@
+{
+  "created": "2026-09-20T12:22:50.656275+00:00",
+  "decided_by": "reports/vast/concurrency_benchmark.json",
+  "groups": [
+    [
+      "ofi_lstm",
+      "hfformer",
+      "lit"
+    ],
+    [
+      "moderntcn"
+    ],
+    [
+      "patchtst"
+    ]
+  ],
+  "csv": "BTCUSDT_L10_oct2023.csv",
+  "runs": {
+    "ofi_lstm": "ofi_lstm_60s_base",
+    "hfformer": "hfformer_60s_base",
+    "patchtst": "patchtst_60s_base",
+    "moderntcn": "moderntcn_60s_base",
+    "lit": "lit_60s_base"
+  },
+  "extra_train_flags": [],
+  "frozen": {
+    "batch_size": 128,
+    "epochs": 30,
+    "seed": 42,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "optimizer": "AdamW",
+    "loss": "mse",
+    "scheduler": "CosineAnnealingLR",
+    "gradient_clip": 1.0,
+    "gradient_accumulation": 1,
+    "history_seconds": 60,
+    "history_rows": 49,
+    "stride_rows": 8
+  },
+  "policy": "concurrency selects co-execution only; no run parameter changes"
+}

@@ -1,20 +1,27 @@
 import torch
 from .common import ForecastModel
 
+# Frozen HFformer input contract; see src/models/hfformer.py and reports/IMPLEMENTATION.md.
+WINDOW_LOCAL_NORMALIZATION = (
+    "window-local per-feature z-score over history dimension; "
+    "unbiased=False; eps=1e-5; no train-global standardizer")
+
 DEFAULTS = {
     "e0": {},
     "ofi_lstm": dict(hidden_size=64, layers=2, dropout=.1),
     # Final multi-horizon loop in the public notebook (not the contradictory paper table).
     "hfformer": dict(d_model=36, heads=6, layers=2, ffn_dim=64, dropout=.3,
-                     causal=True, spike_dt=.001),
+                     causal=True, spike_dt=.001,
+                     normalization=WINDOW_LOCAL_NORMALIZATION),
     "patchtst": dict(d_model=128, heads=16, layers=3, ffn_dim=256, dropout=.2,
                      head_dropout=0., patch_length=16, patch_stride=8, scaling="std"),
     "moderntcn": dict(dims=[256, 256, 256, 256], blocks=[1, 1, 1, 1],
                       large_kernels=[31, 29, 27, 13], small_kernels=[5, 5, 5, 5],
                       ffn_ratio=2, patch_length=16, patch_stride=8, downsample_ratio=2,
                       dropout=.05, head_dropout=0., instance_norm=True),
-    "lit": dict(d_model=64, position_dim=16, heads=4, layers=2, ffn_dim=128,
-                dropout=.1, temporal_patch=4, lstm_hidden=64, lstm_layers=1),
+    # L10 capacity contract: 736,547 parameters at history_rows=49.
+    "lit": dict(d_model=128, position_dim=32, heads=8, layers=4, ffn_dim=256,
+                dropout=.1, temporal_patch=4, lstm_hidden=128, lstm_layers=1),
 }
 
 
@@ -43,4 +50,6 @@ def build_model(name, history_rows, channels, **kwargs):
         raise ValueError("Invalid input shape")
     if name == "lit" and not 0 < c["position_dim"] < c["d_model"]:
         raise ValueError("LiT position_dim must be between zero and d_model")
+    if name == "hfformer" and c["normalization"] != WINDOW_LOCAL_NORMALIZATION:
+        raise ValueError("HFformer normalization is frozen to the window-local contract")
     return classes[name](c)

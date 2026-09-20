@@ -1,5 +1,5 @@
 {
-  "model": "ofi_lstm",
+  "model": "hfformer",
   "data": {
     "csv_path": "BTCUSDT_L10_oct2023.csv",
     "history_seconds": 60,
@@ -21,11 +21,11 @@
     "gradient_accumulation": 1,
     "gradient_clip": 1.0,
     "precision": "auto",
-    "compile": false,
+    "compile": true,
     "auto_batch_size": false,
     "seed": 42,
     "loss": "mse",
-    "run_name": "base"
+    "run_name": "hfformer_60s_base"
   },
   "model_kwargs": {}
 }

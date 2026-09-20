@@ -97,6 +97,23 @@ def save_training_checkpoint(model, directory, metadata, optimizer, scheduler, s
             shutil.rmtree(stage)
 
 
+@torch.no_grad()
+def verify_checkpoint(directory, model, sample, device="cpu"):
+    """Reload a saved folder and require numerically identical predictions."""
+    restored = from_pretrained(directory, device=device)
+    training = model.training
+    model.eval()
+    sample = sample.to(device)
+    before, after = model(sample), restored(sample)
+    model.train(training)
+    difference = float((before.double()-after.double()).abs().max())
+    del restored
+    if difference != 0.0:
+        raise AssertionError(f"Reloaded {directory} deviates by {difference}")
+    return dict(path=str(directory), samples=int(len(sample)),
+                max_absolute_difference=difference, exact=True)
+
+
 def load_training_state(directory, optimizer, scheduler, scaler, generator):
     directory = Path(directory)
     optimizer.load_state_dict(torch.load(directory/"optimizer.pt", map_location="cpu", weights_only=True))

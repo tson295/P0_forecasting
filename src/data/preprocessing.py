@@ -5,9 +5,28 @@ import numpy as np
 import pandas as pd
 
 from .ofi import order_flow
+from src.models import WINDOW_LOCAL_NORMALIZATION
 
 RAW_COLUMNS = [f"{side}_{field}_{level}" for side in ("bid", "ask")
                for field in ("price", "qty") for level in range(1, 11)]
+
+TRAIN_GLOBAL_NORMALIZATION = "per-field train-only z-score; no target scaling"
+
+# HFformer is the single exception: it never sees a corpus-level statistic.
+GLOBAL_STANDARDIZER_MODELS = ("e0", "ofi_lstm", "patchtst", "moderntcn", "lit")
+
+
+# How each policy is evaluated numerically; the policy string itself stays frozen.
+NORMALIZATION_IMPLEMENTATION = {
+    TRAIN_GLOBAL_NORMALIZATION: "float64 train-split fit and transform; float32 model input",
+    WINDOW_LOCAL_NORMALIZATION: ("inside HFformer.forward; float64 accumulation for the window "
+                                 "reduction, float32 result, so the z-score depends on the sample's "
+                                 "own history alone and never on the batch"),
+}
+
+
+def normalization_policy(model):
+    return TRAIN_GLOBAL_NORMALIZATION if model in GLOBAL_STANDARDIZER_MODELS else WINDOW_LOCAL_NORMALIZATION
 
 
 @dataclass
@@ -120,8 +139,10 @@ def features(raw, model, representation, ranges):
     else:
         x = book.transpose(0, 1, 3, 2).reshape(-1, 40)
         names, layout = RAW_COLUMNS, ["time", "feature"]
+    policy = normalization_policy(model)
     schema = dict(model=model, names=names, layout=layout, sample_shape=list(x.shape[1:]),
-                  normalization="per-field train-only z-score; no target scaling",
+                  normalization=policy,
+                  normalization_implementation=NORMALIZATION_IMPLEMENTATION[policy],
                   reset_policy="zero lag/flow at first row, gap, segment and split boundary",
                   weighted_mid_definition="(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid")
     return np.ascontiguousarray(x), schema

@@ -2,7 +2,14 @@
 __pycache__/
 .pytest_cache/
 *.pyc
-checkpoints/
-runs/
-*.csv
 .DS_Store
+
+checkpoints/
+artifacts/
+runs/
+data/
+
+*.csv
+*.csv.gz
+
+.env

@@ -4,4 +4,6 @@ torch>=2.5,<3
 transformers==4.57.6
 safetensors>=0.4,<1
 pytorch-spiking==0.1.0
+huggingface_hub>=0.28
+nvidia-ml-py>=12
 pytest>=8,<10

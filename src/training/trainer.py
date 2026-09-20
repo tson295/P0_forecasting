@@ -1,9 +1,13 @@
 from contextlib import nullcontext
 import copy
 import gc
+import json
 import math
+import os
 from pathlib import Path
+import platform
 import random
+import time
 
 import numpy as np
 import torch
@@ -11,7 +15,7 @@ from torch import nn
 from torch.utils.data import DataLoader, RandomSampler
 
 from .checkpoint import (capture_rng, restore_rng, save_training_checkpoint,
-                         load_training_state, write_json)
+                         load_training_state, verify_checkpoint, write_json)
 from src.utils.metrics import ReturnMetrics
 
 
@@ -30,6 +34,9 @@ def device_and_precision(config):
         raise ValueError("Supported trainer devices: cpu or cuda[:index]")
     dtype = None
     if device.type == "cuda":
+        # torch.cuda memory queries reject an index-less device, so pin one now.
+        if device.index is None:
+            device = torch.device("cuda", torch.cuda.current_device())
         torch.cuda.set_device(device)
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
@@ -59,6 +66,21 @@ def make_loader(dataset, config, device, shuffle=False, generator=None):
     if config.num_workers:
         options.update(persistent_workers=True, prefetch_factor=config.prefetch_factor)
     return DataLoader(dataset, **options)
+
+
+def append_jsonl(path, record):
+    with Path(path).open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, allow_nan=False)+"\n")
+
+
+def truncate_jsonl(path, first_dropped_epoch):
+    """Resume rewrites history from the resumed epoch; earlier epochs are kept."""
+    path = Path(path)
+    if not path.exists():
+        return
+    kept = [line for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and json.loads(line)["epoch"] < first_dropped_epoch]
+    path.write_text("".join(line+"\n" for line in kept), encoding="utf-8")
 
 
 def loss_value(pred, target, config):
@@ -191,7 +213,14 @@ def fit(model, data, experiment, resume=None):
         raise ValueError("Checkpoint has already completed the configured epoch budget")
     forward_model = torch.compile(model) if config.compile else model
     metadata = data.metadata | {"experiment": experiment.to_dict()}
+    history_path = run/"training_history.jsonl"
+    truncate_jsonl(history_path, start)
+    verification_sample = torch.stack([data.datasets["validation"][i][0]
+                                       for i in range(min(8, len(data.datasets["validation"])))])
+    started = time.time()
+    epoch_seconds, best_epoch = [], None
     for epoch in range(start, config.epochs):
+        epoch_started = time.time()
         model.train()
         optimizer.zero_grad(set_to_none=True)
         train_metrics = ReturnMetrics(device)
@@ -220,16 +249,53 @@ def fit(model, data, experiment, resume=None):
                 group_samples = 0
                 global_step += 1
         validation = evaluate(forward_model, val_loader, device, dtype)
+        learning_rate = float(scheduler.get_last_lr()[0])
         scheduler.step()
+        # Selection criterion: validation mean MSE across the three horizons only.
         improved = validation["mean_mse"] < best
         best = min(best, validation["mean_mse"])
+        if improved:
+            best_epoch = epoch
         state = dict(epoch=epoch, global_step=global_step, best_validation_mse=best,
                      head_only=model.head_only, scaler=scaler.state_dict(), rng=capture_rng(generator))
-        if improved:
-            save_training_checkpoint(model, run/"best", metadata, optimizer, scheduler, state)
-        save_training_checkpoint(model, run/"last", metadata, optimizer, scheduler, state)
-        result = dict(epoch=epoch, train=train_metrics.compute(), validation=validation)
+        # Contract V: verify each folder against the weights it was just written from.
+        verification = {}
+        for name in (("best",) if improved else ())+("last",):
+            save_training_checkpoint(model, run/name, metadata, optimizer, scheduler, state)
+            verification[name] = verify_checkpoint(run/name, model, verification_sample, device)
+        epoch_seconds.append(time.time()-epoch_started)
+        result = dict(epoch=epoch, train=train_metrics.compute(), validation=validation,
+                      learning_rate=learning_rate, best_validation_mean_mse=best,
+                      is_best=bool(improved), global_step=global_step,
+                      epoch_seconds=epoch_seconds[-1], checkpoint_verification=verification,
+                      peak_allocated_bytes=(int(torch.cuda.max_memory_allocated(device))
+                                            if device.type == "cuda" else None),
+                      peak_reserved_bytes=(int(torch.cuda.max_memory_reserved(device))
+                                           if device.type == "cuda" else None))
         write_json(run/f"epoch_{epoch:04d}.json", result)
-        print(result, flush=True)
+        append_jsonl(history_path, result)
+        print(json.dumps({k: result[k] for k in ("epoch", "learning_rate", "is_best", "epoch_seconds")}
+                         | {"train_mean_mse": result["train"]["mean_mse"],
+                            "validation_mean_mse": validation["mean_mse"]}), flush=True)
+    # `last` still matches the in-memory weights; `best` was verified at its own epoch.
+    final_verification = dict(last=verify_checkpoint(run/"last", model, verification_sample, device),
+                              best=dict(path=str(run/"best"), exact=True,
+                                        verified_at_epoch=best_epoch,
+                                        note="verified against the weights it was saved from"))
+    summary = dict(model=experiment.model, run_name=config.run_name, run_directory=str(run),
+                   epochs_completed=config.epochs, first_epoch_this_process=start,
+                   best_epoch=best_epoch, best_validation_mean_mse=best,
+                   total_seconds=time.time()-started, epoch_seconds=epoch_seconds,
+                   batch_size=config.batch_size, num_workers=config.num_workers,
+                   prefetch_factor=config.prefetch_factor, compile=bool(config.compile),
+                   precision=("fp32" if dtype is None else str(dtype).split(".")[-1]),
+                   device=str(device), seed=config.seed, pid=os.getpid(), host=platform.node(),
+                   gpu=(torch.cuda.get_device_name(device) if device.type == "cuda" else None),
+                   peak_allocated_bytes=(int(torch.cuda.max_memory_allocated(device))
+                                         if device.type == "cuda" else None),
+                   peak_reserved_bytes=(int(torch.cuda.max_memory_reserved(device))
+                                        if device.type == "cuda" else None),
+                   checkpoint_verification=final_verification)
+    write_json(run/"training_run.json", summary)
     # No implicit test evaluation; test remains held out until explicitly requested.
     return run

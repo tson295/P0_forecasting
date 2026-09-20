@@ -72,6 +72,7 @@
           40
         ],
         "normalization": "per-field train-only z-score; no target scaling",
+        "normalization_implementation": "float64 train-split fit and transform; float32 model input",
         "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
         "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
       },
@@ -130,6 +131,7 @@
           20
         ],
         "normalization": "per-field train-only z-score; no target scaling",
+        "normalization_implementation": "float64 train-split fit and transform; float32 model input",
         "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
         "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
       },
@@ -158,7 +160,8 @@
         "ffn_dim": 64,
         "dropout": 0.3,
         "causal": true,
-        "spike_dt": 0.001
+        "spike_dt": 0.001,
+        "normalization": "window-local per-feature z-score over history dimension; unbiased=False; eps=1e-5; no train-global standardizer"
       },
       "features": {
         "model": "hfformer",
@@ -209,7 +212,8 @@
         "sample_shape": [
           38
         ],
-        "normalization": "per-field train-only z-score; no target scaling",
+        "normalization": "window-local per-feature z-score over history dimension; unbiased=False; eps=1e-5; no train-global standardizer",
+        "normalization_implementation": "inside HFformer.forward; float64 accumulation for the window reduction, float32 result, so the z-score depends on the sample's own history alone and never on the batch",
         "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
         "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
       },
@@ -294,6 +298,7 @@
           40
         ],
         "normalization": "per-field train-only z-score; no target scaling",
+        "normalization_implementation": "float64 train-split fit and transform; float32 model input",
         "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
         "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
       },
@@ -400,6 +405,7 @@
           40
         ],
         "normalization": "per-field train-only z-score; no target scaling",
+        "normalization_implementation": "float64 train-split fit and transform; float32 model input",
         "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
         "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
       },
@@ -419,19 +425,19 @@
       ],
       "finite": true,
       "backward": true,
-      "parameters": 121107,
+      "parameters": 736547,
       "architecture": {
         "name": "lit",
         "history_rows": 49,
         "channels": 40,
-        "d_model": 64,
-        "position_dim": 16,
-        "heads": 4,
-        "layers": 2,
-        "ffn_dim": 128,
+        "d_model": 128,
+        "position_dim": 32,
+        "heads": 8,
+        "layers": 4,
+        "ffn_dim": 256,
         "dropout": 0.1,
         "temporal_patch": 4,
-        "lstm_hidden": 64,
+        "lstm_hidden": 128,
         "lstm_layers": 1
       },
       "features": {
@@ -490,6 +496,7 @@
           2
         ],
         "normalization": "per-field train-only z-score; no target scaling",
+        "normalization_implementation": "float64 train-split fit and transform; float32 model input",
         "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
         "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
       },
@@ -593,6 +600,7 @@
         ],
         "fitted_on": "train_only"
       },
+      "normalization": "per-field train-only z-score; no target scaling",
       "median_train_dt_seconds": 1.235,
       "history_seconds": 60,
       "history_rows": 49,
@@ -700,6 +708,7 @@
         40
       ],
       "normalization": "per-field train-only z-score; no target scaling",
+      "normalization_implementation": "float64 train-split fit and transform; float32 model input",
       "reset_policy": "zero lag/flow at first row, gap, segment and split boundary",
       "weighted_mid_definition": "(ask_price_1*bid_qty_1 + bid_price_1*ask_qty_1)/(bid_qty_1+ask_qty_1); zero-volume fallback=mid"
     },
@@ -718,7 +727,7 @@
     "split_manifest": {
       "policy": "strict: history, origin, and all targets inside one split",
       "source": {
-        "path": "/Users/son/Projects/P0_LOB/data/processed/BTCUSDT_L10_oct2023.csv",
+        "path": "/home/ubuntu/Pretrain_Model/BTCUSDT_L10_oct2023.csv",
         "sha256": "e42bb29e79bdff68f94540916983b1cba2bbbfd745b30933e755e04ec92a60ab",
         "size_bytes": 259919778
       },

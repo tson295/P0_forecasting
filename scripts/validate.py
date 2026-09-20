@@ -54,8 +54,11 @@ def main():
     torch.set_num_threads(2)
     seed_everything(42)
     result = dict(training_epochs_run=0, optimizer_steps_run=0, models={})
+    configs = Path(__file__).resolve().parents[1]/"configs"
     for name in MODELS:
-        config = Config(model=name)
+        # Audit the frozen base-experiment runs, not the dataclass defaults.
+        run_name = "e0_60s" if name == "e0" else f"{name}_60s_base"
+        config = Config.load(configs/f"{run_name}.json")
         config.data.csv_path = args.csv
         data = prepare_data(config)
         if name == "e0":

@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from .preprocessing import load_csv, chronological_split, features, Standardizer
+from .preprocessing import (load_csv, chronological_split, features, Standardizer,
+                            GLOBAL_STANDARDIZER_MODELS, normalization_policy)
 
 
 class LOBDataset(Dataset):
@@ -61,19 +62,24 @@ def prepare_data(config, saved_metadata=None):
     history = config.data.history_rows or math.ceil(config.data.history_seconds/median_dt)
     stride = max(1, int(math.floor(stride_seconds/median_dt+0.5)))
     x, schema = features(raw, config.model, config.data.of_representation, ranges)
+    # HFformer normalizes inside its own forward pass, from the sample's history
+    # alone, so no corpus-level statistic is fitted or stored for it at all.
+    global_standardizer = config.model in GLOBAL_STANDARDIZER_MODELS
     if saved_metadata:
         old = saved_metadata["preprocessing"]
         if schema != saved_metadata["feature_schema"]:
             raise ValueError("Feature schema does not match checkpoint")
         if config.data.history_seconds != old["history_seconds"] or config.data.history_rows != old["history_rows_override"]:
             raise ValueError("Checkpoint history configuration differs")
+        if bool(old["standardizer"]) != global_standardizer:
+            raise ValueError("Checkpoint normalization policy differs")
         # Fine-tuning keeps base feature scaling and shape; no val/test refitting.
-        scaler = Standardizer.from_dict(old["standardizer"])
+        scaler = Standardizer.from_dict(old["standardizer"]) if global_standardizer else None
         history, median_dt = old["history_rows"], old["median_train_dt_seconds"]
         stride = max(1, int(math.floor(stride_seconds/median_dt+0.5)))
     else:
-        scaler = Standardizer.fit(x[:train_hi])
-    x = scaler.transform(x)
+        scaler = Standardizer.fit(x[:train_hi]) if global_standardizer else None
+    x = scaler.transform(x) if scaler is not None else np.ascontiguousarray(x, dtype=np.float32)
     datasets = {name: LOBDataset(x, raw, bounds, history, stride, config.data)
                 for name, bounds in ranges.items()}
     if any(len(d) == 0 for d in datasets.values()):
@@ -84,7 +90,9 @@ def prepare_data(config, saved_metadata=None):
     for name, ds in datasets.items():
         manifest["origin_index_sha256"][name] = hashlib.sha256(ds.origins.tobytes()).hexdigest()
     metadata = dict(
-        preprocessing=dict(standardizer=scaler.to_dict(), median_train_dt_seconds=median_dt,
+        preprocessing=dict(standardizer=scaler.to_dict() if scaler is not None else None,
+                           normalization=normalization_policy(config.model),
+                           median_train_dt_seconds=median_dt,
                            history_seconds=config.data.history_seconds, history_rows=history,
                            history_rows_override=config.data.history_rows,
                            history_rounding="ceil(seconds/median_train_continuous_dt)",

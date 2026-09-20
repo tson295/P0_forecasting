@@ -94,15 +94,17 @@ def write_csv(path, n=3000):
 
 
 def test_train_only_scaling_and_saved_preprocessing(tmp_path):
+    # HFformer deliberately has no corpus standardizer; see tests/test_contracts.py.
     path = tmp_path/"data.csv"
     frame = write_csv(path)
-    c = Config(model="hfformer"); c.data.csv_path = str(path)
+    c = Config(model="ofi_lstm"); c.data.csv_path = str(path)
     a = prepare_data(c)
     hi = a.metadata["split_manifest"]["ranges"]["train"][1]
     frame.loc[hi:, [k for k in RAW_COLUMNS if "price" in k]] *= 10
     frame.to_csv(path, index=False)
     b = prepare_data(c)
     assert a.metadata["preprocessing"]["standardizer"] == b.metadata["preprocessing"]["standardizer"]
+    assert a.metadata["preprocessing"]["standardizer"] is not None
     assert a.history_rows == b.history_rows == 48
     assert a.metadata["preprocessing"]["stride_rows"] == 8
     np.testing.assert_array_equal(a.datasets["train"][0][0], b.datasets["train"][0][0])

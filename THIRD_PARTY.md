@@ -28,6 +28,10 @@ interval**) and its analog surrogate derivative. Deliberate correctness changes:
 - Express the same surrogate with a straight-through expression to retain gradients
   for the PReLU slope; the library's custom backward omits that parameter's gradient.
 - Separate attention projections for LoRA; FP32 spike accumulation under AMP.
+- Window-local normalization replaces any corpus standardizer: HFformer receives the
+  38 features at raw numerical scale and z-scores each feature across its own 49-row
+  history inside `forward` (unbiased=False, eps=1e-5). Nothing fitted on train,
+  validation or test data reaches this model.
 
 Feature order is explicit in each saved schema, not the notebook's interleaved
 order. Features are 36 L1–L9 price/quantity fields, one snapshot-lag log return,
@@ -81,11 +85,13 @@ partial initial patch. Bid and ask tokens remain distinct, with position labels;
 their encoded vectors are concatenated at each temporal position before LSTM.
 The classification output becomes an unactivated three-return linear head.
 
-Embedding 64 (48 content + 16 position), four heads, two encoders, FFN 128 and
-LSTM 64 are explicit, untuned adaptation defaults. They are **not claimed to be
-the paper's exact undocumented hyperparameters**. `--history-rows 64` supports
-the paper-style sample count. The default uses the same seconds-based history as
-the other models. Loss, horizons and optimizer follow this task's common trainer.
+Embedding 128 (96 content + 32 position), eight heads, four encoders, FFN 256 and
+LSTM 128 are the explicit L10 capacity contract of this base experiment: 736,547
+parameters at `history_rows=49`. They are **not claimed to be the paper's exact
+undocumented hyperparameters**, and they are not the result of any search.
+`--history-rows 64` supports the paper-style sample count. The default uses the
+same seconds-based history as the other models. Loss, horizons and optimizer
+follow this task's common trainer.
 
 ## OF/OFI-LSTM and E0
 

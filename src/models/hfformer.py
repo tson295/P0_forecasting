@@ -9,6 +9,30 @@ from pytorch_spiking import SpikingActivation
 from .common import ForecastModel, EncoderLayer
 
 
+class WindowLocalZScore(nn.Module):
+    """Per-sample, per-feature z-score across the history dimension.
+
+    Frozen contract: never a corpus statistic, unbiased=False, eps=1e-5, and the
+    result depends only on this sample's own history. The module therefore holds
+    no parameters and no buffers.
+
+    The reduction accumulates in FP64 before the FP32 result. That is the same
+    formula, evaluated without reduction error: at raw L10 price scale (~2.7e4,
+    FP32 ulp ~2e-3) a batched FP32 mean is off by a few ulp, and dividing that
+    residue by eps=1e-5 turns a constant window -- whose true z-score is 0 --
+    into ~600. Worse, the FP32 reduction kernel varies with tensor shape, so the
+    value would depend on the batch rather than on the sample alone.
+    """
+    eps = 1e-5
+
+    def forward(self, x):
+        x_fp32 = x.float()
+        window = x_fp32.double()
+        mean = window.mean(dim=1, keepdim=True)
+        std = window.std(dim=1, keepdim=True, unbiased=False)
+        return ((window-mean)/(std+self.eps)).float()
+
+
 class StableSpikingPReLU(nn.Module):
     def __init__(self, dt):
         super().__init__()
@@ -34,6 +58,8 @@ class HFformer(ForecastModel):
     def __init__(self, config):
         super().__init__(config)
         c = config
+        # Raw feature scale in, window-local z-score here: never a saved standardizer.
+        self.normalization = WindowLocalZScore()
         self.input_projection = nn.Linear(c["channels"], c["d_model"])
         self.encoder = nn.Sequential(*[
             EncoderLayer(c["d_model"], c["heads"], c["ffn_dim"], c["dropout"],
@@ -43,6 +69,7 @@ class HFformer(ForecastModel):
         self.head = HFHead(c["d_model"], c["history_rows"])
 
     def forward(self, x):
+        x = self.normalization(x)
         return self.head(self.encoder_norm(self.encoder(self.input_projection(x))))
 
 

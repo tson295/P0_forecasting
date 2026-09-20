@@ -1,4 +1,15 @@
+"""Frozen metric families: RMSE, MAE, standard R2, RMSE gain vs the E0 baseline."""
+import math
+
+import numpy as np
 import torch
+
+HORIZON_LABELS = ("1m", "2m", "3m")
+
+
+def _gain(rmse, rmse_e0):
+    """1 - RMSE_model/RMSE_E0: >0 beats E0, 0 equals E0, <0 worse than E0."""
+    return [float(1-rmse[i]/rmse_e0[i]) if rmse_e0[i] > 0 else None for i in range(len(rmse))]
 
 
 class ReturnMetrics:
@@ -20,8 +31,34 @@ class ReturnMetrics:
             raise ValueError("Cannot evaluate an empty dataset")
         s = self.sums.cpu()
         mse = s[0]/self.count
+        # E0 predicts return 0 for every horizon, so RMSE_E0 = sqrt(mean(y^2)).
+        rmse, rmse_e0 = mse.sqrt(), (s[3]/self.count).sqrt()
         sst = s[3]-s[2]**2/self.count
-        return dict(samples=self.count, mse=mse.tolist(), rmse=mse.sqrt().tolist(),
+        return dict(samples=self.count, mse=mse.tolist(), rmse=rmse.tolist(),
                     mae=(s[1]/self.count).tolist(),
                     r2=[float(1-s[0, i]/sst[i]) if sst[i] > 0 else None for i in range(3)],
+                    rmse_e0=rmse_e0.tolist(),
+                    rmse_gain_vs_e0=_gain(rmse.tolist(), rmse_e0.tolist()),
                     mean_mse=float(mse.mean()))
+
+
+def metrics_from_arrays(prediction, target):
+    """Exact float64 metrics for the exported prediction tables, same contract."""
+    p = np.asarray(prediction, dtype=np.float64)
+    y = np.asarray(target, dtype=np.float64)
+    if p.shape != y.shape or p.ndim != 2 or p.shape[1] != 3 or not len(p):
+        raise ValueError("Predictions and targets must both be non-empty [N, 3] arrays")
+    mse = ((p-y)**2).mean(axis=0)
+    rmse, rmse_e0 = np.sqrt(mse), np.sqrt((y*y).mean(axis=0))
+    sst = ((y-y.mean(axis=0))**2).sum(axis=0)
+    sse = ((p-y)**2).sum(axis=0)
+    result = dict(samples=int(len(p)), horizons=list(HORIZON_LABELS),
+                  mse=mse.tolist(), rmse=rmse.tolist(),
+                  mae=np.abs(p-y).mean(axis=0).tolist(),
+                  r2=[float(1-sse[i]/sst[i]) if sst[i] > 0 else None for i in range(3)],
+                  rmse_e0=rmse_e0.tolist(),
+                  rmse_gain_vs_e0=_gain(rmse.tolist(), rmse_e0.tolist()),
+                  mean_mse=float(mse.mean()))
+    if not all(math.isfinite(v) for v in result["mse"]+result["rmse"]+result["mae"]):
+        raise FloatingPointError("Nonfinite metrics")
+    return result

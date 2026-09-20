@@ -4,32 +4,35 @@ Prepared implementations of E0, OF/OFI-LSTM, HFformer, PatchTST, ModernTCN and
 LiT adapted to L10. Every output is `[return_60s, return_120s, return_180s]`, where
 `return_h = log(mid[target_h] / mid[origin])`. E0 always returns zero.
 
-**No training epoch has been run.** Real-CSV checks and bounded CPU forward/backward
-checks are in [reports/validation.json](reports/validation.json); the complete
-handoff is [reports/IMPLEMENTATION.md](reports/IMPLEMENTATION.md).
+This repository holds the **frozen base experiment**: 60-second history, 49 history
+rows, stride 8 rows, batch 128, 30 epochs, seed 42, no hyperparameter tuning and no
+pretrained weights. Every learned model is randomly initialised and trained from
+scratch on the BTC L10 train split. Frozen run configs live in `configs/`; the
+pre-training gate is `scripts/check_contracts.py`.
 
 ## Setup and safe checks
 
-Python 3.11+ recommended. Validation here used a local `.venv` with Python 3.14.7.
-For the RTX 4090, install the appropriate CUDA-enabled PyTorch build first, then
-the remaining requirements. Do not replace it with a CPU-only wheel.
+Python 3.12. For the RTX 4090 install a CUDA-enabled PyTorch build first, then the
+remaining requirements. Do not replace it with a CPU-only wheel.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+pip install --index-url https://download.pytorch.org/whl/cu128 torch==2.8.0
+pip install -r requirements.txt
 ```
 
-The CSV is not copied or modified. In this workspace it was found at the path
-below. On another machine, set `LOB_CSV` to the dataset location.
+The CSV is never copied or modified. Set `LOB_CSV` to the dataset location; it must
+hash to `e42bb29e79bdff68f94540916983b1cba2bbbfd745b30933e755e04ec92a60ab`.
 
 ```bash
-export LOB_CSV=/Users/son/Projects/P0_LOB/data/processed/BTCUSDT_L10_oct2023.csv
+export LOB_CSV=$PWD/BTCUSDT_L10_oct2023.csv
+sha256sum "$LOB_CSV"
 python -m compileall -q src train.py scripts tests
 python -m pytest -q
+python scripts/check_contracts.py --csv "$LOB_CSV"     # hard gate, exits non-zero on any violation
 python scripts/validate.py --csv "$LOB_CSV" --backward
-python train.py --model ofi_lstm --csv "$LOB_CSV" --prepare-only --output runs/inspection
-python train.py --model lit --csv "$LOB_CSV" --smoke-test --backward
+python scripts/profile_gpu.py --mode all               # hardware, CUDA smoke, throughput, compile, concurrency
 ```
 
 `--smoke-test` reads the CSV and constructs valid datasets, then takes at most two
@@ -79,10 +82,10 @@ are temporary and contain untrained weights.
 |---|---|---|
 | E0 | Same origins/labels; input ignored | Constant `[0,0,0]` |
 | OFI-LSTM | 20 bid/ask OF channels; optional 10 OFI | 2-layer LSTM, hidden 64, dropout .1, linear 3 |
-| HFformer | 36 L1–L9 price/qty + lag return + weighted mid | d=36, 6 heads, 2 post-norm encoders, FFN 64, spiking PReLU, dropout .3, linear decoder |
+| HFformer | 38 raw-scale: 36 L1–L9 price/qty + lag return + weighted mid | d=36, 6 heads, 2 post-norm encoders, FFN 64, spiking PReLU, dropout .3, causal, no position encoding, linear decoder |
 | PatchTST | 40 raw L10 fields | HF channel-independent backbone, temporal patch 16/stride 8, d=128, 16 heads, 3 layers, FFN 256, dropout .2, joint regression head |
 | ModernTCN | 40 raw L10 fields | Patch 16/stride 8; 4 stages of d=256; 1 block/stage; large kernels 31/29/27/13, small 5; ConvFFN expansion 2 |
-| LiT | `[side=2, depth=10, price/qty=2]` | Full-side patches of 4 snapshots; projection 48 + learned position 16; 2 encoders, 4 heads, FFN 128; LSTM 64; linear 3 |
+| LiT | `[side=2, depth=10, price/qty=2]` | Full-side patches of 4 snapshots (80 numbers/token, 26 tokens); projection 96 concatenated with learned position 32; 4 encoders, 8 heads, FFN 256; bid+ask concat 256 into LSTM 128; linear 3 |
 
 Raw feature order for PatchTST/ModernTCN is all bid prices, all bid quantities,
 all ask prices, all ask quantities. HFformer uses that order over nine levels,
@@ -99,24 +102,49 @@ Unknown model settings are rejected. No hyperparameter search is implemented.
 See [THIRD_PARTY.md](THIRD_PARTY.md) for source revisions, retained components,
 intentional corrections, and paper/code ambiguities.
 
-## Future training commands — not executed
+## Base experiment runbook
 
-After activating the environment and setting `LOB_CSV`, these start real training:
-
-```bash
-python train.py --model ofi_lstm --csv "$LOB_CSV" --history-seconds 60 --device cuda --run-name of_60s
-python train.py --model hfformer --csv "$LOB_CSV" --history-seconds 60 --device cuda --run-name hf_60s
-python train.py --model patchtst --csv "$LOB_CSV" --history-seconds 60 --device cuda --run-name patch_60s
-python train.py --model moderntcn --csv "$LOB_CSV" --history-seconds 60 --device cuda --run-name tcn_60s
-python train.py --model lit --csv "$LOB_CSV" --history-seconds 60 --device cuda --run-name lit_60s
-```
-
-Use `--history-seconds 120` or `180` with a different run name for other histories;
-`--history-rows 64` selects the explicit LiT paper-style count. E0 needs no training:
+Run every step from the repository root, in this order. Each step is a hard gate
+for the next one.
 
 ```bash
-python train.py --model e0 --csv "$LOB_CSV" --evaluate validation --num-workers 0
+# 1. Gates
+python -m compileall -q src train.py scripts tests
+python -m pytest -q
+python scripts/check_contracts.py --csv "$LOB_CSV"
+python scripts/validate.py --csv "$LOB_CSV" --backward
+
+# 2. Systems profiling (never touches a real checkpoint, never calls fit)
+python scripts/profile_gpu.py --mode all
+
+# 3. Commit the training source, then train from exactly that commit
+git rev-parse HEAD
+python scripts/run_training.py --csv "$LOB_CSV"          # schedule comes from the benchmark
+
+# 4. Predictions and metrics for train/validation/test, from the best checkpoint
+for run in e0_60s ofi_lstm_60s_base hfformer_60s_base patchtst_60s_base \
+           moderntcn_60s_base lit_60s_base; do
+  python scripts/export_predictions.py --config "configs/$run.json" --csv "$LOB_CSV"
+done
+
+# 5. Publish and report
+python scripts/upload_hf.py --dry-run
+python scripts/upload_hf.py
+python scripts/final_report.py --hf-repo "<user>/Pretrain_Model" --training-commit "<sha>"
 ```
+
+`run_training.py` reads the concurrency decision from
+`reports/vast/concurrency_benchmark.json`, launches each frozen run as its own
+process on GPU 0 with `batch_size=128` unchanged, samples the GPU every three
+seconds into `reports/vast/gpu_usage.csv`, and resumes a crashed job from its
+`last` checkpoint instead of restarting at epoch 0. Concurrency decides only
+which frozen runs execute at the same time; it never changes batch size,
+architecture, learning rate, epochs, stride or split.
+
+The six frozen runs are `e0_60s`, `ofi_lstm_60s_base`, `hfformer_60s_base`,
+`patchtst_60s_base`, `moderntcn_60s_base` and `lit_60s_base`. E0 is never
+trained: it predicts return 0 at every horizon on exactly the same origins and
+targets as the learned models.
 
 Trainer defaults: AdamW, lr 1e-4, decay 1e-4, 30 epochs, cosine scheduler, MSE,
 gradient norm clip 1. Optional quantile loss is configured through JSON. Best
@@ -192,10 +220,41 @@ requires this project. No Hub upload is performed. Saved normalizer statistics,
 feature ordering, histories, target definition and split fingerprint accompany
 weights. A new dataset fine-tune reuses the base normalizer and fixed input shape.
 
+## Metrics and prediction artifacts
+
+Exactly four metric families are reported, per horizon 1m/2m/3m:
+
+```text
+rmse   mae   r2 (standard)   rmse_e0   rmse_gain_vs_e0
+```
+
+`rmse_e0 = sqrt(mean(y^2))` because E0 predicts return 0, and
+`rmse_gain_vs_e0 = 1 - rmse_model/rmse_e0`, so a positive gain beats E0, zero
+equals E0 and negative is worse. E0's own gain is 0 by construction. R2 is the
+standard coefficient of determination, never R2_OS.
+
+`scripts/export_predictions.py` loads the `best` checkpoint, verifies that both
+`best` and `last` reload to identical predictions, runs deterministic FP32
+inference and writes, per run:
+
+```text
+artifacts/<model>/<run_name>/
+    train_predictions.csv.gz   validation_predictions.csv.gz   test_predictions.csv.gz
+    train_metrics.json         validation_metrics.json         test_metrics.json
+    training_history.jsonl     run_summary.json
+```
+
+Every prediction table carries `origin_index`, `origin_timestamp_ns`,
+`origin_mid`, and for each horizon `target_index`, `target_timestamp_ns`,
+`target_mid`, `true_return`, `pred_return` and
+`pred_mid = origin_mid * exp(pred_return)`, ordered by origin timestamp. Every
+actual-vs-predicted, error, scatter and horizon-comparison figure can therefore be
+rebuilt without running a model again. Test inference happens only after training
+and best-checkpoint selection are complete; the test split is never used to choose
+a checkpoint, an epoch or an architecture.
+
 ## Verification limits
 
-All implemented models and full default shapes were checked on CPU, with no epochs
-or optimizer steps. Unit tests cover data and checkpoint edge cases. CUDA AMP,
-`torch.compile`, batch probing, throughput, and long-run optimizer/scheduler behavior
-need checking on the target GPU when training is authorized. No validation tuning,
-forecasting-quality claim, or trading performance claim is made.
+Checkpoints, prediction tables and the raw CSV stay out of Git and live locally and
+on the Hugging Face repo only. No validation tuning, forecasting-quality claim, or
+trading performance claim is made.
