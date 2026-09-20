@@ -24,9 +24,10 @@ METRIC_SPACE_NOTE = (
     "are measured on the mid price via `pred_mid = origin_mid*exp(pred_return)`, so RMSE and MAE "
     "below are in quote currency (USD). E0 predicts that the price does not move, so its predicted "
     "mid is the origin mid and `RMSE_E0 = sqrt(mean((target_mid-origin_mid)^2))`. Standard R2 is "
-    "near 1 for every model including E0, because sigma(target mid) is about 16,579 USD while every "
-    "error here is around 50 USD; it is reported for contract completeness only, and **RMSE gain vs "
-    "E0** is the column to read. Each price table is followed by the same four families in "
+    "near 1 for every model including E0, because sigma(target mid) is about 16,579 USD while the E0 "
+    "error measured on this file is 50.4 / 71.7 / 87.9 USD at 1m/2m/3m; it is reported for contract "
+    "completeness only, and **RMSE gain vs E0** is the column to read. Each price table is followed "
+    "by the same four families in "
     "log-return units, so both spaces stay comparable.")
 
 OCT2023_DEVIATIONS = [
@@ -74,17 +75,20 @@ GATE1Y_DEVIATIONS = [
     "origin and every target inside one uninterrupted stretch -- is unchanged; only its unit follows "
     "the file.",
     "**`history_seconds` 60 -> 490, chosen so the architectures stay identical** (section K). At 10 s "
-    "cadence 60 s resolves to history_rows=6, below the patch_length=16 that PatchTST and ModernTCN "
-    "require, so the frozen architectures could not be built at all. 490 s re-resolves to "
-    "history_rows=49 and stride_rows=8 -- exactly the Oct-2023 values -- so every model sees the same "
+    "cadence 60 s resolves to history_rows=6. PatchTST then refuses to build at all (its history must "
+    "be >= patch_length=16), while HFformer and LiT do build but at a different capacity "
+    "(22,026 -> 21,897 and 736,547 -> 735,843), so the frozen parameter contract breaks either way. "
+    "490 s re-resolves to history_rows=49 and stride_rows=8 -- exactly the Oct-2023 values -- so "
+    "every model sees the same "
     "input shape and all five parameter counts are unchanged (ofi_lstm 55,491; hfformer 22,026; "
     "patchtst 477,059; moderntcn 50,568,195; lit 736,547). Only the wall-clock span of one history "
     "window differs, because a row is now 10 s instead of ~1.2 s.",
     "**R2 is reported in price space although it is uninformative there** (sections 28-29). The four "
     "metric families are frozen, so R2 is reported for completeness; but on the mid price "
-    "sigma(target mid) is about 16,579 USD while every model's error is around 50 USD, which pins R2 "
-    "near 0.9999 for all six models including E0. It is kept as-is rather than replaced by an "
-    "invented metric: the log-return table under each price table preserves the Oct-2023 comparison, "
+    "sigma(target mid) is about 16,579 USD while the E0 error measured on this file is 50.4 / 71.7 / "
+    "87.9 USD at 1m/2m/3m, which pins R2 near 0.9999 for all six models including E0. It is kept "
+    "as-is rather than replaced by an invented metric: the log-return table under each price table "
+    "preserves the Oct-2023 comparison, "
     "and RMSE gain vs E0 is what separates the models.",
 ]
 
@@ -95,12 +99,12 @@ SUITES = {
               ("hfformer", "hfformer_60s_base"), ("patchtst", "patchtst_60s_base"),
               ("moderntcn", "moderntcn_60s_base"), ("lit", "lit_60s_base")),
         reports_dir="reports/vast", contract_check="reports/contract_check.json",
-        price=False, deviations=OCT2023_DEVIATIONS),
+        max_gap=2.0, price=False, deviations=OCT2023_DEVIATIONS),
     "gate1y": dict(
         title="Gate experiment final report — BTC L10 1 year at 10 s, 490 s history",
         runs=tuple((model, f"{model}_490s_gate1y") for model in MODELS),
         reports_dir="reports/vast_gate1y", contract_check="reports/contract_check_gate1y.json",
-        price=True, deviations=GATE1Y_DEVIATIONS),
+        max_gap=10.0, price=True, deviations=GATE1Y_DEVIATIONS),
 }
 
 
@@ -124,6 +128,17 @@ def number(value, digits=6):
     if value is None:
         return MISSING
     return f"{value:.{digits}g}" if isinstance(value, float) else str(value)
+
+
+def metric_space(metrics, price):
+    """Label a table from the artifact's own units; the suite only covers a missing one.
+
+    export_predictions now writes price metrics at the top level for every run, so a
+    re-export of an older suite changes the space of the numbers, not the suite name.
+    """
+    units = (metrics or {}).get("units")
+    priced = price if units is None else units == "quote_currency"
+    return (PRICE_ROWS, "price (USD)") if priced else (RETURN_ROWS, "log return")
 
 
 def metric_block(metrics, rows, header):
@@ -190,7 +205,8 @@ def main():
     source = manifest.get("source", {})
     pre = (reference.get("normalization"), reference.get("history_rows"), reference.get("stride_rows"))
     # The gap count is meaningless unless it is labelled with the rule that produced it.
-    max_gap = ((reference.get("experiment") or {}).get("data") or {}).get("max_gap_seconds", 2.0)
+    max_gap = ((reference.get("experiment") or {}).get("data") or {}).get("max_gap_seconds",
+                                                                         suite["max_gap"])
     gaps = stats.get("gaps_gt_max_gap", stats.get("gaps_gt_2_seconds", MISSING))
     w("| Item | Value |")
     w("|---|---|")
@@ -209,14 +225,17 @@ def main():
     w(f"| stride_rows | {number(pre[2])} |")
     for name, count in manifest.get("sample_counts", {}).items():
         w(f"| Samples {name} | {count} |")
-    w(f"| Contract gate | {contracts.get('status', MISSING)} "
+    # Name the gated file: a --contract-check pointed at the other suite would otherwise pass silently.
+    w(f"| Contract gate | {contracts.get('status', MISSING)} on "
+      f"`{Path(contracts['csv']).name if contracts.get('csv') else MISSING}` "
       f"({len(contracts.get('checks', []))} checks, "
       f"{len(contracts.get('failed', []))} failed) |")
 
     w("\n### Data repair\n")
     repairs = source.get("row_repairs")
     if not repairs:
-        w("none")
+        # "none" is a claim about a run that happened; with no run summary it would be invented.
+        w("none" if reference else MISSING)
     else:
         w("| Item | Value |")
         w("|---|---|")
@@ -272,14 +291,13 @@ def main():
     w("\n## 28-29. Metrics\n")
     if price:
         w(f"\n{METRIC_SPACE_NOTE}\n")
-    rows, header = ((PRICE_ROWS, "price (USD)") if price else (RETURN_ROWS, "log return"))
     for split in ("validation", "test"):
         w(f"\n### {split}\n")
         for model, _ in runs:
             summary = summaries.get(model)
             metrics = (summary or {}).get("metrics", {}).get(split)
             w(f"\n**{model}** ({(metrics or {}).get('samples', MISSING)} samples)\n")
-            out.extend(metric_block(metrics, rows, header))
+            out.extend(metric_block(metrics, *metric_space(metrics, price)))
             nested = (metrics or {}).get("log_return")
             if nested:
                 w("")
@@ -302,8 +320,9 @@ def main():
     w("")
     crashed = final.get("crashed") or []
     resumed = final.get("resumed") or []
-    w(f"- Crashed jobs: {', '.join(crashed) if crashed else 'none'}")
-    w(f"- Resumed jobs: {', '.join(resumed) if resumed else 'none'}")
+    clean = "none" if final else MISSING  # Same rule: no summary, no clean bill of health.
+    w(f"- Crashed jobs: {', '.join(crashed) if crashed else clean}")
+    w(f"- Resumed jobs: {', '.join(resumed) if resumed else clean}")
     w(f"- Total scheduled training wall time: {number(final.get('total_seconds'), 6)} s")
     w(f"- GPU usage log: `{final.get('gpu_usage_csv', vast/'gpu_usage.csv')}`")
 

@@ -23,11 +23,89 @@ CHECKPOINT_FILES = (("model.safetensors", "config.json", "environment.json",
                     + tuple(f"{name}.json" for name in METADATA_FILES))
 ARTIFACT_FILES = (tuple(f"{s}_predictions.csv.gz" for s in SPLITS)
                   + tuple(f"{s}_metrics.json" for s in SPLITS) + ("run_summary.json",))
-# The raw L10 book CSV never leaves the machine; only gzipped prediction tables ship.
+# The raw L10 book CSVs never leave the machine; only gzipped prediction tables ship.
 IGNORE = ("*.csv", "*.pyc", "*__pycache__/*", "*.venv/*", "*.previous/*", ".*", "*/.*")
-DATASET_NAMES = ("BTCUSDT_L10_oct2023.csv",)
+DATASET_NAMES = ("BTCUSDT_L10_oct2023.csv", "BTC_L10_gate_1y.csv")
 TAGS = ("time-series-forecasting", "limit-order-book", "market-microstructure", "bitcoin", "btcusdt")
 OPTIMIZER = "AdamW(lr, weight_decay) + CosineAnnealingLR(T_max=epochs), no warmup, no scheduler tuning"
+E0_NOTE = ("Untrained reference baseline: predicts a zero log return at every horizon, so "
+           "RMSE_E0 = sqrt(mean(y^2)) and every gain below is measured against it.")
+# --suite selects one frozen experiment: its run names, its destination repo, the reports directory
+# the schedule prose quotes, the frozen contract that stands in until the first checkpoint exists,
+# and the prose no metadata file carries.
+SUITES = {
+    "oct2023": dict(
+        repo="{user}/Pretrain_Model", e0=("e0", "e0_60s"), reports="reports/vast",
+        runs=(("ofi_lstm", "ofi_lstm_60s_base"), ("hfformer", "hfformer_60s_base"),
+              ("patchtst", "patchtst_60s_base"), ("moderntcn", "moderntcn_60s_base"),
+              ("lit", "lit_60s_base")),
+        csv="BTCUSDT_L10_oct2023.csv", contract=None, e0_note=E0_NOTE, sections=(),
+        price_metrics=False,
+        title="BTCUSDT L10 multi-horizon log-return forecasting (60s history)",
+        intro="Five learned models plus the untrained `e0` zero-return baseline, trained once under a "
+              "frozen experiment contract on a single October 2023 BTCUSDT L10 limit-order-book file. "
+              "Every checkpoint (`best`, `last`), every prediction table and every metric file below "
+              "was produced by that single run; nothing here is tuned, re-fitted or re-scored."),
+    "gate1y": dict(
+        repo="Tson29/Pretrain_Model_Gate_1Y", e0=("e0", "e0_490s_gate1y"), reports="reports/vast_gate1y",
+        runs=(("ofi_lstm", "ofi_lstm_490s_gate1y"), ("hfformer", "hfformer_490s_gate1y"),
+              ("patchtst", "patchtst_490s_gate1y"), ("moderntcn", "moderntcn_490s_gate1y"),
+              ("lit", "lit_490s_gate1y")),
+        csv="BTC_L10_gate_1y.csv", contract="contracts/gate1y.json", price_metrics=True,
+        # The rows are sorted at load time, so the file's first and last line are not the interval.
+        interval=("2025-09-17T00:00:00+00:00", "2026-09-16T23:59:50+00:00"),
+        row_repairs="rows sorted by timestamp (a 64,080-row 2026-07-01..07-08 block arrives in front "
+                    "of the main block) and 9 duplicate timestamps carrying different payloads dropped "
+                    "under `keep_first`: 3,139,606 -> 3,139,597 rows",
+        e0_note="Untrained reference baseline: predicts a zero log return at every horizon, i.e. that "
+                "the mid price does not move, so its predicted mid is the origin mid, "
+                "RMSE_E0 = sqrt(mean((target_mid - origin_mid)^2)) in USD, and every gain below is "
+                "measured against it.",
+        title="BTC L10 multi-horizon forecasting on a one-year 10s book (490s history, raw-price metrics)",
+        intro="Five learned models plus the untrained `e0` zero-return baseline, trained once under a "
+              "frozen experiment contract on a one-year BTC L10 limit-order-book file sampled on an "
+              "exact 10-second grid. Every checkpoint (`best`, `last`), every prediction table and "
+              "every metric file below was produced by that single run; nothing here is tuned, "
+              "re-fitted or re-scored. The headline metrics are measured in raw price (USD); the "
+              "training target is unchanged and still the log return.",
+        sections=(
+            ("Metric space: raw price, not log return",
+             "Training is unchanged from the 60s run: the target is still `log(mid[t+h]/mid[t])` and "
+             "the loss is still MSE on that log return. Only the reported metric space changed. Every "
+             "`*_metrics.json` here carries RMSE, MAE, standard R2, RMSE_E0 and RMSE gain vs E0 "
+             "measured on the mid price in quote currency (USD) at the top level, with the previous "
+             "log-return metrics nested under `log_return` so the two runs stay comparable. Every "
+             "headline number is recomputed from the exported prediction columns by "
+             "`src/utils/predictions.frame_metrics`.\n\n"
+             "E0 predicts that the price does not move, so its predicted mid is the origin mid and "
+             "`rmse_e0 = sqrt(mean((target_mid - origin_mid)^2))`; measured on this file that baseline "
+             "is about 50.4 / 71.7 / 87.9 USD at 1m / 2m / 3m.\n\n"
+             "Standard R2 in price space is about 0.9999 for every model, E0 included: sigma(target "
+             "mid) is roughly 16,579 USD across the year while every forecast error here is around 50 "
+             "USD, so the level of the price, not forecast skill, fills the variance. It is reported "
+             "for contract completeness only - `rmse_gain_vs_e0` is the informative column."),
+            ("Dataset and what changed against the 60s Oct-2023 run",
+             "- A new one-year L10 capture on an exact 10-second grid (SHA256, rows and interval in "
+             "the contract table above), 3,139,597 rows after repair, 31 gaps longer than 10s.\n"
+             "- The file arrives out of order, so `data.sort_by_timestamp=true` and "
+             "`data.duplicate_timestamp_policy=\"keep_first\"` repair it. Both are opt-in and both are "
+             "recorded in `split_manifest.source.row_repairs` of every checkpoint; the defaults still "
+             "refuse to reorder or deduplicate a book silently.\n"
+             "- `max_gap_seconds` and `target_tolerance_seconds` move 2.0s -> 10.0s: at a 10s cadence "
+             "the old 2.0s rule marks every edge in the file as a gap.\n"
+             "- `history_seconds` moves 60 -> 490, which re-resolves to the same 49 history rows and "
+             "the same stride of 8 rows, so the architectures and their parameter counts are "
+             "untouched: {parameters}."),
+        )),
+}
+E0_RUN, RUNS = SUITES["oct2023"]["e0"], SUITES["oct2023"]["runs"]
+
+
+def select_suite(name):
+    """Rebind the published run names to one experiment."""
+    suite = SUITES[name]
+    globals()["E0_RUN"], globals()["RUNS"] = suite["e0"], suite["runs"]
+    return suite
 
 
 def load(path):
@@ -79,8 +157,9 @@ def scan(folder, repo_dir, message, ignore):
 
 
 def build_plan(monitoring_csv=False):
-    # reports/vast/gpu_usage.csv is the only CSV that may ship, and only on request.
-    reports_ignore = (tuple(p for p in IGNORE if p != "*.csv")+("*BTCUSDT*.csv",)) if monitoring_csv else IGNORE
+    # The gpu_usage.csv sampling logs are the only CSVs that may ship, and only on request.
+    reports_ignore = (tuple(p for p in IGNORE if p != "*.csv")
+                      + tuple(f"*{name}" for name in DATASET_NAMES)) if monitoring_csv else IGNORE
     plan = [scan(ROOT/"artifacts"/E0_RUN[0]/E0_RUN[1], f"{E0_RUN[0]}/{E0_RUN[1]}/artifacts",
                  "e0 baseline artifacts", IGNORE)]
     for model, run in RUNS:
@@ -158,15 +237,28 @@ def dataset_interval(manifest, preprocessing):
             for row in (first, last)]
 
 
-def parameter_count(run):
+def repair_note(repairs):
+    """row_repairs once a checkpoint records it; before that, the suite's recorded prose."""
+    if isinstance(repairs, str):
+        return repairs
+    return (f"sorted by timestamp: {yes_no(repairs.get('sorted_by_timestamp'))} "
+            f"({cell(repairs.get('rows_moved_by_sort'), ',')} rows moved); duplicate timestamps: "
+            f"{cell(repairs.get('duplicate_timestamp_policy'))}, "
+            f"{cell(repairs.get('duplicate_rows_dropped'), ',')} rows dropped; "
+            f"{cell(repairs.get('rows_in_file'), ',')} -> {cell(repairs.get('rows_used'), ',')} rows")
+
+
+def parameter_count(run, frozen=None):
     for source in (run["summary"], run["training"], run["config"]):
         for key in ("parameters", "parameter_count"):
             if isinstance(get(source, key), int):
                 return get(source, key)
     if run["model"] == "e0":
         return 0
+    # A shipped config.json is the architecture itself, so measure it rather than quote the
+    # contract; the frozen count only stands in while this suite has no checkpoint at all.
     if not run["config"]:
-        return None
+        return get(frozen, "PARAMETERS", run["model"])
     spec = dict(run["config"])
     model = build_model(spec.pop("name"), spec.pop("history_rows"), spec.pop("channels"), **spec)
     total = sum(p.numel() for p in model.parameters())
@@ -174,8 +266,8 @@ def parameter_count(run):
     return total
 
 
-def vast_reports():
-    folder = ROOT/"reports"/"vast"
+def vast_reports(suite):
+    folder = ROOT/suite["reports"]
     return {p.name: load(p) for p in sorted(folder.glob("*.json"))} if folder.is_dir() else {}
 
 
@@ -193,7 +285,7 @@ def find_key(obj, *names):
     return next((found for found in (find_key(child, *names) for child in children) if found is not None), None)
 
 
-def summarize(value, limit=3000):
+def summarize(value, folder, limit=3000):
     if value is None:
         return None
     for key in ("selected", "decision", "chosen", "schedule", "groups"):
@@ -203,7 +295,7 @@ def summarize(value, limit=3000):
                                                   "aggregate_samples_per_second", "gpu_utilization_percent")}
             break
     text = json.dumps(value, indent=2)
-    return text if len(text) <= limit else text[:limit]+"\n... (truncated; full file at reports/vast/)"
+    return text if len(text) <= limit else text[:limit]+f"\n... (truncated; full file at {folder}/)"
 
 
 def table(header, rows):
@@ -211,28 +303,62 @@ def table(header, rows):
             *["| "+" | ".join(str(c) for c in row)+" |" for row in rows]]
 
 
-def metric_table(runs, split):
+def metric_table(runs, split, unit="", spec=".6e", nested=None):
     rows = []
     for run in runs:
         metrics = run["metrics"].get(split)
+        metrics = get(metrics, nested) if nested else metrics
         for k, horizon in enumerate(HORIZON_LABELS):
             rows.append((f"`{run['model']}`", horizon,
-                         cell(get(metrics, "rmse", default=[None]*3)[k], ".6e"),
-                         cell(get(metrics, "mae", default=[None]*3)[k], ".6e"),
+                         cell(get(metrics, "rmse", default=[None]*3)[k], spec),
+                         cell(get(metrics, "mae", default=[None]*3)[k], spec),
                          cell(get(metrics, "r2", default=[None]*3)[k], ".6f"),
                          cell(get(metrics, "rmse_gain_vs_e0", default=[None]*3)[k], "+.6f"),
                          cell(get(metrics, "samples"))))
-    return table(("Model", "Horizon", "RMSE", "MAE", "R2", "RMSE gain vs E0", "Samples"), rows)
+    return table(("Model", "Horizon", f"RMSE{unit}", f"MAE{unit}", "R2", "RMSE gain vs E0", "Samples"),
+                 rows)
 
 
-def model_card(repo_id, runs, plan):
+def metric_section(runs, split, suite):
+    """Headline table in whatever unit the metric files declare, then their nested log-return copy."""
+    units = {get(run["metrics"].get(split), "units") for run in runs if run["metrics"].get(split)}
+    if len(units) > 1:
+        raise RuntimeError(f"{split}: metric files disagree about units {sorted(map(str, units))}")
+    # A metric file states its own space; the suite only predicts one no file has declared yet.
+    price = units.pop() == "quote_currency" if units else suite["price_metrics"]
+    lines = metric_table(runs, split, " (USD)" if price else "", ",.4f" if price else ".6e")
+    if any(get(run["metrics"].get(split), "log_return") for run in runs):
+        lines += ["", "The same predictions scored in log-return space (the `log_return` block of each "
+                  "`*_metrics.json`), for comparison with the 60s run:", "",
+                  *metric_table(runs, split, nested="log_return")]
+    return lines
+
+
+def suite_sections(suite, frozen):
+    """Prose no metadata file carries: the metric space and the dataset's recorded repair."""
+    parameters = ", ".join(f"`{model}` {count:,}"  # e0 is untrained, so it carries no count
+                           for model, count in get(frozen, "PARAMETERS", default={}).items() if count)
+    return [line for heading, body in suite["sections"]
+            for line in (f"## {heading}", "",
+                         body.format(parameters=parameters or "see the per-model tables below"), "")]
+
+
+def model_card(repo_id, runs, plan, suite):
     shared = contract(runs)
+    # The frozen contract JSON states the gate values before this suite's first checkpoint exists,
+    # so the card is complete even when it is generated ahead of the run.
+    frozen = (load(ROOT/suite["contract"]) if suite["contract"] else None) or {}
+    fact = lambda value, key: value if value is not None else frozen.get(key)
     data = get(shared["experiment"], "data", default={})
     training = get(shared["experiment"], "training", default={})
     prep, target = shared["preprocessing"], shared["target_config"]
-    split, stats, vast = shared["split_manifest"], shared["data_stats"], vast_reports()
-    interval = dataset_interval(split, prep)
-    ranges, counts = get(split, "ranges", default={}), get(split, "sample_counts", default={})
+    split, vast = shared["split_manifest"], vast_reports(suite)
+    stats = shared["data_stats"] or frozen.get("DATA_STATS")
+    # Sorted rows mean the file's first and last line say nothing about the interval.
+    interval = suite.get("interval") if data.get("sort_by_timestamp") else dataset_interval(split, prep)
+    ranges = get(split, "ranges") or frozen.get("RANGES", {})
+    counts = get(split, "sample_counts") or frozen.get("SAMPLE_COUNTS", {})
+    repairs = get(split, "source", "row_repairs") or suite.get("row_repairs")
     gpus = (sorted({get(run, "training", "gpu") for run in runs if get(run, "training", "gpu")})
             or [find_key(vast, "gpu_name", "gpu", "device")])
     precisions = (sorted({get(run, "training", "precision") for run in runs
@@ -242,41 +368,42 @@ def model_card(repo_id, runs, plan):
     host = (find_key(vast, "hostname", "host")
             or next((get(run, "training", "host") for run in runs if get(run, "training", "host")), None))
     versions = ", ".join(f"{k} {v}" for k, v in (shared["environment"] or {}).items())
+    gaps = (f"gaps > 2s: {cell(get(stats, 'gaps_gt_2_seconds'))}"
+            + (f", gaps > max_gap: {cell(get(stats, 'gaps_gt_max_gap'))}"
+               if get(stats, "gaps_gt_max_gap") is not None else ""))
     lines = ["---", "license: mit", "library_name: pytorch", "tags:", *[f"- {t}" for t in TAGS], "---", "",
-             "# BTCUSDT L10 multi-horizon log-return forecasting (60s history)",
-             "",
-             "Five learned models plus the untrained `e0` zero-return baseline, trained once under a "
-             "frozen experiment contract on a single October 2023 BTCUSDT L10 limit-order-book file. "
-             "Every checkpoint (`best`, `last`), every prediction table and every metric file below "
-             "was produced by that single run; nothing here is tuned, re-fitted or re-scored.", "",
-             "## Experiment contract", ""]
-    lines += table(("Field", "Value"), [
+             f"# {suite['title']}", "", suite["intro"], "", "## Experiment contract", ""]
+    lines += table(("Field", "Value"), [row for row in [
         ("Git commit", f"`{cell(git_commit())}`"),
-        ("Dataset", f"`{Path(source_path).name if source_path else 'n/a'}` "
+        ("Dataset", f"`{Path(source_path).name if source_path else suite['csv']}` "
                     "- L10 depth: 10 bid + 10 ask levels, price and quantity per level"),
-        ("Dataset SHA256", f"`{cell(get(split, 'source', 'sha256'))}`"),
+        ("Dataset SHA256", f"`{cell(fact(get(split, 'source', 'sha256'), 'CSV_SHA256'))}`"),
         ("Dataset rows", cell(get(stats, "rows"), ",")),
         ("Dataset interval (UTC)", " -> ".join(interval) if interval else "n/a"),
+        # Only a suite that repairs its row order has anything to declare here.
+        ("Row repair", repair_note(repairs)) if repairs else None,
         ("Sampling", f"median dt {cell(get(stats, 'median_dt_seconds'), suffix='s')}, "
                      f"p99 {cell(get(stats, 'p99_dt_seconds'), suffix='s')}, "
-                     f"max {cell(get(stats, 'max_dt_seconds'), suffix='s')}, "
-                     f"gaps > 2s: {cell(get(stats, 'gaps_gt_2_seconds'))}, "
+                     f"max {cell(get(stats, 'max_dt_seconds'), suffix='s')}, {gaps}, "
                      f"segment transitions: {cell(get(stats, 'segment_transitions'))}"),
-        ("History", f"{cell(get(prep, 'history_seconds'), suffix='s')} -> "
-                    f"{cell(get(prep, 'history_rows'))} rows "
-                    f"({cell(get(prep, 'history_rounding'))}, median train continuous dt "
-                    f"{cell(get(prep, 'median_train_dt_seconds'), suffix='s')})"),
-        ("Stride", f"{cell(get(prep, 'stride_seconds'), suffix='s')} -> {cell(get(prep, 'stride_rows'))} rows"),
-        ("Horizons", " / ".join(f"{h}s" for h in get(target, "horizons_seconds", default=[])) or "n/a"),
+        ("History", f"{cell(fact(get(prep, 'history_seconds'), 'HISTORY_SECONDS'), suffix='s')} -> "
+                    f"{cell(fact(get(prep, 'history_rows'), 'HISTORY_ROWS'))} rows"
+                    + (f" ({cell(get(prep, 'history_rounding'))}, median train continuous dt "
+                       f"{cell(get(prep, 'median_train_dt_seconds'), suffix='s')})" if prep else "")),
+        ("Stride", f"{cell(fact(get(prep, 'stride_seconds'), 'STRIDE_SECONDS'), suffix='s')} -> "
+                   f"{cell(fact(get(prep, 'stride_rows'), 'STRIDE_ROWS'))} rows"),
+        ("Horizons", " / ".join(f"{h}s" for h in (get(target, "horizons_seconds")
+                                                  or frozen.get("HORIZONS", []))) or "n/a"),
         ("Target", f"{cell(get(target, 'definition'))}; {cell(get(target, 'lookup'))}; "
-                   f"tolerance {cell(get(target, 'tolerance_seconds'), suffix='s')}"),
+                   f"tolerance {cell(fact(get(target, 'tolerance_seconds'), 'TOLERANCE_SECONDS'), suffix='s')}"),
         ("Split boundaries (exclusive, UTC)",
          " ".join(f"{k}={v}" for k, v in zip(("train_end", "validation_end"),
                                              get(split, "boundaries_utc", default=["n/a", "n/a"])))),
         ("Split row ranges", " ".join(f"{k}=[{v[0]}, {v[1]})" for k, v in ranges.items()) or "n/a"),
         ("Split samples", " ".join(f"{k}={v}" for k, v in counts.items()) or "n/a"),
         ("Split policy", cell(get(split, "policy"))),
-        ("Gap rule", f"max_gap_seconds={cell(get(target, 'max_gap_seconds'))}, segment boundary rejection="
+        ("Gap rule", f"max_gap_seconds={cell(fact(get(target, 'max_gap_seconds'), 'MAX_GAP_SECONDS'))}"
+                     ", segment boundary rejection="
                      f"{cell(get(target, 'segment_boundary_rejection'))}; a window is dropped if any gap or "
                      "segment change falls between its first history row and its last target row"),
         ("Batch size", cell(training.get("batch_size"))),
@@ -296,19 +423,18 @@ def model_card(repo_id, runs, plan):
                      f"driver {cell(find_key(vast, 'driver_version', 'driver'))}, "
                      f"VRAM {cell(find_key(vast, 'vram_total_bytes'), ',')} bytes"),
         ("Library versions", versions or "n/a"),
-    ])
-    lines += ["", "## Models", ""]
+    ] if row])
+    lines += ["", *suite_sections(suite, frozen), "## Models", ""]
     for run in runs:
         prep_run, schema = run["preprocessing"], run["feature_schema"]
         shape = get(schema, "sample_shape", default=[])
         lines += [f"### `{run['model']}` - `{run['run']}`", ""]
         if run["model"] == "e0":
-            lines += ["Untrained reference baseline: predicts a zero log return at every horizon, so "
-                      "RMSE_E0 = sqrt(mean(y^2)) and every gain below is measured against it. Parameters: "
-                      f"{cell(parameter_count(run))}. No checkpoint; predictions and metrics only.", ""]
+            lines += [f"{suite['e0_note']} Parameters: {cell(parameter_count(run, frozen))}. "
+                      "No checkpoint; predictions and metrics only.", ""]
             continue
         lines += table(("Field", "Value"), [
-            ("Parameters", cell(parameter_count(run), ",")),
+            ("Parameters", cell(parameter_count(run, frozen), ",")),
             ("Input", f"[{cell(get(run, 'config', 'history_rows', default=get(prep_run, 'history_rows')))}"
                       f", {', '.join(str(d) for d in shape) or 'n/a'}] "
                       f"({cell(get(run, 'config', 'channels'))} channels)"),
@@ -331,19 +457,19 @@ def model_card(repo_id, runs, plan):
             lines += ["", "Architecture (`config.json`):", "", "```json",
                       json.dumps(run["config"], indent=2), "```"]
         lines += [""]
-    lines += ["## Validation metrics", "", *metric_table(runs, "validation"), "",
+    lines += ["## Validation metrics", "", *metric_section(runs, "validation", suite), "",
               "## Test metrics", "",
               "Test was scored once, after training and best-checkpoint selection completed.", "",
-              *metric_table(runs, "test"), "",
-              "## Train metrics", "", *metric_table(runs, "train"), "",
+              *metric_section(runs, "test", suite), "",
+              "## Train metrics", "", *metric_section(runs, "train", suite), "",
               "## Concurrency schedule and throughput", ""]
     for name in ("concurrency_benchmark.json", "training_schedule.json"):
-        body = summarize(vast.get(name))
-        lines += [f"`reports/vast/{name}`:", "", "```json", body, "```", ""] if body else \
-                 [f"`reports/vast/{name}`: not present.", ""]
+        body = summarize(vast.get(name), suite["reports"])
+        lines += [f"`{suite['reports']}/{name}`:", "", "```json", body, "```", ""] if body else \
+                 [f"`{suite['reports']}/{name}`: not present.", ""]
     benchmark = get(vast.get("single_job_benchmark.json"), "models", default={})
     if benchmark:
-        lines += ["Single-job benchmark (`reports/vast/single_job_benchmark.json`), batch size "
+        lines += [f"Single-job benchmark (`{suite['reports']}/single_job_benchmark.json`), batch size "
                   f"{cell(get(vast['single_job_benchmark.json'], 'batch_size'))}:", "",
                   *table(("Model", "Samples/s", "Mean step (s)", "Peak allocated (bytes)", "Avg GPU util %"),
                          [(f"`{name}`", cell(get(value, "samples_per_second"), ",.1f"),
@@ -351,10 +477,11 @@ def model_card(repo_id, runs, plan):
                            cell(get(value, "peak_allocated_bytes"), ","),
                            cell(get(value, "average_gpu_utilization_percent"), ".1f"))
                           for name, value in benchmark.items()]), ""]
-    if (ROOT/"reports"/"vast"/"gpu_usage.csv").is_file():
+    if (ROOT/suite["reports"]/"gpu_usage.csv").is_file():
         shipped = any(name.endswith(".csv") for item in plan for name in item["files"])
-        lines += [f"GPU sampling log `reports/vast/gpu_usage.csv` is {'included' if shipped else 'kept local'}; "
-                  "the raw book CSV is never uploaded.", ""]
+        lines += [f"GPU sampling log `{suite['reports']}/gpu_usage.csv` is "
+                  f"{'included' if shipped else 'kept local'}; the raw book CSV is never uploaded.", ""]
+    example = "/".join(RUNS[-1])  # any run would do; lit is the last one listed above
     lines += ["## Repository layout", "", "```text"]
     lines += [f"{item['repo_dir']}/  ({len(item['files'])} files, {human(item['bytes'])})" for item in plan]
     lines += ["```", "",
@@ -365,8 +492,8 @@ def model_card(repo_id, runs, plan):
               "## Loading a checkpoint", "", "```python",
               "from huggingface_hub import snapshot_download",
               "from src.training.checkpoint import from_pretrained  # this repo's code, not AutoModel", "",
-              f'path = snapshot_download("{repo_id}", allow_patterns="lit/lit_60s_base/best/*")',
-              'model = from_pretrained(f"{path}/lit/lit_60s_base/best")',
+              f'path = snapshot_download("{repo_id}", allow_patterns="{example}/best/*")',
+              f'model = from_pretrained(f"{{path}}/{example}/best")',
               "```", "",
               "`best/` also carries `optimizer.pt`, `scheduler.pt` and `trainer_state.pt`; `last/` resumes "
               "the exact training run at an epoch boundary. No adapter is merged into these base weights. "
@@ -445,10 +572,12 @@ def verify(api, repo_id, plan):
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--repo-id", help="Overrides HF_REPO_ID; default <authenticated user>/Pretrain_Model")
+    p.add_argument("--suite", choices=sorted(SUITES), default="oct2023",
+                   help="Frozen experiment to publish: run names, destination repo and model card")
+    p.add_argument("--repo-id", help="Overrides HF_REPO_ID; default is the suite's repo")
     p.add_argument("--card-out", help="Also write the generated model card here (never the repo README)")
     p.add_argument("--include-monitoring-csv", action="store_true",
-                   help="Ship reports/vast/*.csv GPU logs; the book CSV stays excluded either way")
+                   help="Ship the suite's reports/*.csv GPU logs; the book CSV stays excluded either way")
     p.add_argument("--allow-public", action="store_true",
                    help="Permit publishing into a repo that already exists and is public")
     mode = p.add_mutually_exclusive_group()
@@ -459,12 +588,14 @@ def parser():
 
 def main(argv=None):
     args = parser().parse_args(argv)
+    suite = select_suite(args.suite)
     plan = build_plan(args.include_monitoring_csv)
     missing = missing_required(plan)
     runs = [gather(*E0_RUN)]+[gather(model, run) for model, run in RUNS]
     if args.dry_run:
-        repo_id = args.repo_id or os.environ.get("HF_REPO_ID") or "<authenticated user>/Pretrain_Model"
-        card = model_card(repo_id, runs, plan)
+        repo_id = (args.repo_id or os.environ.get("HF_REPO_ID")
+                   or suite["repo"].format(user="<authenticated user>"))
+        card = model_card(repo_id, runs, plan, suite)
         print_plan(repo_id, plan, missing)
         print("\n"+"="*80+"\nREADME.md\n"+"="*80)
         print(card)
@@ -477,9 +608,10 @@ def main(argv=None):
     if not token:
         raise SystemExit("No Hugging Face token: set HF_TOKEN or log in with huggingface-cli")
     api = HfApi(token=token)
-    repo_id = args.repo_id or os.environ.get("HF_REPO_ID") or f"{api.whoami()['name']}/Pretrain_Model"
+    repo_id = (args.repo_id or os.environ.get("HF_REPO_ID")
+               or suite["repo"].format(user=api.whoami()["name"]))
     if not args.verify_only:
-        card = model_card(repo_id, runs, plan)
+        card = model_card(repo_id, runs, plan, suite)
         if args.card_out:
             write_card(args.card_out, card)
         print_plan(repo_id, plan, missing)

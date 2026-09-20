@@ -13,8 +13,9 @@ from tests.test_data import write_csv
 
 START_US = 1_758_067_200_000_000  # 2025-09-17T00:00:00Z, the first row of the real file.
 STEP_US = 10_000_000
-# Same capacity contract as tests/test_contracts.py: history_seconds 490 must re-resolve
-# to the history_rows=49 these counts were frozen at on the 1.25s Oct-2023 file.
+# Same capacity contract as tests/test_contracts.py: history_seconds 490 on the new 10s
+# cadence must re-resolve to the history_rows=49 these counts were frozen at (the Oct-2023
+# file measures a 1.236s median, so ceil(60/1.236) is that same 49).
 CAPACITY = dict(ofi_lstm=(20, 55491), hfformer=(38, 22026), patchtst=(40, 477059),
                 moderntcn=(40, 50568195), lit=(40, 736547))
 PRICE_KEYS = {"samples", "horizons", "units", "mse", "rmse", "mae", "r2",
@@ -41,9 +42,9 @@ def write_us_csv(path, stamps_us, key=None, segments=None):
     return frame
 
 
-def write_grid(path, rows=1200):
+def write_grid(path, rows=1200, step_us=STEP_US):
     """The perfect 10s grid the real file sits on."""
-    return write_us_csv(path, START_US+np.arange(rows)*STEP_US)
+    return write_us_csv(path, START_US+np.arange(rows)*step_us)
 
 
 def us_config(path, **kwargs):
@@ -92,10 +93,35 @@ def test_duplicate_timestamp_policy_picks_a_payload(tmp_path):
         load_csv(us_config(path))
     for policy, kept in (("keep_first", 1000.), ("keep_last", 2000.)):
         raw = load_csv(us_config(path, duplicate_timestamp_policy=policy))
-        assert raw.source["row_repairs"]["duplicate_rows_dropped"] == 1
+        repairs = raw.source["row_repairs"]
+        assert repairs["duplicate_rows_dropped"] == 1 and repairs["duplicate_timestamp_policy"] == policy
+        # The manifest has to report the drop as 60 -> 59, the way the real file reports
+        # 3,139,606 -> 3,139,597; a rows_used that echoes rows_in_file would hide it.
+        assert repairs["rows_in_file"] == 60 and repairs["rows_used"] == 59
         assert len(raw.timestamps) == 59 and (np.diff(raw.timestamps) > 0).all()
         # The row count cannot tell the two policies apart; the surviving payload can.
         assert raw.book[30, 0, 0, 0] == 100+kept*1e-3-.01
+
+
+def test_gate_config_sorts_before_it_deduplicates(tmp_path):
+    """Both repairs at once: exactly what configs/*_490s_gate1y.json turns on."""
+    path = tmp_path/"gate_shape.csv"
+    lead, main = 64, 1000  # The real file in miniature: a later block in front, then 9 dupes.
+    stamps = np.r_[START_US+np.arange(main, main+lead)*STEP_US, START_US+np.arange(main)*STEP_US]
+    dupes = lead+np.linspace(5, main-5, 9).astype(int)
+    stamps[dupes] = stamps[dupes-1]  # Nine disagreeing payloads, as in the real file.
+    write_us_csv(path, stamps, key=np.arange(len(stamps), dtype=np.float64))
+    raw = load_csv(us_config(path, sort_by_timestamp=True, duplicate_timestamp_policy="keep_first"))
+    repairs = raw.source["row_repairs"]
+    assert repairs["sorted_by_timestamp"] is True and repairs["duplicate_rows_dropped"] == 9
+    assert repairs["rows_in_file"] == lead+main and repairs["rows_used"] == lead+main-9
+    assert len(raw.timestamps) == lead+main-9 and (np.diff(raw.timestamps) > 0).all()
+    # Dedup only looks at adjacency, so "keep_first" means "earliest row in the file" only
+    # while the sort is stable: under quicksort or heapsort three of these nine ties come
+    # back the other way round and the later payload wins.
+    survivor = (raw.book[:, 0, 0, 0]+.01-100)*1e3  # write_us_csv encodes the file position.
+    np.testing.assert_allclose(survivor[np.searchsorted(raw.timestamps, stamps[dupes-1]*1000)],
+                               dupes-1, rtol=0, atol=1e-9)
 
 
 def test_sorting_permutes_book_and_segments_with_the_timestamps(tmp_path):
@@ -125,7 +151,8 @@ def test_timestamp_us_keeps_microsecond_resolution(tmp_path):
 
 
 def test_gap_rule_scales_with_cadence(tmp_path):
-    # The frozen 2.0s rule still fits the 1.25s Oct-2023 file...
+    # The frozen 2.0s rule still fits the sub-2s Oct-2023 cadence (48 rows on this 1.25s
+    # stand-in; the real 1.236s file rounds up to the 49 the capacity contract froze)...
     fast = tmp_path/"fast.csv"
     write_csv(fast)
     old = Config(model="e0")
@@ -142,6 +169,12 @@ def test_gap_rule_scales_with_cadence(tmp_path):
     assert load_csv(us_config(slow, max_gap_seconds=10.)).stats["gaps_gt_max_gap"] == 0
     assert data.history_rows == 49 and data.metadata["preprocessing"]["stride_rows"] == 8
     assert all(len(dataset) for dataset in data.datasets.values())
+    # Both frozen pairs divide exactly (490/10, 60/1.25), so only an off-grid cadence can
+    # pin the advertised ceil: 490/12 is 40.83, which floor would resolve to 40 instead.
+    off = tmp_path/"off_grid.csv"
+    write_grid(off, step_us=12*10**6)
+    assert prepare_data(gate_config(off, max_gap_seconds=12., target_tolerance_seconds=12.)
+                        ).history_rows == 41
 
 
 def test_price_metric_contract_for_perfect_and_e0_predictions():
@@ -158,11 +191,26 @@ def test_price_metric_contract_for_perfect_and_e0_predictions():
     np.testing.assert_allclose(e0["mae_e0"], np.abs(target-origin).mean(axis=0), rtol=1e-12, atol=0)
     # Known and deliberate: sigma(mid) is five figures and every error is two, so
     # price-space R2 is ~1 even for E0. Read rmse_gain_vs_e0, do not "fix" R2.
-    assert min(e0["r2"]) > .999
-    result = price_metrics(origin, target, origin+rng.normal(scale=40., size=(512, 3)))
+    assert min(e0["r2"]) > .9999
+    predicted = origin+rng.normal(scale=40., size=(512, 3))
+    result = price_metrics(origin, target, predicted)
     assert set(result) == PRICE_KEYS and result["units"] == "quote_currency"
-    assert result["horizons"] == list(HORIZON_LABELS) and result["samples"] == 512
+    assert result["horizons"] == ["1m", "2m", "3m"] and result["samples"] == 512
     assert all(len(result[k]) == 3 for k in ("rmse", "mae", "r2", "rmse_e0", "rmse_gain_vs_e0"))
+    # The perfect and E0 corners collapse error onto baseline, so they pin neither the
+    # gain formula nor the R2 denominator. Away from them every family has its own oracle.
+    rmse = np.sqrt(((predicted-target)**2).mean(axis=0))
+    rmse_e0 = np.sqrt(((origin-target)**2).mean(axis=0))
+    for key, oracle in (("rmse", rmse), ("mae", np.abs(predicted-target).mean(axis=0)),
+                        ("rmse_e0", rmse_e0), ("mae_e0", np.abs(origin-target).mean(axis=0)),
+                        # Standard R2 divides by the variance of the target mid; R2_OS would
+                        # divide by sum(mid^2) and score ~1 for everything at this price level.
+                        ("r2", 1-((predicted-target)**2).sum(axis=0)
+                         / ((target-target.mean(axis=0))**2).sum(axis=0)),
+                        ("rmse_gain_vs_e0", 1-rmse/rmse_e0)):
+        np.testing.assert_allclose(result[key], oracle, rtol=1e-12, atol=0)
+    # This prediction is worse than E0, so the headline column has to go negative.
+    assert max(result["rmse_gain_vs_e0"]) < 0
     assert result["mean_mse"] == pytest.approx(float(np.mean(result["mse"])), rel=1e-12)
     with pytest.raises(ValueError, match="share a shape"):
         price_metrics(origin, target, origin[:-1])
