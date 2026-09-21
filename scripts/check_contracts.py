@@ -37,9 +37,16 @@ FROZEN_TRAINING = dict(epochs=30, batch_size=128, learning_rate=1e-4, weight_dec
                        gradient_clip=1.0, gradient_accumulation=1, seed=42, loss="mse",
                        auto_batch_size=False)
 # Section H: 49 and 8 must be resolved from the cadence, never pinned in the config.
+# The walk-forward fields carry their chronological values here, so one block covers both
+# schemes and a suite that forgets one inherits a value its config will contradict.
 FROZEN_DATA = dict(horizons_seconds=HORIZONS, target_tolerance_seconds=TOLERANCE_SECONDS,
                    max_gap_seconds=MAX_GAP_SECONDS, history_seconds=HISTORY_SECONDS,
-                   history_rows_override=None, stride_seconds_override=None)
+                   history_rows_override=None, stride_seconds_override=None,
+                   split_scheme="chronological", folds=3, fold=1, test_fraction=0.15,
+                   embargo_seconds=0.0)
+# Walk forward only: sha256 of the held-out tail's origins and targets, frozen identically in
+# every fold's file, so all six models and all three folds are pinned to one test split.
+TEST_FINGERPRINT = None
 # Section W: future LoRA injection needs unmerged, individually named Linear modules.
 ATTENTION_PROJECTIONS = ("q_proj", "k_proj", "v_proj", "out_proj")
 LORA_SUFFIXES = ATTENTION_PROJECTIONS+("fc1", "fc2")
@@ -103,7 +110,10 @@ def config_checks(gate, model, config):
                     target_tolerance_seconds=data.target_tolerance_seconds,
                     max_gap_seconds=data.max_gap_seconds, history_seconds=data.history_seconds,
                     history_rows_override=data.history_rows,
-                    stride_seconds_override=data.stride_seconds), FROZEN_DATA)
+                    stride_seconds_override=data.stride_seconds,
+                    split_scheme=data.split_scheme, folds=data.folds, fold=data.fold,
+                    test_fraction=data.test_fraction,
+                    embargo_seconds=data.embargo_seconds), FROZEN_DATA)
 
 
 def split_checks(gate, model, data):
@@ -117,10 +127,24 @@ def split_checks(gate, model, data):
     gate.equal(f"{model}.channels", data.channels, CHANNELS[model])
 
 
+def purge_limits(timestamps, ranges):
+    """Rebuilt from the split ranges and the frozen embargo, never read back from the manifest.
+
+    Exclusive ns bound on the last target a split may touch. At embargo 0 it is exactly the
+    next split's first record, which the in-bounds row test already implies, so the
+    chronological suites keep the sampling they had.
+    """
+    embargo = round(FROZEN_DATA["embargo_seconds"]*1e9)
+    order = ("train", "validation", "test")
+    return {name: (None if following is None else int(timestamps[ranges[following][0]])-embargo)
+            for name, following in zip(order, order[1:]+(None,))}
+
+
 def sampling_checks(gate, model, data):
     """Sections E/F/G re-derived from raw timestamps: the stored indices cannot self-certify."""
     raw, ranges = data.raw, data.metadata["split_manifest"]["ranges"]
     timestamps, segments = raw.timestamps, raw.segments
+    limits = purge_limits(timestamps, ranges)
     # dt == max_gap is still a good edge, so only a strict overshoot breaks continuity.
     bad = np.r_[0, np.cumsum((np.diff(timestamps)/1e9 > MAX_GAP_SECONDS)
                              | (segments[1:] != segments[:-1]), dtype=np.int64)]
@@ -133,8 +157,11 @@ def sampling_checks(gate, model, data):
         target = np.searchsorted(timestamps, wanted, side="left")
         safe = np.minimum(target, len(timestamps)-1)
         overshoot = timestamps[safe]-wanted
+        limit = limits[name]
         keep = ((target < hi).all(axis=1) & ((overshoot >= 0) & (overshoot <= tolerance)).all(axis=1)
                 & (bad[safe[:, -1]]-bad[origins-HISTORY_ROWS+1] == 0))
+        if limit is not None:
+            keep &= (timestamps[safe] < limit).all(axis=1)
         stored = timestamps[dataset.target_indices]-(timestamps[dataset.origins, None]+horizons)
         gate.equal(f"{model}.{name}_sampling", dict(
             count=len(dataset.origins),
@@ -145,8 +172,25 @@ def sampling_checks(gate, model, data):
             within_tolerance=bool(((stored >= 0) & (stored <= tolerance)).all()),
             continuous=bool((bad[dataset.target_indices[:, -1]]
                              - bad[dataset.origins-HISTORY_ROWS+1] == 0).all()),
+            purged=bool(limit is None or (timestamps[dataset.target_indices] < limit).all()),
         ), dict(count=int(keep.sum()), origins=True, targets=True, inside_split=True,
-                within_tolerance=True, continuous=True))
+                within_tolerance=True, continuous=True, purged=True))
+
+
+def walk_forward_checks(gate, model, data):
+    """Only meaningful per fold: the embargo gap, and the tail split shared by every run."""
+    timestamps, history = data.raw.timestamps, data.history_rows
+    embargo = FROZEN_DATA["embargo_seconds"]
+    # The first raw row a split reads is an earliest history start, the last is a last target.
+    span = {name: (int((ds.origins-history+1).min()), int(ds.target_indices.max()))
+            for name, ds in data.datasets.items()}
+    measured = {f"{a}_to_{b}": float(int(timestamps[span[b][0]])-int(timestamps[span[a][1]]))/1e9
+                for a, b in (("train", "validation"), ("validation", "test"))}
+    gate.check(f"{model}.embargo_separation_seconds",
+               all(gap > embargo for gap in measured.values()), f"> {embargo}", measured)
+    gate.equal(f"{model}.held_out_test_fingerprint", fingerprint(data.datasets)["test"],
+               TEST_FINGERPRINT)
+    return dict(rows_touched=span, separation_seconds=measured)
 
 
 def normalization_checks(gate, model, data):
@@ -178,11 +222,13 @@ def normalization_checks(gate, model, data):
                 normalization=pre["normalization"], **measured)
 
 
-def model_checks(gate, model, data):
-    net = build_model(model, data.history_rows, data.channels)
+def model_checks(gate, model, config, data):
+    # Built with the run's own model_kwargs: the scaled capacity is what trains, so checking
+    # the bare DEFAULTS here would certify a size no run uses.
+    net = build_model(model, data.history_rows, data.channels, **config.model_kwargs)
     parameters = sum(p.numel() for p in net.parameters())
     gate.equal(f"{model}.parameters", parameters, PARAMETERS[model])
-    record = dict(parameters=parameters)
+    record = dict(parameters=parameters, model_kwargs=dict(config.model_kwargs))
     required = LORA_REQUIRED.get(model)
     if required:
         # Exact Linear leaf names: a merged qkv or a renamed projection must not pass.
@@ -209,7 +255,7 @@ def render(checks):
 EXPECTED_GLOBALS = ("CSV_SHA256", "DATA_STATS", "RANGES", "SAMPLE_COUNTS", "HISTORY_ROWS",
                     "STRIDE_SECONDS", "STRIDE_ROWS", "HORIZONS", "TOLERANCE_SECONDS",
                     "MAX_GAP_SECONDS", "HISTORY_SECONDS", "PARAMETERS", "CHANNELS",
-                    "RUN_CONFIGS", "FROZEN_TRAINING", "FROZEN_DATA")
+                    "RUN_CONFIGS", "FROZEN_TRAINING", "FROZEN_DATA", "TEST_FINGERPRINT")
 
 
 def apply_expectations(path):
@@ -218,12 +264,13 @@ def apply_expectations(path):
     unknown = set(expected)-set(EXPECTED_GLOBALS)
     if unknown:
         raise ValueError(f"Unknown expectation keys: {sorted(unknown)}")
+    # Merged over the defaults, not replaced: a file that omits a data field still checks it,
+    # against the chronological value, instead of dropping the field from the comparison.
+    frozen = FROZEN_DATA | expected.get("FROZEN_DATA", {})
+    frozen["horizons_seconds"] = tuple(frozen["horizons_seconds"])
     for key, value in expected.items():
         globals()[key] = tuple(value) if key == "HORIZONS" else value
-    if "FROZEN_DATA" in expected:
-        frozen = dict(expected["FROZEN_DATA"])
-        frozen["horizons_seconds"] = tuple(frozen["horizons_seconds"])
-        globals()["FROZEN_DATA"] = frozen
+    globals()["FROZEN_DATA"] = frozen
     return expected
 
 
@@ -255,10 +302,12 @@ def main():
             reference = marks  # E0 defines the frozen origins/targets every model must share.
         else:
             gate.equal(f"{model}.same_origins_and_targets_as_e0", marks, reference)
+        walk = (walk_forward_checks(gate, model, data)
+                if FROZEN_DATA["split_scheme"] == "walk_forward" else {})
         summary[model] = dict(sample_counts=data.metadata["split_manifest"]["sample_counts"],
-                              channels=data.channels, samples=marks,
+                              channels=data.channels, samples=marks, **walk,
                               **normalization_checks(gate, model, data),
-                              **model_checks(gate, model, data))
+                              **model_checks(gate, model, config, data))
         print(f"checked {model}", flush=True)
         del data
         gc.collect()

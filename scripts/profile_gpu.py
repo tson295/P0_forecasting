@@ -33,8 +33,13 @@ EXPECTED_PARAMETERS = dict(e0=0, ofi_lstm=55491, hfformer=22026, patchtst=477059
 EXPECTED_CHANNELS = dict(e0=40, ofi_lstm=20, hfformer=38, patchtst=40, moderntcn=40, lit=40)
 # --suite selects which frozen experiment to profile; the shapes differ, so the
 # measured throughput and the schedule estimate must come from the matching configs.
+# A suite that scales capacity states its own counts; the assertion must still fire.
+SUITE_PARAMETERS = {"wf3": dict(e0=0, ofi_lstm=2990211, hfformer=4677278, patchtst=14434563,
+                                moderntcn=50568195, lit=15995235)}
 SUITES = {"oct2023": ("configs/e0_60s.json", "configs/{model}_60s_base.json", 58774),
-          "gate1y": ("configs/e0_490s_gate1y.json", "configs/{model}_490s_gate1y.json", 274215)}
+          "gate1y": ("configs/e0_490s_gate1y.json", "configs/{model}_490s_gate1y.json", 274215),
+          # Fold 1 is the cheapest to prepare; per-step cost is fold-independent.
+          "wf3": ("configs/e0_wf3_f1.json", "configs/{model}_wf3_f1.json", 333177)}
 CONFIG_PATHS = dict(e0="configs/e0_60s.json") | {m: f"configs/{m}_60s_base.json" for m in LEARNED}
 # (warmup steps, measured-step floor, measured-window floor in seconds); the window floor keeps
 # NVML utilization meaningful and keeps concurrent jobs overlapping instead of finishing in turn.
@@ -44,10 +49,12 @@ EPOCH_SAMPLES = 58774  # Frozen train-split window count; the workload one model
 
 
 def select_suite(name):
-    """Rebind the config paths and the per-epoch workload to one frozen experiment."""
+    """Rebind the config paths, the per-epoch workload and the frozen capacities."""
     e0_path, template, samples = SUITES[name]
     globals()["CONFIG_PATHS"] = dict(e0=e0_path) | {m: template.format(model=m) for m in LEARNED}
     globals()["EPOCH_SAMPLES"] = samples
+    if name in SUITE_PARAMETERS:
+        globals()["EXPECTED_PARAMETERS"] = SUITE_PARAMETERS[name]
 # Section R: ModernTCN alone first, every model alone as the sequential baseline, then 2 -> 5 jobs.
 # The ModernTCN pairings are the "ModernTCN with one or more light models" case section R allows.
 CONCURRENCY_GROUPS = ([["moderntcn"]]+[[m] for m in LEARNED if m != "moderntcn"]
@@ -295,7 +302,9 @@ def mode_cuda_smoke(args):
         try:
             seed_everything(42)
             generator = torch.Generator().manual_seed(42)
-            model = build_model(name, HISTORY_ROWS, EXPECTED_CHANNELS[name]).to(device).train()
+            kwargs = Config.load(ROOT/CONFIG_PATHS[name]).model_kwargs
+            model = build_model(name, HISTORY_ROWS, EXPECTED_CHANNELS[name],
+                                **kwargs).to(device).train()
             parameters = sum(p.numel() for p in model.parameters())
             trainable = [p for p in model.parameters() if p.requires_grad]
             entry.update(parameters=parameters, trainable_tensors=len(trainable))

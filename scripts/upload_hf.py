@@ -27,40 +27,44 @@ ARTIFACT_FILES = (tuple(f"{s}_predictions.csv.gz" for s in SPLITS)
 IGNORE = ("*.csv", "*.pyc", "*__pycache__/*", "*.venv/*", "*.previous/*", ".*", "*/.*")
 DATASET_NAMES = ("BTCUSDT_L10_oct2023.csv", "BTC_L10_gate_1y.csv")
 TAGS = ("time-series-forecasting", "limit-order-book", "market-microstructure", "bitcoin", "btcusdt")
+R2_LABELS = {"r2": "R2", "r2_gain_vs_e0": "R2 gain vs E0"}
 OPTIMIZER = "AdamW(lr, weight_decay) + CosineAnnealingLR(T_max=epochs), no warmup, no scheduler tuning"
 E0_NOTE = ("Untrained reference baseline: predicts a zero log return at every horizon, so "
            "RMSE_E0 = sqrt(mean(y^2)) and every gain below is measured against it.")
+E0_PRICE_NOTE = ("Untrained reference baseline: predicts a zero log return at every horizon, i.e. "
+                 "that the mid price does not move, so its predicted mid is the origin mid, "
+                 "RMSE_E0 = sqrt(mean((target_mid - origin_mid)^2)) in USD, and every gain below is "
+                 "measured against it.")
+# The gate 1-year capture, published by two suites: its rows are sorted at load time, so the file's
+# first and last line are not the interval.
+BOOK_INTERVAL = ("2025-09-17T00:00:00+00:00", "2026-09-16T23:59:50+00:00")
+BOOK_REPAIRS = ("rows sorted by timestamp (a 64,080-row 2026-07-01..07-08 block arrives in front "
+                "of the main block) and 9 duplicate timestamps carrying different payloads dropped "
+                "under `keep_first`: 3,139,606 -> 3,139,597 rows")
 # --suite selects one frozen experiment: its run names, its destination repo, the reports directory
 # the schedule prose quotes, the frozen contract that stands in until the first checkpoint exists,
 # and the prose no metadata file carries.
 SUITES = {
     "oct2023": dict(
-        repo="{user}/Pretrain_Model", e0=("e0", "e0_60s"), reports="reports/vast",
+        repo="{user}/Pretrain_Model", e0=(("e0", "e0_60s"),), reports="reports/vast",
         runs=(("ofi_lstm", "ofi_lstm_60s_base"), ("hfformer", "hfformer_60s_base"),
               ("patchtst", "patchtst_60s_base"), ("moderntcn", "moderntcn_60s_base"),
               ("lit", "lit_60s_base")),
         csv="BTCUSDT_L10_oct2023.csv", contract=None, e0_note=E0_NOTE, sections=(),
-        price_metrics=False,
+        price_metrics=False, r2_key="r2",
         title="BTCUSDT L10 multi-horizon log-return forecasting (60s history)",
         intro="Five learned models plus the untrained `e0` zero-return baseline, trained once under a "
               "frozen experiment contract on a single October 2023 BTCUSDT L10 limit-order-book file. "
               "Every checkpoint (`best`, `last`), every prediction table and every metric file below "
               "was produced by that single run; nothing here is tuned, re-fitted or re-scored."),
     "gate1y": dict(
-        repo="Tson29/Pretrain_Model_Gate_1Y", e0=("e0", "e0_490s_gate1y"), reports="reports/vast_gate1y",
+        repo="Tson29/Pretrain_Model_Gate_1Y", e0=(("e0", "e0_490s_gate1y"),),
+        reports="reports/vast_gate1y",
         runs=(("ofi_lstm", "ofi_lstm_490s_gate1y"), ("hfformer", "hfformer_490s_gate1y"),
               ("patchtst", "patchtst_490s_gate1y"), ("moderntcn", "moderntcn_490s_gate1y"),
               ("lit", "lit_490s_gate1y")),
         csv="BTC_L10_gate_1y.csv", contract="contracts/gate1y.json", price_metrics=True,
-        # The rows are sorted at load time, so the file's first and last line are not the interval.
-        interval=("2025-09-17T00:00:00+00:00", "2026-09-16T23:59:50+00:00"),
-        row_repairs="rows sorted by timestamp (a 64,080-row 2026-07-01..07-08 block arrives in front "
-                    "of the main block) and 9 duplicate timestamps carrying different payloads dropped "
-                    "under `keep_first`: 3,139,606 -> 3,139,597 rows",
-        e0_note="Untrained reference baseline: predicts a zero log return at every horizon, i.e. that "
-                "the mid price does not move, so its predicted mid is the origin mid, "
-                "RMSE_E0 = sqrt(mean((target_mid - origin_mid)^2)) in USD, and every gain below is "
-                "measured against it.",
+        r2_key="r2", interval=BOOK_INTERVAL, row_repairs=BOOK_REPAIRS, e0_note=E0_PRICE_NOTE,
         title="BTC L10 multi-horizon forecasting on a one-year 10s book (490s history, raw-price metrics)",
         intro="Five learned models plus the untrained `e0` zero-return baseline, trained once under a "
               "frozen experiment contract on a one-year BTC L10 limit-order-book file sampled on an "

@@ -18,7 +18,7 @@ STEP_US = 10_000_000
 # file measures a 1.236s median, so ceil(60/1.236) is that same 49).
 CAPACITY = dict(ofi_lstm=(20, 55491), hfformer=(38, 22026), patchtst=(40, 477059),
                 moderntcn=(40, 50568195), lit=(40, 736547))
-PRICE_KEYS = {"samples", "horizons", "units", "mse", "rmse", "mae", "r2",
+PRICE_KEYS = {"samples", "horizons", "units", "mse", "rmse", "mae", "r2_gain_vs_e0",
               "rmse_e0", "rmse_gain_vs_e0", "mae_e0", "mean_mse"}
 
 
@@ -191,22 +191,26 @@ def test_price_metric_contract_for_perfect_and_e0_predictions():
     np.testing.assert_allclose(e0["mae_e0"], np.abs(target-origin).mean(axis=0), rtol=1e-12, atol=0)
     # Known and deliberate: sigma(mid) is five figures and every error is two, so
     # price-space R2 is ~1 even for E0. Read rmse_gain_vs_e0, do not "fix" R2.
-    assert min(e0["r2"]) > .9999
+    # Mean-based R2 on price is gone: it answered "do you know the price level", which E0
+    # also does, so it read ~0.9999 for everything. R2 is now measured against E0 itself.
+    assert "r2" not in e0
+    assert e0["r2_gain_vs_e0"] == [0., 0., 0.] and perfect["r2_gain_vs_e0"] == [1., 1., 1.]
     predicted = origin+rng.normal(scale=40., size=(512, 3))
     result = price_metrics(origin, target, predicted)
     assert set(result) == PRICE_KEYS and result["units"] == "quote_currency"
     assert result["horizons"] == ["1m", "2m", "3m"] and result["samples"] == 512
-    assert all(len(result[k]) == 3 for k in ("rmse", "mae", "r2", "rmse_e0", "rmse_gain_vs_e0"))
+    assert all(len(result[k]) == 3
+               for k in ("rmse", "mae", "r2_gain_vs_e0", "rmse_e0", "rmse_gain_vs_e0"))
     # The perfect and E0 corners collapse error onto baseline, so they pin neither the
     # gain formula nor the R2 denominator. Away from them every family has its own oracle.
     rmse = np.sqrt(((predicted-target)**2).mean(axis=0))
     rmse_e0 = np.sqrt(((origin-target)**2).mean(axis=0))
     for key, oracle in (("rmse", rmse), ("mae", np.abs(predicted-target).mean(axis=0)),
                         ("rmse_e0", rmse_e0), ("mae_e0", np.abs(origin-target).mean(axis=0)),
-                        # Standard R2 divides by the variance of the target mid; R2_OS would
-                        # divide by sum(mid^2) and score ~1 for everything at this price level.
-                        ("r2", 1-((predicted-target)**2).sum(axis=0)
-                         / ((target-target.mean(axis=0))**2).sum(axis=0)),
+                        # R2 is measured against E0's squared error, not the variance of the
+                        # price level, which every model including E0 tracks to ~0.9999.
+                        ("r2_gain_vs_e0", 1-((predicted-target)**2).sum(axis=0)
+                         / ((origin-target)**2).sum(axis=0)),
                         ("rmse_gain_vs_e0", 1-rmse/rmse_e0)):
         np.testing.assert_allclose(result[key], oracle, rtol=1e-12, atol=0)
     # This prediction is worse than E0, so the headline column has to go negative.

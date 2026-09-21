@@ -5,12 +5,13 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from .preprocessing import (load_csv, chronological_split, features, Standardizer,
-                            GLOBAL_STANDARDIZER_MODELS, normalization_policy)
+from .preprocessing import (load_csv, chronological_split, walk_forward_split, target_limits,
+                            features, Standardizer, GLOBAL_STANDARDIZER_MODELS,
+                            normalization_policy)
 
 
 class LOBDataset(Dataset):
-    def __init__(self, x, raw, bounds, history_rows, stride_rows, config):
+    def __init__(self, x, raw, bounds, history_rows, stride_rows, config, target_limit_ns=None):
         self.x, self.mid = x, raw.mid
         self.timestamps = raw.timestamps
         self.history_rows = history_rows
@@ -19,6 +20,11 @@ class LOBDataset(Dataset):
         wanted = raw.timestamps[origins, None] + np.array(config.horizons_seconds, dtype=np.int64)*10**9
         target = np.searchsorted(raw.timestamps, wanted, side="left")
         in_bounds = (target < hi).all(axis=1)
+        if target_limit_ns is not None:
+            # Purge and embargo: no sample may read a record at or after the limit, so the
+            # last record this split touches stays clear of the next split's first record.
+            safe_target = np.minimum(target, len(raw.timestamps)-1)
+            in_bounds &= (raw.timestamps[safe_target] < target_limit_ns).all(axis=1)
         safe = np.minimum(target, len(raw.timestamps)-1)
         overshoot = raw.timestamps[safe]-wanted
         tolerance = round(config.target_tolerance_seconds*1e9)
@@ -51,7 +57,10 @@ class PreparedData:
 def prepare_data(config, saved_metadata=None):
     config.validate()
     raw = load_csv(config.data)
-    ranges, manifest = chronological_split(raw, config.data)
+    split = (walk_forward_split if config.data.split_scheme == "walk_forward"
+             else chronological_split)
+    ranges, manifest = split(raw, config.data)
+    limits = target_limits(raw, ranges, config.data)
     train_hi = ranges["train"][1]
     train_dt = np.diff(raw.timestamps[:train_hi])/1e9
     train_good = ~raw.bad_edges[:train_hi-1]
@@ -80,11 +89,19 @@ def prepare_data(config, saved_metadata=None):
     else:
         scaler = Standardizer.fit(x[:train_hi]) if global_standardizer else None
     x = scaler.transform(x) if scaler is not None else np.ascontiguousarray(x, dtype=np.float32)
-    datasets = {name: LOBDataset(x, raw, bounds, history, stride, config.data)
+    datasets = {name: LOBDataset(x, raw, bounds, history, stride, config.data, limits[name])
                 for name, bounds in ranges.items()}
     if any(len(d) == 0 for d in datasets.values()):
         raise ValueError(f"No valid windows in a split: { {k:len(v) for k,v in datasets.items()} }")
     manifest["sample_counts"] = {name: len(ds) for name, ds in datasets.items()}
+    manifest["target_limits_ns"] = limits
+    # Recorded, not asserted here: scripts/check_leakage.py re-derives it from raw timestamps.
+    manifest["split_separation_seconds"] = {
+        name: (None if limits[name] is None else
+               float((int(raw.timestamps[ranges[following][0]])
+                      - int(raw.timestamps[ds.target_indices[:, -1].max()]))/1e9))
+        for (name, ds), following in zip(datasets.items(), ["validation", "test", None])
+        if following is not None}
     manifest["origin_index_sha256"] = {}
     import hashlib
     for name, ds in datasets.items():

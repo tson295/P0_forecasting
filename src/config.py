@@ -26,6 +26,14 @@ class DataConfig:
     horizons_seconds: tuple = (60, 120, 180)
     train_fraction: float = 0.70
     validation_fraction: float = 0.15
+    # Walk-forward: the last test_fraction of elapsed time is held out, the rest is cut
+    # into folds+1 equal blocks, and fold k trains on blocks [0,k) and validates on block k.
+    split_scheme: str = "chronological"  # chronological | walk_forward
+    folds: int = 3
+    fold: int = 1                        # 1-based
+    test_fraction: float = 0.15
+    # No sample may touch a record within embargo_seconds of the next split's first record.
+    embargo_seconds: float = 0.0
     train_end: str | None = None  # ISO-8601, exclusive UTC boundary.
     validation_end: str | None = None
     of_representation: str = "of"
@@ -37,6 +45,15 @@ class DataConfig:
             raise ValueError("history_seconds must be a positive number of seconds")
         if self.duplicate_timestamp_policy not in ("error", "keep_first", "keep_last"):
             raise ValueError("duplicate_timestamp_policy must be error, keep_first or keep_last")
+        if self.split_scheme not in ("chronological", "walk_forward"):
+            raise ValueError("split_scheme must be chronological or walk_forward")
+        if self.split_scheme == "walk_forward":
+            if self.folds < 2 or not 1 <= self.fold <= self.folds:
+                raise ValueError("walk_forward needs folds >= 2 and 1 <= fold <= folds")
+            if not 0 < self.test_fraction < 1:
+                raise ValueError("test_fraction must be in (0, 1)")
+        if self.embargo_seconds < 0:
+            raise ValueError("embargo_seconds must be nonnegative")
         if self.history_rows is not None and self.history_rows < 2:
             raise ValueError("history_rows must be >= 2")
         if self.stride_seconds is not None and self.stride_seconds <= 0:

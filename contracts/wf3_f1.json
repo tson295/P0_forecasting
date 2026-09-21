@@ -1,0 +1,98 @@
+{
+  "CSV_SHA256": "6d8f82fbf3d0d0078b22c44cf5a06c3d82259ca16c71b16bde9b6632a8fbe6df",
+  "DATA_STATS": {
+    "rows": 3139597,
+    "median_dt_seconds": 10.0,
+    "p99_dt_seconds": 10.0,
+    "max_dt_seconds": 7210.0,
+    "gaps_gt_2_seconds": 3139596,
+    "gaps_gt_max_gap": 31,
+    "segment_transitions": 0
+  },
+  "RANGES": {
+    "train": [
+      0,
+      666900
+    ],
+    "validation": [
+      666900,
+      1333126
+    ],
+    "test": [
+      2667637,
+      3139597
+    ]
+  },
+  "SAMPLE_COUNTS": {
+    "train": 333177,
+    "validation": 332849,
+    "test": 235848
+  },
+  "HISTORY_ROWS": 49,
+  "STRIDE_SECONDS": 20.0,
+  "STRIDE_ROWS": 2,
+  "HORIZONS": [
+    60,
+    120,
+    180
+  ],
+  "TOLERANCE_SECONDS": 10.0,
+  "MAX_GAP_SECONDS": 10.0,
+  "HISTORY_SECONDS": 490,
+  "PARAMETERS": {
+    "e0": 0,
+    "ofi_lstm": 2990211,
+    "hfformer": 4677278,
+    "patchtst": 14434563,
+    "moderntcn": 50568195,
+    "lit": 15995235
+  },
+  "CHANNELS": {
+    "e0": 40,
+    "ofi_lstm": 20,
+    "hfformer": 38,
+    "patchtst": 40,
+    "moderntcn": 40,
+    "lit": 40
+  },
+  "RUN_CONFIGS": {
+    "e0": "e0_wf3_f1",
+    "ofi_lstm": "ofi_lstm_wf3_f1",
+    "hfformer": "hfformer_wf3_f1",
+    "patchtst": "patchtst_wf3_f1",
+    "moderntcn": "moderntcn_wf3_f1",
+    "lit": "lit_wf3_f1"
+  },
+  "FROZEN_TRAINING": {
+    "epochs": 30,
+    "batch_size": 128,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "gradient_clip": 1.0,
+    "gradient_accumulation": 1,
+    "seed": 42,
+    "loss": "mse",
+    "auto_batch_size": false
+  },
+  "FROZEN_DATA": {
+    "horizons_seconds": [
+      60,
+      120,
+      180
+    ],
+    "target_tolerance_seconds": 10.0,
+    "max_gap_seconds": 10.0,
+    "history_seconds": 490,
+    "history_rows_override": null,
+    "stride_seconds_override": 20.0,
+    "split_scheme": "walk_forward",
+    "folds": 3,
+    "fold": 1,
+    "test_fraction": 0.15,
+    "embargo_seconds": 180.0
+  },
+  "TEST_FINGERPRINT": {
+    "origins": "75601d2e6411ea3d893ea3a4e525fb7a1d4f8e526c43e6f086766ed4edcd5120",
+    "targets": "4d17d09f58b3d11acea49ff34ef8a7e71be0bac75ec826a07b2efb2100f69f64"
+  }
+}

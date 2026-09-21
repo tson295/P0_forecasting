@@ -147,6 +147,57 @@ def chronological_split(raw, config):
     return ranges, manifest
 
 
+def walk_forward_split(raw, config):
+    """Expanding-window walk forward with a permanently held-out tail test split.
+
+    The last test_fraction of elapsed time is the test split and is never trained or
+    selected on. The remainder is cut into folds+1 equal blocks by elapsed time; fold
+    k (1-based) trains on blocks [0, k) and validates on block k, so every fold
+    validates strictly after everything it trained on.
+    """
+    ts = raw.timestamps
+    start, end = int(ts[0]), int(ts[-1])
+    duration = end-start
+    test_cut = start+round(duration*(1-config.test_fraction))
+    edges = [start+round((test_cut-start)*i/(config.folds+1)) for i in range(config.folds+1)]
+    edges.append(test_cut)
+    rows = [int(np.searchsorted(ts, cut, side="left")) for cut in edges]
+    k = config.fold
+    ranges = dict(train=(0, rows[k]), validation=(rows[k], rows[k+1]),
+                  test=(rows[-1], len(ts)))
+    if any(hi-lo < 2 for lo, hi in ranges.values()):
+        raise ValueError(f"Walk-forward fold {k} produced an empty split: {ranges}")
+    manifest = dict(policy="walk_forward expanding window; history, origin and all targets inside "
+                           "one split; embargo before the next split's first record",
+                    scheme="walk_forward", folds=config.folds, fold=k,
+                    test_fraction=config.test_fraction,
+                    embargo_seconds=config.embargo_seconds,
+                    source=raw.source, block_boundaries_ns=edges, block_boundary_rows=rows,
+                    boundaries_ns=[int(ts[rows[k]]), int(ts[rows[k+1]])], ranges=ranges,
+                    boundaries_utc=[pd.Timestamp(int(ts[r]), unit="ns", tz="UTC").isoformat()
+                                    for r in (rows[k], rows[k+1])],
+                    block_boundaries_utc=[pd.Timestamp(t, unit="ns", tz="UTC").isoformat()
+                                          for t in edges])
+    return ranges, manifest
+
+
+def target_limits(raw, ranges, config):
+    """Exclusive upper bound, in ns, on the last target a split's samples may touch.
+
+    Purging plus embargo: a train sample must not read a record within embargo_seconds
+    of the first record the next split uses, so the two splits cannot share information
+    across the boundary. Expressed in timestamps, not rows, so gaps widen it rather than
+    narrow it. The final split has no successor and so no limit.
+    """
+    ts = raw.timestamps
+    embargo = round(config.embargo_seconds*1e9)
+    order = ["train", "validation", "test"]
+    limits = {}
+    for name, following in zip(order, order[1:]+[None]):
+        limits[name] = None if following is None else int(ts[ranges[following][0]])-embargo
+    return limits
+
+
 def features(raw, model, representation, ranges):
     reset = np.r_[True, raw.bad_edges].copy()
     for lo, _ in ranges.values():

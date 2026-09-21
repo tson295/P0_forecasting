@@ -48,10 +48,11 @@ def price_metrics(origin_mid, target_mid, predicted_mid):
     E0 predicts "the price does not move", so its predicted mid IS the origin mid
     and RMSE_E0 = sqrt(mean((mid_target - mid_origin)^2)) in price units.
 
-    Standard R2 is reported for contract completeness, but in price space it is
-    dominated by the level of the price, not by forecast skill: sigma(target mid)
-    runs to five figures while every error here is around two, so R2 sits near 1
-    for any model including E0. Read rmse_gain_vs_e0 instead.
+    R2 is measured against E0, not against the mean of the price. Mean-based R2 in
+    price space answers "do you know the price level", which every model does, so it
+    sits near 1 for any model including E0 and carries no information. R2 gain vs E0
+    is 1 - SSE_model/SSE_E0: positive beats E0, 0 equals E0, negative is worse. It is
+    the squared-error twin of rmse_gain_vs_e0, related by 1-(1-rmse_gain)^2.
     """
     origin = np.asarray(origin_mid, dtype=np.float64)
     target = np.asarray(target_mid, dtype=np.float64)
@@ -63,12 +64,12 @@ def price_metrics(origin_mid, target_mid, predicted_mid):
     error, baseline = predicted-target, origin-target
     mse = (error**2).mean(axis=0)
     rmse, rmse_e0 = np.sqrt(mse), np.sqrt((baseline**2).mean(axis=0))
-    sst = ((target-target.mean(axis=0))**2).sum(axis=0)
-    sse = (error**2).sum(axis=0)
+    sse, sse_e0 = (error**2).sum(axis=0), (baseline**2).sum(axis=0)
     result = dict(samples=int(len(target)), horizons=list(HORIZON_LABELS), units="quote_currency",
                   mse=mse.tolist(), rmse=rmse.tolist(),
                   mae=np.abs(error).mean(axis=0).tolist(),
-                  r2=[float(1-sse[i]/sst[i]) if sst[i] > 0 else None for i in range(3)],
+                  r2_gain_vs_e0=[float(1-sse[i]/sse_e0[i]) if sse_e0[i] > 0 else None
+                                 for i in range(3)],
                   rmse_e0=rmse_e0.tolist(),
                   rmse_gain_vs_e0=_gain(rmse.tolist(), rmse_e0.tolist()),
                   mae_e0=np.abs(baseline).mean(axis=0).tolist(),
