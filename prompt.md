@@ -1,2165 +1,1381 @@
-Bạn đang làm việc trên một máy Vast.ai Linux có **1 × NVIDIA RTX 4090 24GB**.
+You are starting from a completely NEW Claude Code session on a Vast.ai machine with:
 
-Bạn có:
+* **1× NVIDIA RTX 4090 24GB**
+* Ubuntu/Linux
+* GitHub and Hugging Face credentials expected to already be configured
 
-* `GITHUB_TOKEN`: có quyền clone/pull/push GitHub repo.
-* `HF_TOKEN`: có quyền tạo/push Hugging Face repo.
-* Internet access.
-* Repo GitHub:
+You have NO previous conversation context.
+
+Your job is to autonomously:
+
+1. clone and set up the repository;
+2. create a new Git branch;
+3. save THIS ENTIRE PROMPT verbatim into `prompt.md`;
+4. download and verify the required dataset from Hugging Face;
+5. create a new Hugging Face experiment repository;
+6. implement the classification experiment below;
+7. benchmark and maximize safe GPU concurrency;
+8. run the complete initial experiment;
+9. analyze results;
+10. deepen the SAME classification method with controlled follow-up experiments;
+11. generate reports/artifacts;
+12. push code to GitHub;
+13. push model artifacts/results to Hugging Face;
+14. verify both destinations before declaring completion.
+
+Do NOT merely prepare code or commands. Actually execute the work.
+
+Do not ask for confirmation for normal implementation decisions. Inspect the existing project, make reasonable choices, record them, and continue.
+
+---
+
+# 0. Authentication
+
+First verify GitHub:
+
+```bash
+ssh -T git@github.com
+```
+
+Set up Hugging Face environment:
+
+```bash
+export HF_HOME="$HOME/.hf_home"
+mkdir -p "$HF_HOME"
+hf auth whoami
+```
+
+Ensure all later shells/tmux jobs inherit:
+
+```bash
+export HF_HOME="$HOME/.hf_home"
+```
+
+If GitHub or Hugging Face authentication is genuinely unavailable, do not fabricate credentials. Report the exact missing authentication and stop.
+
+Otherwise continue automatically.
+
+---
+
+# 1. Clone the project
+
+Work under `$HOME`.
+
+Repository:
 
 ```text
-https://github.com/tson295/Pretrain_Model
+git@github.com:tson295/P0_forecasting.git
 ```
 
-Đây là một task **hoàn chỉnh và self-contained**. Không cần tìm prompt cũ, không cần suy diễn “giữ config trước đó”, không tự chọn architecture/hyperparameter khác.
-
-Mục tiêu:
-
-1. Clone repo.
-2. Sửa chính xác những điểm được mô tả bên dưới.
-3. Chạy toàn bộ unit tests + CUDA smoke tests.
-4. Base-train từ random initialization 5 learned models:
-
-   * OF/OFI-LSTM
-   * HFformer
-   * PatchTST
-   * ModernTCN
-   * LiT-L10
-5. Evaluate E0 baseline.
-6. Tận dụng RTX 4090 hiệu quả bằng cách chạy nhiều model song song nếu profiling chứng minh có lợi.
-7. Lưu đầy đủ `best` và `last` checkpoints.
-8. Lưu prediction files để sau này có thể tái tạo toàn bộ figures mà không cần inference lại.
-9. Push source code về GitHub.
-10. Push checkpoints, metrics, predictions và run metadata lên Hugging Face.
-11. Sau cùng báo cáo đầy đủ kết quả và đường dẫn artifact.
-
-Không được hyperparameter tuning.
-Không được thay architecture ngoài những thay đổi được chỉ định bên dưới.
-Không dùng test set để chọn checkpoint, epoch hoặc architecture.
-Không download pretrained model weights.
-Tất cả 5 learned models đều được **khởi tạo random và train từ đầu trên BTC L10 train split**.
-
----
-
-# A. CLONE REPO VÀ AUTHENTICATION
-
-Clone:
+If it is not present:
 
 ```bash
-git clone https://github.com/tson295/Pretrain_Model.git
-cd Pretrain_Model
+cd ~
+git clone git@github.com:tson295/P0_forecasting.git
+cd P0_forecasting
 ```
 
-Dùng `GITHUB_TOKEN` để authenticate cho push.
-
-Ưu tiên GitHub CLI:
+If already present:
 
 ```bash
-printf '%s' "$GITHUB_TOKEN" | gh auth login --with-token
-gh auth setup-git
+cd ~/P0_forecasting
+git fetch --all --tags
 ```
 
-Không:
-
-* echo token ra log;
-* ghi token vào source;
-* commit token;
-* embed token trực tiếp vào Git remote URL nếu tránh được.
-
-Kiểm tra:
-
-```bash
-git status
-git rev-parse HEAD
-nvidia-smi
-python --version
-```
-
-Ghi lại commit SHA ban đầu.
-
----
-
-# B. ENVIRONMENT
-
-Tạo virtual environment.
-
-RTX 4090 cần CUDA-enabled PyTorch.
-
-Không được vô tình cài CPU-only PyTorch.
-
-Sau khi setup, verify:
-
-```python
-import torch
-
-assert torch.cuda.is_available()
-print(torch.__version__)
-print(torch.version.cuda)
-print(torch.cuda.get_device_name(0))
-print(torch.cuda.get_device_properties(0).total_memory)
-```
-
-GPU phải là RTX 4090 với khoảng 24GB VRAM.
-
-Cài các dependency trong `requirements.txt` và thêm `huggingface_hub` nếu repo chưa có.
-
-Không download pretrained weights từ Hugging Face hoặc nguồn bên ngoài.
-
----
-
-# C. DATASET — FREEZE CHÍNH XÁC FILE
-
-Dataset bắt buộc phải là:
+The existing WF3 experiment used training-source commit:
 
 ```text
-BTCUSDT_L10_oct2023.csv
+fdbb369946cc07eae9e615c968943036507be129
+```
+
+Verify this commit exists.
+
+Inspect the current repository and the existing private Hugging Face repo:
+
+```text
+Tson29/Pretrain_Model_WF3
+```
+
+Read at minimum:
+
+```text
+README.md
+reports/FINAL_REPORT_WF3.md
+```
+
+Use the existing WF3 implementation as the source of truth for:
+
+* preprocessing;
+* features;
+* walk-forward split;
+* sample eligibility;
+* target timestamp lookup;
+* embargo;
+* E0;
+* metric implementation;
+* artifact conventions.
+
+Do not accidentally base this work on an unrelated experimental branch.
+
+---
+
+# 2. Create a separate Git branch
+
+This experiment must NOT modify the existing WF3 branch.
+
+From the verified WF3 codebase create:
+
+```bash
+git checkout -b classification
+```
+
+If `classification` already exists locally/remotely, inspect it first. Continue it only if it clearly belongs to this experiment; otherwise avoid overwriting unrelated work.
+
+All new code must be pushed to:
+
+```text
+GitHub:
+tson295/P0_forecasting
+
+Branch:
+classification
+```
+
+Never force-push unless absolutely unavoidable.
+
+---
+
+# 3. SAVE THIS PROMPT INTO THE REPOSITORY
+
+Immediately after cloning and switching to the `classification` branch:
+
+Create:
+
+```text
+prompt.md
+```
+
+at the repository root.
+
+**Copy the ENTIRE content of this prompt verbatim into `prompt.md`, from the first sentence through the final instruction.**
+
+Do not summarize it.
+Do not rewrite it.
+Do not omit sections.
+Do not replace it with a link.
+
+`prompt.md` is part of experiment provenance and must be committed and pushed to GitHub with the implementation.
+
+Do this before substantial implementation begins.
+
+---
+
+# 4. Dataset — download directly from Hugging Face
+
+The dataset has already been uploaded.
+
+Private Hugging Face DATASET repository:
+
+```text
+Tson29/btc-l10-gate-1y
+```
+
+Required file:
+
+```text
+BTC_L10_gate_1y.csv
+```
+
+The repository contains the full raw CSV, approximately 1.15 GB.
+
+Download it directly using the authenticated Hugging Face account.
+
+For example, use `hf download` or `huggingface_hub.hf_hub_download`.
+
+Do NOT ask the user to upload the dataset manually.
+
+Do NOT substitute another dataset.
+
+After download, verify:
+
+```text
+Expected raw rows:
+3,139,606
+```
+
+Expected date range:
+
+```text
+2025-09-17T00:00:00Z
+→
+2026-09-16T23:59:50Z
 ```
 
 Expected SHA256:
 
 ```text
-e42bb29e79bdff68f94540916983b1cba2bbbfd745b30933e755e04ec92a60ab
+6d8f82fbf3d0d0078b22c44cf5a06c3d82259ca16c71b16bde9b6632a8fbe6df
 ```
 
-Nếu `$LOB_CSV` tồn tại, dùng file đó.
+Compute SHA256 locally and require an exact match.
 
-Nếu `$LOB_CSV` không tồn tại nhưng `$HF_DATASET_REPO` tồn tại, dùng `$HF_TOKEN` tải đúng file `BTCUSDT_L10_oct2023.csv` từ repo đó.
+If the hash does not match, stop the experiment and report the mismatch.
 
-Nếu không tìm được đúng file thì **dừng**, không tự lấy dataset khác.
+The raw file is intentionally NOT sorted chronologically.
 
-Trước khi làm bất cứ training nào:
+Reuse the existing WF3 repair procedure:
 
-```bash
-sha256sum "$LOB_CSV"
-```
+* sort by timestamp;
+* duplicate timestamp policy = keep first;
+* 9 duplicate rows were previously removed.
 
-Phải có:
+Expected usable rows after repair:
 
 ```text
-actual_sha256 ==
-e42bb29e79bdff68f94540916983b1cba2bbbfd745b30933e755e04ec92a60ab
+3,139,597
 ```
 
-Expected audit:
+Do NOT push this raw CSV to GitHub.
+
+Do NOT upload another duplicate copy into the experiment model repository.
+
+The raw data stays in:
 
 ```text
-rows                    = 678362
-median dt               ≈ 1.236 s
-p99 dt                  ≈ 1.683 s
-max dt                  ≈ 6.221 s
-number of gaps > 2 s    = 60
-segment transitions     = 1
+Tson29/btc-l10-gate-1y
 ```
-
-Nếu SHA không đúng: dừng.
-
-Nếu SHA đúng nhưng statistics không đúng: dừng và báo lỗi preprocessing.
 
 ---
 
-# D. TASK — FREEZE
+# 5. Create a new Hugging Face experiment repository
 
-Mid-price:
-
-```text
-mid_t = (best_bid_t + best_ask_t) / 2
-```
-
-Direct targets:
+Do NOT overwrite:
 
 ```text
-y_1m = log(mid_(t+60s)  / mid_t)
-y_2m = log(mid_(t+120s) / mid_t)
-y_3m = log(mid_(t+180s) / mid_t)
+Tson29/Pretrain_Model_WF3
 ```
 
-Output learned model:
+Create a new PRIVATE Hugging Face MODEL repository:
 
 ```text
-[B, 3]
+Tson29/LOB_Classification_WF3
 ```
 
-theo thứ tự:
+If it already exists from a partial attempt, inspect it and resume safely rather than destroying valid artifacts.
 
-```text
-[pred_return_1m, pred_return_2m, pred_return_3m]
-```
+This new repo will contain:
 
-Không recursive forecasting.
-
-Không forecast phút 1 rồi feed prediction đó để forecast phút 2.
+* checkpoints;
+* configs;
+* label definitions;
+* predictions;
+* metrics;
+* training histories;
+* reports;
+* leakage audit;
+* hardware/concurrency benchmarks;
+* experiment manifests.
 
 ---
 
-# E. TARGET LOOKUP — FREEZE
+# 6. Existing WF3 contract — KEEP IT
 
-Timestamp irregular.
+Dataset:
 
-Không dùng:
+* BTCUSDT L10;
+* 10 bid levels + 10 ask levels;
+* price and quantity;
+* nominal 10-second grid.
 
-```text
-origin + fixed number of rows
-```
-
-Phải tìm:
-
-```python
-target_index = np.searchsorted(
-    timestamps,
-    origin_timestamp + horizon,
-    side="left",
-)
-```
-
-cho:
+Preserve:
 
 ```text
-60 s
-120 s
+History = 490 s = 49 rows
+Stride = 20 s = 2 rows
+```
+
+Horizons:
+
+```text
+h1 = 60 s
+h2 = 120 s
+h3 = 180 s
+```
+
+Walk-forward:
+
+```text
+3 expanding folds
+```
+
+Final held-out test:
+
+```text
+last 15% of elapsed time
+```
+
+Embargo:
+
+```text
 180 s
 ```
 
-Observation được chọn phải là observation đầu tiên:
+The final test set must remain identical for every:
 
-```text
-timestamp >= origin_timestamp + horizon
-```
+* architecture;
+* fold;
+* binning method;
+* multi/single formulation.
 
-Target tolerance:
+Reuse the exact existing WF3:
 
-```text
-2.0 seconds
-```
+* history validity;
+* gap handling;
+* target timestamp selection;
+* tolerance;
+* leakage control;
+* preprocessing;
+* train-only normalization.
 
-Nếu overshoot > 2.0s thì sample invalid.
-
----
-
-# F. CONTINUITY — FREEZE
-
-Một edge giữa snapshot `i` và `i+1` là bad nếu:
-
-```text
-dt > 2.0 seconds
-OR
-segment_id changes
-```
-
-Lưu ý:
-
-```text
-dt == 2.0 seconds
-```
-
-vẫn hợp lệ.
-
-Một sample chỉ hợp lệ nếu **không có bad edge nào từ history start cho tới target 3 phút**.
-
-Tức phải sạch trên toàn đoạn:
-
-```text
-history_start
-→ origin
-→ target_1m
-→ target_2m
-→ target_3m
-```
-
-Dùng prefix sum của bad edges để kiểm tra O(1).
-
-Không scan toàn window trong mỗi `__getitem__`.
-
-Không forward-fill.
-Không interpolation.
-Không reorder timestamps.
-Không deduplicate âm thầm.
+Do NOT redesign the split.
 
 ---
 
-# G. TRAIN / VALIDATION / TEST SPLIT — FREEZE
+# 7. Motivation
 
-Không dùng random split.
+Existing regression results showed:
 
-Không tự tính lại split theo một policy khác.
+* E0 is extremely strong.
+* E0 predicts future mid = current/origin mid.
+* ModernTCN improved substantially as training history increased from F1 → F2 → F3.
+* ModernTCN F3 beat E0 on all h1/h2/h3 in squared-error metrics.
+* OFI-LSTM showed positive test behavior particularly at h3 for F2/F3.
+* h3 appears to contain clearer signal than h1/h2.
+* one possible explanation is stronger microstructure noise at shorter horizons.
 
-Dùng chính xác chronological boundaries sau:
-
-```text
-train_end =
-2023-10-07T22:01:22.396Z
-
-validation_end =
-2023-10-09T09:35:56.2555Z
-```
-
-Expected row ranges:
+The new experiment tests whether direct continuous regression can be replaced by:
 
 ```text
-train:
-[0, 477086)
-
-validation:
-[477086, 578798)
-
-test:
-[578798, 678362)
+future price displacement
+→ discrete price-change class
+→ classification
+→ decode class back into price
 ```
 
-Mọi history và mọi target của sample phải nằm hoàn toàn trong cùng một split.
+This discretized classification formulation is the CORE METHOD.
 
-Không được để train label đi vào validation.
-
-Không được dùng validation/test để fit corpus-level statistics.
+Do not abandon it later because an initial result is bad.
 
 ---
 
-# H. HISTORY + STRIDE — FREEZE
+# 8. Classification target
 
-Base experiment chỉ chạy:
-
-```text
-history_seconds = 60
-history_rows = None
-stride_seconds = None
-```
-
-Không chạy 120s hoặc 180s history trong lần này.
-
-Code hiện tại phải resolve history bằng:
+For every valid origin `t` and horizon `h`:
 
 ```text
-history_rows =
-ceil(
-    history_seconds /
-    median_continuous_train_dt
-)
+delta_h(t) = target_mid(t+h) - origin_mid(t)
 ```
 
-Với dataset này expected:
+where:
 
 ```text
-history_rows = 49
+h ∈ {60s, 120s, 180s}
 ```
 
-Khi:
+The target is therefore USD mid-price displacement from E0.
 
-```text
-stride_seconds = None
-```
+Do NOT implement:
 
-giữ logic:
+* binary direction prediction;
+* up/down;
+* down/flat/up.
 
-```text
-stride_seconds =
-history_seconds / 6
-```
-
-tức:
-
-```text
-10.0 seconds
-```
-
-Sau đó convert sang rows bằng current cadence logic.
-
-Expected:
-
-```text
-stride_rows = 8
-```
-
-Không thay thành stride 1.
-Không đổi stride để tăng số training samples.
-
-Expected valid sample counts gần chính xác:
-
-```text
-train       = 58774
-validation  = 12427
-test        = 12145
-```
-
-Nếu sample counts lệch đáng kể thì audit dataset logic trước khi train.
+The task is multi-class prediction of a price-change interval.
 
 ---
 
-# I. FEATURE NORMALIZATION
+# 9. Freeze class definitions using F1 TRAIN only
 
-## I.1 Models KHÔNG phải HFformer
+This is critical.
 
-OF/OFI-LSTM, LiT và raw-input preprocessing nơi thích hợp tiếp tục dùng **train-only preprocessing** hiện có, trừ normalization nội bộ vốn là một phần architecture của PatchTST/ModernTCN.
+All class boundaries must be fitted from:
 
-Không dùng validation/test statistics.
+```text
+FOLD 1 TRAIN ONLY
+```
+
+Then freeze them.
+
+Exactly the same boundaries must be applied to:
+
+```text
+F1 train/validation/test
+F2 train/validation/test
+F3 train/validation/test
+```
+
+Never recalculate boundaries for F2/F3.
+
+Reason:
+
+The experiment explicitly studies whether increasing training data F1 → F2 → F3 improves learning.
+
+If class definitions change between folds, that comparison becomes confounded.
+
+Never use:
+
+* validation;
+* test;
+* future folds
+
+to define boundaries.
+
+Save all boundaries/statistics as explicit JSON artifacts.
 
 ---
 
-# J. HFFORMER NORMALIZATION — FREEZE CHÍNH XÁC
+# 10. METHOD A — PRIMARY: equal-width p99 classification
 
-Đây là thay đổi bắt buộc.
-
-HFformer **KHÔNG ĐƯỢC dùng train-global Standardizer**.
-
-HFformer feature array phải đi vào Dataset/model ở raw numerical feature scale trước window-local normalization.
-
-Mỗi input sample có:
+Using F1 TRAIN only, calculate separately:
 
 ```text
-x shape = [B, T, 38]
+q_60  = p99(abs(delta_60))
+q_120 = p99(abs(delta_120))
+q_180 = p99(abs(delta_180))
 ```
 
-Ngay trước HFformer backbone, normalize **từng feature trên time dimension của chính sample đó**:
-
-```python
-x_fp32 = x.float()
-
-mean = x_fp32.mean(
-    dim=1,
-    keepdim=True,
-)
-
-std = x_fp32.std(
-    dim=1,
-    keepdim=True,
-    unbiased=False,
-)
-
-x_norm = (
-    x_fp32 - mean
-) / (
-    std + 1e-5
-)
-```
-
-Freeze:
+For horizon `h`, the main finite classification range is:
 
 ```text
-unbiased = False
-eps = 1e-5
+[-q_h, +q_h]
 ```
 
-Không:
+Split this into equal-width intervals.
+
+Use the SAME number of finite bins for all horizons.
+
+The actual USD bin width may differ because q60/q120/q180 differ.
+
+Choose a reasonable moderate initial number of bins after inspecting the F1-train distributions.
+
+Use an EVEN number of finite bins so:
 
 ```text
-global normalize
-→ rồi local normalize lần nữa
+0 USD
 ```
 
-Không dùng saved train-global mean/std cho HFformer features.
+is exactly a boundary.
 
-HFformer normalization phải phụ thuộc **duy nhất vào history hiện tại của sample**.
+No ordinary bin should cross zero.
 
-Update metadata để checkpoint ghi rõ:
-
-```text
-normalization =
-window-local per-feature z-score
-over history dimension
-unbiased=False
-eps=1e-5
-no train-global standardizer
-```
-
-Unit test phải chứng minh HFformer không phụ thuộc validation/test corpus statistics.
-
----
-
-# K. FREEZE ARCHITECTURE — TẤT CẢ 5 MODEL
-
-Không được hiểu “giữ architecture cũ”.
-Dùng chính xác các config dưới đây.
-
----
-
-# K1. OF/OFI-LSTM
-
-Tên code:
+Example structure:
 
 ```text
-ofi_lstm
-```
+delta < -q_h          lower overflow
 
-Base experiment lần này dùng:
-
-```text
-of_representation = "of"
-```
-
-Input không collapse thành OFI10.
-
-Input channels:
-
-```text
-bid_OF_1
+[-q_h, ...)
 ...
-bid_OF_10
-
-ask_OF_1
+[-w, 0)
+[0, w)
 ...
-ask_OF_10
+(..., +q_h]
+
+delta > +q_h          upper overflow
 ```
 
-Tổng:
+There are:
 
 ```text
-20 channels
+K finite bins + 2 overflow classes
 ```
 
-OF calculation giữ logic hiện tại:
+### Meaning of overflow
 
-Bid:
+p99 intentionally covers the central ~99% absolute movement region.
+
+Movements outside it must NOT be clipped into the edge bins.
+
+Instead:
 
 ```text
-price improves:
-    current qty
-
-price unchanged:
-    current qty - previous qty
-
-price worsens:
-    -previous qty
+delta < -q_h
 ```
 
-Ask dùng logic symmetric theo hướng giảm giá là improve.
+gets the lower overflow class.
 
-Architecture:
+And:
 
 ```text
-input channels = 20
-LSTM layers = 2
-LSTM hidden size = 64
-batch_first = True
-dropout = 0.1
-prediction head = Linear(64, 3)
+delta > +q_h
 ```
 
-Expected parameter count:
+gets the upper overflow class.
 
-```text
-55,491
-```
+For every horizon save:
 
-Sau instantiate:
+* q_h;
+* finite min/max;
+* K;
+* bin width;
+* exact edges;
+* number of samples per class;
+* percentage in lower overflow;
+* percentage in upper overflow.
 
-```python
-sum(
-    p.numel()
-    for p in model.parameters()
-)
-```
+Do not automatically modify the method simply because class frequencies are imbalanced.
 
-phải bằng:
+Initial training uses ordinary CrossEntropy.
 
-```text
-55491
-```
-
-Nếu không bằng, dừng và kiểm tra architecture.
-
-Không tăng hidden size.
+No class weighting initially.
 
 ---
 
-# K2. HFFORMER
+# 11. METHOD B — quantile classification
 
-Input features chính xác:
-
-```text
-bid_price_1..9         = 9
-bid_qty_1..9           = 9
-ask_price_1..9         = 9
-ask_qty_1..9           = 9
-lagged_log_return      = 1
-weighted_mid_price_L1  = 1
-```
-
-Tổng:
+Also implement a second required binning method:
 
 ```text
-38 features
+quantile bins
 ```
 
-Weighted mid:
+Fit quantile boundaries using F1 TRAIN ONLY.
+
+Freeze them for all folds.
+
+Use approximately the same total number of classes as Method A so comparisons are meaningful.
+
+Do not treat this as the primary formulation.
+
+It is a required comparison/ablation.
+
+Primary method remains:
 
 ```text
-(
-    ask_price_1 * bid_qty_1
-    +
-    bid_price_1 * ask_qty_1
-)
-/
-(
-    bid_qty_1 + ask_qty_1
-)
+equal-width ±p99
 ```
-
-Zero total quantity fallback:
-
-```text
-ordinary mid
-```
-
-Architecture:
-
-```text
-input_projection:
-    Linear(38, 36)
-
-d_model:
-    36
-
-attention heads:
-    6
-
-Transformer encoder layers:
-    2
-
-FFN dimension:
-    64
-
-dropout:
-    0.3
-
-attention:
-    causal = True
-
-position encoding:
-    NONE
-
-activation:
-    Stable Spiking PReLU
-
-spike simulation dt:
-    0.001
-
-encoder style:
-    post-norm
-
-final encoder LayerNorm:
-    yes
-
-decoder:
-    Linear(36, 1)
-    PReLU
-    transpose time
-    Linear(history_rows=49, 3)
-```
-
-Separate Linear modules phải tiếp tục tồn tại:
-
-```text
-q_proj
-k_proj
-v_proj
-out_proj
-fc1
-fc2
-```
-
-để future LoRA có thể inject.
-
-Expected parameter count:
-
-```text
-22,026
-```
-
-Normalization không tính vào parameter count.
-
-Sau instantiate phải đúng:
-
-```text
-22026
-```
-
-Không scale HFformer lên chỉ vì model nhỏ.
 
 ---
 
-# K3. PATCHTST
+# 12. Models
 
-Input:
-
-```text
-40 raw L10 channels
-```
-
-Feature order:
+Run exactly:
 
 ```text
-bid_price_1..10
-bid_qty_1..10
-ask_price_1..10
-ask_qty_1..10
+1. OFI-LSTM
+2. ModernTCN
+3. Custom Transformer
 ```
 
-Architecture freeze:
+## OFI-LSTM
+
+Reuse the existing WF3 implementation:
+
+* existing input features;
+* existing normalization;
+* existing backbone architecture/config as closely as possible.
+
+Change the output formulation from regression to classification.
+
+Do not unnecessarily redesign it.
+
+## ModernTCN
+
+Reuse:
+
+* existing WF3 features;
+* preprocessing;
+* backbone/config.
+
+Replace regression output with classification head(s).
+
+Do not change the core ModernTCN architecture unless required to support classification output.
+
+## Custom Transformer
+
+Add a conventional Transformer encoder baseline:
 
 ```text
-num_input_channels = 40
-context_length = 49
-
-patch_length = 16
-patch_stride = 8
-
-d_model = 128
-num_attention_heads = 16
-num_hidden_layers = 3
-
-ffn_dim = 256
-
-attention_dropout = 0.2
-ff_dropout = 0.2
-positional_dropout = 0.2
-path_dropout = 0.2
-
-head_dropout = 0.0
-
-share_embedding = True
-channel_attention = False
-
-norm_type = "batchnorm"
-pre_norm = True
-
-activation_function = "gelu"
-
-positional_encoding_type = "sincos"
-
-scaling = "std"
-
-do_mask_input = False
+input sequence
+→ Linear projection
+→ positional encoding
+→ TransformerEncoder
+→ sequence representation
+→ classification head(s)
 ```
+
+Keep it simple.
+
+Do not add:
+
+* FlashAttention experiments;
+* RoPE experiments;
+* pretrained foundation models;
+* unrelated architectural novelty.
+
+Aim for a sensible few-million-parameter model.
+
+Record exact parameter count.
+
+---
+
+# 13. STAGE 1 — multi-horizon classification
+
+RUN THIS FIRST.
+
+Each architecture uses ONE shared backbone and three output heads:
+
+```text
+Backbone
+├── h1 head: 60s
+├── h2 head: 120s
+└── h3 head: 180s
+```
+
+Each head outputs class logits.
+
+If a true displacement lies inside interval:
+
+```text
+[a, b)
+```
+
+its true class is exactly that interval.
+
+Example:
+
+```text
+[20,30) = class 4
+[30,40) = class 5
+
+delta = 36.7
+→ class 5
+```
+
+This is deterministic interval assignment.
+
+It is NOT a nearest-neighbor heuristic.
+
+### Loss
+
+For each horizon use standard multi-class CrossEntropy:
+
+```text
+CE_60
+CE_120
+CE_180
+```
+
+Overall multi-horizon loss:
+
+```text
+Loss = (CE_60 + CE_120 + CE_180) / 3
+```
+
+For the initial benchmark do NOT add:
+
+* focal loss;
+* class weighting;
+* ordinal loss;
+* distance-aware loss;
+* auxiliary MSE;
+* auxiliary regression target.
+
+Keep the first comparison clean.
+
+---
+
+# 14. STAGE 2 — single-horizon classification
+
+Only after the complete multi-horizon stage is evaluated, run independent models:
+
+```text
+model_h1 → 60s only
+model_h2 → 120s only
+model_h3 → 180s only
+```
+
+Do this for all three architectures and both binning methods.
+
+The purpose is to test whether:
+
+* shared representation helps;
+* or noisy h1/h2 hurt h3.
+
+Keep all settings as comparable as possible with the multi-horizon run.
+
+---
+
+# 15. Decode classification back into price
+
+Primary inference is:
+
+```text
+predicted_class = argmax(logits)
+```
+
+For an ordinary finite interval:
+
+```text
+[a,b)
+```
+
+decode its displacement using midpoint:
+
+```text
+decoded_delta = (a+b)/2
+```
+
+Then:
+
+```text
+pred_mid = origin_mid + decoded_delta
+```
+
+### Equal-width overflow decoding
 
 Use:
 
 ```text
-transformers.PatchTSTModel
+lower overflow:
+-q_h - width_h/2
+
+upper overflow:
++q_h + width_h/2
 ```
 
-khởi tạo từ config local.
+and document it.
 
-Không:
+### Quantile outer-class decoding
+
+Use a deterministic representative derived from F1 TRAIN only.
+
+Never derive decoding representatives from validation/test.
+
+### Probability diagnostic
+
+Softmax probabilities will naturally be available.
+
+You MAY also compute:
 
 ```text
-from_pretrained(remote_model)
+expected_delta = Σ p_k * class_representative_k
 ```
 
-Không tải external weights.
+as a secondary diagnostic.
 
-Backbone output:
+However:
 
 ```text
-[B, channels, patches, d_model]
+argmax class → representative
 ```
 
-Regression head:
+remains the official primary classification decoding.
 
-```text
-Flatten from dim 1
-Dropout(0.0)
-Linear(
-    channels * patches * d_model,
-    3,
-)
-```
-
-Không denormalize output sang price.
-
-Target vẫn là 3 log returns.
-
-Expected parameter count tại history_rows=49:
-
-```text
-477,059
-```
-
-Sau instantiate phải bằng:
-
-```text
-477059
-```
-
-Nếu không đúng, không train.
+Do not replace the main method silently.
 
 ---
 
-# K4. MODERNTCN
+# 16. EXACTLY FOUR official metrics
 
-Input:
-
-```text
-40 raw L10 channels
-```
-
-Feature order giống PatchTST:
-
-```text
-bid_price_1..10
-bid_qty_1..10
-ask_price_1..10
-ask_qty_1..10
-```
-
-Architecture freeze:
-
-```text
-history_rows = 49
-
-patch_length = 16
-patch_stride = 8
-
-dims =
-[256, 256, 256, 256]
-
-number of stages =
-4
-
-blocks per stage =
-[1, 1, 1, 1]
-
-large kernels =
-[31, 29, 27, 13]
-
-small kernels =
-[5, 5, 5, 5]
-
-ffn_ratio =
-2
-
-downsample_ratio =
-2
-
-dropout =
-0.05
-
-head_dropout =
-0.0
-
-instance_norm =
-True
-```
-
-Retain:
-
-```text
-shared patch Conv1d stem
-BatchNorm
-4 stages
-depthwise large/small kernel branches
-ConvFFN1
-ConvFFN2
-GELU
-residual blocks
-stage downsampling
-```
-
-Regression head:
-
-```text
-Flatten
-Dropout(0.0)
-Linear(..., 3)
-```
-
-Expected parameter count tại history_rows=49:
-
-```text
-50,568,195
-```
-
-Sau instantiate phải bằng:
-
-```text
-50568195
-```
-
-Nếu không đúng, dừng.
-
-Không giảm architecture để tiết kiệm VRAM.
-
----
-
-# K5. LiT-L10 — CAPACITY MỚI
-
-Không dùng config LiT cũ 121,107 parameters.
-
-Input:
-
-```text
-[B, T, side=2, depth=10, field=2]
-```
-
-Trong đó:
-
-```text
-side:
-    bid
-    ask
-
-depth:
-    L1..L10
-
-field:
-    price
-    quantity
-```
-
-Base history:
-
-```text
-T = 49
-```
-
-Structured patch:
-
-```text
-temporal_patch = 4
-```
-
-Mỗi token phải span:
-
-```text
-4 consecutive snapshots
-×
-all 10 levels
-×
-price + quantity
-```
-
-của **một side**.
-
-Tức raw content/token:
-
-```text
-4 * 10 * 2
-=
-80 numbers
-```
-
-Nếu `49` không chia hết cho `4`, giữ current behavior:
-
-```text
-left-pad bằng oldest historical snapshot
-```
-
-để đủ temporal patch.
-
-Expected number temporal patches:
-
-```text
-ceil(49 / 4)
-=
-13
-```
-
-Bid và ask tạo token riêng:
-
-```text
-13 * 2
-=
-26 tokens
-```
-
-Architecture freeze:
-
-```text
-d_model = 128
-position_dim = 32
-
-content projection dimension =
-96
-
-patch_projection =
-Linear(80, 96)
-
-learned position embedding =
-[1, 26, 32]
-
-content projection
-+
-position embedding
-are CONCATENATED
-
-final token dim =
-96 + 32
-=
-128
-```
-
-Transformer:
-
-```text
-layers = 4
-heads = 8
-d_model = 128
-ffn_dim = 256
-dropout = 0.1
-causal attention = False
-post-norm EncoderLayer
-```
-
-Separate projections:
-
-```text
-q_proj
-k_proj
-v_proj
-out_proj
-fc1
-fc2
-```
-
-Sau Transformer:
-
-```text
-bid token
-+
-ask token
-của cùng temporal patch
-```
-
-được concatenate:
-
-```text
-128 + 128
-=
-256
-```
-
-LSTM:
-
-```text
-input_size = 256
-hidden_size = 128
-num_layers = 1
-batch_first = True
-```
-
-Prediction head:
-
-```text
-Linear(128, 3)
-```
-
-Expected **exact parameter count** với history_rows=49:
-
-```text
-736,547
-```
-
-Sau instantiate phải bằng:
-
-```text
-736547
-```
-
-Nếu parameter count không đúng, không bắt đầu training.
-
----
-
-# L. E0 BASELINE
-
-E0 không train.
-
-Prediction:
-
-```text
-pred_return_1m = 0
-pred_return_2m = 0
-pred_return_3m = 0
-```
-
-Tương đương:
-
-```text
-predicted future mid = current mid
-```
-
-E0 phải sử dụng **đúng cùng origins và targets** với learned models.
-
----
-
-# M. FREEZE TRAINING HYPERPARAMETERS
-
-Đây là base run.
-
-Không tune.
-
-Dùng giống nhau cho 5 learned models trừ architecture:
-
-```text
-epochs = 30
-
-batch_size = 128
-
-learning_rate = 1e-4
-
-weight_decay = 1e-4
-
-optimizer = AdamW
-
-loss = MSE
-
-scheduler = CosineAnnealingLR
-
-gradient_clip = 1.0
-
-gradient_accumulation = 1
-
-seed = 42
-```
-
-### Batch size contract
-
-Base batch size của **tất cả 5 learned models**:
-
-```text
-128
-```
-
-Cụ thể:
-
-```text
-OF/OFI-LSTM = 128
-HFformer    = 128
-PatchTST    = 128
-ModernTCN   = 128
-LiT         = 128
-```
-
-Không được:
-
-```text
-128 → 256 → 512 ...
-```
-
-chỉ để lấp VRAM.
-
-Không dùng `--auto-batch-size` cho full run.
-
-Chỉ được giảm batch dưới 128 nếu:
-
-```text
-single model
-running ALONE
-at batch=128
-```
-
-bị CUDA OOM.
-
-Nếu trường hợp đó xảy ra:
-
-1. ghi rõ model;
-2. ghi peak memory/OOM;
-3. giảm về 64;
-4. nếu vẫn OOM → 32;
-5. báo trong final report.
-
-Không tăng batch trên 128 trong experiment này.
-
----
-
-# N. PRECISION
-
-Trên RTX 4090:
-
-```text
-BF16 preferred
-TF32 enabled
-```
-
-Nếu BF16 không available thì fallback FP16.
-
-Không thay architecture.
-
-Mọi loss accumulation/metric quan trọng phải dùng precision đủ ổn định.
-
-HFformer window normalization phải tính FP32 như đã chỉ định.
-
----
-
-# O. DATALOADER / SYSTEM TUNING
-
-Đây là **systems tuning**, không phải model hyperparameter tuning.
-
-Được phép benchmark:
-
-```text
-num_workers
-prefetch_factor
-torch.compile
-concurrent process grouping
-```
-
-chỉ dựa trên:
-
-```text
-samples/sec
-step time
-GPU utilization
-CPU utilization
-VRAM usage
-```
-
-Không dùng validation loss để quyết định systems settings.
-
-DataLoader phải dùng khi CUDA:
-
-```text
-pin_memory=True
-persistent_workers=True
-non_blocking=True
-```
-
-Không pandas trong `__getitem__`.
-
-Không materialize overlapping windows.
-
----
-
-# P. GPU UTILIZATION — KHÔNG THAY BATCH
-
-Vì nhiều model nhỏ, một job có thể không sử dụng hết RTX 4090.
-
-Không giải quyết bằng cách tăng batch > 128.
-
-Thay vào đó được phép chạy **nhiều independent training processes song song trên cùng GPU**.
-
-Mỗi process vẫn giữ:
-
-```text
-batch_size = 128
-seed = 42
-architecture frozen
-training hyperparameters frozen
-```
-
----
-
-# Q. SYSTEM PROFILING TRƯỚC FULL TRAINING
-
-Sau CUDA smoke tests, benchmark ngắn bằng temporary model instances.
-
-Không dùng checkpoint thật.
-Không làm thay đổi weights của actual training runs.
-
-Mỗi benchmark khoảng:
-
-```text
-50–100 forward/backward/optimizer steps
-```
-
-với:
-
-```text
-batch_size = 128
-```
-
-Đo từng model đơn:
-
-```text
-OF/OFI-LSTM
-HFformer
-PatchTST
-ModernTCN
-LiT
-```
-
-Ghi:
-
-```text
-peak allocated VRAM
-peak reserved VRAM
-average GPU utilization
-samples/sec
-mean step time
-```
-
----
-
-# R. CONCURRENCY PROFILING
-
-Sau single-job profiling, thử concurrent groups.
-
-Batch của từng model vẫn = 128.
-
-Được thử tối đa 5 models/processes nếu memory cho phép, nhưng phải benchmark tăng dần:
-
-```text
-2 jobs
-3 jobs
-4 jobs
-5 jobs
-```
-
-Không mặc định rằng nhiều hơn luôn tốt hơn.
-
-Candidate lightweight groups nên bao gồm thử nghiệm như:
-
-```text
-OF/OFI-LSTM + HFformer
-
-OF/OFI-LSTM + HFformer + LiT
-
-OF/OFI-LSTM + HFformer + LiT + PatchTST
-```
-
-ModernTCN phải benchmark:
-
-```text
-alone
-```
-
-trước.
-
-Sau đó có thể thử ModernTCN cùng một hoặc nhiều model nhẹ nếu tổng VRAM đủ.
-
-Mỗi process:
-
-```text
-CUDA_VISIBLE_DEVICES=0
-```
-
-nhưng cùng dùng GPU 0.
-
-Concurrency được chọn bằng:
-
-1. aggregate samples/sec lớn hơn sequential;
-2. GPU utilization cao hơn;
-3. không OOM;
-4. không làm aggregate throughput giảm;
-5. tổng VRAM an toàn.
-
-Safety margin khi chạy nhiều process:
-
-```text
-ít nhất 3 GiB VRAM free
-```
-
-Không cần lấp 24/24 GB.
-
-Nếu:
-
-```text
-GPU utilization > 85–90%
-```
-
-và aggregate throughput không cải thiện khi thêm process thì không thêm nữa.
-
-Không dùng CUDA MPS trừ khi một bounded benchmark chứng minh throughput tăng.
-
-Lưu quyết định cuối vào:
-
-```text
-reports/vast/concurrency_benchmark.json
-```
-
----
-
-# S. TORCH.COMPILE
-
-`torch.compile` là systems optimization, không phải architecture change.
-
-Benchmark từng model ngắn.
-
-Chỉ bật cho full training nếu:
-
-```text
-compile works reliably
-AND
-outputs/loss remain finite
-AND
-throughput materially improves
-```
-
-HFformer dùng `pytorch-spiking`, nên nếu compile có vấn đề:
-
-```text
-HFformer chạy eager
-```
-
-Không sửa semantics model để ép compile.
-
-Ghi compile status từng model vào final report.
-
----
-
-# T. METRICS — FREEZE
-
-Chỉ báo cáo 4 metric families:
+The official benchmark contains ONLY:
 
 ```text
 RMSE
 MAE
-standard R²
-RMSE Gain vs E0
+R² gain vs E0
+Directional Accuracy (DA)
 ```
 
-theo từng horizon:
+Do NOT add official:
+
+* classification accuracy;
+* F1;
+* balanced accuracy;
+* bin accuracy;
+* top-k accuracy;
+* ±1-bin accuracy;
+* bin-distance error.
+
+### RMSE
+
+Evaluate decoded future MID PRICE.
+
+### MAE
+
+Evaluate decoded future MID PRICE.
+
+### R² gain vs E0
+
+Reuse the existing WF3 definition:
 
 ```text
-1m
-2m
-3m
+R2_gain_vs_E0
+=
+1 - SSE_model / SSE_E0
 ```
 
-## Standard R²
-
-Giữ:
+E0:
 
 ```text
-R² =
-1
--
-sum((y - pred)^2)
-/
-sum((y - mean(y))^2)
-```
-
-Đây là standard R².
-
-Không đổi nó thành R²_OS.
-
-## E0 RMSE
-
-Vì E0 predicts return = 0:
-
-```text
-RMSE_E0 =
-sqrt(
-    mean(y²)
-)
-```
-
-## Gain vs E0
-
-```text
-RMSE_Gain_vs_E0 =
-1
--
-RMSE_model / RMSE_E0
+pred_mid = origin_mid
 ```
 
 Interpretation:
 
 ```text
-> 0 : model better than E0
-= 0 : equal E0
-< 0 : worse than E0
+positive → beats E0
+zero     → equals E0
+negative → worse than E0
 ```
 
-E0:
+### Directional Accuracy
+
+Use:
 
 ```text
-gain = 0
+pred_delta = pred_mid - origin_mid
+true_delta = target_mid - origin_mid
 ```
 
-Metric JSON phải có:
+DA measures sign agreement.
 
-```json
-{
-  "rmse": [r1, r2, r3],
-  "mae": [m1, m2, m3],
-  "r2": [r1, r2, r3],
-  "rmse_e0": [e1, e2, e3],
-  "rmse_gain_vs_e0": [g1, g2, g3]
-}
-```
+Define exact-zero handling once, document it, and use the same convention for every run.
 
-Không thêm R²_OS.
+DA is only an evaluation metric.
 
-Unit tests:
-
-```text
-perfect prediction:
-RMSE = 0
-Gain = 1
-
-E0 prediction:
-Gain = 0
-```
+Do NOT change the task into direction classification.
 
 ---
 
-# U. CHECKPOINT SELECTION
+# 17. Initial experiment matrix
 
-Train mỗi learned model tối đa 30 epochs.
-
-Sau mỗi epoch:
+The required initial experiment contains:
 
 ```text
-train metrics
-validation metrics
+2 binning methods
+×
+3 architectures
+×
+3 folds
+×
+multi + single
 ```
 
-Checkpoint selection criterion:
+Multi-horizon:
 
 ```text
-validation mean MSE across the 3 horizons
+2 × 3 × 3 = 18 trained models
 ```
 
-Không dùng test set.
-
-Lưu:
+Single-horizon:
 
 ```text
-best
-last
+2 × 3 × 3 folds × 3 horizons
+= 54 trained models
 ```
+
+Total initial trained jobs:
+
+```text
+72
+```
+
+Do not silently skip runs.
+
+Maintain a machine-readable run registry containing:
+
+* planned;
+* running;
+* completed;
+* failed;
+* retried.
 
 ---
 
-# V. CHECKPOINT FORMAT — BẮT BUỘC
+# 18. Optimize execution on RTX 4090 24GB
 
-Mỗi run:
+Do NOT simply run 72 jobs serially.
 
-```text
-checkpoints/
-  <model>/
-    <run_name>/
-      best/
-      last/
-```
-
-Cả `best` và `last` phải chứa:
+Before the full sweep, benchmark representative short runs for:
 
 ```text
-model.safetensors
-config.json
-experiment.json
-preprocessing.json
-feature_schema.json
-target_config.json
-split_manifest.json
-data_stats.json
-environment.json
-
-optimizer.pt
-scheduler.pt
-trainer_state.pt
+OFI-LSTM
+ModernTCN
+Transformer
 ```
 
-`last` phải resume exact training được.
+Record:
 
-`best` phải dùng được cho:
+* VRAM allocated;
+* VRAM reserved;
+* GPU utilization;
+* samples/sec;
+* step time;
+* CPU utilization if relevant.
+
+Then experimentally compare safe concurrency such as:
 
 ```text
-inference
-full fine-tuning
-head-only fine-tuning
-future LoRA fine-tuning
+1 concurrent job
+2 concurrent jobs
+3 concurrent jobs
+4 concurrent jobs
 ```
 
-Checkpoint phải lưu architecture config đầy đủ.
+when possible.
 
-Sau save phải verify:
+Measure TOTAL throughput.
+
+Do not maximize concurrency merely for its own sake.
+
+A configuration where 4 jobs each become extremely slow is not better than 2 efficient jobs.
+
+Prefer mixed workloads when useful, e.g.:
 
 ```text
-load checkpoint
-→ same input
-→ prediction exact / numerically identical within expected deterministic tolerance
+ModernTCN
++
+Transformer
++
+lightweight OFI-LSTM
 ```
 
----
+if that gives better GPU utilization and aggregate throughput.
 
-# W. FUTURE LoRA COMPATIBILITY
+Monitor:
 
-Không train LoRA trong task này.
+* GPU compute;
+* VRAM;
+* CPU;
+* RAM;
+* disk I/O;
+* dataloader contention.
 
-Nhưng checkpoint/model code phải tiếp tục expose Transformer modules bằng names:
+### If OOM happens
+
+Adjustment priority:
 
 ```text
-q_proj
-k_proj
-v_proj
-out_proj
-fc1
-fc2
+1. reduce concurrent jobs
+2. adjust batch size if necessary
+3. only then consider implementation-level memory optimizations
 ```
 
-Không merge projections theo cách làm future LoRA injection khó hơn.
-
-Base checkpoint phải chứa **unmodified full base weights**.
-
-Không merge LoRA adapter vì chưa có LoRA trong phase này.
-
----
-
-# X. RUN NAMES
-
-Freeze:
-
-```text
-ofi_lstm_60s_base
-hfformer_60s_base
-patchtst_60s_base
-moderntcn_60s_base
-lit_60s_base
-```
-
-E0:
-
-```text
-e0_60s
-```
-
----
-
-# Y. PREDICTION ARTIFACTS — BẮT BUỘC
-
-Sau khi mỗi model train xong:
-
-1. load `best`;
-2. inference deterministic;
-3. save predictions.
-
-Save cho:
-
-```text
-train
-validation
-test
-```
-
-Việc chạy test chỉ được thực hiện **sau khi model training và best checkpoint selection đã hoàn tất**.
-
-Tạo:
-
-```text
-artifacts/
-  <model>/
-    <run_name>/
-      train_predictions.csv.gz
-      validation_predictions.csv.gz
-      test_predictions.csv.gz
-
-      train_metrics.json
-      validation_metrics.json
-      test_metrics.json
-
-      training_history.jsonl
-      run_summary.json
-```
-
-E0 phải có prediction files cùng schema.
-
-Prediction table phải chứa tối thiểu:
-
-```text
-origin_index
-origin_timestamp_ns
-origin_mid
-
-target_index_1m
-target_timestamp_ns_1m
-target_mid_1m
-true_return_1m
-pred_return_1m
-pred_mid_1m
-
-target_index_2m
-target_timestamp_ns_2m
-target_mid_2m
-true_return_2m
-pred_return_2m
-pred_mid_2m
-
-target_index_3m
-target_timestamp_ns_3m
-target_mid_3m
-true_return_3m
-pred_return_3m
-pred_mid_3m
-```
-
-Trong đó:
-
-```text
-pred_mid_h =
-origin_mid * exp(pred_return_h)
-```
-
-Prediction rows phải deterministic và ordered theo origin timestamp.
-
-Không save chỉ summary metric.
-
-Mục tiêu là sau này có thể tạo lại:
-
-```text
-actual vs predicted plots
-return plots
-error plots
-scatter plots
-horizon comparisons
-time-series visualizations
-```
-
-mà không cần chạy model lại.
-
----
-
-# Z. GPU MONITORING
-
-Trong full training chạy GPU monitor background.
-
-Sample mỗi khoảng:
-
-```text
-2–5 seconds
-```
+Do NOT arbitrarily shrink the model architecture simply because several concurrent jobs do not fit.
 
 Save:
 
 ```text
-reports/vast/gpu_usage.csv
+concurrency_benchmark.json
+training_schedule.json
 ```
 
-Columns tối thiểu:
-
-```text
-timestamp
-gpu_util_percent
-memory_used_mb
-memory_total_mb
-temperature_c
-power_draw_w
-```
-
-Nếu chạy concurrent jobs, log thêm process/PID mapping riêng.
-
-Tạo:
-
-```text
-reports/vast/
-    hardware.json
-    cuda_smoke.json
-    single_job_benchmark.json
-    concurrency_benchmark.json
-    training_schedule.json
-    final_training_summary.json
-```
+or equivalent machine-readable artifacts.
 
 ---
 
-# AA. .GITIGNORE — SỬA BẮT BUỘC
+# 19. Use tmux
 
-Đảm bảo `.gitignore` có ít nhất:
+Long-running execution must use tmux.
 
-```gitignore
-.venv/
-__pycache__/
-.pytest_cache/
-*.pyc
-.DS_Store
-
-checkpoints/
-artifacts/
-runs/
-data/
-
-*.csv
-*.csv.gz
-
-.env
-```
-
-Prediction files và checkpoints:
-
-```text
-MUST remain local + Hugging Face only.
-MUST NOT be committed to GitHub.
-```
-
-Không dùng `git add -f` cho artifacts.
-
-Trước mỗi GitHub push:
+Use a clearly named session such as:
 
 ```bash
-git status
+tmux new -s classification
 ```
 
-verify không có:
+or detached windows/jobs.
 
-```text
-CSV
-CSV.GZ
-checkpoint
-model.safetensors
-optimizer.pt
-HF token
-GitHub token
-```
+Requirements:
 
-staged.
+* persistent logs;
+* independent job status;
+* recoverability;
+* failed jobs rerunnable;
+* automatic transition from training → evaluation → report → upload.
+
+Do not leave the workflow after training with evaluation/upload unfinished.
 
 ---
 
-# AB. TESTS TRƯỚC FULL TRAINING
+# 20. Leakage audit
 
-Bắt buộc chạy:
+Extend the existing WF3 leakage audit.
 
-```bash
-python -m compileall -q src train.py scripts tests
-pytest -q
-```
+Verify explicitly:
 
-Sau đó real-data prepare validation.
+1. chronological split unchanged;
+2. test split identical for all experiments;
+3. no history window crosses forbidden split boundaries;
+4. targets remain isolated correctly;
+5. train-only normalization remains train-only;
+6. p99 is fitted ONLY on F1 TRAIN;
+7. quantiles are fitted ONLY on F1 TRAIN;
+8. class boundaries never use validation/test;
+9. class representatives never use validation/test;
+10. all folds use identical frozen class definitions;
+11. prediction/test sample fingerprints match across models where expected.
 
-Expected:
+If leakage audit fails, do NOT treat the result as valid.
 
-```text
-SHA exact
-rows exact
-history_rows = 49
-stride_rows = 8
-
-train samples = 58774
-validation samples = 12427
-test samples = 12145
-```
-
-Sau đó instantiate 5 models và assert parameter counts:
-
-```text
-OF/OFI-LSTM:
-55,491
-
-HFformer:
-22,026
-
-PatchTST:
-477,059
-
-ModernTCN:
-50,568,195
-
-LiT:
-736,547
-```
-
-Sau đó CUDA smoke:
-
-```text
-one small forward
-one backward
-finite predictions
-finite MSE
-finite gradients
-```
-
-cho cả 5 learned models.
-
-Không full train nếu một test fail.
+Save the audit report.
 
 ---
 
-# AC. HF TOKEN / HUGGING FACE DESTINATION
+# 21. Artifacts per run
 
-Dùng:
+Persist enough to reproduce each result.
 
-```text
-HF_TOKEN
-```
-
-Không in token.
-
-Nếu environment variable:
+At minimum:
 
 ```text
-HF_REPO_ID
-```
-
-đã tồn tại thì push tới repo đó.
-
-Nếu không tồn tại:
-
-1. dùng HF API để lấy authenticated username;
-2. tạo private repo:
-
-```text
-<authenticated_username>/Pretrain_Model
-```
-
-nếu chưa tồn tại.
-
-Không upload raw BTC CSV lên model repo.
-
----
-
-# AD. HUGGING FACE ARTIFACT STRUCTURE
-
-Upload theo cấu trúc:
-
-```text
-e0/
-  e0_60s/
-    artifacts/
-
-ofi_lstm/
-  ofi_lstm_60s_base/
-    best/
-    last/
-    artifacts/
-
-hfformer/
-  hfformer_60s_base/
-    best/
-    last/
-    artifacts/
-
-patchtst/
-  patchtst_60s_base/
-    best/
-    last/
-    artifacts/
-
-moderntcn/
-  moderntcn_60s_base/
-    best/
-    last/
-    artifacts/
-
-lit/
-  lit_60s_base/
-    best/
-    last/
-    artifacts/
-
-reports/
-```
-
-Tạo HF README/model card ghi:
-
-```text
-Git commit SHA
-dataset SHA256
-dataset date interval
-L10 depth
-history = 60s / resolved 49 rows
-stride = resolved 8 rows
-horizons = 60/120/180s
-split timestamps
-gap rule
-architecture
-parameter count
-batch size = 128
-optimizer/loss/lr
-best epoch
+config
+model config
+feature schema
+preprocessing metadata
+label definition
+split manifest
+environment
+git commit
+training history
+best checkpoint
 validation metrics
 test metrics
-hardware
-precision
-compile yes/no
-concurrency schedule
+test predictions
+run summary
+```
+
+Prediction CSVs must contain enough information to independently recompute:
+
+```text
+RMSE
+MAE
+R² gain vs E0
+DA
 ```
 
 ---
 
-# AE. GITHUB WORKFLOW
+# 22. Analyze the complete initial sweep
 
-Sau khi sửa code và tests pass:
+Do NOT start arbitrary tuning before the required baseline matrix is complete.
 
-Commit code trước training.
+After all initial runs finish, answer:
 
-Ví dụ commit bao gồm:
+1. Does discretized classification beat E0?
+2. Does it improve over the previous regression behavior?
+3. Equal-width or quantile: which works better?
+4. Does F1 → F2 → F3 improve as training data increases?
+5. Is h3 stronger than h1/h2?
+6. Does single-horizon improve h3?
+7. Does multi-horizon sharing help any horizon?
+8. Which architecture benefits most?
+9. Does DA agree with RMSE/R² gain?
+10. Which positive results repeat across folds instead of appearing as one isolated cell?
 
-```text
-HFformer exact window normalization
-LiT 736,547-param configuration
-fixed architecture contracts
-RMSE gain vs E0
-prediction export
-Vast profiling/orchestration
-HF artifact upload
-.gitignore artifact policy
-```
-
-Push GitHub.
-
-Record:
-
-```bash
-git rev-parse HEAD
-```
-
-Đó là **training source commit SHA**.
-
-Full training phải chạy từ đúng commit đó.
-
-Nếu sau training chỉ thêm final report/documentation:
-
-* commit report riêng;
-* không thay training source code âm thầm.
+Do not overclaim extremely small improvements.
 
 ---
 
-# AF. TRAINING SCHEDULE
+# 23. REQUIRED follow-up: deepen THIS SAME method
 
-Sau profiling, tạo một deterministic schedule.
+The work does NOT stop after the initial 72 jobs.
 
-Ví dụ:
+Whether the results are strong or weak, continue investigating the SAME classification formulation.
 
-```text
-Group 1:
-some safe concurrent lightweight models
-
-Group 2:
-remaining models
-
-ModernTCN:
-alone or concurrent only if benchmark proves aggregate throughput improves
-```
-
-Không hard-code group nếu systems benchmark cho thấy group khác tốt hơn.
-
-Nhưng **training parameters của từng model không được thay đổi**.
-
-Concurrency chỉ quyết định:
+The core must remain:
 
 ```text
-which frozen run executes at the same time
+continuous future price displacement
+→ fixed discretization
+→ multi-class prediction
+→ decode to price
 ```
 
-không quyết định:
+Do NOT abandon this and invent another task.
+
+Allowed follow-up directions include controlled tests of:
 
 ```text
-batch
-architecture
-lr
-epochs
-stride
-split
+number of bins
+p99 range sensitivity
+p98 / p99 / p99.5 range
+bin width
+overflow representation
+argmax vs expected-value decoding
+multi vs single horizon
+shared vs separate heads
+capacity changes inside the SAME three architectures
 ```
 
-Save final schedule trước launch vào:
+Every follow-up experiment must follow:
 
 ```text
-reports/vast/training_schedule.json
+Hypothesis
+→ ONE controlled change
+→ Result
+→ Conclusion
 ```
+
+Do not change multiple major factors simultaneously.
+
+### If initial results are bad
+
+Diagnose why THIS classification method fails and modify it carefully.
+
+Do NOT switch to:
+
+* another unrelated forecasting task;
+* RL;
+* diffusion;
+* arbitrary ensembles;
+* unrelated new architectures;
+* binary direction prediction.
+
+### If initial results are good
+
+Identify what part of the current formulation causes the improvement and refine it systematically.
+
+The core research contribution must remain this discretized classification approach.
 
 ---
 
-# AG. FAILURE POLICY
+# 24. Reporting
 
-Nếu một concurrent group OOM:
-
-1. stop group;
-2. không giảm architecture;
-3. không giảm batch ngay;
-4. chạy các jobs với ít concurrency hơn.
-
-Chỉ giảm batch <128 nếu **chính model đó chạy một mình** vẫn OOM.
-
-Nếu một process crash:
-
-* inspect log;
-* nếu checkpoint `last` valid và experiment contract không đổi → resume;
-* không restart từ epoch 0 vô lý.
-
-Nếu data/hash/split mismatch:
+Produce a final report with sections:
 
 ```text
-STOP.
+1. Experiment contract
+2. Dataset provenance
+3. Git/HF provenance
+4. Leakage audit
+5. Label-distribution analysis
+6. Equal-width p99 definition
+7. Quantile definition
+8. Model architectures / parameter counts
+9. GPU benchmark / concurrency strategy
+10. Multi-horizon results
+11. Single-horizon results
+12. F1 → F2 → F3 scaling
+13. h1 vs h2 vs h3
+14. Equal-width vs quantile
+15. Follow-up experiments
+16. Interpretation
+17. Limitations
+18. Final conclusions
 ```
 
-Không “fix” bằng cách tự đổi dataset.
+Official benchmark tables must show ONLY:
+
+```text
+RMSE
+MAE
+R² gain vs E0
+DA
+```
+
+Make comparisons easy across:
+
+* fold;
+* horizon;
+* architecture;
+* binning method;
+* multi vs single.
 
 ---
 
-# AH. SAU TRAINING
+# 25. Hugging Face artifact structure
 
-Sau khi cả 5 learned models hoàn tất:
+Push to:
 
-1. verify `best`;
-2. verify `last`;
-3. evaluate train;
-4. evaluate validation;
-5. evaluate held-out test;
-6. export predictions;
-7. calculate:
+```text
+Tson29/LOB_Classification_WF3
+```
 
-   * RMSE
-   * MAE
-   * standard R²
-   * RMSE Gain vs E0
-8. upload HF;
-9. verify uploaded artifacts tồn tại;
-10. chỉ sau verify HF thành công mới được cân nhắc cleanup local.
+Use a structured layout similar to:
 
-Không xóa local checkpoints hoặc prediction files trước khi verify HF upload.
+```text
+equal_width/
+    multi/
+        ofi_lstm/
+        moderntcn/
+        transformer/
+    single/
+        ofi_lstm/
+        moderntcn/
+        transformer/
+
+quantile/
+    multi/
+        ofi_lstm/
+        moderntcn/
+        transformer/
+    single/
+        ofi_lstm/
+        moderntcn/
+        transformer/
+
+labeling/
+reports/
+audits/
+benchmarks/
+```
+
+Upload:
+
+* best checkpoints;
+* configs;
+* label boundaries;
+* metrics;
+* test predictions;
+* histories;
+* reports;
+* leakage audit;
+* run registry;
+* concurrency benchmark;
+* environment/provenance.
+
+Do NOT duplicate the raw 1.15GB source CSV here.
+
+Dataset source remains:
+
+```text
+Tson29/btc-l10-gate-1y
+```
+
+After uploading, READ BACK representative files from Hugging Face to verify the upload is actually usable.
 
 ---
 
-# AI. FINAL REPORT — BẮT BUỘC
+# 26. GitHub publication
 
-Sau toàn bộ task, báo cáo lại:
+Commit:
 
-```text
-1. initial Git commit
-2. training-source Git commit
-3. final Git commit nếu khác
-4. Hugging Face repo URL/id
+* `prompt.md`;
+* source code;
+* configs;
+* orchestration scripts;
+* evaluation scripts;
+* audit code;
+* reports;
+* lightweight experiment metadata.
 
-5. dataset path
-6. dataset SHA256
-7. dataset rows
-8. split timestamps
-9. split row ranges
-10. history_rows
-11. stride_rows
-12. train/val/test sample counts
-
-13. GPU model
-14. CUDA version
-15. PyTorch version
-16. precision
-17. torch.compile status từng model
-
-18. exact parameter count:
-    OF/OFI-LSTM
-    HFformer
-    PatchTST
-    ModernTCN
-    LiT
-
-19. batch size từng model
-20. num_workers từng model
-21. concurrency groups đã dùng
-
-22. single-job VRAM từng model
-23. concurrent-group peak VRAM
-24. average GPU utilization
-25. aggregate samples/sec
-
-26. training duration từng model
-27. best epoch từng model
-
-28. validation:
-    RMSE 1m/2m/3m
-    MAE 1m/2m/3m
-    R² 1m/2m/3m
-    RMSE Gain vs E0 1m/2m/3m
-
-29. test:
-    RMSE 1m/2m/3m
-    MAE 1m/2m/3m
-    R² 1m/2m/3m
-    RMSE Gain vs E0 1m/2m/3m
-
-30. local checkpoint paths
-31. local prediction paths
-32. HF checkpoint paths
-33. HF prediction artifact paths
-
-34. jobs nào crash
-35. jobs nào resume
-36. bất kỳ deviation nào khỏi contract
-```
-
-Nếu không có deviation, ghi rõ:
+Push to:
 
 ```text
-No experiment-contract deviations.
+origin/classification
 ```
 
-Không chỉ nói “training successful”.
-Phải báo exact numbers và artifact locations.
+Do NOT push:
+
+* raw BTC CSV;
+* huge checkpoints already stored on Hugging Face.
+
+Do not unnecessarily git-ignore useful reports/configs/metadata.
+
+---
+
+# 27. Final verification
+
+Do not declare completion before all of the following are checked.
+
+## Dataset
+
+Verify:
+
+```text
+Tson29/btc-l10-gate-1y
+```
+
+was successfully downloaded.
+
+Verify local:
+
+```text
+BTC_L10_gate_1y.csv
+```
+
+matches SHA256:
+
+```text
+6d8f82fbf3d0d0078b22c44cf5a06c3d82259ca16c71b16bde9b6632a8fbe6df
+```
+
+## GitHub
+
+Verify:
+
+* remote branch `classification` exists;
+* `prompt.md` exists on that branch;
+* final code commit is pushed;
+* important changes are not left uncommitted.
+
+## Hugging Face
+
+Verify:
+
+```text
+Tson29/LOB_Classification_WF3
+```
+
+exists and representative:
+
+* reports;
+* metrics;
+* predictions;
+* checkpoints;
+* labels;
+* audits
+
+can be read back.
+
+## Experiment
+
+Report:
+
+* total planned baseline jobs;
+* successful jobs;
+* failed jobs;
+* retried jobs;
+* follow-up jobs;
+* leakage audit status.
+
+---
+
+# 28. Final response
+
+At the end report concisely:
+
+1. final Git commit hash;
+2. GitHub branch;
+3. Hugging Face dataset source;
+4. Hugging Face experiment repo;
+5. p99 values for h1/h2/h3;
+6. chosen initial bin count and widths;
+7. best multi-horizon results;
+8. best single-horizon results;
+9. equal-width vs quantile conclusion;
+10. OFI-LSTM vs ModernTCN vs Transformer;
+11. F1 → F2 → F3 scaling conclusion;
+12. h1/h2/h3 conclusion;
+13. follow-up experiments performed;
+14. leakage audit result;
+15. any remaining limitations.
+
+Remember:
+
+**The core of this work is discretized multi-class forecasting of future price displacement.**
+
+Good initial results should lead to deeper investigation of this same method.
+
+Bad initial results should also lead to diagnosis and controlled refinement of this same method.
+
+Do not independently abandon or replace the research direction.
+
+And ensure this entire prompt itself is preserved verbatim in:
+
+```text
+prompt.md
+```
+
+and committed to the `classification` Git branch.
