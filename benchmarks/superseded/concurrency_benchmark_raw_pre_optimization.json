@@ -1,0 +1,90 @@
+[
+  {
+    "config": "T",
+    "archs": [
+      "moderntcn"
+    ],
+    "jobs": [
+      {
+        "arch": "moderntcn",
+        "compile": true,
+        "parameters": 51582054,
+        "batch_size": 128,
+        "samples": 325497,
+        "steps": 2543,
+        "seconds": 72.73018264770508,
+        "samples_per_second": 4475.404682766471,
+        "mean_step_seconds": 0.028600150470981155,
+        "peak_allocated_bytes": 2030368256,
+        "peak_reserved_bytes": 2195718144,
+        "resident_feature_bytes": 502335520,
+        "process_cpu_percent": 98.59730498320526,
+        "rss_bytes": 2764914688,
+        "prepare_seconds": 13.583544969558716,
+        "warmup_seconds": 23.89950942993164,
+        "warmup_steps": 60
+      }
+    ],
+    "system": {
+      "mean_gpu_util": 51.78,
+      "mean_gpu_mem_util": 40.593333333333334,
+      "mean_gpu_used_bytes": 3326991837.866667,
+      "mean_cpu_percent": 4.941999999999999,
+      "mean_ram_used_bytes": 8838671810.56,
+      "mean_disk_read_bps": 2998.968507956579,
+      "mean_disk_write_bps": 1357345.1169719063,
+      "max_gpu_util": 100.0,
+      "max_gpu_mem_util": 100.0,
+      "max_gpu_used_bytes": 3371171840.0,
+      "max_cpu_percent": 24.2,
+      "max_ram_used_bytes": 9490546688.0,
+      "max_disk_read_bps": 449845.2761934868,
+      "max_disk_write_bps": 60138163.091931,
+      "samples": 150
+    }
+  },
+  {
+    "config": "F",
+    "archs": [
+      "transformer"
+    ],
+    "jobs": [
+      {
+        "arch": "transformer",
+        "compile": true,
+        "parameters": 3196262,
+        "batch_size": 128,
+        "samples": 342265,
+        "steps": 2674,
+        "seconds": 45.009456634521484,
+        "samples_per_second": 7604.290866677306,
+        "mean_step_seconds": 0.016832257529738773,
+        "peak_allocated_bytes": 942461952,
+        "peak_reserved_bytes": 1042284544,
+        "resident_feature_bytes": 502335520,
+        "process_cpu_percent": 98.95698222190619,
+        "rss_bytes": 2398195712,
+        "prepare_seconds": 13.767579078674316,
+        "warmup_seconds": 12.559651851654053,
+        "warmup_steps": 60
+      }
+    ],
+    "system": {
+      "mean_gpu_util": 18.56382978723404,
+      "mean_gpu_mem_util": 9.52127659574468,
+      "mean_gpu_used_bytes": 2207453271.1489363,
+      "mean_cpu_percent": 7.85,
+      "mean_ram_used_bytes": 11486458771.06383,
+      "mean_disk_read_bps": 52885.16727723342,
+      "mean_disk_write_bps": 934036.2779606108,
+      "max_gpu_util": 90.0,
+      "max_gpu_mem_util": 100.0,
+      "max_gpu_used_bytes": 2209349632.0,
+      "max_cpu_percent": 28.8,
+      "max_ram_used_bytes": 14420123648.0,
+      "max_disk_read_bps": 2420772.277052691,
+      "max_disk_write_bps": 22716044.76245977,
+      "samples": 94
+    }
+  }
+]

@@ -1,0 +1,306 @@
+{
+  "source": "Tson29/Pretrain_Model_WF3",
+  "test_sample_fingerprint": "b5f142f827194cd81202da08e33955e40d40ebd7da460cd2c8141670efb2f46c",
+  "runs": {
+    "ofi_lstm_wf3_f1": {
+      "model": "ofi_lstm",
+      "fold": 1,
+      "same_test_samples": true,
+      "test": {
+        "60s": {
+          "rmse": 36.04085154584345,
+          "mae": 21.120121270500128,
+          "r2_gain_vs_e0": -0.004916247681601149,
+          "da": 0.5052986671832257,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 211657,
+            "true_zero_excluded": 24191,
+            "pred_zero": 2,
+            "rmse_e0": 35.95258399526193,
+            "mae_e0": 20.664517825039837
+          }
+        },
+        "120s": {
+          "rmse": 51.642498824764736,
+          "mae": 31.334459483395676,
+          "r2_gain_vs_e0": -0.016238780016439636,
+          "da": 0.4972598891470207,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 224261,
+            "true_zero_excluded": 11587,
+            "pred_zero": 0,
+            "rmse_e0": 51.228231855735466,
+            "mae_e0": 30.28859562090836
+          }
+        },
+        "180s": {
+          "rmse": 62.79132861267128,
+          "mae": 37.785365744086285,
+          "r2_gain_vs_e0": -0.006278446487702816,
+          "da": 0.5045893614231391,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 228790,
+            "true_zero_excluded": 7058,
+            "pred_zero": 3,
+            "rmse_e0": 62.59513597128367,
+            "mae_e0": 37.39732794002915
+          }
+        }
+      },
+      "formulation": "WF3 regression: MSE on log return, pred_mid = origin_mid*exp(pred)"
+    },
+    "ofi_lstm_wf3_f2": {
+      "model": "ofi_lstm",
+      "fold": 2,
+      "same_test_samples": true,
+      "test": {
+        "60s": {
+          "rmse": 35.98084313473351,
+          "mae": 20.91268531314396,
+          "r2_gain_vs_e0": -0.0015726405355251938,
+          "da": 0.5205403081400568,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 211657,
+            "true_zero_excluded": 24191,
+            "pred_zero": 2,
+            "rmse_e0": 35.95258399526193,
+            "mae_e0": 20.664517825039837
+          }
+        },
+        "120s": {
+          "rmse": 51.46840347145219,
+          "mae": 30.823643491639235,
+          "r2_gain_vs_e0": -0.00939851333124131,
+          "da": 0.5030879198790694,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 224261,
+            "true_zero_excluded": 11587,
+            "pred_zero": 0,
+            "rmse_e0": 51.228231855735466,
+            "mae_e0": 30.28859562090836
+          }
+        },
+        "180s": {
+          "rmse": 62.57354660365993,
+          "mae": 37.43907327081577,
+          "r2_gain_vs_e0": 0.0006896907930532548,
+          "da": 0.5168232877311071,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 228790,
+            "true_zero_excluded": 7058,
+            "pred_zero": 14,
+            "rmse_e0": 62.59513597128367,
+            "mae_e0": 37.39732794002915
+          }
+        }
+      },
+      "formulation": "WF3 regression: MSE on log return, pred_mid = origin_mid*exp(pred)"
+    },
+    "ofi_lstm_wf3_f3": {
+      "model": "ofi_lstm",
+      "fold": 3,
+      "same_test_samples": true,
+      "test": {
+        "60s": {
+          "rmse": 35.95858577397993,
+          "mae": 20.902251611201404,
+          "r2_gain_vs_e0": -0.0003338997650401687,
+          "da": 0.5181779955305046,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 211657,
+            "true_zero_excluded": 24191,
+            "pred_zero": 1,
+            "rmse_e0": 35.95258399526193,
+            "mae_e0": 20.664517825039837
+          }
+        },
+        "120s": {
+          "rmse": 51.36414176021417,
+          "mae": 30.626481490742293,
+          "r2_gain_vs_e0": -0.005313093421395854,
+          "da": 0.5089962142325237,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 224261,
+            "true_zero_excluded": 11587,
+            "pred_zero": 3,
+            "rmse_e0": 51.228231855735466,
+            "mae_e0": 30.28859562090836
+          }
+        },
+        "180s": {
+          "rmse": 62.56835547020636,
+          "mae": 37.39622364660062,
+          "r2_gain_vs_e0": 0.0008554905048210326,
+          "da": 0.5212072205953058,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 228790,
+            "true_zero_excluded": 7058,
+            "pred_zero": 6,
+            "rmse_e0": 62.59513597128367,
+            "mae_e0": 37.39732794002915
+          }
+        }
+      },
+      "formulation": "WF3 regression: MSE on log return, pred_mid = origin_mid*exp(pred)"
+    },
+    "moderntcn_wf3_f1": {
+      "model": "moderntcn",
+      "fold": 1,
+      "same_test_samples": true,
+      "test": {
+        "60s": {
+          "rmse": 36.062753593479584,
+          "mae": 21.100061963123867,
+          "r2_gain_vs_e0": -0.006137995239940297,
+          "da": 0.524938934219043,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 211657,
+            "true_zero_excluded": 24191,
+            "pred_zero": 0,
+            "rmse_e0": 35.95258399526193,
+            "mae_e0": 20.664517825039837
+          }
+        },
+        "120s": {
+          "rmse": 51.36732202444908,
+          "mae": 30.671147707371908,
+          "r2_gain_vs_e0": -0.005437587285952672,
+          "da": 0.5119258364138214,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 224261,
+            "true_zero_excluded": 11587,
+            "pred_zero": 0,
+            "rmse_e0": 51.228231855735466,
+            "mae_e0": 30.28859562090836
+          }
+        },
+        "180s": {
+          "rmse": 62.74930350612708,
+          "mae": 37.77697048944091,
+          "r2_gain_vs_e0": -0.004931929118469736,
+          "da": 0.5068272214694698,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 228790,
+            "true_zero_excluded": 7058,
+            "pred_zero": 0,
+            "rmse_e0": 62.59513597128367,
+            "mae_e0": 37.39732794002915
+          }
+        }
+      },
+      "formulation": "WF3 regression: MSE on log return, pred_mid = origin_mid*exp(pred)"
+    },
+    "moderntcn_wf3_f2": {
+      "model": "moderntcn",
+      "fold": 2,
+      "same_test_samples": true,
+      "test": {
+        "60s": {
+          "rmse": 35.986166287117136,
+          "mae": 20.9689993614976,
+          "r2_gain_vs_e0": -0.0018690159235359438,
+          "da": 0.5443146222425906,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 211657,
+            "true_zero_excluded": 24191,
+            "pred_zero": 0,
+            "rmse_e0": 35.95258399526193,
+            "mae_e0": 20.664517825039837
+          }
+        },
+        "120s": {
+          "rmse": 51.28174055048701,
+          "mae": 30.523099606723314,
+          "r2_gain_vs_e0": -0.0020901225027396553,
+          "da": 0.5307164420028448,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 224261,
+            "true_zero_excluded": 11587,
+            "pred_zero": 0,
+            "rmse_e0": 51.228231855735466,
+            "mae_e0": 30.28859562090836
+          }
+        },
+        "180s": {
+          "rmse": 62.63028686543122,
+          "mae": 37.561244411060294,
+          "r2_gain_vs_e0": -0.0011234343774955136,
+          "da": 0.5222387342104113,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 228790,
+            "true_zero_excluded": 7058,
+            "pred_zero": 0,
+            "rmse_e0": 62.59513597128367,
+            "mae_e0": 37.39732794002915
+          }
+        }
+      },
+      "formulation": "WF3 regression: MSE on log return, pred_mid = origin_mid*exp(pred)"
+    },
+    "moderntcn_wf3_f3": {
+      "model": "moderntcn",
+      "fold": 3,
+      "same_test_samples": true,
+      "test": {
+        "60s": {
+          "rmse": 35.92574207911577,
+          "mae": 20.862469440164407,
+          "r2_gain_vs_e0": 0.0014926268536397114,
+          "da": 0.5502062298908139,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 211657,
+            "true_zero_excluded": 24191,
+            "pred_zero": 0,
+            "rmse_e0": 35.95258399526193,
+            "mae_e0": 20.664517825039837
+          }
+        },
+        "120s": {
+          "rmse": 51.213319359585384,
+          "mae": 30.398711352674503,
+          "r2_gain_vs_e0": 0.0005821136159605,
+          "da": 0.5331421870053197,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 224261,
+            "true_zero_excluded": 11587,
+            "pred_zero": 0,
+            "rmse_e0": 51.228231855735466,
+            "mae_e0": 30.28859562090836
+          }
+        },
+        "180s": {
+          "rmse": 62.58433640789174,
+          "mae": 37.48073156526218,
+          "r2_gain_vs_e0": 0.00034503101871785624,
+          "da": 0.5247563267625334,
+          "counts": {
+            "samples": 235848,
+            "da_samples": 228790,
+            "true_zero_excluded": 7058,
+            "pred_zero": 0,
+            "rmse_e0": 62.59513597128367,
+            "mae_e0": 37.39732794002915
+          }
+        }
+      },
+      "formulation": "WF3 regression: MSE on log return, pred_mid = origin_mid*exp(pred)"
+    }
+  }
+}

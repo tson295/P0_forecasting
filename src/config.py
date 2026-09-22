@@ -3,7 +3,8 @@ from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
 
-MODELS = ("e0", "ofi_lstm", "hfformer", "patchtst", "moderntcn", "lit")
+MODELS = ("e0", "ofi_lstm", "hfformer", "patchtst", "moderntcn", "lit",
+          "transformer")  # transformer: classification branch only (src/cls)
 
 
 @dataclass

@@ -40,14 +40,23 @@ def touched_rows(dataset, history_rows):
 def audit_fold(audit, fold, data, embargo_seconds, config):
     ts = data.raw.timestamps
     history = data.history_rows
+    # The floor is never the config's own embargo: a run that froze embargo 0 would then be
+    # measured against "> 0" and certify a one-snapshot gap under a 180s label. Leakage is
+    # defined by the forecast horizon, so the separation must clear the LONGEST horizon
+    # whatever the config says, and the embargo must itself cover that horizon.
+    horizon = float(max(config.data.horizons_seconds))
+    required = max(float(embargo_seconds), horizon)
+    audit.add(f"fold{fold}.embargo_covers_max_horizon", embargo_seconds >= horizon,
+              dict(embargo_seconds=embargo_seconds, max_horizon_seconds=horizon))
     spans = {name: touched_rows(ds, history) for name, ds in data.datasets.items()}
     ranges = data.metadata["split_manifest"]["ranges"]
 
     for earlier, later in (("train", "validation"), ("validation", "test"), ("train", "test")):
         first, second = spans[earlier], spans[later]
         gap = (int(ts[second[0]])-int(ts[first[1]]))/1e9
-        audit.add(f"fold{fold}.{earlier}_to_{later}_gap_seconds", gap > embargo_seconds,
-                  dict(gap_seconds=gap, required_greater_than=embargo_seconds,
+        audit.add(f"fold{fold}.{earlier}_to_{later}_gap_seconds", gap > required,
+                  dict(gap_seconds=gap, required_greater_than=required,
+                       embargo_seconds=embargo_seconds, max_horizon_seconds=horizon,
                        last_row_touched_by=earlier, first_row_touched_by=later,
                        last_row=first[1], first_row=second[0]))
 
@@ -103,12 +112,14 @@ def main():
     audit = Audit()
     models = [m.strip() for m in args.models.split(",") if m.strip()]
     folds = [int(f) for f in args.folds.split(",")]
-    test_fingerprint, summary = {}, {}
+    test_fingerprint, summary, required_floor = {}, {}, 0.0
     for model in models:
         for fold in folds:
             config = Config.load(args.config_template.format(model=model, fold=fold))
             config.data.csv_path = args.csv
             data = prepare_data(config)
+            required_floor = max(required_floor, float(config.data.embargo_seconds),
+                                 float(max(config.data.horizons_seconds)))
             summary[f"{model}.fold{fold}"] = audit_fold(
                 audit, f"{fold}.{model}", data, config.data.embargo_seconds, config)
             # Every model and fold must score E0 on exactly the same held-out samples.
@@ -128,7 +139,8 @@ def main():
         print(f"{'PASS' if c['passed'] else 'FAIL'}  {c['name']:<{width}}  "
               f"{'' if c['passed'] else json.dumps(c['detail'])[:160]}")
     report = dict(status="fail" if failures else "pass", csv=str(Path(args.csv).resolve()),
-                  embargo_seconds_required=180.0, checks=audit.checks,
+                  # Measured from the configs actually audited, never a hard-coded claim.
+                  embargo_seconds_required=required_floor, checks=audit.checks,
                   failed=[c["name"] for c in failures], splits=summary)
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)

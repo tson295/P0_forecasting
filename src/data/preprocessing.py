@@ -13,7 +13,7 @@ RAW_COLUMNS = [f"{side}_{field}_{level}" for side in ("bid", "ask")
 TRAIN_GLOBAL_NORMALIZATION = "per-field train-only z-score; no target scaling"
 
 # HFformer is the single exception: it never sees a corpus-level statistic.
-GLOBAL_STANDARDIZER_MODELS = ("e0", "ofi_lstm", "patchtst", "moderntcn", "lit")
+GLOBAL_STANDARDIZER_MODELS = ("e0", "ofi_lstm", "patchtst", "moderntcn", "lit", "transformer")
 
 
 # How each policy is evaluated numerically; the policy string itself stays frozen.

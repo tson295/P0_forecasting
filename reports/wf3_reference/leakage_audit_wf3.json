@@ -1,0 +1,3276 @@
+{
+  "status": "pass",
+  "csv": "/home/ubuntu/Pretrain_Model/BTC_L10_gate_1y.csv",
+  "embargo_seconds_required": 180.0,
+  "checks": [
+    {
+      "name": "fold1.e0.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold1.e0.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 666880,
+        "first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.e0.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13402820.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1333124,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.e0.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 20104400.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 666880,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.e0.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.e0.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333124,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.e0.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.e0.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 666880,
+        "split_hi": 666900
+      }
+    },
+    {
+      "name": "fold1.e0.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 333177
+      }
+    },
+    {
+      "name": "fold1.e0.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 666900,
+        "split_lo": 666900,
+        "max_target": 1333124,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold1.e0.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332849
+      }
+    },
+    {
+      "name": "fold1.e0.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold1.e0.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold1.e0.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.e0.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.e0.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.e0.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 666900,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold2.e0.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold2.e0.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1333106,
+        "first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.e0.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701410.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1998586,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.e0.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13403000.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1333106,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.e0.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.e0.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998586,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.e0.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.e0.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1333106,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold2.e0.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 666059
+      }
+    },
+    {
+      "name": "fold2.e0.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1333126,
+        "split_lo": 1333126,
+        "max_target": 1998586,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold2.e0.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332433
+      }
+    },
+    {
+      "name": "fold2.e0.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold2.e0.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold2.e0.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.e0.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.e0.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.e0.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1333126,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold3.e0.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold3.e0.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 190.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1998568,
+        "first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.e0.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 2667617,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.e0.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701590.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1998568,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.e0.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.e0.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 2667617,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.e0.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.e0.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1998568,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold3.e0.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 998525
+      }
+    },
+    {
+      "name": "fold3.e0.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1998587,
+        "split_lo": 1998587,
+        "max_target": 2667617,
+        "split_hi": 2667637
+      }
+    },
+    {
+      "name": "fold3.e0.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 334350
+      }
+    },
+    {
+      "name": "fold3.e0.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold3.e0.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold3.e0.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.e0.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.e0.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.e0.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1998587,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 666880,
+        "first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13402820.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1333124,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 20104400.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 666880,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333124,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 666880,
+        "split_hi": 666900
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 333177
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 666900,
+        "split_lo": 666900,
+        "max_target": 1333124,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332849
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.ofi_lstm.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 666900,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1333106,
+        "first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701410.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1998586,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13403000.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1333106,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998586,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1333106,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 666059
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1333126,
+        "split_lo": 1333126,
+        "max_target": 1998586,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332433
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.ofi_lstm.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1333126,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 190.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1998568,
+        "first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 2667617,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701590.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1998568,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 2667617,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1998568,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 998525
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1998587,
+        "split_lo": 1998587,
+        "max_target": 2667617,
+        "split_hi": 2667637
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 334350
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.ofi_lstm.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1998587,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold1.hfformer.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold1.hfformer.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 666880,
+        "first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.hfformer.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13402820.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1333124,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.hfformer.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 20104400.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 666880,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.hfformer.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.hfformer.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333124,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.hfformer.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.hfformer.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 666880,
+        "split_hi": 666900
+      }
+    },
+    {
+      "name": "fold1.hfformer.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 333177
+      }
+    },
+    {
+      "name": "fold1.hfformer.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 666900,
+        "split_lo": 666900,
+        "max_target": 1333124,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold1.hfformer.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332849
+      }
+    },
+    {
+      "name": "fold1.hfformer.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold1.hfformer.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold1.hfformer.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.hfformer.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.hfformer.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.hfformer.standardizer_absent_for_window_local_model",
+      "passed": true,
+      "detail": {
+        "model": "hfformer"
+      }
+    },
+    {
+      "name": "fold2.hfformer.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold2.hfformer.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1333106,
+        "first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.hfformer.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701410.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1998586,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.hfformer.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13403000.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1333106,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.hfformer.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.hfformer.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998586,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.hfformer.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.hfformer.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1333106,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold2.hfformer.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 666059
+      }
+    },
+    {
+      "name": "fold2.hfformer.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1333126,
+        "split_lo": 1333126,
+        "max_target": 1998586,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold2.hfformer.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332433
+      }
+    },
+    {
+      "name": "fold2.hfformer.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold2.hfformer.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold2.hfformer.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.hfformer.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.hfformer.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.hfformer.standardizer_absent_for_window_local_model",
+      "passed": true,
+      "detail": {
+        "model": "hfformer"
+      }
+    },
+    {
+      "name": "fold3.hfformer.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold3.hfformer.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 190.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1998568,
+        "first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.hfformer.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 2667617,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.hfformer.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701590.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1998568,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.hfformer.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.hfformer.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 2667617,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.hfformer.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.hfformer.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1998568,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold3.hfformer.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 998525
+      }
+    },
+    {
+      "name": "fold3.hfformer.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1998587,
+        "split_lo": 1998587,
+        "max_target": 2667617,
+        "split_hi": 2667637
+      }
+    },
+    {
+      "name": "fold3.hfformer.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 334350
+      }
+    },
+    {
+      "name": "fold3.hfformer.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold3.hfformer.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold3.hfformer.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.hfformer.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.hfformer.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.hfformer.standardizer_absent_for_window_local_model",
+      "passed": true,
+      "detail": {
+        "model": "hfformer"
+      }
+    },
+    {
+      "name": "fold1.patchtst.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold1.patchtst.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 666880,
+        "first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.patchtst.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13402820.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1333124,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.patchtst.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 20104400.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 666880,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.patchtst.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.patchtst.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333124,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.patchtst.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.patchtst.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 666880,
+        "split_hi": 666900
+      }
+    },
+    {
+      "name": "fold1.patchtst.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 333177
+      }
+    },
+    {
+      "name": "fold1.patchtst.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 666900,
+        "split_lo": 666900,
+        "max_target": 1333124,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold1.patchtst.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332849
+      }
+    },
+    {
+      "name": "fold1.patchtst.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold1.patchtst.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold1.patchtst.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.patchtst.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.patchtst.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.patchtst.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 666900,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold2.patchtst.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold2.patchtst.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1333106,
+        "first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.patchtst.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701410.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1998586,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.patchtst.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13403000.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1333106,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.patchtst.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.patchtst.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998586,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.patchtst.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.patchtst.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1333106,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold2.patchtst.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 666059
+      }
+    },
+    {
+      "name": "fold2.patchtst.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1333126,
+        "split_lo": 1333126,
+        "max_target": 1998586,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold2.patchtst.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332433
+      }
+    },
+    {
+      "name": "fold2.patchtst.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold2.patchtst.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold2.patchtst.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.patchtst.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.patchtst.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.patchtst.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1333126,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold3.patchtst.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold3.patchtst.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 190.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1998568,
+        "first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.patchtst.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 2667617,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.patchtst.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701590.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1998568,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.patchtst.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.patchtst.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 2667617,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.patchtst.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.patchtst.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1998568,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold3.patchtst.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 998525
+      }
+    },
+    {
+      "name": "fold3.patchtst.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1998587,
+        "split_lo": 1998587,
+        "max_target": 2667617,
+        "split_hi": 2667637
+      }
+    },
+    {
+      "name": "fold3.patchtst.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 334350
+      }
+    },
+    {
+      "name": "fold3.patchtst.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold3.patchtst.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold3.patchtst.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.patchtst.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.patchtst.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.patchtst.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1998587,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold1.moderntcn.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold1.moderntcn.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 666880,
+        "first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.moderntcn.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13402820.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1333124,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.moderntcn.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 20104400.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 666880,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.moderntcn.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.moderntcn.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333124,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.moderntcn.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.moderntcn.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 666880,
+        "split_hi": 666900
+      }
+    },
+    {
+      "name": "fold1.moderntcn.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 333177
+      }
+    },
+    {
+      "name": "fold1.moderntcn.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 666900,
+        "split_lo": 666900,
+        "max_target": 1333124,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold1.moderntcn.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332849
+      }
+    },
+    {
+      "name": "fold1.moderntcn.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold1.moderntcn.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold1.moderntcn.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.moderntcn.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.moderntcn.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.moderntcn.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 666900,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold2.moderntcn.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold2.moderntcn.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1333106,
+        "first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.moderntcn.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701410.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1998586,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.moderntcn.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13403000.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1333106,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.moderntcn.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.moderntcn.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998586,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.moderntcn.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.moderntcn.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1333106,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold2.moderntcn.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 666059
+      }
+    },
+    {
+      "name": "fold2.moderntcn.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1333126,
+        "split_lo": 1333126,
+        "max_target": 1998586,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold2.moderntcn.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332433
+      }
+    },
+    {
+      "name": "fold2.moderntcn.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold2.moderntcn.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold2.moderntcn.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.moderntcn.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.moderntcn.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.moderntcn.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1333126,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold3.moderntcn.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold3.moderntcn.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 190.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1998568,
+        "first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.moderntcn.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 2667617,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.moderntcn.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701590.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1998568,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.moderntcn.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.moderntcn.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 2667617,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.moderntcn.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.moderntcn.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1998568,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold3.moderntcn.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 998525
+      }
+    },
+    {
+      "name": "fold3.moderntcn.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1998587,
+        "split_lo": 1998587,
+        "max_target": 2667617,
+        "split_hi": 2667637
+      }
+    },
+    {
+      "name": "fold3.moderntcn.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 334350
+      }
+    },
+    {
+      "name": "fold3.moderntcn.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold3.moderntcn.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold3.moderntcn.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.moderntcn.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.moderntcn.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.moderntcn.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1998587,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold1.lit.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold1.lit.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 666880,
+        "first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.lit.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13402820.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1333124,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.lit.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 20104400.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 666880,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.lit.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 666900
+      }
+    },
+    {
+      "name": "fold1.lit.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333124,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.lit.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 666880,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold1.lit.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 666880,
+        "split_hi": 666900
+      }
+    },
+    {
+      "name": "fold1.lit.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 333177
+      }
+    },
+    {
+      "name": "fold1.lit.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 666900,
+        "split_lo": 666900,
+        "max_target": 1333124,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold1.lit.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332849
+      }
+    },
+    {
+      "name": "fold1.lit.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold1.lit.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold1.lit.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.lit.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.lit.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold1.lit.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 666900,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold2.lit.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold2.lit.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1333106,
+        "first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.lit.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701410.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 1998586,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.lit.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 13403000.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1333106,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.lit.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 1333126
+      }
+    },
+    {
+      "name": "fold2.lit.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998586,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.lit.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1333106,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold2.lit.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1333106,
+        "split_hi": 1333126
+      }
+    },
+    {
+      "name": "fold2.lit.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 666059
+      }
+    },
+    {
+      "name": "fold2.lit.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1333126,
+        "split_lo": 1333126,
+        "max_target": 1998586,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold2.lit.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 332433
+      }
+    },
+    {
+      "name": "fold2.lit.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold2.lit.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold2.lit.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.lit.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.lit.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold2.lit.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1333126,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "fold3.lit.embargo_covers_max_horizon",
+      "passed": true,
+      "detail": {
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0
+      }
+    },
+    {
+      "name": "fold3.lit.train_to_validation_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 190.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "validation",
+        "last_row": 1998568,
+        "first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.lit.validation_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 200.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "validation",
+        "first_row_touched_by": "test",
+        "last_row": 2667617,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.lit.train_to_test_gap_seconds",
+      "passed": true,
+      "detail": {
+        "gap_seconds": 6701590.0,
+        "required_greater_than": 180.0,
+        "embargo_seconds": 180.0,
+        "max_horizon_seconds": 180.0,
+        "last_row_touched_by": "train",
+        "first_row_touched_by": "test",
+        "last_row": 1998568,
+        "first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.lit.train_validation_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 1998587
+      }
+    },
+    {
+      "name": "fold3.lit.validation_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 2667617,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.lit.train_test_rows_disjoint",
+      "passed": true,
+      "detail": {
+        "earlier_last_row": 1998568,
+        "later_first_row": 2667637
+      }
+    },
+    {
+      "name": "fold3.lit.train_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 0,
+        "split_lo": 0,
+        "max_target": 1998568,
+        "split_hi": 1998587
+      }
+    },
+    {
+      "name": "fold3.lit.train_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 998525
+      }
+    },
+    {
+      "name": "fold3.lit.validation_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 1998587,
+        "split_lo": 1998587,
+        "max_target": 2667617,
+        "split_hi": 2667637
+      }
+    },
+    {
+      "name": "fold3.lit.validation_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 334350
+      }
+    },
+    {
+      "name": "fold3.lit.test_inside_own_split",
+      "passed": true,
+      "detail": {
+        "min_history_start": 2667637,
+        "split_lo": 2667637,
+        "max_target": 3139595,
+        "split_hi": 3139597
+      }
+    },
+    {
+      "name": "fold3.lit.test_no_gap_inside_window",
+      "passed": true,
+      "detail": {
+        "samples": 235848
+      }
+    },
+    {
+      "name": "fold3.lit.train_validation_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.lit.validation_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.lit.train_test_origins_disjoint",
+      "passed": true,
+      "detail": {
+        "shared": 0
+      }
+    },
+    {
+      "name": "fold3.lit.standardizer_fitted_on_train_rows_only",
+      "passed": true,
+      "detail": {
+        "train_hi": 1998587,
+        "matches_refit": true
+      }
+    },
+    {
+      "name": "test_split_identical_across_every_model_and_fold",
+      "passed": true,
+      "detail": {
+        "distinct_test_sets": 1,
+        "groups": [
+          [
+            "e0.fold1",
+            "e0.fold2",
+            "e0.fold3",
+            "ofi_lstm.fold1",
+            "ofi_lstm.fold2",
+            "ofi_lstm.fold3",
+            "hfformer.fold1",
+            "hfformer.fold2",
+            "hfformer.fold3",
+            "patchtst.fold1",
+            "patchtst.fold2",
+            "patchtst.fold3",
+            "moderntcn.fold1",
+            "moderntcn.fold2",
+            "moderntcn.fold3",
+            "lit.fold1",
+            "lit.fold2",
+            "lit.fold3"
+          ]
+        ]
+      }
+    }
+  ],
+  "failed": [],
+  "splits": {
+    "e0.fold1": {
+      "train": {
+        "rows_touched": [
+          0,
+          666880
+        ],
+        "samples": 333177,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          666900,
+          1333124
+        ],
+        "samples": 332849,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "e0.fold2": {
+      "train": {
+        "rows_touched": [
+          0,
+          1333106
+        ],
+        "samples": 666059,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1333126,
+          1998586
+        ],
+        "samples": 332433,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "e0.fold3": {
+      "train": {
+        "rows_touched": [
+          0,
+          1998568
+        ],
+        "samples": 998525,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1998587,
+          2667617
+        ],
+        "samples": 334350,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "ofi_lstm.fold1": {
+      "train": {
+        "rows_touched": [
+          0,
+          666880
+        ],
+        "samples": 333177,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          666900,
+          1333124
+        ],
+        "samples": 332849,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "ofi_lstm.fold2": {
+      "train": {
+        "rows_touched": [
+          0,
+          1333106
+        ],
+        "samples": 666059,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1333126,
+          1998586
+        ],
+        "samples": 332433,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "ofi_lstm.fold3": {
+      "train": {
+        "rows_touched": [
+          0,
+          1998568
+        ],
+        "samples": 998525,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1998587,
+          2667617
+        ],
+        "samples": 334350,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "hfformer.fold1": {
+      "train": {
+        "rows_touched": [
+          0,
+          666880
+        ],
+        "samples": 333177,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          666900,
+          1333124
+        ],
+        "samples": 332849,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "hfformer.fold2": {
+      "train": {
+        "rows_touched": [
+          0,
+          1333106
+        ],
+        "samples": 666059,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1333126,
+          1998586
+        ],
+        "samples": 332433,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "hfformer.fold3": {
+      "train": {
+        "rows_touched": [
+          0,
+          1998568
+        ],
+        "samples": 998525,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1998587,
+          2667617
+        ],
+        "samples": 334350,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "patchtst.fold1": {
+      "train": {
+        "rows_touched": [
+          0,
+          666880
+        ],
+        "samples": 333177,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          666900,
+          1333124
+        ],
+        "samples": 332849,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "patchtst.fold2": {
+      "train": {
+        "rows_touched": [
+          0,
+          1333106
+        ],
+        "samples": 666059,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1333126,
+          1998586
+        ],
+        "samples": 332433,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "patchtst.fold3": {
+      "train": {
+        "rows_touched": [
+          0,
+          1998568
+        ],
+        "samples": 998525,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1998587,
+          2667617
+        ],
+        "samples": 334350,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "moderntcn.fold1": {
+      "train": {
+        "rows_touched": [
+          0,
+          666880
+        ],
+        "samples": 333177,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          666900,
+          1333124
+        ],
+        "samples": 332849,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "moderntcn.fold2": {
+      "train": {
+        "rows_touched": [
+          0,
+          1333106
+        ],
+        "samples": 666059,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1333126,
+          1998586
+        ],
+        "samples": 332433,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "moderntcn.fold3": {
+      "train": {
+        "rows_touched": [
+          0,
+          1998568
+        ],
+        "samples": 998525,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1998587,
+          2667617
+        ],
+        "samples": 334350,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "lit.fold1": {
+      "train": {
+        "rows_touched": [
+          0,
+          666880
+        ],
+        "samples": 333177,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          666900,
+          1333124
+        ],
+        "samples": 332849,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "lit.fold2": {
+      "train": {
+        "rows_touched": [
+          0,
+          1333106
+        ],
+        "samples": 666059,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1333126,
+          1998586
+        ],
+        "samples": 332433,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    },
+    "lit.fold3": {
+      "train": {
+        "rows_touched": [
+          0,
+          1998568
+        ],
+        "samples": 998525,
+        "origin_sha": null
+      },
+      "validation": {
+        "rows_touched": [
+          1998587,
+          2667617
+        ],
+        "samples": 334350,
+        "origin_sha": null
+      },
+      "test": {
+        "rows_touched": [
+          2667637,
+          3139595
+        ],
+        "samples": 235848,
+        "origin_sha": null
+      }
+    }
+  }
+}
