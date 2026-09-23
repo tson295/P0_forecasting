@@ -11,6 +11,8 @@ each rule is one controlled change against the official argmax decoding:
   overflow_median     equal-width only: argmax, but the two overflow classes decode to the
                       fold-1-train median displacement of their own samples instead of
                       -q - w/2 / +q + w/2 (labeling/equal_width_k32_p99_ovfmedian.json)
+  overflow_edge       equal-width only: argmax, overflow classes decoded at the range edge
+                      -q / +q (the smallest value an overflow displacement can take)
 
 Learning-free references from the run's own TRAIN class frequencies (train_metrics.json):
   prior_argmax        always the most frequent train class, decoded (a constant prediction)
@@ -72,6 +74,10 @@ def main():
                     if ovf[h].edges != ls[h].edges:
                         raise AssertionError("overflow variant must share the edges")
                     decoded["overflow_median"] = np.asarray(ovf[h].representatives)[cls]
+                    # Overflow decoded at the range edge -q / +q instead of -q - w/2 / +q + w/2.
+                    edge_reps = reps.copy()
+                    edge_reps[0], edge_reps[-1] = ls[h].edges[0], ls[h].edges[-1]
+                    decoded["overflow_edge"] = edge_reps[cls]
                 for rule, delta in decoded.items():
                     m, c = official_metrics(origin, target, origin+delta)
                     rows.append(dict(job_id=s["job_id"], method=s["method"], label_set=ls.name, arch=s["arch"],
