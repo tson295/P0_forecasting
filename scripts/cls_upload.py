@@ -26,6 +26,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("HF_HOME", str(Path.home()/".hf_home"))
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")  # keep the pipeline log readable
 from huggingface_hub import HfApi, hf_hub_download
 
 REPO = "Tson29/LOB_Classification_WF3"
