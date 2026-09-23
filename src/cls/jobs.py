@@ -4,7 +4,7 @@ A job is one trained model: (method or label set, formulation, architecture, hor
 fold, variant). Its run directory mirrors the Hugging Face layout:
 
   runs/cls/<method>/<multi|single>/<arch>/[h<seconds>/]f<fold>/
-  runs/cls/followups/<experiment>/<variant>/<arch>/[h<seconds>/]f<fold>/
+  runs/cls/followups/<experiment>/<variant>/<method>/<multi|single>/<arch>/[h<seconds>/]f<fold>/
 
 The registry (runs/cls/registry.json) is owned by the scheduler; every status change is
 written atomically. Statuses: planned -> running -> completed | failed; a failed job
@@ -48,7 +48,7 @@ def job_id(method, formulation, arch, horizons, fold, experiment=None, variant=N
 
 def run_dir(method, formulation, arch, horizons, fold, experiment=None, variant=None):
     parts = ["runs", "cls"]
-    parts += [method] if experiment is None else ["followups", experiment, variant]
+    parts += [method] if experiment is None else ["followups", experiment, variant, method]
     parts += [formulation, arch]
     if len(horizons) == 1:
         parts.append(f"h{horizons[0]}")
@@ -137,6 +137,15 @@ class Registry:
     def add(self, jobs):
         with self.locked() as data:
             known = {j["id"] for j in data["jobs"]}
-            added = [j for j in jobs if j["id"] not in known]
+            dirs = {j["run_dir"]: j["id"] for j in data["jobs"]}
+            added = []
+            for job in jobs:
+                if job["id"] in known:
+                    continue
+                if dirs.get(job["run_dir"], job["id"]) != job["id"]:
+                    raise ValueError(f"{job['id']} would share {job['run_dir']} with {dirs[job['run_dir']]}")
+                dirs[job["run_dir"]] = job["id"]
+                known.add(job["id"])
+                added.append(job)
             data["jobs"].extend(added)
         return added

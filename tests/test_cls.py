@@ -62,10 +62,11 @@ def test_equal_width_edges_zero_boundary_and_overflow():
     assert spec.edges[0] == -q and spec.edges[-1] == q and spec.edges[16] == 0.0
     assert np.allclose(np.diff(spec.edges), w)
     # No finite bin crosses zero; zero opens the upper central bin [0, w).
-    assert spec.assign([0.0])[0] == 17 and spec.assign([-1e-9])[0] == 16
+    # (Displacements are snapped to 1e-6 USD, the smallest distinguishable move.)
+    assert spec.assign([0.0])[0] == 17 and spec.assign([-1e-6])[0] == 16 and spec.assign([-1e-9])[0] == 17
     # Closed finite range [-q, +q]; overflow strictly outside it, never clipped.
     assert spec.assign([-q])[0] == 1 and spec.assign([q])[0] == 32
-    assert spec.assign([np.nextafter(q, np.inf)])[0] == 33 and spec.assign([np.nextafter(-q, -np.inf)])[0] == 0
+    assert spec.assign([q+1e-6])[0] == 33 and spec.assign([-q-1e-6])[0] == 0
     assert spec.assign([-10*q])[0] == 0 and spec.assign([10*q])[0] == 33
     # Official decoding: midpoints; overflow at -q - w/2 and +q + w/2.
     assert spec.representatives[0] == -q-w/2 and spec.representatives[-1] == q+w/2
@@ -87,7 +88,7 @@ def test_interval_assignment_is_deterministic_not_nearest():
 
 def test_quantile_bins_are_equal_frequency_and_merge_point_masses():
     rng = np.random.default_rng(2)
-    delta = rng.normal(0, 10, 34_000)
+    delta = np.round(rng.normal(0, 10, 34_000), 6)  # already on the 1e-6 USD snap grid
     spec = fit_quantile(delta, 120, n_classes=34)
     counts = np.bincount(spec.assign(delta), minlength=spec.n_classes)
     assert spec.n_classes == 34 and abs(counts.max()-counts.min()) <= 2
@@ -205,7 +206,7 @@ def test_gpu_batching_reproduces_lobdataset_windows_and_labels(walk_csv):
                 mid = data.mid
                 o, t = ds.origins[i], ds.target_indices[i]
                 assert np.allclose(np.log(mid[t]/mid[o]), ref_y.numpy(), atol=1e-7)
-                assert np.array_equal(delta[row].numpy(), mid[t]-mid[o])
+                assert np.array_equal(delta[row].numpy(), np.round(mid[t]-mid[o], 6))  # snapped USD delta
                 assert [int(v) for v in y[row]] == [int(ls[h].assign([mid[t[j]]-mid[o]])[0]) for j, h in enumerate(HORIZONS)]
             seen += len(index)
         assert seen == len(ds)
@@ -217,3 +218,62 @@ def test_shuffle_order_is_the_wf3_random_sampler_permutation():
     ours = torch.randperm(n, generator=torch.Generator().manual_seed(42)).tolist()
     theirs = list(RandomSampler(range(n), generator=torch.Generator().manual_seed(42)))
     assert ours == theirs
+
+
+# ---------------------------------------------------------------- snapping and end to end
+
+def test_displacement_snapping_makes_classes_a_function_of_the_usd_value():
+    from src.cls.labels import displacement, snap
+    a, b = np.array([-0.10000000000582]), np.array([-0.09999999999127])
+    assert snap(a)[0] == snap(b)[0] == -0.1
+    massed = np.r_[np.full(500, -0.10000000000582), np.full(500, -0.09999999999127),
+                   np.random.default_rng(6).normal(0, 1, 9000)]
+    spec = fit_quantile(massed, 60, n_classes=34)
+    assert len(set(spec.assign(massed[:1000]).tolist())) == 1
+    assert displacement(np.array([100.15]), np.array([100.05]))[0] == 0.1
+
+
+def test_end_to_end_run_resume_export_and_audit_comparisons(tmp_path, walk_csv):
+    """A tiny CPU run: 1 epoch, then resume to 2; exported tables satisfy the audit's
+    exact per-run comparisons after a round-trip CSV read."""
+    from src.cls.labels import displacement
+    from src.cls.metrics import official_metrics
+    from src.cls.trainer import run
+    fields = data_fields()
+    probe = ClassificationData("transformer", fields, walk_csv,
+                               LabelSet("p", [fit_equal_width(np.r_[-1., 1.], h, bins=2) for h in HORIZONS]),
+                               HORIZONS, torch.device("cpu"))
+    train_delta = displacement(probe.mid[probe.splits["train"].targets], probe.mid[probe.splits["train"].origins][:, None])
+    for method in ("equal_width", "quantile"):
+        specs = [fit_equal_width(train_delta[:, j], h, bins=8) if method == "equal_width"
+                 else fit_quantile(train_delta[:, j], h, n_classes=10) for j, h in enumerate(HORIZONS)]
+        path = LabelSet(method, specs, meta=dict(variant=dict(method=method))).save(tmp_path/f"{method}.json")
+        for horizons in ([60, 120, 180], [120]):
+            cfg = dict(job_id="t", stage="test", method=method, formulation="multi" if len(horizons) == 3 else "single",
+                       arch="transformer", horizons=horizons, fold=1, label_set_path=str(path), data=fields,
+                       csv_path=walk_csv, model_kwargs=dict(d_model=16, heads=2, layers=1, ffn_dim=32),
+                       training=dict(epochs=1, batch_size=16, learning_rate=1e-3, weight_decay=1e-4, gradient_clip=1.0,
+                                     precision="fp32", seed=42, eval_batch_size=64, compile_mode="none"))
+            run_dir = tmp_path/f"{method}_{len(horizons)}"
+            run(cfg, run_dir, ".")
+            cfg["training"]["epochs"] = 2
+            summary = run(cfg, run_dir, ".")          # resumes from last/
+            history = [json.loads(l) for l in (run_dir/"training_history.jsonl").read_text().splitlines()]
+            assert [r["epoch"] for r in history] == [0, 1]
+            ces = [r["validation"]["mean_ce"] for r in history]
+            selected = json.loads((run_dir/"best/selection.json").read_text())["epoch"]
+            assert history[int(np.argmin(ces))]["epoch"] == summary["best_epoch"] == selected
+            ls = LabelSet.load(path)
+            for split in ("validation", "test"):
+                frame = pd.read_csv(run_dir/f"{split}_predictions.csv.gz", float_precision="round_trip")
+                origins = frame["origin_index"].to_numpy(np.int64)
+                metrics = json.loads((run_dir/f"{split}_metrics.json").read_text())["official_metrics"]
+                for h in horizons:
+                    t = f"{h}s"
+                    true = displacement(probe.mid[frame[f"target_index_{t}"].to_numpy(np.int64)], probe.mid[origins])
+                    assert np.array_equal(frame[f"true_delta_{t}"].to_numpy(), true)
+                    assert np.array_equal(frame[f"true_class_{t}"].to_numpy(np.int64), ls[h].assign(true))
+                    assert np.array_equal(frame[f"pred_delta_{t}"].to_numpy(),
+                                          ls[h].decode(frame[f"pred_class_{t}"].to_numpy(np.int64)))
+                    again, _ = official_metrics(frame["origin_mid"], frame[f"target_mid_{t}"], frame[f"pred_mid_{t}"])
+                    assert all(np.isclose(again[k], metrics[t][k], rtol=1e-12) for k in again)

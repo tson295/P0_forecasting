@@ -61,8 +61,8 @@ def worker(args):
     def step():
         """Exactly the trainer's step (src/cls/trainer.fit)."""
         nonlocal stream
-        # Full batches only: the epoch's final partial batch (333177 mod 128 = 1 sample)
-        # would trigger a one-off dynamic-shape recompile inside the measured window.
+        # Full batches only: the epoch's final partial batch (333177 mod 128 = 121 samples)
+        # would trigger a one-off recompile inside the measured window.
         x, y, _, _ = next(stream, (None, None, None, None))
         if x is None or len(y) < batch:
             stream = data.batches("train", batch, order)

@@ -1,0 +1,206 @@
+{
+  "policy": {
+    "max_concurrent": 4,
+    "capacity": 1.0,
+    "load": {
+      "moderntcn": 1.0,
+      "transformer": 1.0,
+      "ofi_lstm": 0.25
+    },
+    "peak_reserved_bytes": {
+      "moderntcn": 3149989920,
+      "transformer": 1666254880,
+      "ofi_lstm": 951092240
+    },
+    "single_job_samples_per_second": {
+      "moderntcn": 10999.188058717798,
+      "transformer": 44055.98185298283,
+      "ofi_lstm": 14205.69043489729
+    }
+  },
+  "rationale": "Same-architecture scaling, normalized throughput by number of jobs: {\"moderntcn\": {\"1\": 1.0, \"2\": 0.908, \"3\": 0.906, \"4\": 0.904}, \"transformer\": {\"1\": 1.0, \"2\": 0.911, \"3\": 0.909, \"4\": 0.909}, \"ofi_lstm\": {\"1\": 1.0, \"2\": 2.032, \"3\": 1.433, \"4\": 2.82, \"5\": 2.831, \"6\": 2.819, \"8\": 2.817}}. ModernTCN and the Transformer saturate the GPU alone (mean util 95% / 97%) and a second heavy job only loses throughput; OFI-LSTM is latency-bound alone (46% util) and peaks at k=4 (2.82x). Mixed configurations reach normalized throughput up to 2.11x, but they buy it by slowing the heavy job; against time-slicing the exclusive groups their efficiency is {'FL': 0.949, 'TF': 0.905, 'TL': 0.92, 'TFL': 0.941, 'TLL': 0.978, 'TFFL': 0.93, 'TFLL': 0.953, 'TTFL': 0.929, 'FFFLLL': 0.956, 'TTFFLL': 0.931} (1.00 = equal). No mixed configuration beats exclusive groups, so the policy runs one ModernTCN or one Transformer alone, or up to 4 OFI-LSTM jobs together (capacity 1.0). Batch size and every hyperparameter stay fixed; only the number of concurrent jobs is chosen.",
+  "admissibility_of_measured_configurations": [
+    {
+      "config": "F",
+      "load": 1.0,
+      "normalized": 1.0,
+      "efficiency_vs_exclusive_groups": 1.0,
+      "admitted": true
+    },
+    {
+      "config": "L",
+      "load": 0.25,
+      "normalized": 1.0,
+      "efficiency_vs_exclusive_groups": 0.355,
+      "admitted": true
+    },
+    {
+      "config": "T",
+      "load": 1.0,
+      "normalized": 1.0,
+      "efficiency_vs_exclusive_groups": 1.0,
+      "admitted": true
+    },
+    {
+      "config": "FF",
+      "load": 2.0,
+      "normalized": 0.911,
+      "efficiency_vs_exclusive_groups": 0.911,
+      "admitted": false
+    },
+    {
+      "config": "FL",
+      "load": 1.25,
+      "normalized": 1.533,
+      "efficiency_vs_exclusive_groups": 0.949,
+      "admitted": false
+    },
+    {
+      "config": "LL",
+      "load": 0.5,
+      "normalized": 2.032,
+      "efficiency_vs_exclusive_groups": 0.721,
+      "admitted": true
+    },
+    {
+      "config": "TF",
+      "load": 2.0,
+      "normalized": 0.905,
+      "efficiency_vs_exclusive_groups": 0.905,
+      "admitted": false
+    },
+    {
+      "config": "TL",
+      "load": 1.25,
+      "normalized": 1.513,
+      "efficiency_vs_exclusive_groups": 0.92,
+      "admitted": false
+    },
+    {
+      "config": "TT",
+      "load": 2.0,
+      "normalized": 0.908,
+      "efficiency_vs_exclusive_groups": 0.908,
+      "admitted": false
+    },
+    {
+      "config": "FFF",
+      "load": 3.0,
+      "normalized": 0.909,
+      "efficiency_vs_exclusive_groups": 0.909,
+      "admitted": false
+    },
+    {
+      "config": "LLL",
+      "load": 0.75,
+      "normalized": 1.433,
+      "efficiency_vs_exclusive_groups": 0.508,
+      "admitted": true
+    },
+    {
+      "config": "TFL",
+      "load": 2.25,
+      "normalized": 1.526,
+      "efficiency_vs_exclusive_groups": 0.941,
+      "admitted": false
+    },
+    {
+      "config": "TLL",
+      "load": 1.5,
+      "normalized": 2.113,
+      "efficiency_vs_exclusive_groups": 0.978,
+      "admitted": false
+    },
+    {
+      "config": "TTT",
+      "load": 3.0,
+      "normalized": 0.906,
+      "efficiency_vs_exclusive_groups": 0.906,
+      "admitted": false
+    },
+    {
+      "config": "FFFF",
+      "load": 4.0,
+      "normalized": 0.909,
+      "efficiency_vs_exclusive_groups": 0.909,
+      "admitted": false
+    },
+    {
+      "config": "LLLL",
+      "load": 1.0,
+      "normalized": 2.82,
+      "efficiency_vs_exclusive_groups": 1.0,
+      "admitted": true
+    },
+    {
+      "config": "TFFL",
+      "load": 3.25,
+      "normalized": 1.372,
+      "efficiency_vs_exclusive_groups": 0.93,
+      "admitted": false
+    },
+    {
+      "config": "TFLL",
+      "load": 2.5,
+      "normalized": 1.803,
+      "efficiency_vs_exclusive_groups": 0.953,
+      "admitted": false
+    },
+    {
+      "config": "TTFL",
+      "load": 3.25,
+      "normalized": 1.37,
+      "efficiency_vs_exclusive_groups": 0.929,
+      "admitted": false
+    },
+    {
+      "config": "TTTT",
+      "load": 4.0,
+      "normalized": 0.904,
+      "efficiency_vs_exclusive_groups": 0.904,
+      "admitted": false
+    },
+    {
+      "config": "LLLLL",
+      "load": 1.25,
+      "normalized": 2.831,
+      "efficiency_vs_exclusive_groups": 1.004,
+      "admitted": false
+    },
+    {
+      "config": "FFFLLL",
+      "load": 3.75,
+      "normalized": 1.816,
+      "efficiency_vs_exclusive_groups": 0.956,
+      "admitted": false
+    },
+    {
+      "config": "LLLLLL",
+      "load": 1.5,
+      "normalized": 2.819,
+      "efficiency_vs_exclusive_groups": 1.0,
+      "admitted": false
+    },
+    {
+      "config": "TTFFLL",
+      "load": 4.5,
+      "normalized": 1.326,
+      "efficiency_vs_exclusive_groups": 0.931,
+      "admitted": false
+    },
+    {
+      "config": "LLLLLLLL",
+      "load": 2.0,
+      "normalized": 2.817,
+      "efficiency_vs_exclusive_groups": 0.999,
+      "admitted": false
+    }
+  ],
+  "ordering": "longest estimated job first within the admitted stage",
+  "oom_policy": "1) fewer concurrent jobs 2) batch size only if unavoidable 3) implementation-level memory work; never shrink the architecture",
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4090",
+    "reported_total_bytes": 50770362368,
+    "note": "the card reports 47.4 GiB, not the 24 GB the prompt assumed; memory never bound"
+  }
+}

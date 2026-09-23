@@ -30,7 +30,7 @@ from torch.nn import functional as F
 
 from src.training.trainer import seed_everything
 from .data import ClassificationData, fingerprint
-from .labels import LabelSet
+from .labels import LabelSet, displacement
 from .metrics import DA_CONVENTION, official_metrics
 from .models import build_classifier, load_classifier, parameter_count, save_weights
 
@@ -193,8 +193,10 @@ def training_functions(model, compile_mode, dtype, device):
         return loss_fn, model
     if compile_mode not in ("default", "reduce-overhead"):
         raise ValueError(f"Unknown compile_mode {compile_mode}")
-    eval_model = torch.compile(model) if compile_mode == "default" else model
-    return torch.compile(loss_fn, mode=compile_mode), eval_model
+    # dynamic=False: batch 128 keeps the static graph the benchmark measured; the epoch's
+    # remainder batch compiles its own static entry instead of switching to dynamic shapes.
+    eval_model = torch.compile(model, dynamic=False) if compile_mode == "default" else model
+    return torch.compile(loss_fn, mode=compile_mode, dynamic=False), eval_model
 
 
 def rng_state(generator):
@@ -250,6 +252,11 @@ def fit(cfg, run_dir, device, dtype, label_set, data, repo_root):
     history_path = run_dir/"training_history.jsonl"
     start, best, best_epoch = 0, math.inf, None
     last = run_dir/"last"
+    # A kill inside _checkpoint's rename window leaves only <name>.old: take it back.
+    for folder in (last, run_dir/"best"):
+        old = folder.with_name(folder.name+".old")
+        if not folder.exists() and old.exists():
+            old.rename(folder)
     if (last/"trainer_state.pt").exists():
         state = torch.load(last/"trainer_state.pt", map_location="cpu", weights_only=False)
         model.load_state_dict(load_classifier(last).state_dict())
@@ -257,10 +264,28 @@ def fit(cfg, run_dir, device, dtype, label_set, data, repo_root):
         scheduler.load_state_dict(torch.load(last/"scheduler.pt", map_location="cpu", weights_only=True))
         restore_rng(state["rng"], generator)
         start, best, best_epoch = state["epoch"]+1, state["best"], state["best_epoch"]
-        if history_path.exists():
-            kept = [l for l in history_path.read_text().splitlines() if l.strip() and json.loads(l)["epoch"] < start]
-            history_path.write_text("".join(l+"\n" for l in kept))
+        selection = run_dir/"best"/"selection.json"
+        saved_best = json.loads(selection.read_text())["epoch"] if selection.exists() else None
+        if saved_best != best_epoch:
+            # last/ is committed before best/, so a kill between them leaves best/ one
+            # improvement behind; the resumed weights ARE the best epoch's weights then.
+            if best_epoch != state["epoch"]:
+                raise RuntimeError(f"best/ holds epoch {saved_best}, state says {best_epoch}")
+            _checkpoint(model, run_dir/"best", metadata | dict(selection=dict(
+                criterion="validation mean CrossEntropy over the run's horizons", epoch=best_epoch,
+                value=best, restored_from="last/ after an interrupted best/ save")))
         print(json.dumps(dict(resumed_from_epoch=state["epoch"], best=best, best_epoch=best_epoch)), flush=True)
+    # History keeps exactly the epochs before `start` (WF3 truncate_jsonl semantics); a
+    # fresh start drops everything, a torn final line is dropped rather than parsed.
+    kept = []
+    if history_path.exists():
+        for line in history_path.read_text().splitlines():
+            try:
+                if json.loads(line)["epoch"] < start:
+                    kept.append(line)
+            except (json.JSONDecodeError, KeyError):
+                pass
+    history_path.write_text("".join(l+"\n" for l in kept))
     n_train = len(data.splits["train"])
     sample = data.windows(data.device_split("validation")["origins"][:8]).float()
     started = time.time()
@@ -291,24 +316,29 @@ def fit(cfg, run_dir, device, dtype, label_set, data, repo_root):
         improved = validation["mean_ce"] < best
         if improved:
             best, best_epoch = validation["mean_ce"], epoch
-            _checkpoint(model, run_dir/"best", metadata | dict(selection=dict(
-                criterion="validation mean CrossEntropy over the run's horizons", epoch=epoch,
-                value=best)))
-            verification = _verify(run_dir/"best", model, sample, device)
-        state = dict(epoch=epoch, best=best, best_epoch=best_epoch, rng=rng_state(generator))
-        _checkpoint(model, last, dict(run_config=cfg),
-                    {"optimizer.pt": optimizer.state_dict(), "scheduler.pt": scheduler.state_dict(),
-                     "trainer_state.pt": state})
         record = dict(epoch=epoch, learning_rate=learning_rate, train_mean_ce=train_loss,
                       validation=validation, is_best=bool(improved), best_epoch=best_epoch,
                       best_validation_mean_ce=best, steps=steps,
                       train_seconds=train_seconds, epoch_seconds=time.time()-epoch_started,
                       train_samples_per_second=n_train/train_seconds,
-                      checkpoint_verified=verification if improved else None,
                       peak_allocated_bytes=int(torch.cuda.max_memory_allocated(device)) if device.type == "cuda" else None,
                       peak_reserved_bytes=int(torch.cuda.max_memory_reserved(device)) if device.type == "cuda" else None)
+        # Commit order: history, then last/ (resume point), then best/. A kill after the
+        # history line re-runs the epoch (its line is dropped on resume); a kill between
+        # last/ and best/ is repaired on resume from last/, which holds the best weights.
         with history_path.open("a") as handle:
             handle.write(json.dumps(record, allow_nan=False)+"\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        state = dict(epoch=epoch, best=best, best_epoch=best_epoch, rng=rng_state(generator))
+        _checkpoint(model, last, dict(run_config=cfg),
+                    {"optimizer.pt": optimizer.state_dict(), "scheduler.pt": scheduler.state_dict(),
+                     "trainer_state.pt": state})
+        if improved:
+            _checkpoint(model, run_dir/"best", metadata | dict(selection=dict(
+                criterion="validation mean CrossEntropy over the run's horizons", epoch=epoch,
+                value=best)))
+            _verify(run_dir/"best", model, sample, device)
         print(json.dumps(dict(epoch=epoch, train_ce=round(train_loss, 5),
                               val_ce=[round(v, 5) for v in validation["ce"]],
                               val_r2_gain=[round(v, 5) for v in validation["argmax"]["r2_gain_vs_e0"]],
@@ -341,9 +371,13 @@ def export(cfg, run_dir, device, label_set, data, splits=("train", "validation",
     model = load_classifier(run_dir/"best", device)
     batch = cfg["training"]["eval_batch_size"]
     results = {}
+    # GPU phase: every split's probabilities; then the CPU-only writing phase, during which
+    # the scheduler does not count this job against the GPU capacity.
+    all_probs = {split: predict_split(model, data, split, batch) for split in splits}
+    set_status(run_dir, state="writing")
     for split in splits:
         s = data.splits[split]
-        probs = predict_split(model, data, split, batch)
+        probs = all_probs.pop(split)
         if any(len(p) != len(s) for p in probs):
             raise ValueError("Prediction count does not match the split")
         origin_mid = data.mid[s.origins].astype(np.float64)
@@ -358,12 +392,13 @@ def export(cfg, run_dir, device, label_set, data, splits=("train", "validation",
             pred_class = p.argmax(1)
             pred_delta = spec.decode(pred_class)
             expected_delta = spec.expected(p)
-            if not np.array_equal(spec.assign(target_mid-origin_mid), s.labels[:, j]):
+            true_delta = displacement(target_mid, origin_mid)
+            if not np.array_equal(spec.assign(true_delta), s.labels[:, j]):
                 raise AssertionError("Exported true classes disagree with the training labels")
             table |= {f"target_index_{tag}": target_index.astype(np.int64),
                       f"target_timestamp_ns_{tag}": data.timestamps[target_index].astype(np.int64),
                       f"target_mid_{tag}": target_mid,
-                      f"true_delta_{tag}": target_mid-origin_mid,
+                      f"true_delta_{tag}": true_delta,
                       f"true_class_{tag}": s.labels[:, j],
                       f"pred_class_{tag}": pred_class.astype(np.int64),
                       f"pred_delta_{tag}": pred_delta,

@@ -76,6 +76,8 @@ class TransformerClassifier(ForecastModel):
     def __init__(self, config):
         super().__init__(config)
         c = config
+        if c["pooling"] != "mean" or c["positional_encoding"] != "sinusoidal":
+            raise ValueError("The Transformer baseline is mean-pooled with sinusoidal positions only")
         self.input_proj = nn.Linear(c["channels"], c["d_model"])
         self.register_buffer("positions", sinusoidal_positions(c["history_rows"], c["d_model"]),
                              persistent=False)

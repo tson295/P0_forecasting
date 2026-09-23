@@ -20,7 +20,7 @@ import numpy as np
 
 from src.cls import HORIZONS
 from src.cls.data import wf3_config
-from src.cls.labels import LabelSet, distribution, fit_equal_width, fit_quantile
+from src.cls.labels import LabelSet, displacement, distribution, fit_equal_width, fit_quantile
 from src.data.dataset import prepare_data
 
 WF3_TRAINING_COMMIT = "fdbb369946cc07eae9e615c968943036507be129"
@@ -41,7 +41,7 @@ def split_deltas(csv, fold):
     raw = data.raw
     out, provenance = {}, {}
     for name, ds in data.datasets.items():
-        out[name] = raw.mid[ds.target_indices]-raw.mid[ds.origins][:, None]
+        out[name] = displacement(raw.mid[ds.target_indices], raw.mid[ds.origins][:, None])
         provenance[name] = dict(samples=len(ds), rows=list(data.metadata["split_manifest"]["ranges"][name]),
                                 origin_index_sha256=hashlib.sha256(ds.origins.tobytes()).hexdigest())
     source = raw.source
@@ -93,6 +93,10 @@ def main(argv=None):
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     variants = BASELINE_VARIANTS if args.variants is None else json.loads(args.variants)
+    if args.variants is not None:
+        # Extra variants are fitted and frozen only; label_distribution.json stays the
+        # baseline description the report reads.
+        args.skip_distribution = True
 
     deltas = {}
     fold1, provenance, source = split_deltas(args.csv, 1)

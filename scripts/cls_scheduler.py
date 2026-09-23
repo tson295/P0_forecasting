@@ -134,8 +134,12 @@ def main(argv=None):
                     print(f"  adopting live {job['id']} pid={attempt['pid']}", flush=True)
                     continue
                 state = run_state(job)
-                attempt.update(end=now(), outcome="completed" if state == "completed" else "lost")
-                job["status"] = "completed" if state == "completed" else "failed"
+                done = state == "completed" and (ROOT/job["run_dir"]/"run_summary.json").exists()
+                attempt.update(end=now(), outcome="completed" if done else "lost")
+                job["status"] = "completed" if done else "failed"
+        for job in data["jobs"]:
+            if job["status"] == "completed":
+                prune(job)   # idempotent: clears last/ left by a run that ended while we were down
 
     while not STOP:
         with registry.locked() as data:
@@ -176,24 +180,32 @@ def main(argv=None):
             if not running and not planned:
                 break
             # 3. admit (longest first)
-            load = sum(policy["load"][j["arch"]] for j in running)
+            # A job in its CPU-only writing phase no longer occupies the GPU.
+            gpu_jobs = [j for j in running if run_state(j) != "writing"]
+            load = sum(policy["load"][j["arch"]] for j in gpu_jobs)
             if planned and time.time()-last_launch >= args.stagger:
                 planned.sort(key=lambda j: -estimate_seconds(j, policy))
                 free = gpu_free_bytes()
                 for job in planned:
                     need = policy["load"][job["arch"]]
-                    if len(running) >= policy["max_concurrent"] or load+need > policy["capacity"]+1e-9:
+                    if len(gpu_jobs) >= policy["max_concurrent"] or load+need > policy["capacity"]+1e-9:
                         continue
                     vram = policy["peak_reserved_bytes"][job["arch"]]
                     if free is not None and free < vram+args.safety_bytes:
                         continue
-                    process, handle, log = launch(job, args, log_dir)
+                    try:
+                        process, handle, log = launch(job, args, log_dir)
+                    except Exception as error:  # a bad job must not take the sweep down
+                        job["attempts"].append(dict(start=now(), end=now(), outcome="launch-error", error=repr(error)))
+                        job["status"] = "failed"
+                        print(f"[{now()}] LAUNCH ERROR {job['id']}: {error!r}", flush=True)
+                        continue
                     children[job["id"]] = (process, handle)
                     job["attempts"].append(dict(start=now(), pid=process.pid, log=log))
                     job["status"] = "running"
                     last_launch = time.time()
                     print(f"[{now()}] start {job['id']} pid={process.pid} load={load+need:.2f}/"
-                          f"{policy['capacity']} running={len(running)+1} est={estimate_seconds(job, policy)/3600:.2f}h",
+                          f"{policy['capacity']} gpu_jobs={len(gpu_jobs)+1} est={estimate_seconds(job, policy)/3600:.2f}h",
                           flush=True)
                     break
         time.sleep(args.poll)

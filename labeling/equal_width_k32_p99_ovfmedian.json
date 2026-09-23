@@ -1,11 +1,12 @@
 {
-  "name": "equal_width_k32_p99",
+  "name": "equal_width_k32_p99_ovfmedian",
   "meta": {
     "variant": {
-      "name": "equal_width_k32_p99",
+      "name": "equal_width_k32_p99_ovfmedian",
       "method": "equal_width",
       "bins": 32,
-      "percentile": 99.0
+      "percentile": 99.0,
+      "overflow": "conditional_median"
     },
     "fitted_on": {
       "fold": 1,
@@ -80,7 +81,7 @@
         221.0
       ],
       "representatives": [
-        -227.90625,
+        -262.3,
         -214.09375,
         -200.28125,
         -186.46875,
@@ -113,7 +114,7 @@
         186.46875,
         200.28125,
         214.09375,
-        227.90625
+        272.9
       ],
       "n_classes": 34,
       "top_edge_closed": true,
@@ -124,7 +125,7 @@
         "width": 13.8125,
         "finite_min": -221.0,
         "finite_max": 221.0,
-        "overflow": "edge_plus_half_width",
+        "overflow": "conditional_median",
         "percentile_method": "numpy.percentile(|delta|, linear)",
         "delta_rounding": "numpy.round(delta, 6)"
       },
@@ -287,7 +288,7 @@
         310.2239999999991
       ],
       "representatives": [
-        -319.918499999999,
+        -370.0,
         -300.5294999999991,
         -281.1404999999992,
         -261.7514999999992,
@@ -320,7 +321,7 @@
         261.7514999999992,
         281.1404999999992,
         300.5294999999991,
-        319.918499999999
+        381.6
       ],
       "n_classes": 34,
       "top_edge_closed": true,
@@ -331,7 +332,7 @@
         "width": 19.388999999999943,
         "finite_min": -310.2239999999991,
         "finite_max": 310.2239999999991,
-        "overflow": "edge_plus_half_width",
+        "overflow": "conditional_median",
         "percentile_method": "numpy.percentile(|delta|, linear)",
         "delta_rounding": "numpy.round(delta, 6)"
       },
@@ -494,7 +495,7 @@
         381.92399999999907
       ],
       "representatives": [
-        -393.85912499999904,
+        -457.55,
         -369.9888749999991,
         -346.11862499999916,
         -322.2483749999992,
@@ -527,7 +528,7 @@
         322.2483749999992,
         346.11862499999916,
         369.9888749999991,
-        393.85912499999904
+        475.1
       ],
       "n_classes": 34,
       "top_edge_closed": true,
@@ -538,7 +539,7 @@
         "width": 23.870249999999942,
         "finite_min": -381.92399999999907,
         "finite_max": 381.92399999999907,
-        "overflow": "edge_plus_half_width",
+        "overflow": "conditional_median",
         "percentile_method": "numpy.percentile(|delta|, linear)",
         "delta_rounding": "numpy.round(delta, 6)"
       },
@@ -663,5 +664,5 @@
       }
     }
   },
-  "definition_sha256": "389ffcb97910c11d33a72356e9eafea52ecdcb56cdcc109c5c9b0489cdd09d15"
+  "definition_sha256": "5af75e52a75178f860dabbb7fe7ac7cec586ddf15577b650ce5d5f49facbdf00"
 }

@@ -81,8 +81,14 @@ def official_block(df, formulation, split="test", baseline_stage=True):
         d = sub[sub.horizon == tag].sort_values(["method", "arch", "fold"])
         if d.empty:
             continue
-        e0 = d.iloc[0]
-        rows = [["E0 (pred = origin mid)", "", "", fmt(e0.rmse_e0, "rmse"), fmt(e0.mae_e0, "mae"), fmt(0.0, "r2"), fmt(0.0, "da")]]
+        # E0 depends only on the samples: one row for the shared test split, one per fold otherwise.
+        e0s = d.drop_duplicates("fold").sort_values("fold")
+        if split == "test":
+            if d.rmse_e0.round(9).nunique() != 1:
+                raise AssertionError("Test E0 differs across runs: the test split is not shared")
+            e0s = e0s.iloc[:1]
+        rows = [["E0 (pred = origin mid)", "", "" if split == "test" else f"F{r.fold}", fmt(r.rmse_e0, "rmse"),
+                 fmt(r.mae_e0, "mae"), fmt(0.0, "r2"), fmt(0.0, "da")] for _, r in e0s.iterrows()]
         for _, r in d.iterrows():
             rows.append([METHOD_NAME[r.method], ARCH_NAME[r.arch], f"F{r.fold}", fmt(r.rmse, "rmse"), fmt(r.mae, "mae"),
                          fmt(r.r2_gain_vs_e0, "r2"), fmt(r.da, "da")])
@@ -96,6 +102,7 @@ def pivot(df, value, formulation, split="test", index=("method", "arch"), column
     if sub.empty:
         return "(no runs)"
     p = sub.pivot_table(index=list(index), columns=list(columns), values=value, aggfunc="first")
+    p = p[sorted(p.columns, key=lambda c: (TAGS.index(c[0]), c[1]))]
     header = [" / ".join(index)]+[f"{c[0]} F{c[1]}" if isinstance(c, tuple) else str(c) for c in p.columns]
     rows = []
     for idx, r in p.iterrows():
@@ -263,7 +270,8 @@ def main():
                "**DA (test), single-horizon**\n\n"+pivot(df, "da", "single"),
                "## 13. h1 vs h2 vs h3", sections.get("horizons", ""),
                "## 14. Equal-width vs quantile", sections.get("methods", ""),
-               "## 15. Follow-up experiments", sections.get("followups", ""),
+               "## 15. Follow-up experiments", sections.get("followups", ""), decoding_block(),
+               followup_block(df, registry),
                "## 16. Interpretation", sections.get("interpretation", ""),
                "## 17. Limitations", sections.get("limitations", ""),
                "## 18. Final conclusions", sections.get("conclusions", "")]
@@ -272,22 +280,146 @@ def main():
     md += ["## Appendix A. Secondary diagnostic (NOT an official metric): expected-value decoding",
            "Σ_k p_k · representative_k instead of the argmax representative, same test samples. Shown only to explain the "
            "official numbers; the official decoding is argmax.\n\n"
-           + pivot(df, "ev_r2_gain_vs_e0", "multi", index=("method", "arch")) + "\n\n"
-           + (pivot(df, "ev_r2_gain_vs_e0", "single", index=("method", "arch")) if args.stage == "all" else ""),
+           + "**Expected-value decoding, R² gain vs E0 (test), multi-horizon**\n\n"
+           + pivot(df, "ev_r2_gain_vs_e0", "multi", index=("method", "arch"))
+           + ("\n\n**Expected-value decoding, R² gain vs E0 (test), single-horizon**\n\n"
+              + pivot(df, "ev_r2_gain_vs_e0", "single", index=("method", "arch")) if args.stage == "all" else ""),
            "## Appendix B. Validation (selection split), multi-horizon, official metrics",
            official_block(df, "multi", split="validation")]
     name = "STAGE1_MULTI_REPORT.md" if args.stage == "multi" else "FINAL_REPORT_CLASSIFICATION.md"
     out = ROOT/"reports"/name
     out.write_text("\n\n".join(x for x in md if x is not None)+"\n")
+    write_model_card(df, registry, head)
     print(f"wrote {out} ({len(df)} result rows from {df.job_id.nunique() if len(df) else 0} runs)")
 
 
+def write_model_card(df, registry, head):
+    """reports/HF_README.md: the Hugging Face model card (uploaded as README.md)."""
+    base = [j for j in registry["jobs"] if j["stage"] in ("multi", "single")]
+    follow = [j for j in registry["jobs"] if j["stage"] == "followup"]
+    count = lambda js, st: sum(j["status"] == st for j in js)
+    card = f"""---
+license: mit
+library_name: pytorch
+tags:
+- time-series-forecasting
+- limit-order-book
+- classification
+- bitcoin
+---
+
+# LOB_Classification_WF3 — discretized classification of BTC mid-price displacement
+
+The future USD mid-price displacement delta_h = mid(t+h) − mid(t), h ∈ {{60, 120, 180}} s, is mapped to
+frozen class intervals (fitted on fold-1 train only), predicted with CrossEntropy by OFI-LSTM, ModernTCN and a
+Transformer, and decoded back to a price (argmax class → interval representative). Everything else is the WF3
+contract of `Tson29/Pretrain_Model_WF3`: 490 s history, 20 s stride, 3 expanding walk-forward folds, a shared
+held-out test split (last 15 % of time, 235,848 samples), 180 s embargo, train-only normalization.
+
+| Item | Value |
+|---|---|
+| Code | GitHub `tson295/P0_forecasting`, branch `classification`, commit `{head}` |
+| Data | private dataset `Tson29/btc-l10-gate-1y`, `BTC_L10_gate_1y.csv`, SHA256 `6d8f82fb…e6df` (not copied here) |
+| Baseline jobs | {len(base)} planned, {count(base, 'completed')} completed, {count(base, 'failed')} failed |
+| Follow-up jobs | {len(follow)} ({count(follow, 'completed')} completed) |
+| Official metrics | RMSE, MAE, R² gain vs E0, directional accuracy — on the decoded future mid price |
+
+Full report: `reports/FINAL_REPORT_CLASSIFICATION.md`. Leakage audit: `audits/leakage_audit_classification.json`.
+Frozen label definitions: `labeling/`. Throughput benchmark and schedule: `benchmarks/`. Run registry: `registry/registry.json`.
+
+## Layout
+
+```text
+<equal_width|quantile>/<multi|single>/<ofi_lstm|moderntcn|transformer>/[h<seconds>/]f<fold>/
+    best/                      weights (safetensors), config.json and every metadata JSON
+    run_config.json label_set.json training_history.jsonl run_summary.json
+    {{train,validation,test}}_metrics.json  {{validation,test}}_predictions.csv.gz  {{validation,test}}_probs.npz
+followups/<experiment>/<variant>/<method>/<multi|single>/<arch>/[h<seconds>/]f<fold>/   same files
+labeling/ reports/ audits/ benchmarks/ registry/
+```
+
+Prediction tables hold one row per origin with origin/target indices, timestamps and mids, the true displacement
+and class, the predicted class, decoded displacement and mid, and the expected-value diagnostic, so all four
+official metrics can be recomputed without the model.
+
+## Loading a checkpoint
+
+```python
+from huggingface_hub import snapshot_download
+from src.cls.models import load_classifier   # code from the GitHub branch above
+
+path = snapshot_download("Tson29/LOB_Classification_WF3", allow_patterns="equal_width/multi/moderntcn/f3/best/*")
+model = load_classifier(f"{{path}}/equal_width/multi/moderntcn/f3/best")   # returns one logits tensor per horizon
+```
+"""
+    (ROOT/"reports/HF_README.md").write_text(card)
+
+
 def params_table(df):
-    if df.empty:
+    """Exact counts differ with the class count (33 vs 34 at 60 s) and the number of heads."""
+    d = df[df.experiment == ""]
+    if d.empty:
         return ""
-    d = df.drop_duplicates(["arch", "formulation"])[["arch", "formulation", "parameters"]].sort_values(["arch", "formulation"])
-    return md_table(["Architecture", "Formulation", "Parameters (exact)"],
-                    [[ARCH_NAME[r.arch], r.formulation, f"{r.parameters:,}"] for _, r in d.iterrows()])
+    d = d.assign(h=np.where(d.formulation == "multi", "60/120/180 s", d.horizon))
+    d = d.drop_duplicates(["arch", "formulation", "method", "h"]).sort_values(["arch", "formulation", "method", "h"])
+    return md_table(["Architecture", "Formulation", "Binning", "Horizon(s)", "Parameters (exact)"],
+                    [[ARCH_NAME[r.arch], r.formulation, METHOD_NAME[r.method], r.h, f"{r.parameters:,}"]
+                     for _, r in d.iterrows()])
+
+
+def followup_block(df, registry):
+    """Every follow-up variant against its baseline twin (same method, arch, formulation,
+    fold, horizon), official metrics only, validation first (the selection split)."""
+    fu = df[df.experiment != ""]
+    if fu.empty:
+        return "(no follow-up runs)"
+    base = df[df.experiment == ""]
+    hyp = {}
+    for j in registry["jobs"]:
+        if j["stage"] == "followup":
+            hyp[(j["experiment"], j["variant"])] = (j.get("extra", {}).get("hypothesis", ""), j["label_set_path"],
+                                                    j.get("model_kwargs", {}))
+    keys = ["method", "formulation", "arch", "fold", "horizon", "split"]
+    out = []
+    for (exp, var), g in fu.groupby(["experiment", "variant"], sort=True):
+        h, labels, kwargs = hyp.get((exp, var), ("", "", {}))
+        m = g.merge(base, on=keys, suffixes=("_var", "_base"))
+        lines = [f"### {exp} / {var}", f"*Hypothesis:* {h}" if h else "",
+                 f"*Controlled change:* label set `{labels}`" + (f", model_kwargs `{json.dumps(kwargs)}`" if kwargs else "")
+                 + "; everything else identical to the baseline twin."]
+        if len(m) != len(g):
+            lines.append(f"**{len(g)-len(m)} follow-up rows have no baseline twin.**")
+        for split in ("validation", "test"):
+            mm = m[m.split == split].sort_values(["method", "arch", "horizon", "fold"],
+                                                 key=lambda c: c.map(TAGS.index) if c.name == "horizon" else c)
+            rows = [[METHOD_NAME[r.method], ARCH_NAME[r.arch], r.formulation, r.horizon, f"F{r.fold}",
+                     fmt(r.rmse_base, "rmse"), fmt(r.rmse_var, "rmse"), fmt(r.mae_base, "mae"), fmt(r.mae_var, "mae"),
+                     fmt(r.r2_gain_vs_e0_base, "r2"), fmt(r.r2_gain_vs_e0_var, "r2"), fmt(r.da_base, "da"), fmt(r.da_var, "da")]
+                    for _, r in mm.iterrows()]
+            lines.append(f"**{split}**\n\n" + md_table(
+                ["Binning", "Arch", "Form.", "Horizon", "Fold", "RMSE base", "RMSE var", "MAE base", "MAE var",
+                 "R² gain base", "R² gain var", "DA base", "DA var"], rows))
+        out.append("\n\n".join(x for x in lines if x))
+    return "\n\n".join(out)
+
+
+def decoding_block():
+    path = ROOT/"reports/followups/decoding_long.csv"
+    if not path.exists():
+        return ""
+    d = pd.read_csv(path)
+    d = d[d.experiment.fillna("") == ""]
+    agg = (d.groupby(["split", "rule", "method", "formulation", "arch", "horizon"])[["rmse", "mae", "r2_gain_vs_e0", "da"]]
+           .mean().reset_index())
+    out = []
+    for split in ("validation", "test"):
+        a = agg[agg.split == split].sort_values(["method", "formulation", "arch", "horizon", "rule"],
+                                                key=lambda c: c.map(TAGS.index) if c.name == "horizon" else c)
+        rows = [[r.rule, METHOD_NAME[r.method], r.formulation, ARCH_NAME[r.arch], r.horizon, fmt(r.rmse, "rmse"),
+                 fmt(r.mae, "mae"), fmt(r.r2_gain_vs_e0, "r2"), fmt(r.da, "da")] for _, r in a.iterrows()]
+        out.append(f"**Decoding rules, {split}, mean over folds F1–F3** (same models, same classes; only the decoding changes)\n\n"
+                   + md_table(["Decoding", "Binning", "Form.", "Arch", "Horizon", "RMSE", "MAE", "R² gain vs E0", "DA"], rows))
+    return "\n\n".join(out)
 
 
 if __name__ == "__main__":

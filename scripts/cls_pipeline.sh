@@ -21,14 +21,15 @@ MODE="${1:-baseline}"
 if [ "$MODE" = "baseline" ]; then
   step python scripts/cls_registry.py init-baseline || exit 1
   step python scripts/cls_scheduler.py --stages multi --csv "$CSV" || { say "stage multi has failed jobs; stopping"; exit 1; }
-  step python scripts/cls_report.py --stage multi
-  step python scripts/cls_upload.py upload --only-runs
+  step python scripts/cls_report.py --stage multi || say "stage-1 report failed (the final report is regenerated anyway)"
+  # A stuck or failing interim upload must not hold stage 2: the final upload resends everything.
+  step timeout -k 60 3h python scripts/cls_upload.py upload --only-runs || say "stage-1 upload failed/timed out; continuing"
   step python scripts/cls_scheduler.py --stages single --csv "$CSV" || { say "stage single has failed jobs; stopping"; exit 1; }
 elif [ "$MODE" = "followup" ]; then
   step python scripts/cls_scheduler.py --stages followup --csv "$CSV" || { say "follow-up has failed jobs; stopping"; exit 1; }
 fi
 step python scripts/cls_audit.py --csv "$CSV" || { say "LEAKAGE AUDIT FAILED: results are not valid"; exit 1; }
-step python scripts/cls_report.py
-step python scripts/cls_upload.py upload
-step python scripts/cls_upload.py verify
+step python scripts/cls_report.py || { say "REPORT FAILED"; exit 1; }
+step timeout -k 60 8h python scripts/cls_upload.py upload || { say "UPLOAD FAILED; re-run scripts/cls_pipeline.sh $MODE"; exit 1; }
+step python scripts/cls_upload.py verify || { say "HF READ-BACK FAILED"; exit 1; }
 say "PIPELINE_DONE $MODE"

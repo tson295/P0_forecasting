@@ -1,0 +1,1030 @@
+{
+  "single_job": {
+    "moderntcn": {
+      "arch": "moderntcn",
+      "compile_mode": "default",
+      "parameters": 51582054,
+      "batch_size": 128,
+      "samples": 495360,
+      "steps": 3870,
+      "seconds": 45.036051511764526,
+      "samples_per_second": 10999.188058717798,
+      "mean_step_seconds": 0.01163722261285905,
+      "peak_allocated_bytes": 2000877568,
+      "peak_reserved_bytes": 2118123520,
+      "resident_feature_bytes": 502335520,
+      "process_cpu_percent": 99.87554079480107,
+      "rss_bytes": 2535378944,
+      "prepare_seconds": 13.814604759216309,
+      "warmup_seconds": 3.1361312866210938,
+      "warmup_steps": 60,
+      "gpu_util": 94.52688172043011
+    },
+    "transformer": {
+      "arch": "transformer",
+      "compile_mode": "reduce-overhead",
+      "parameters": 3196262,
+      "batch_size": 128,
+      "samples": 1985664,
+      "steps": 15513,
+      "seconds": 45.07138228416443,
+      "samples_per_second": 44055.98185298283,
+      "mean_step_seconds": 0.0029053943327637744,
+      "peak_allocated_bytes": 567752192,
+      "peak_reserved_bytes": 931135488,
+      "resident_feature_bytes": 502335520,
+      "process_cpu_percent": 99.53100554397975,
+      "rss_bytes": 2400387072,
+      "prepare_seconds": 14.884229898452759,
+      "warmup_seconds": 2.064793586730957,
+      "warmup_steps": 60,
+      "gpu_util": 96.7741935483871
+    },
+    "ofi_lstm": {
+      "arch": "ofi_lstm",
+      "compile_mode": "none",
+      "parameters": 3028326,
+      "batch_size": 128,
+      "samples": 639360,
+      "steps": 4995,
+      "seconds": 45.00731611251831,
+      "samples_per_second": 14205.69043489729,
+      "mean_step_seconds": 0.009010473696199861,
+      "peak_allocated_bytes": 477049344,
+      "peak_reserved_bytes": 559939584,
+      "resident_feature_bytes": 251167760,
+      "process_cpu_percent": 99.805995735671,
+      "rss_bytes": 2141470720,
+      "prepare_seconds": 13.957598686218262,
+      "warmup_seconds": 0.8162651062011719,
+      "warmup_steps": 60,
+      "gpu_util": 46.02197802197802
+    }
+  },
+  "configurations": [
+    {
+      "config": "F",
+      "archs": [
+        "transformer"
+      ],
+      "samples_per_second": [
+        44055.98185298283
+      ],
+      "units_per_second": {
+        "transformer": 1.0
+      },
+      "normalized_throughput": 1.0,
+      "total_samples_per_second": 44055.98185298283,
+      "mean_gpu_util": 96.7741935483871,
+      "max_gpu_used_bytes": 2119172096.0,
+      "mean_cpu_percent": 3.7559139784946245,
+      "max_ram_used_bytes": 7674626048.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 411169.7209373193,
+      "peak_reserved_bytes": [
+        931135488
+      ],
+      "process_cpu_percent": [
+        99.53100554397975
+      ],
+      "efficiency_vs_exclusive_groups": 1.0
+    },
+    {
+      "config": "L",
+      "archs": [
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        14205.69043489729
+      ],
+      "units_per_second": {
+        "ofi_lstm": 1.0
+      },
+      "normalized_throughput": 1.0,
+      "total_samples_per_second": 14205.69043489729,
+      "mean_gpu_util": 46.02197802197802,
+      "max_gpu_used_bytes": 1735393280.0,
+      "mean_cpu_percent": 3.5516483516483515,
+      "max_ram_used_bytes": 7160225792.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 310928.85135433264,
+      "peak_reserved_bytes": [
+        559939584
+      ],
+      "process_cpu_percent": [
+        99.805995735671
+      ],
+      "efficiency_vs_exclusive_groups": 0.3546602255746805
+    },
+    {
+      "config": "T",
+      "archs": [
+        "moderntcn"
+      ],
+      "samples_per_second": [
+        10999.188058717798
+      ],
+      "units_per_second": {
+        "moderntcn": 1.0
+      },
+      "normalized_throughput": 1.0,
+      "total_samples_per_second": 10999.188058717798,
+      "mean_gpu_util": 94.52688172043011,
+      "max_gpu_used_bytes": 3291480064.0,
+      "mean_cpu_percent": 3.595698924731182,
+      "max_ram_used_bytes": 7878565888.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 299428.10897272255,
+      "peak_reserved_bytes": [
+        2118123520
+      ],
+      "process_cpu_percent": [
+        99.87554079480107
+      ],
+      "efficiency_vs_exclusive_groups": 1.0
+    },
+    {
+      "config": "FF",
+      "archs": [
+        "transformer",
+        "transformer"
+      ],
+      "samples_per_second": [
+        20164.331684983677,
+        19965.598631701232
+      ],
+      "units_per_second": {
+        "transformer": 0.9108849384086055
+      },
+      "normalized_throughput": 0.9108849384086055,
+      "total_samples_per_second": 40129.93031668491,
+      "mean_gpu_util": 90.38,
+      "max_gpu_used_bytes": 3573940224.0,
+      "mean_cpu_percent": 96.186,
+      "max_ram_used_bytes": 12219068416.0,
+      "mean_disk_read_bps": 64836.1488530983,
+      "mean_disk_write_bps": 4346880.026926265,
+      "peak_reserved_bytes": [
+        931135488,
+        931135488
+      ],
+      "process_cpu_percent": [
+        83.00480285378956,
+        74.84700117304499
+      ],
+      "efficiency_vs_exclusive_groups": 0.9108849384086055
+    },
+    {
+      "config": "FL",
+      "archs": [
+        "transformer",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        27693.673219773926,
+        12851.412795508986
+      ],
+      "units_per_second": {
+        "transformer": 0.6286018845792427,
+        "ofi_lstm": 0.9046665386948441
+      },
+      "normalized_throughput": 1.533268423274087,
+      "total_samples_per_second": 40545.08601528291,
+      "mean_gpu_util": 92.96875,
+      "max_gpu_used_bytes": 3190161408.0,
+      "mean_cpu_percent": 61.822916666666664,
+      "max_ram_used_bytes": 10358464512.0,
+      "mean_disk_read_bps": 67458.26655050232,
+      "mean_disk_write_bps": 508942.8145785909,
+      "peak_reserved_bytes": [
+        931135488,
+        559939584
+      ],
+      "process_cpu_percent": [
+        97.00895957499566,
+        90.02600936221097
+      ],
+      "efficiency_vs_exclusive_groups": 0.9494511232626216
+    },
+    {
+      "config": "LL",
+      "archs": [
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        14475.823411682726,
+        14394.46375631676
+      ],
+      "units_per_second": {
+        "ofi_lstm": 2.0323043994452794
+      },
+      "normalized_throughput": 2.0323043994452794,
+      "total_samples_per_second": 28870.287167999486,
+      "mean_gpu_util": 92.21978021978022,
+      "max_gpu_used_bytes": 2806317056.0,
+      "mean_cpu_percent": 9.504395604395606,
+      "max_ram_used_bytes": 10043322368.0,
+      "mean_disk_read_bps": 59185.43502973844,
+      "mean_disk_write_bps": 9312160.812520133,
+      "peak_reserved_bytes": [
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        99.71680911043725,
+        99.81341878052585
+      ],
+      "efficiency_vs_exclusive_groups": 0.7207775367436784
+    },
+    {
+      "config": "TF",
+      "archs": [
+        "moderntcn",
+        "transformer"
+      ],
+      "samples_per_second": [
+        5008.002382671264,
+        19832.649210427422
+      ],
+      "units_per_second": {
+        "moderntcn": 0.4553065513505784,
+        "transformer": 0.45016927046615446
+      },
+      "normalized_throughput": 0.9054758218167329,
+      "total_samples_per_second": 24840.651593098686,
+      "mean_gpu_util": 97.49462365591398,
+      "max_gpu_used_bytes": 4746248192.0,
+      "mean_cpu_percent": 9.294623655913979,
+      "max_ram_used_bytes": 11055722496.0,
+      "mean_disk_read_bps": 4924.61441942011,
+      "mean_disk_write_bps": 697327.4150417538,
+      "peak_reserved_bytes": [
+        2118123520,
+        931135488
+      ],
+      "process_cpu_percent": [
+        99.69782237682172,
+        99.64551616596526
+      ],
+      "efficiency_vs_exclusive_groups": 0.9054758218167329
+    },
+    {
+      "config": "TL",
+      "archs": [
+        "moderntcn",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        6534.213308837754,
+        13056.732953029605
+      ],
+      "units_per_second": {
+        "moderntcn": 0.5940632412097755,
+        "ofi_lstm": 0.9191199127467125
+      },
+      "normalized_throughput": 1.513183153956488,
+      "total_samples_per_second": 19590.946261867357,
+      "mean_gpu_util": 93.17204301075269,
+      "max_gpu_used_bytes": 4362469376.0,
+      "mean_cpu_percent": 43.067741935483866,
+      "max_ram_used_bytes": 10004627456.0,
+      "mean_disk_read_bps": 26467.116149750454,
+      "mean_disk_write_bps": 500350.10698992497,
+      "peak_reserved_bytes": [
+        2118123520,
+        559939584
+      ],
+      "process_cpu_percent": [
+        92.77112061060562,
+        92.34062253728597
+      ],
+      "efficiency_vs_exclusive_groups": 0.9200385167947052
+    },
+    {
+      "config": "TT",
+      "archs": [
+        "moderntcn",
+        "moderntcn"
+      ],
+      "samples_per_second": [
+        4992.465899567928,
+        4992.04683403755
+      ],
+      "units_per_second": {
+        "moderntcn": 0.9077499793897875
+      },
+      "normalized_throughput": 0.9077499793897875,
+      "total_samples_per_second": 9984.51273360548,
+      "mean_gpu_util": 93.75,
+      "max_gpu_used_bytes": 5918556160.0,
+      "mean_cpu_percent": 83.77291666666667,
+      "max_ram_used_bytes": 16575188992.0,
+      "mean_disk_read_bps": 255.5874578738675,
+      "mean_disk_write_bps": 2252048.170911364,
+      "peak_reserved_bytes": [
+        2118123520,
+        2118123520
+      ],
+      "process_cpu_percent": [
+        92.93870721918574,
+        95.6817850327252
+      ],
+      "efficiency_vs_exclusive_groups": 0.9077499793897875
+    },
+    {
+      "config": "FFF",
+      "archs": [
+        "transformer",
+        "transformer",
+        "transformer"
+      ],
+      "samples_per_second": [
+        13349.322450641635,
+        13361.708003429796,
+        13331.174005656128
+      ],
+      "units_per_second": {
+        "transformer": 0.9088937024114123
+      },
+      "normalized_throughput": 0.9088937024114123,
+      "total_samples_per_second": 40042.20445972756,
+      "mean_gpu_util": 95.78947368421052,
+      "max_gpu_used_bytes": 5028642816.0,
+      "mean_cpu_percent": 95.86947368421055,
+      "max_ram_used_bytes": 13105229824.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 327071.74835971073,
+      "peak_reserved_bytes": [
+        931135488,
+        931135488,
+        931135488
+      ],
+      "process_cpu_percent": [
+        77.65500769841574,
+        69.39326791939017,
+        95.57379496574089
+      ],
+      "efficiency_vs_exclusive_groups": 0.9088937024114123
+    },
+    {
+      "config": "LLL",
+      "archs": [
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        6012.070798327992,
+        7095.932832654665,
+        7246.0949759100395
+      ],
+      "units_per_second": {
+        "ofi_lstm": 1.4328130477130068
+      },
+      "normalized_throughput": 1.4328130477130068,
+      "total_samples_per_second": 20354.098606892694,
+      "mean_gpu_util": 65.66666666666667,
+      "max_gpu_used_bytes": 3877240832.0,
+      "mean_cpu_percent": 96.07741935483872,
+      "max_ram_used_bytes": 11333775360.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 639533.1912809288,
+      "peak_reserved_bytes": [
+        559939584,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        42.703406140559956,
+        50.25989500082931,
+        50.41144249270224
+      ],
+      "efficiency_vs_exclusive_groups": 0.5081617987082405
+    },
+    {
+      "config": "TFL",
+      "archs": [
+        "moderntcn",
+        "transformer",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        3412.042675566771,
+        13609.391620486644,
+        12878.695328078724
+      ],
+      "units_per_second": {
+        "moderntcn": 0.31020859515738847,
+        "transformer": 0.30891132255097414,
+        "ofi_lstm": 0.9065870741798858
+      },
+      "normalized_throughput": 1.5257069918882484,
+      "total_samples_per_second": 29900.12962413214,
+      "mean_gpu_util": 94.79787234042553,
+      "max_gpu_used_bytes": 5817171968.0,
+      "mean_cpu_percent": 96.08936170212768,
+      "max_ram_used_bytes": 12807852032.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 320570.28694646433,
+      "peak_reserved_bytes": [
+        2118123520,
+        931135488,
+        559939584
+      ],
+      "process_cpu_percent": [
+        65.9539759069232,
+        23.86127769988558,
+        92.89397970415108
+      ],
+      "efficiency_vs_exclusive_groups": 0.9406502939400905
+    },
+    {
+      "config": "TLL",
+      "archs": [
+        "moderntcn",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        3893.5623035245258,
+        12386.746984982887,
+        12597.381149260938
+      ],
+      "units_per_second": {
+        "moderntcn": 0.3539863381496186,
+        "ofi_lstm": 1.7587408545007102
+      },
+      "normalized_throughput": 2.1127271926503286,
+      "total_samples_per_second": 28877.69043776835,
+      "mean_gpu_util": 92.30208333333333,
+      "max_gpu_used_bytes": 5433393152.0,
+      "mean_cpu_percent": 13.19375,
+      "max_ram_used_bytes": 15684845568.0,
+      "mean_disk_read_bps": 16524.04130979223,
+      "mean_disk_write_bps": 578801.9931737605,
+      "peak_reserved_bytes": [
+        2118123520,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        99.82582183306492,
+        99.85943902357754,
+        99.77252441328038
+      ],
+      "efficiency_vs_exclusive_groups": 0.9777417663342469
+    },
+    {
+      "config": "TTT",
+      "archs": [
+        "moderntcn",
+        "moderntcn",
+        "moderntcn"
+      ],
+      "samples_per_second": [
+        3319.9856819766246,
+        3326.223535965876,
+        3320.65843371737
+      ],
+      "units_per_second": {
+        "moderntcn": 0.9061457626192939
+      },
+      "normalized_throughput": 0.9061457626192939,
+      "total_samples_per_second": 9966.867651659872,
+      "mean_gpu_util": 92.09278350515464,
+      "max_gpu_used_bytes": 8545566720.0,
+      "mean_cpu_percent": 96.15051546391753,
+      "max_ram_used_bytes": 17352048640.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 160723.94804151202,
+      "peak_reserved_bytes": [
+        2118123520,
+        2118123520,
+        2118123520
+      ],
+      "process_cpu_percent": [
+        57.15092874022261,
+        95.00898471905514,
+        79.60178804116828
+      ],
+      "efficiency_vs_exclusive_groups": 0.9061457626192939
+    },
+    {
+      "config": "FFFF",
+      "archs": [
+        "transformer",
+        "transformer",
+        "transformer",
+        "transformer"
+      ],
+      "samples_per_second": [
+        9986.279453247766,
+        10032.785405092865,
+        9990.496669341586,
+        10024.952730433737
+      ],
+      "units_per_second": {
+        "transformer": 0.9087191471912548
+      },
+      "normalized_throughput": 0.9087191471912548,
+      "total_samples_per_second": 40034.51425811595,
+      "mean_gpu_util": 97.17204301075269,
+      "max_gpu_used_bytes": 6483410944.0,
+      "mean_cpu_percent": 12.652688172043007,
+      "max_ram_used_bytes": 15433105408.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 350866.55673897493,
+      "peak_reserved_bytes": [
+        931135488,
+        931135488,
+        931135488,
+        931135488
+      ],
+      "process_cpu_percent": [
+        99.91134875542043,
+        99.9022870834147,
+        99.90320083922516,
+        99.90261563704901
+      ],
+      "efficiency_vs_exclusive_groups": 0.9087191471912548
+    },
+    {
+      "config": "LLLL",
+      "archs": [
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        10004.465867786419,
+        10011.20857603301,
+        10036.06731631902,
+        10002.624110403776
+      ],
+      "units_per_second": {
+        "ofi_lstm": 2.819600078863173
+      },
+      "normalized_throughput": 2.819600078863173,
+      "total_samples_per_second": 40054.36587054223,
+      "mean_gpu_util": 95.93406593406593,
+      "max_gpu_used_bytes": 4948230144.0,
+      "mean_cpu_percent": 15.283516483516483,
+      "max_ram_used_bytes": 12995313664.0,
+      "mean_disk_read_bps": 23629.83786658751,
+      "mean_disk_write_bps": 356150.1213003224,
+      "peak_reserved_bytes": [
+        559939584,
+        559939584,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        99.88944754959623,
+        99.90008912281309,
+        99.893248152965,
+        99.87722357685382
+      ],
+      "efficiency_vs_exclusive_groups": 1.0
+    },
+    {
+      "config": "TFFL",
+      "archs": [
+        "moderntcn",
+        "transformer",
+        "transformer",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        2540.7047979127906,
+        10058.274490024336,
+        10013.462346736822,
+        9743.192405739639
+      ],
+      "units_per_second": {
+        "moderntcn": 0.23099021349117352,
+        "transformer": 0.4555961754238418,
+        "ofi_lstm": 0.6858654600697756
+      },
+      "normalized_throughput": 1.3724518489847908,
+      "total_samples_per_second": 32355.634040413588,
+      "mean_gpu_util": 96.87096774193549,
+      "max_gpu_used_bytes": 7271874560.0,
+      "mean_cpu_percent": 12.701075268817199,
+      "max_ram_used_bytes": 14820802560.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 342399.607078118,
+      "peak_reserved_bytes": [
+        2118123520,
+        931135488,
+        931135488,
+        559939584
+      ],
+      "process_cpu_percent": [
+        100.02164274009706,
+        99.89467005911025,
+        99.92146945860945,
+        99.88776623001263
+      ],
+      "efficiency_vs_exclusive_groups": 0.929835587697244
+    },
+    {
+      "config": "TFLL",
+      "archs": [
+        "moderntcn",
+        "transformer",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        2682.5481405981473,
+        10619.232984087734,
+        9108.915372386778,
+        9620.016024443361
+      ],
+      "units_per_second": {
+        "moderntcn": 0.24388601470196686,
+        "transformer": 0.24103952601770814,
+        "ofi_lstm": 1.3184104977271072
+      },
+      "normalized_throughput": 1.8033360384467823,
+      "total_samples_per_second": 32030.71252151602,
+      "mean_gpu_util": 89.3030303030303,
+      "max_gpu_used_bytes": 6888095744.0,
+      "mean_cpu_percent": 43.58585858585859,
+      "max_ram_used_bytes": 14570397696.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 404909.4681482829,
+      "peak_reserved_bytes": [
+        2118123520,
+        931135488,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        79.1280734594427,
+        78.79689271880005,
+        86.44920219802955,
+        92.45744382978197
+      ],
+      "efficiency_vs_exclusive_groups": 0.9525133052435977
+    },
+    {
+      "config": "TTFL",
+      "archs": [
+        "moderntcn",
+        "moderntcn",
+        "transformer",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        2529.8875130784336,
+        2526.490221208236,
+        10014.647420101697,
+        9709.202720015126
+      ],
+      "units_per_second": {
+        "moderntcn": 0.45970463522342064,
+        "transformer": 0.2273164051483658,
+        "ofi_lstm": 0.6834727790606909
+      },
+      "normalized_throughput": 1.3704938194324774,
+      "total_samples_per_second": 24780.227874403492,
+      "mean_gpu_util": 96.0,
+      "max_gpu_used_bytes": 8444248064.0,
+      "mean_cpu_percent": 13.0516129032258,
+      "max_ram_used_bytes": 14845710336.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 113659.46186659433,
+      "peak_reserved_bytes": [
+        2118123520,
+        2118123520,
+        931135488,
+        559939584
+      ],
+      "process_cpu_percent": [
+        100.0202514892451,
+        100.02019630993253,
+        99.89143224634546,
+        99.9036031996735
+      ],
+      "efficiency_vs_exclusive_groups": 0.9294216503676048
+    },
+    {
+      "config": "TTTT",
+      "archs": [
+        "moderntcn",
+        "moderntcn",
+        "moderntcn",
+        "moderntcn"
+      ],
+      "samples_per_second": [
+        2484.1053544092297,
+        2492.4865994869797,
+        2479.92877373225,
+        2486.2541261803417
+      ],
+      "units_per_second": {
+        "moderntcn": 0.9039553465883603
+      },
+      "normalized_throughput": 0.9039553465883603,
+      "total_samples_per_second": 9942.774853808802,
+      "mean_gpu_util": 96.1063829787234,
+      "max_gpu_used_bytes": 11172642816.0,
+      "mean_cpu_percent": 52.21489361702128,
+      "max_ram_used_bytes": 15790952448.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 376613.22661495535,
+      "peak_reserved_bytes": [
+        2118123520,
+        2118123520,
+        2118123520,
+        2118123520
+      ],
+      "process_cpu_percent": [
+        76.63135363960407,
+        82.09929018859096,
+        82.41334728420925,
+        98.18240932651666
+      ],
+      "efficiency_vs_exclusive_groups": 0.9039553465883603
+    },
+    {
+      "config": "LLLLL",
+      "archs": [
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        8058.505213301187,
+        8045.723361745899,
+        8046.816193740311,
+        8021.464414358226,
+        8049.729126510094
+      ],
+      "units_per_second": {
+        "ofi_lstm": 2.8314173460268375
+      },
+      "normalized_throughput": 2.8314173460268375,
+      "total_samples_per_second": 40222.23830965572,
+      "mean_gpu_util": 95.94565217391305,
+      "max_gpu_used_bytes": 6019153920.0,
+      "mean_cpu_percent": 16.160869565217393,
+      "max_ram_used_bytes": 15083171840.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 84870.37033779666,
+      "peak_reserved_bytes": [
+        559939584,
+        559939584,
+        559939584,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        99.92025257054912,
+        99.9154864761948,
+        99.93815274103585,
+        99.91818158907918,
+        99.89478424040783
+      ],
+      "efficiency_vs_exclusive_groups": 1.0041911146379414
+    },
+    {
+      "config": "FFFLLL",
+      "archs": [
+        "transformer",
+        "transformer",
+        "transformer",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        7122.918961011122,
+        7091.673363126513,
+        7105.354019740419,
+        5391.538890845866,
+        6744.414763333769,
+        6785.173160614581
+      ],
+      "units_per_second": {
+        "transformer": 0.4839285256432113,
+        "ofi_lstm": 1.3319399645872279
+      },
+      "normalized_throughput": 1.8158684902304392,
+      "total_samples_per_second": 40241.07315867227,
+      "mean_gpu_util": 87.69607843137256,
+      "max_gpu_used_bytes": 8235188224.0,
+      "mean_cpu_percent": 96.1509803921569,
+      "max_ram_used_bytes": 20504223744.0,
+      "mean_disk_read_bps": 67106.17375693952,
+      "mean_disk_write_bps": 1538109.7908539895,
+      "peak_reserved_bytes": [
+        929038336,
+        929038336,
+        929038336,
+        559939584,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        32.79245615420857,
+        29.678186653179907,
+        19.98292495731739,
+        37.56953332280906,
+        49.50004790425135,
+        58.150522488544695
+      ],
+      "efficiency_vs_exclusive_groups": 0.9563146539356495
+    },
+    {
+      "config": "LLLLLL",
+      "archs": [
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        6663.730268991041,
+        6680.96237801244,
+        6664.907785223535,
+        6691.164688248261,
+        6664.758355828155,
+        6681.63454696475
+      ],
+      "units_per_second": {
+        "ofi_lstm": 2.819092687314197
+      },
+      "normalized_throughput": 2.819092687314197,
+      "total_samples_per_second": 40047.15802326818,
+      "mean_gpu_util": 94.03260869565217,
+      "max_gpu_used_bytes": 7090077696.0,
+      "mean_cpu_percent": 19.119565217391305,
+      "max_ram_used_bytes": 16187351040.0,
+      "mean_disk_read_bps": 0.0,
+      "mean_disk_write_bps": 300044.3499810458,
+      "peak_reserved_bytes": [
+        559939584,
+        559939584,
+        559939584,
+        559939584,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        99.9355816140624,
+        99.91681112640583,
+        99.93109290903004,
+        99.9421844325217,
+        99.8402630133232,
+        99.9711575393737
+      ],
+      "efficiency_vs_exclusive_groups": 0.9998200483987855
+    },
+    {
+      "config": "TTFFLL",
+      "archs": [
+        "moderntcn",
+        "moderntcn",
+        "transformer",
+        "transformer",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        1954.872084698246,
+        1980.0535073658455,
+        7831.564714578966,
+        7878.697789991675,
+        4668.9830660046855,
+        4013.9155023416297
+      ],
+      "units_per_second": {
+        "moderntcn": 0.3577469146866096,
+        "transformer": 0.3565977159922715,
+        "ofi_lstm": 0.6112267902879368
+      },
+      "normalized_throughput": 1.325571420966818,
+      "total_samples_per_second": 28328.08666498105,
+      "mean_gpu_util": 87.96078431372548,
+      "max_gpu_used_bytes": 10969874432.0,
+      "mean_cpu_percent": 96.19117647058825,
+      "max_ram_used_bytes": 22286249984.0,
+      "mean_disk_read_bps": 80.19006508290175,
+      "mean_disk_write_bps": 2147993.196643633,
+      "peak_reserved_bytes": [
+        2118123520,
+        2118123520,
+        931135488,
+        931135488,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        21.226475647934986,
+        24.786077524250576,
+        24.99068845981405,
+        16.74682823944973,
+        33.30745722682375,
+        28.427163614317493
+      ],
+      "efficiency_vs_exclusive_groups": 0.9311224619996887
+    },
+    {
+      "config": "LLLLLLLL",
+      "archs": [
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm",
+        "ofi_lstm"
+      ],
+      "samples_per_second": [
+        4984.013953488642,
+        4993.363982274482,
+        5001.8343160175355,
+        5003.974673397796,
+        5011.754626707204,
+        5003.479180322185,
+        5015.756773196763,
+        5007.412682728472
+      ],
+      "units_per_second": {
+        "ofi_lstm": 2.817292856798934
+      },
+      "normalized_throughput": 2.817292856798934,
+      "total_samples_per_second": 40021.59018813308,
+      "mean_gpu_util": 95.46739130434783,
+      "max_gpu_used_bytes": 9231990784.0,
+      "mean_cpu_percent": 27.076086956521728,
+      "max_ram_used_bytes": 20646715392.0,
+      "mean_disk_read_bps": 14483.270022815454,
+      "mean_disk_write_bps": 366631.3530266819,
+      "peak_reserved_bytes": [
+        559939584,
+        559939584,
+        559939584,
+        559939584,
+        559939584,
+        559939584,
+        559939584,
+        559939584
+      ],
+      "process_cpu_percent": [
+        99.75549945081804,
+        99.66193711076762,
+        99.88268023828194,
+        99.73612508699979,
+        99.61127773685796,
+        99.74837128639969,
+        99.6345318221742,
+        99.72607183725087
+      ],
+      "efficiency_vs_exclusive_groups": 0.9991817201022462
+    }
+  ],
+  "failed_configurations": [],
+  "same_architecture_scaling": {
+    "moderntcn": {
+      "1": 1.0,
+      "2": 0.908,
+      "3": 0.906,
+      "4": 0.904
+    },
+    "transformer": {
+      "1": 1.0,
+      "2": 0.911,
+      "3": 0.909,
+      "4": 0.909
+    },
+    "ofi_lstm": {
+      "1": 1.0,
+      "2": 2.032,
+      "3": 1.433,
+      "4": 2.82,
+      "5": 2.831,
+      "6": 2.819,
+      "8": 2.817
+    }
+  },
+  "best_k": {
+    "moderntcn": 1,
+    "transformer": 1,
+    "ofi_lstm": 4
+  },
+  "exclusive_group_rate": {
+    "moderntcn": 1.0,
+    "transformer": 1.0,
+    "ofi_lstm": 2.819600078863173
+  }
+}

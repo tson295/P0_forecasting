@@ -6,7 +6,8 @@ applies purge + embargo, selects valid origins (history validity, gap rule, targ
 lookup, tolerance), builds the model's features and fits the train-only standardizer.
 
 This module adds only:
-  * delta_h = mid[target_h] - mid[origin], in USD, from the same origin/target indices;
+  * delta_h = mid[target_h] - mid[origin], in USD, from the same origin/target indices
+    (snapped to 1e-6 USD, src/cls/labels.displacement);
   * the frozen class of each delta (src/cls/labels.py), never refitted here;
   * batching: the standardized feature matrix lives on the GPU and a batch of windows
     is gathered there, x[origin-history+1 : origin+1], which is exactly what
@@ -23,6 +24,7 @@ import torch
 from src.config import Config, DataConfig, TrainConfig
 from src.data.dataset import prepare_data
 from . import HORIZONS
+from .labels import displacement
 
 # Feature set per architecture: OFI-LSTM keeps its 20 order-flow channels, ModernTCN and
 # the Transformer read the 40 raw L10 price/quantity columns; all use the WF3 train-only
@@ -69,7 +71,7 @@ class ClassificationData:
         self.splits = {}
         for name, ds in prepared.datasets.items():
             targets = ds.target_indices
-            delta = raw.mid[targets[:, self.columns]]-raw.mid[ds.origins][:, None]
+            delta = displacement(raw.mid[targets[:, self.columns]], raw.mid[ds.origins][:, None])
             labels = np.stack([label_set[h].assign(delta[:, j]) for j, h in enumerate(self.horizons)], 1)
             self.splits[name] = Split(name, ds.origins, targets, delta, labels,
                                       hashlib.sha256(ds.origins.tobytes()).hexdigest())

@@ -20,6 +20,20 @@ from pathlib import Path
 import numpy as np
 
 METHODS = ("equal_width", "quantile")
+# Mids are (bid+ask)/2 on a 0.05 USD grid, but their float64 difference carries ~1e-11 of
+# rounding noise, so one USD displacement has several binary representations (e.g.
+# -0.10000000000582 and -0.09999999999127). Every displacement is snapped to 1e-6 USD
+# before it is fitted or assigned, so a class is a function of the USD value alone.
+DELTA_DECIMALS = 6
+
+
+def snap(delta):
+    return np.round(np.asarray(delta, dtype=np.float64), DELTA_DECIMALS)
+
+
+def displacement(target_mid, origin_mid):
+    """delta = target_mid - origin_mid in USD, snapped to 1e-6 USD."""
+    return snap(np.asarray(target_mid, dtype=np.float64)-np.asarray(origin_mid, dtype=np.float64))
 
 
 @dataclass
@@ -35,7 +49,7 @@ class LabelSpec:
 
     def assign(self, delta):
         """Deterministic interval assignment, never nearest-representative."""
-        delta = np.asarray(delta, dtype=np.float64)
+        delta = snap(delta)
         if not np.isfinite(delta).all():
             raise ValueError("Nonfinite displacement")
         edges = np.asarray(self.edges, dtype=np.float64)
@@ -99,7 +113,7 @@ def fit_equal_width(delta, horizon_seconds, bins=32, percentile=99.0,
     `overflow="conditional_median"` is a follow-up variant that uses the fold-1-train
     median displacement of each overflow class instead.
     """
-    delta = np.asarray(delta, dtype=np.float64)
+    delta = snap(delta)
     if bins < 2 or bins % 2:
         raise ValueError("equal_width needs an even number of finite bins >= 2")
     q = float(np.percentile(np.abs(delta), percentile))  # numpy default: linear interpolation
@@ -116,7 +130,8 @@ def fit_equal_width(delta, horizon_seconds, bins=32, percentile=99.0,
                      top_edge_closed=True,
                      params=dict(percentile=float(percentile), q=q, bins=int(bins), width=width,
                                  finite_min=-q, finite_max=q, overflow=overflow,
-                                 percentile_method="numpy.percentile(|delta|, linear)"),
+                                 percentile_method="numpy.percentile(|delta|, linear)",
+                                 delta_rounding=f"numpy.round(delta, {DELTA_DECIMALS})"),
                      fit={})
     classes = spec.assign(delta)
     if overflow == "edge_plus_half_width":
@@ -140,10 +155,12 @@ def fit_quantile(delta, horizon_seconds, n_classes=34, fitted_on=None):
     and the merge is recorded. Interior classes decode to their midpoint; the two
     unbounded outer classes decode to the fold-1-train median of their own samples.
     """
-    delta = np.asarray(delta, dtype=np.float64)
+    delta = snap(delta)
     levels = np.arange(1, n_classes)/n_classes
     raw_edges = np.quantile(delta, levels)  # numpy default: linear interpolation
-    edges = np.unique(raw_edges)
+    # Snapped like the data, so an edge that lands on a price-grid point mass is exactly
+    # that grid value and the whole mass goes to the class above it.
+    edges = np.unique(snap(raw_edges))
     spec = LabelSpec(method="quantile", horizon_seconds=int(horizon_seconds),
                      edges=edges.tolist(), representatives=[], n_classes=len(edges)+1,
                      top_edge_closed=False,
@@ -151,6 +168,7 @@ def fit_quantile(delta, horizon_seconds, n_classes=34, fitted_on=None):
                                  raw_quantile_edges=raw_edges.tolist(),
                                  merged_duplicate_edges=int(len(raw_edges)-len(edges)),
                                  quantile_method="numpy.quantile(delta, linear)",
+                                 delta_rounding=f"numpy.round(delta, {DELTA_DECIMALS})",
                                  outer_representative="fold-1-train median of the class's own samples",
                                  interior_representative="interval midpoint (a+b)/2"),
                      fit={})

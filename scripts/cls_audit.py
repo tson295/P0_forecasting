@@ -37,7 +37,7 @@ import pandas as pd
 
 from src.cls import HORIZONS
 from src.cls.data import FEATURE_MODEL, fingerprint, wf3_config
-from src.cls.labels import LabelSet
+from src.cls.labels import LabelSet, displacement
 from src.cls.metrics import official_metrics
 from src.data.dataset import prepare_data
 from src.data.preprocessing import Standardizer, features
@@ -122,7 +122,7 @@ def main():
                              fingerprint=fingerprint(ds.origins, ds.target_indices))
                 if arch == "ofi_lstm":
                     canonical.setdefault(fold, {})[split] = entry
-                    delta.setdefault(fold, {})[split] = raw.mid[ds.target_indices]-raw.mid[ds.origins][:, None]
+                    delta.setdefault(fold, {})[split] = displacement(raw.mid[ds.target_indices], raw.mid[ds.origins][:, None])
                 else:
                     audit.add(f"{tag}.{split}_samples_identical_across_feature_sets",
                               entry["fingerprint"] == canonical[fold][split]["fingerprint"])
@@ -190,10 +190,17 @@ def main():
                   prep["standardizer"] == standardizers[(s["arch"], fold)])
         history = [json.loads(l) for l in (run/"training_history.jsonl").read_text().splitlines() if l.strip()]
         ces = [r["validation"]["mean_ce"] for r in history]
+        epochs = [r["epoch"] for r in history]
+        audit.add(f"run.{rid}.history_complete", epochs == list(range(cfg["training"]["epochs"])),
+                  dict(epochs=len(epochs)))
+        selected = json.loads((run/"best/selection.json").read_text())["epoch"]
+        # Selection used validation only: the saved best epoch is the validation-CE argmin.
         audit.add(f"run.{rid}.best_epoch_is_validation_ce_argmin",
-                  int(np.argmin(ces)) == s["best_epoch"] and not any("test" in r for r in history))
+                  history[int(np.argmin(ces))]["epoch"] == s["best_epoch"] == selected,
+                  dict(argmin_epoch=history[int(np.argmin(ces))]["epoch"], summary=s["best_epoch"], best_folder=selected))
         for split in ("validation", "test"):
-            frame = pd.read_csv(run/f"{split}_predictions.csv.gz")
+            # round_trip: pandas' default parser can be 1 ulp off on 17-digit floats.
+            frame = pd.read_csv(run/f"{split}_predictions.csv.gz", float_precision="round_trip")
             origins = frame["origin_index"].to_numpy(np.int64)
             ref = canonical[fold][split]
             cols = [ref["targets"][:, HORIZONS.index(h)] for h in s["horizons"]]
@@ -209,7 +216,7 @@ def main():
             ok_labels, ok_metrics = True, True
             for h in s["horizons"]:
                 t = TAG[h]
-                true_delta = mids[frame[f"target_index_{t}"].to_numpy(np.int64)]-mids[origins]
+                true_delta = displacement(mids[frame[f"target_index_{t}"].to_numpy(np.int64)], mids[origins])
                 ok_labels &= np.array_equal(frame[f"true_delta_{t}"].to_numpy(), true_delta)
                 ok_labels &= np.array_equal(frame[f"true_class_{t}"].to_numpy(np.int64), frozen[h].assign(true_delta))
                 ok_labels &= np.array_equal(frame[f"pred_delta_{t}"].to_numpy(),

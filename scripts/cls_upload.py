@@ -6,7 +6,7 @@
 Layout on Tson29/LOB_Classification_WF3 (mirrors runs/cls):
 
   <equal_width|quantile>/<multi|single>/<arch>/[h<seconds>/]f<fold>/   one run each
-  followups/<experiment>/<variant>/<multi|single>/<arch>/[h<s>/]f<fold>/
+  followups/<experiment>/<variant>/<method>/<multi|single>/<arch>/[h<s>/]f<fold>/
   labeling/  reports/  audits/  benchmarks/  registry/  README.md
 
 Per run: best/ (weights + config + every metadata JSON), run_config, label_set,
@@ -17,6 +17,7 @@ Never uploaded: the raw CSV (it stays in Tson29/btc-l10-gate-1y) and last/ folde
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import sys
@@ -61,8 +62,9 @@ def stage(target, runs=True, meta=True):
                     link(f, target/name/f.relative_to(ROOT/local))
         link(ROOT/"runs/cls/registry.json", target/"registry/registry.json")
         link(ROOT/"prompt.md", target/"reports/prompt.md")
-        if (ROOT/"reports/HF_README.md").exists():
-            link(ROOT/"reports/HF_README.md", target/"README.md")
+        if not (ROOT/"reports/HF_README.md").exists():
+            raise SystemExit("reports/HF_README.md is missing: run scripts/cls_report.py first")
+        link(ROOT/"reports/HF_README.md", target/"README.md")
     count = 0
     if runs:
         for run in completed_runs():
@@ -82,12 +84,15 @@ def stage(target, runs=True, meta=True):
 
 def upload(args):
     api = HfApi()
+    api.create_repo(REPO, repo_type="model", private=True, exist_ok=True)
+    if api.repo_info(REPO, repo_type="model").private is not True:
+        raise SystemExit(f"{REPO} is not private; refusing to upload")
     with tempfile.TemporaryDirectory(dir=ROOT/"runs") as tmp:
         target = Path(tmp)/"hf"
         n = stage(target, runs=not args.no_runs, meta=not args.only_runs)
         print(f"staged {n} runs", flush=True)
         api.upload_large_folder(repo_id=REPO, repo_type="model", folder_path=str(target),
-                                print_report=False)
+                                private=True, print_report=False)
     print("upload complete", flush=True)
 
 
@@ -109,6 +114,11 @@ def verify(args):
 
     runs = sorted({f.rsplit("/", 1)[0] for f in files if f.endswith("run_summary.json")})
     check("runs_present", len(runs) > 0, dict(runs=len(runs)))
+    registry = json.loads((ROOT/"runs/cls/registry.json").read_text())
+    expected = {j["run_dir"].removeprefix("runs/cls/") for j in registry["jobs"] if j["status"] == "completed"}
+    check("every_completed_run_uploaded", expected <= set(runs),
+          dict(expected=len(expected), present=len(runs), missing=sorted(expected-set(runs))[:20]))
+    check("repo_private", api.repo_info(REPO, repo_type="model").private is True)
     for required in ("reports/FINAL_REPORT_CLASSIFICATION.md", "audits/leakage_audit_classification.json",
                      "labeling/equal_width_k32_p99.json", "labeling/quantile_c34.json",
                      "benchmarks/concurrency_benchmark.json", "benchmarks/training_schedule.json",
@@ -127,11 +137,15 @@ def verify(args):
             if f"labeling/{name}.json" in files:
                 ls = LabelSet.load(get(f"labeling/{name}.json"))  # verifies its own fingerprint
                 check(f"labels_readable:{name}", ls[60].n_classes > 0, dict(sha256=ls.sha256()))
-        sample = [r for r in runs if "/multi/" in r][:3]+[r for r in runs if "/single/" in r][:2]
+        # One run per (method, formulation, architecture[, follow-up variant]) group.
+        groups = {}
+        for r in runs:
+            groups.setdefault(re.sub(r"(/h\d+)?/f\d+$", "", r), []).append(r)
+        sample = [min(g) for _, g in sorted(groups.items())]
         for run in sample:
             summary = json.loads(Path(get(f"{run}/run_summary.json")).read_text())
             metrics = json.loads(Path(get(f"{run}/test_metrics.json")).read_text())["official_metrics"]
-            frame = pd.read_csv(get(f"{run}/test_predictions.csv.gz"))
+            frame = pd.read_csv(get(f"{run}/test_predictions.csv.gz"), float_precision="round_trip")
             ok = True
             for tag, m in metrics.items():
                 r, _ = official_metrics(frame["origin_mid"], frame[f"target_mid_{tag}"], frame[f"pred_mid_{tag}"])

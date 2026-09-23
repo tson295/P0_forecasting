@@ -40,7 +40,7 @@ def main():
         for fold in (1, 2, 3):
             run = f"{model}_wf3_f{fold}"
             path = hf_hub_download(REPO, f"{model}/{run}/artifacts/test_predictions.csv.gz")
-            frame = pd.read_csv(path)
+            frame = pd.read_csv(path, float_precision="round_trip")
             targets = np.stack([frame[f"target_index_{t}"].to_numpy(np.int64) for t in TAGS], 1)
             same = fingerprint(frame["origin_index"].to_numpy(np.int64), targets) == ours
             if not same:
