@@ -12,6 +12,12 @@ each rule is one controlled change against the official argmax decoding:
                       fold-1-train median displacement of their own samples instead of
                       -q - w/2 / +q + w/2 (labeling/equal_width_k32_p99_ovfmedian.json)
 
+Learning-free references from the run's own TRAIN class frequencies (train_metrics.json):
+  prior_argmax        always the most frequent train class, decoded (a constant prediction)
+  prior_expected      sum_k prior_k * representative_k (a constant, near 0)
+and the cross-entropy of that prior on the split (`prior_ce`) next to the model's CE, so
+"did the classifier learn anything beyond the marginal" is answered per run.
+
 Writes reports/followups/decoding_long.csv (official four metrics per run x split x
 horizon x rule) and prints a summary. Validation and test are scored separately; any
 choice between rules must be read off validation.
@@ -41,7 +47,9 @@ def main():
         s = json.loads(summary_path.read_text())
         cfg = json.loads((run/"run_config.json").read_text())
         ls = LabelSet.load(run/"label_set.json")
+        train_diag = json.loads((run/"train_metrics.json").read_text())["diagnostics_not_official"]
         for split in ("validation", "test"):
+            split_diag = json.loads((run/f"{split}_metrics.json").read_text())["diagnostics_not_official"]
             frame = pd.read_csv(run/f"{split}_predictions.csv.gz", float_precision="round_trip")
             probs = np.load(run/f"{split}_probs.npz")
             origin = frame["origin_mid"].to_numpy()
@@ -52,7 +60,14 @@ def main():
                 p /= p.sum(1, keepdims=True)
                 reps = np.asarray(ls[h].representatives)
                 cls = frame[f"pred_class_{tag}"].to_numpy(np.int64)
-                decoded = dict(argmax=reps[cls], expected=p @ reps)
+                hist = np.asarray(train_diag[tag]["true_class_histogram"], dtype=np.float64)
+                prior = hist/hist.sum()
+                true_cls = frame[f"true_class_{tag}"].to_numpy(np.int64)
+                prior_ce = float(-np.log(np.clip(prior[true_cls], 1e-12, None)).mean())
+                model_ce = split_diag[tag]["cross_entropy"]
+                decoded = dict(argmax=reps[cls], expected=p @ reps,
+                               prior_argmax=np.full(len(frame), reps[int(prior.argmax())]),
+                               prior_expected=np.full(len(frame), float(prior @ reps)))
                 if ls[h].method == "equal_width" and ls.name == "equal_width_k32_p99":
                     if ovf[h].edges != ls[h].edges:
                         raise AssertionError("overflow variant must share the edges")
@@ -61,8 +76,11 @@ def main():
                     m, c = official_metrics(origin, target, origin+delta)
                     rows.append(dict(job_id=s["job_id"], method=s["method"], label_set=ls.name, arch=s["arch"],
                                      formulation=cfg["formulation"], experiment=cfg.get("experiment") or "",
+                                     variant=cfg.get("variant", "baseline"),
                                      fold=s["fold"], horizon=tag, split=split, rule=rule, **m,
-                                     mean_abs_decoded=float(np.abs(delta).mean())))
+                                     mean_abs_decoded=float(np.abs(delta).mean()),
+                                     share_decoded_zero=float((delta == 0).mean()),
+                                     model_ce=model_ce, prior_ce=prior_ce))
         print("decoded", s["job_id"], flush=True)
     df = pd.DataFrame(rows)
     out = ROOT/"reports/followups"

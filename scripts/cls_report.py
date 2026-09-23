@@ -409,6 +409,16 @@ def decoding_block():
         return ""
     d = pd.read_csv(path)
     d = d[d.experiment.fillna("") == ""]
+    ce = (d[d.rule == "argmax"].groupby(["split", "method", "formulation", "arch", "horizon"])[["model_ce", "prior_ce"]]
+          .mean().reset_index())
+    ce_rows = []
+    for _, r in ce.sort_values(["split", "method", "formulation", "arch", "horizon"],
+                               key=lambda c: c.map(TAGS.index) if c.name == "horizon" else c).iterrows():
+        ce_rows.append([r.split, METHOD_NAME[r.method], r.formulation, ARCH_NAME[r.arch], r.horizon,
+                        f"{r.model_ce:.5f}", f"{r.prior_ce:.5f}", f"{r.prior_ce-r.model_ce:+.5f}"])
+    ce_table = ("**Did the classifier learn beyond the class prior?** (diagnostic, not official) Cross-entropy of the "
+                "model vs a predictor that always outputs the run's own train class frequencies; mean over folds.\n\n"
+                + md_table(["Split", "Binning", "Form.", "Arch", "Horizon", "Model CE", "Prior CE", "Prior − model"], ce_rows))
     agg = (d.groupby(["split", "rule", "method", "formulation", "arch", "horizon"])[["rmse", "mae", "r2_gain_vs_e0", "da"]]
            .mean().reset_index())
     out = []
@@ -419,7 +429,7 @@ def decoding_block():
                  fmt(r.mae, "mae"), fmt(r.r2_gain_vs_e0, "r2"), fmt(r.da, "da")] for _, r in a.iterrows()]
         out.append(f"**Decoding rules, {split}, mean over folds F1–F3** (same models, same classes; only the decoding changes)\n\n"
                    + md_table(["Decoding", "Binning", "Form.", "Arch", "Horizon", "RMSE", "MAE", "R² gain vs E0", "DA"], rows))
-    return "\n\n".join(out)
+    return "\n\n".join([ce_table]+out)
 
 
 if __name__ == "__main__":
